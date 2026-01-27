@@ -20,6 +20,18 @@ Sada nástrojů v jazyce JavaScript (.jsx) pro automatizaci předtiskové příp
 - Možnost nastavení prefixu výstupních souborů
 - Detailní reportování chyb a progress bar
 
+### 3. Zund & Summa Automation (`Echo_Zund_Summa_v26.jsx`)
+*Nový sloučený skript (v26.3)*
+
+- **Podpora strojů:** Integrovaná podpora pro ZUND (kruhové značky 5mm) a SUMMA (čtvercové značky 3mm).
+- **Inteligentní UI:** Jedno okno (350px) s dynamickým přepínáním voleb podle zvoleného stroje.
+- **Layer Engine:** Automatická správa vrstev `Regmarks`, `Thru-cut`, `Kiss-cut`.
+- **Logic:** Výpočet Artboardu na základě pozice značek (fixace grafiky proti posunu).
+- **Features:**
+  - Asymetrická značka pro kontrolu rotace.
+  - Generování OPOS Bar pro Summu.
+  - Automatické přejmenování spodní vrstvy na `Graphics`.
+
 ## Požadavky
 
 - **macOS** nebo **Windows**

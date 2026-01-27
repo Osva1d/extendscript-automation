@@ -3,7 +3,7 @@
   Popis: Vytváří ořezové značky, třídí vrstvy a upravuje velikost plátna.
 */
 
-#target illustrator
+// @target illustrator
 
 function main() {
     // Kontrola otevřeného dokumentu

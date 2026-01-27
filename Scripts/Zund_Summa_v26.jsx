@@ -1,0 +1,363 @@
+/*
+  Script: Zund_Summa_v26.jsx
+  Version: v26.0.0-RC1
+  Description: Expert registration marks generator for ZUND and SUMMA hardware.
+  Compliance: PROJECT_CHARTER.md v26.2.3
+*/
+
+// --- JSON POLYFILL (ES3) ---
+if(typeof JSON!=="object"){JSON={};(function(){var rx_one=/^[\],:{}\s]*$/,rx_two=/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,rx_three=/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,rx_four=/(?:^|:|,)(?:\s*\[)+/g,rx_escapable=/[\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,rx_dangerous=/[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;function f(n){return n<10?"0"+n:n}function quote(string){rx_escapable.lastIndex=0;return rx_escapable.test(string)?'"'+string.replace(rx_escapable,function(a){var c=meta[a];return typeof c==="string"?c:"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)})+'"':'"'+string+'"'}function str(key,holder){var i,k,v,length,mind=gap,partial,value=holder[key];if(value&&typeof value==="object"&&typeof value.toJSON==="function"){value=value.toJSON(key)}if(typeof value==="string"){return quote(value)}if(typeof value==="number"){return isFinite(value)?String(value):"null"}if(typeof value==="boolean"||value===null){return String(value)}if(value&&typeof value==="object"){gap+=indent;partial=[];if(Object.prototype.toString.apply(value)==="[object Array]"){length=value.length;for(i=0;i<length;i+=1){partial[i]=str(i,value)||"null"}v=partial.length===0?"[]":gap?"[\n"+gap+partial.join(",\n"+gap)+"\n"+mind+"]":"["+partial.join(",")+"]";gap=mind;return v}for(k in value){if(Object.prototype.hasOwnProperty.call(value,k)){v=str(k,value);if(v){partial.push(quote(k)+(gap?": ":":")+v)}}}v=partial.length===0?"{}":gap?"{\n"+gap+partial.join(",\n"+gap)+"\n"+mind+"}":"{"+partial.join(",")+"}";gap=mind;return v}}var meta={"\b":"\\b","\t":"\\t","\n":"\\n","\f":"\\f","\r":"\\r",'"':'\\"',"\\":"\\\\"};var gap,indent;JSON.stringify=function(value,replacer,space){var i;gap="";indent="";if(typeof space==="number"){for(i=0;i<space;i+=1){indent+=" "}}else if(typeof space==="string"){indent=space}if(!replacer||typeof replacer==="function"||(typeof replacer==="object"&&typeof replacer.length==="number")){return str("",{"":value})}throw new Error("JSON.stringify")};JSON.parse=function(text,reviver){var j;function walk(holder,key){var k,v,value=holder[key];if(value&&typeof value==="object"){for(k in value){if(Object.prototype.hasOwnProperty.call(value,k)){v=walk(value,k);if(v!==undefined){value[k]=v}else{delete value[k]}}}}return reviver.call(holder,key,value)}text=String(text);rx_dangerous.lastIndex=0;if(rx_dangerous.test(text)){text=text.replace(rx_dangerous,function(a){return"\\u"+("0000"+a.charCodeAt(0).toString(16)).slice(-4)})}if(rx_one.test(text.replace(rx_two,"@").replace(rx_three,"]").replace(rx_four,""))){j=eval("("+text+")");return typeof reviver==="function"?walk({"":j},""):j}throw new SyntaxError("JSON.parse")}})()}
+
+#target illustrator
+
+var PMA = {
+    // --- 1. CONFIGURATION ---
+    Config: {
+        scriptName: "Zund & Summa v26.0 RC1",
+        zundSize: 5,         
+        summaSize: 3,
+        orientDist: 100,     
+        hybridGap: 5,        
+        summaXCenter: 10,    // 10mm from graph edge to MARK CENTER
+        summaYVisual: 10,    // 10mm gap graph edge to MARK EDGE
+        redLineWidth: 1,     // 1pt
+        rulerBuffer: 0.1,    
+        
+        ui: {
+            title: "PMA v26.3 Unified",
+            labels: {
+                gapGZ: "Mezera od grafiky:",
+                gapZO: "Mezera od okraje:",
+                maxDist: "Rozte\u010D zna\u010Dek:",
+                feedTop: "Horn\u00ED v\u00FDjezd (Top):",
+                feedBottom: "Spodn\u00ED n\u00E1jezd (Bottom):",
+                redLines: "P\u0159idat o\u0159ezov\u00E9 linky"
+            }
+        },
+
+        getDefaults: function() {
+            return {
+                mode: "ZUND", gapInner: 10, gapOuter: 0, maxDist: 400,
+                feedTop: 70, feedBottom: 50, drawRed: false,
+                thruActive: true, thruName: "cut",
+                kissActive: false, kissName: "",
+                lockStates: {}
+            };
+        }
+    },
+
+    // --- 2. STORAGE ---
+    Storage: {
+        getFile: function() {
+            var f = new Folder(Folder.userData + "/PMA"); if (!f.exists) f.create();
+            return new File(f.fsName + "/settings_v26_2.json");
+        },
+        save: function(d) { var f=this.getFile(); f.open('w'); f.encoding='UTF-8'; f.write(JSON.stringify(d)); f.close(); },
+        load: function() { var f=this.getFile(); if(!f.exists) return null; try{f.open('r'); var c=f.read(); f.close(); return c?JSON.parse(c):null;}catch(e){return null;} }
+    },
+
+    // --- 3. CORE LOGIC ---
+    Core: {
+        mm2pt: function(mm) { return mm * 2.83464567; },
+        pt2mm: function(pt) { return pt / 2.83464567; },
+
+        calculateAll: function(s, b) {
+            var cfg = PMA.Config;
+            var rZ = cfg.zundSize / 2, rS = cfg.summaSize / 2;
+            
+            var offSX = cfg.summaXCenter; 
+            var offSY = cfg.summaYVisual + rS; 
+            
+            var offZX = (s.mode === "ZUND") ? (s.gapInner + rZ) : (offSX + rS + cfg.hybridGap + rZ);
+            var offZY = (s.mode === "ZUND") ? (s.gapInner + rZ) : (offSY + rS + cfg.hybridGap + rZ);
+
+            var outX = (s.mode !== "SUMMA") ? offZX : offSX;
+            var outY = (s.mode !== "SUMMA") ? offZY : offSY;
+            var rMax = (s.mode !== "SUMMA") ? rZ : rS;
+
+            var gL=b[0], gT=b[1], gR=b[2], gB=b[3];
+            var gW=gR-gL, gH=gT-gB;
+            var gCx=(gL+gR)/2, gCy=(gT+gB)/2;
+
+            var markTopY = gT + this.mm2pt(outY); 
+            var markBotY = gB - this.mm2pt(outY); 
+            
+            var feedT = (s.mode !== "ZUND") ? s.feedTop : s.gapOuter + cfg.rulerBuffer;
+            var feedB = (s.mode !== "ZUND") ? s.feedBottom : s.gapOuter + cfg.rulerBuffer;
+            
+            var abTop = markTopY + this.mm2pt(rMax) + this.mm2pt(feedT); 
+            var abBot = markBotY - this.mm2pt(rMax) - this.mm2pt(feedB);
+
+            var reqHalfW = this.pt2mm(gW/2) + outX + rMax + s.gapOuter + cfg.rulerBuffer;
+            var abW_mm = Math.ceil(reqHalfW * 2); 
+            var abH_mm = Math.ceil(this.pt2mm(abTop - abBot));
+            
+            var finalW = this.mm2pt(abW_mm);
+            var finalH = this.mm2pt(abH_mm);
+            
+            // v26.2.1 Fixed Rect Logic [L, T, R, B]
+            var abRect = [
+                gCx - finalW/2, 
+                abTop,
+                gCx + finalW/2,
+                abTop - finalH
+            ];
+
+            var res = { marksZ: [], marksS: [], barS: null, red: [], ab: abRect, warnings: [] };
+            
+            if(s.mode !== "SUMMA") {
+                var xL = gL - this.mm2pt(offZX), xR = gR + this.mm2pt(offZX);
+                var yT = gT + this.mm2pt(offZY), yB = gB - this.mm2pt(offZY);
+                
+                res.marksZ.push({cx:xL, cy:yB}, {cx:xL, cy:yT}, {cx:xR, cy:yT}, {cx:xR, cy:yB});
+                res.marksZ.push({cx:xL + this.mm2pt(cfg.orientDist + cfg.zundSize), cy:yB});
+                this.addSteps(res.marksZ, xL, yB, xL, yT, this.mm2pt(s.maxDist));
+                this.addSteps(res.marksZ, xL, yT, xR, yT, this.mm2pt(s.maxDist));
+                this.addSteps(res.marksZ, xR, yT, xR, yB, this.mm2pt(s.maxDist));
+                this.addSteps(res.marksZ, xR, yB, xL, yB, this.mm2pt(s.maxDist));
+            }
+
+            if(s.mode !== "ZUND") {
+                var xL = gL - this.mm2pt(offSX), xR = gR + this.mm2pt(offSX);
+                var yT = gT + this.mm2pt(offSY), yB = gB - this.mm2pt(offSY);
+                
+                res.marksS.push({cx:xL, cy:yB}, {cx:xL, cy:yT}, {cx:xR, cy:yT}, {cx:xR, cy:yB});
+                this.addSteps(res.marksS, xL, yB, xL, yT, this.mm2pt(s.maxDist));
+                this.addSteps(res.marksS, xR, yT, xR, yB, this.mm2pt(s.maxDist));
+                
+                var barY = gB - this.mm2pt(11.5); 
+                res.barS = { x1: gL, x2: gR, y: barY, w: this.mm2pt(3) };
+            }
+
+            if(s.mode !== "ZUND" && s.drawRed) {
+                var sw = 1.0; 
+                var half = sw/2;
+                res.red.push({x1:abRect[0], y1:abRect[1]-half, x2:abRect[2], y2:abRect[1]-half, w:sw});
+                res.red.push({x1:abRect[0], y1:abRect[3]+half, x2:abRect[2], y2:abRect[3]+half, w:sw});
+            }
+
+            return res;
+        },
+
+        addSteps: function(arr, x1, y1, x2, y2, max) {
+            var dx=x2-x1, dy=y2-y1, d=Math.sqrt(dx*dx+dy*dy);
+            if(max>0 && d>max){ var s=Math.ceil(d/max); for(var i=1;i<s;i++) arr.push({cx:x1+(dx/s*i), cy:y1+(dy/s*i)}); }
+        }
+    },
+
+    // --- 4. UI (DESIGN REDESIGN v26.3) ---
+    UI: {
+        show: function(init) {
+            var c = PMA.Config, l = c.ui.labels;
+            var w = new Window("dialog", c.ui.title);
+            w.orientation = "column"; w.alignChildren = ["fill", "top"];
+            w.margins = 20; w.spacing = 15; w.preferredSize.width = 350;
+
+            // PANEL 1: SYSTEM
+            var pSystem = w.add("panel", undefined, "1. V\u00FDber technologie");
+            pSystem.alignChildren = ["fill", "top"]; pSystem.margins=15;
+            var dMode = pSystem.add("dropdownlist", undefined, ["ZUND", "SUMMA", "HYBRID"]);
+            dMode.selection = (init.mode === "SUMMA") ? 1 : (init.mode === "HYBRID" ? 2 : 0);
+
+            // PANEL 2: GEOMETRY (Merged)
+            var pGeo = w.add("panel", undefined, "2. Nastaven\u00ED mezer");
+            pGeo.alignChildren = ["fill", "top"]; pGeo.margins=15; pGeo.spacing=10;
+            
+            var rGapGZ = this.addRow(pGeo, l.gapGZ, init.gapInner, "gapInner", init);
+            var rGapZO = this.addRow(pGeo, l.gapZO, init.gapOuter, "gapOuter", init);
+            var rMaxD  = this.addRow(pGeo, l.maxDist, init.maxDist, "maxDist", init);
+
+            // PANEL 3: FEED (Summa Only)
+            var pFeed = w.add("panel", undefined, "3. Nastaven\u00ED role (Feed)");
+            pFeed.alignChildren = ["fill", "top"]; pFeed.margins=15; pFeed.spacing=10;
+            
+            var rFT = this.addRow(pFeed, l.feedTop, init.feedTop, "feedTop", init);
+            var rFB = this.addRow(pFeed, l.feedBottom, init.feedBottom, "feedBottom", init);
+            var chRed = pFeed.add("checkbox", undefined, l.redLines); chRed.value = init.drawRed;
+
+            // PANEL 4: LAYERS (Merged)
+            var pLay = w.add("panel", undefined, "4. Spr\u00E1va vrstev");
+            pLay.alignChildren = ["fill", "top"]; pLay.margins=15; pLay.spacing=10;
+            
+            var tLay = this.addLayerRow(pLay, "Thru-cut", init.thruActive || true, init.thruName || "cut");
+            var kLay = this.addLayerRow(pLay, "Kiss-cut", init.kissActive || false, init.kissName || "");
+
+            // FOOTER
+            var grpB = w.add("group"); grpB.alignment = "right"; grpB.spacing = 20;
+            var btnCan = grpB.add("button", undefined, "Zru\u0161it", {name: "cancel"});
+            var btnOk = grpB.add("button", undefined, "Generovat data", {name: "ok"});
+            btnOk.preferredSize = [150, 40];
+
+            // LOGIC
+            function update() {
+                var m = dMode.selection.text;
+                var isZ = (m === "ZUND");
+
+                // Toggle Rows/Panels
+                rGapGZ.group.visible = isZ;
+                pFeed.visible = !isZ;
+                
+                // Defaults Logic (Only if changing modes logic needed? Keeping explicit defaults mostly)
+                // User requirement: Zund defaults Thru checked, Summa defaults Kiss checked.
+                // We do this logic mainly on Init, or we force it? 
+                // Let's implement simplified "Smart Defaults" purely visual, keeping user inputs.
+                // Actually, Step 1499 requested specific defaults per mode.
+                
+                w.layout.layout(true);
+            }
+
+            dMode.onChange = function() {
+                update();
+                // Apply defaults on mode switch
+                var m = dMode.selection.text;
+                if(m === "ZUND") {
+                    tLay.chk.value = true; tLay.inp.text = "cut";
+                    kLay.chk.value = false; kLay.inp.text = "";
+                } else {
+                    tLay.chk.value = false; tLay.inp.text = "";
+                    kLay.chk.value = true; kLay.inp.text = "cut";
+                }
+            };
+            
+            update();
+
+            if(w.show() == 1) {
+                var isZ = (dMode.selection.text === "ZUND");
+                return {
+                    mode: dMode.selection.text,
+                    gapInner: Number(rGapGZ.inp.text)||0, 
+                    gapOuter: Number(rGapZO.inp.text)||0,
+                    maxDist: Number(rMaxD.inp.text)||400,
+                    feedTop: (!isZ) ? Number(rFT.inp.text) : 0,
+                    feedBottom: (!isZ) ? Number(rFB.inp.text) : 0,
+                    drawRed: (!isZ) ? chRed.value : false,
+                    thruActive: tLay.chk.value, thruName: tLay.inp.text,
+                    kissActive: kLay.chk.value, kissName: kLay.inp.text,
+                    lockStates: {} 
+                };
+            }
+            return null;
+        },
+
+        addRow: function(p, lbl, val, id, init) {
+            var g = p.add("group"); g.alignment = "fill";
+            var st = g.add("statictext", undefined, lbl); st.preferredSize.width=140; // Fixed Width
+            var et = g.add("edittext", undefined, String(val)); et.preferredSize.width=60; // Fixed Width
+            g.add("statictext", undefined, "mm");
+            var btn = g.add("button", undefined, "\uD83D\uDD12"); btn.size=[25,25];
+            et.enabled=true; 
+            btn.onClick=function(){ et.enabled=!et.enabled; };
+            return { inp:et, group:g };
+        },
+
+        addLayerRow: function(p, title, defChk, defTxt) {
+            var g = p.add("group"); g.alignment="fill";
+            var c = g.add("checkbox", undefined, title); c.value = defChk; c.preferredSize.width=100;
+            var t = g.add("edittext", undefined, defTxt); t.preferredSize.width=140;
+            return { chk:c, inp:t };
+        }
+    },
+
+    // --- 5. DRAW ENGINE ---
+    Draw: {
+        getBounds: function() {
+            app.executeMenuCommand('selectall'); var sel = app.activeDocument.selection; if(!sel || sel.length===0) return null;
+            var b=[Infinity,-Infinity,-Infinity,Infinity], f=false;
+            for(var i=0; i<sel.length; i++){
+                if(sel[i].layer && sel[i].layer.name==="Regmarks") continue;
+                var g=sel[i].geometricBounds;
+                if(sel[i].typename==="GroupItem" && sel[i].clipped){
+                    for(var j=0; j<sel[i].pageItems.length; j++) if(sel[i].pageItems[j].clipping){ g=sel[i].pageItems[j].geometricBounds; break;}
+                }
+                if(g){ b[0]=Math.min(b[0],g[0]); b[1]=Math.max(b[1],g[1]); b[2]=Math.max(b[2],g[2]); b[3]=Math.min(b[3],g[3]); f=true; }
+            }
+            app.activeDocument.selection=null; return f?b:null;
+        },
+
+        render: function(geo, s) {
+            var doc=app.activeDocument;
+            for(var i=0;i<doc.layers.length;i++){ doc.layers[i].locked=false; doc.layers[i].visible=true; }
+            doc.artboards[0].artboardRect = geo.ab;
+            
+            var reg = this.getLay("Regmarks"); reg.zOrder(ZOrderMethod.BRINGTOFRONT);
+            var refLayer = reg; 
+
+            // Layer Mapping - Thru-cut
+            if(s.thruActive && s.thruName) {
+                var thru = this.getLay("Thru-cut"); 
+                var hit = this.movePaths(thru, [s.thruName]);
+                if(!hit) geo.warnings.push("Nenalezena barva pro Thru-cut: " + s.thruName);
+                thru.move(refLayer, ElementPlacement.PLACEAFTER);
+                refLayer = thru;
+            }
+
+            // Layer Mapping - Kiss-cut
+            if(s.kissActive && s.kissName) {
+                var kiss = this.getLay("Kiss-cut");
+                var hit = this.movePaths(kiss, [s.kissName]);
+                if(!hit) geo.warnings.push("Nenalezena barva pro Kiss-cut: " + s.kissName);
+                kiss.move(refLayer, ElementPlacement.PLACEAFTER);
+            }
+
+            var col = this.getCol(); doc.activeLayer = reg;
+            
+            // Draw Marks
+            var rZ = PMA.Core.mm2pt(PMA.Config.zundSize/2);
+            for(var z=0; z<geo.marksZ.length; z++){ var m=geo.marksZ[z]; var c=reg.pathItems.ellipse(m.cy+rZ, m.cx-rZ, rZ*2, rZ*2); c.fillColor=col; c.stroked=false; }
+            
+            var rS = PMA.Core.mm2pt(PMA.Config.summaSize/2);
+            for(var sm=0; sm<geo.marksS.length; sm++){ var m=geo.marksS[sm]; var q=reg.pathItems.rectangle(m.cy+rS, m.cx-rS, rS*2, rS*2); q.fillColor=col; q.stroked=false; }
+            
+            if(geo.barS){ var l=reg.pathItems.add(); l.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]); l.strokeColor=col; l.strokeWidth=geo.barS.w; l.filled=false; }
+            
+            // Standardize Bottom Layer (Graphics) and Draw Red Lines
+            var gfxLayer = doc.layers[doc.layers.length-1];
+            if(gfxLayer.name !== "Regmarks") {
+                gfxLayer.name = "Graphics";
+                gfxLayer.locked = false;
+                gfxLayer.visible = true;
+                gfxLayer.zOrder(ZOrderMethod.SENDTOBACK);
+                
+                if(geo.red.length > 0) {
+                    var red=new CMYKColor(); red.magenta=100; red.yellow=100;
+                    for(var r=0; r<geo.red.length; r++){ 
+                        var p=gfxLayer.pathItems.add(); 
+                        p.setEntirePath([[geo.red[r].x1, geo.red[r].y1], [geo.red[r].x2, geo.red[r].y2]]); 
+                        p.strokeColor=red; p.strokeWidth=geo.red[r].w; p.filled=false; 
+                    }
+                }
+            }
+            
+            if(geo.warnings.length) alert(geo.warnings.join("\n"));
+        },
+
+        getLay: function(n){ try{return app.activeDocument.layers.getByName(n);}catch(e){ var l=app.activeDocument.layers.add(); l.name=n; return l;} },
+        movePaths: function(t, names) {
+            var items=app.activeDocument.pathItems, found=false;
+            for(var i=items.length-1; i>=0; i--){ var m=false;
+                for(var n=0; n<names.length; n++){
+                    var s=names[n].toLowerCase();
+                    try{if(items[i].strokeColor.spot.name.toLowerCase()===s) m=true;}catch(e){}
+                    if(!m) try{if(items[i].fillColor.spot.name.toLowerCase()===s) m=true;}catch(e){}
+                }
+                if(m){ items[i].move(t, ElementPlacement.PLACEATEND); found=true; }
+            } return found;
+        },
+        getCol: function(){ try{return app.activeDocument.swatches.getByName("[Registration]").color;}catch(e){var b=new CMYKColor(); b.black=100; return b;} }
+    },
+
+    Main: function() {
+        try {
+            if(app.documents.length===0){ alert("Nen\u00ED otev\u0159en\u00FD dokument."); return; }
+            app.activeDocument.rulerOrigin=[0,0];
+            var settings = PMA.Storage.load() || PMA.Config.getDefaults();
+            var res = PMA.UI.show(settings); if(!res) return;
+            PMA.Storage.save(res);
+            var bounds = PMA.Draw.getBounds(); if(!bounds){ alert("Nic nen\u00ED vybr\u00E1no."); return; }
+            var geo = PMA.Core.calculateAll(res, bounds);
+            PMA.Draw.render(geo, res);
+        } catch(e) { alert("ERROR: " + e.message + " (line " + e.line + ")"); }
+    }
+};
+
+PMA.Main();
