@@ -4,13 +4,11 @@ Sada nástrojů v jazyce JavaScript (.jsx) pro automatizaci předtiskové příp
 
 ## Skripty
 
-### 1. Echo & Zund Registration Marks (`Echo_Zund_Marks.jsx`)
-- Automatická příprava dat pro řezací stoly **iEcho (iBrightCut)** a **Zund**
-- Upravuje velikost plátna (Artboard) podle grafiky s přídavkem 25 mm
-- Generuje 5mm registrační značky v bezpečném rozložení **10-5-10** (10 mm okraj – 5 mm značka – 10 mm mezera ke grafice)
-- Přidává 5. asymetrickou značku pro kontrolu orientace (prevence otočení o 180°)
-- Automaticky vkládá průběžné značky u dlouhých tisků (> 500 mm) pro korekci deformace materiálu
-- Třídí vrstvy na `REGMARKS`, `CUT` (ořezové cesty) a tisková data
+### 1. Zund Registration Marks (`Illustrator_Zund_Marks.jsx`)
+- *Starší verze / Legacy skript pouze pro Zund.*
+- Automatická příprava dat pro řezací stoly **Zund**.
+- Generuje 5mm registrační značky v bezpečném rozložení **10-5-10**.
+- Třídí vrstvy na `REGMARKS`, `CUT` a tisková data.
 
 ### 2. Batch Relink & Export (`Batch_Relink_Export.jsx`)
 - Hromadné vkládání PDF souborů do připravené šablony (impozice)
@@ -20,14 +18,13 @@ Sada nástrojů v jazyce JavaScript (.jsx) pro automatizaci předtiskové příp
 - Možnost nastavení prefixu výstupních souborů
 - Detailní reportování chyb a progress bar
 
-### 3. Zund & Summa Automation (`Echo_Zund_Summa_v26.jsx`)
-*Nový sloučený skript (v26.3)*
-
-- **Podpora strojů:** Integrovaná podpora pro ZUND (kruhové značky 5mm) a SUMMA (čtvercové značky 3mm).
+### 3. Zund & Summa Automation (`Illustrator_Zund_Summa_Marks.jsx`)
+- **Komplexní automatizace** pro řezací stoly **ZUND (Desky)** a **SUMMA (Role/OPOS)**.
 - **Inteligentní UI:** Jedno okno (350px) s dynamickým přepínáním voleb podle zvoleného stroje.
 - **Layer Engine:** Automatická správa vrstev `Regmarks`, `Thru-cut`, `Kiss-cut`.
 - **Logic:** Výpočet Artboardu na základě pozice značek (fixace grafiky proti posunu).
 - **Features:**
+  - Obsahuje správu vrstev, Feed logiku a Red Lines.
   - Asymetrická značka pro kontrolu rotace.
   - Generování OPOS Bar pro Summu.
   - Automatické přejmenování spodní vrstvy na `Graphics`.

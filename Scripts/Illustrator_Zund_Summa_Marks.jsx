@@ -1,5 +1,5 @@
 /*
-  Script: Zund_Summa_v26.jsx
+  Script: Illustrator_Zund_Summa_Marks.jsx
   Version: v26.0.0-RC1
   Description: Expert registration marks generator for ZUND and SUMMA hardware.
   Compliance: PROJECT_CHARTER.md v26.2.3
@@ -13,7 +13,7 @@ if(typeof JSON!=="object"){JSON={};(function(){var rx_one=/^[\],:{}\s]*$/,rx_two
 var PMA = {
     // --- 1. CONFIGURATION ---
     Config: {
-        scriptName: "Zund & Summa v26.0 RC1",
+        scriptName: "Zund & Summa Automation",
         zundSize: 5,         
         summaSize: 3,
         orientDist: 100,     

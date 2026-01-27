@@ -1,7 +1,6 @@
-# PROJECT CHARTER: Zund & Summa Automation (v26.3 As-Built)
-
+# PROJECT CHARTER: Zund & Summa Automation
 > **Status:** Released (As-Built Specification)
-> **Verze Skriptu:** v26.3.0 / v26.0.0-RC1
+> **Skript:** Illustrator_Zund_Summa_Marks.jsx (v26.3)
 > **Platforma:** Adobe Illustrator (ExtendScript ES3)
 
 ---
