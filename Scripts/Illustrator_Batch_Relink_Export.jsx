@@ -32,7 +32,10 @@ function main() {
             } else {
                 selected = File.openDialog("Vyberte soubor:", fileExtension);
             }
-            if (selected) { pathField.text = decodeURI(selected.fsName); }
+            if (selected) { 
+                // FIX: Nepouzivat decodeURI na fsName, vraci systemovou cestu, ktera neni URI encoded
+                pathField.text = selected.fsName; 
+            }
         }
         return pathField;
     }
@@ -57,15 +60,42 @@ function main() {
     prefixGroup.add("statictext", [0, 0, 150, 20], "Prefix výstupního souboru:");
     var prefixInput = prefixGroup.add("edittext", [0, 0, 100, 20], "arch_");
 
-    // PDF Preset
+    // PDF Preset - Načtení ze systému
     var presetGroup = configPanel.add("group");
-    presetGroup.add("statictext", [0, 0, 150, 20], "Název PDF Presetu:");
-    var presetInput = presetGroup.add("edittext", [0, 0, 200, 20], "[Tisková kvalita]"); 
+    presetGroup.add("statictext", [0, 0, 150, 20], "PDF Preset:");
+    var presetDropdown = presetGroup.add("dropdownlist", [0, 0, 200, 20]);
     
-    // Tlačítka
+    var pdfPresets = [];
+    try {
+        pdfPresets = app.PDFPresetsList;
+    } catch(e) {
+        pdfPresets = ["[Tisková kvalita]", "[Nejmenší velikost souboru]"]; // Fallback
+    }
+
+    for (var i = 0; i < pdfPresets.length; i++) {
+        presetDropdown.add("item", pdfPresets[i]);
+    }
+    
+    // Vybrat default nebo první
+    if (pdfPresets.length > 0) {
+        var defaultIndex = 0;
+        for (var i = 0; i < pdfPresets.length; i++) {
+            if (pdfPresets[i].indexOf("High Quality") !== -1 || pdfPresets[i].indexOf("Tisková kvalita") !== -1) {
+                defaultIndex = i;
+                break;
+            }
+        }
+        presetDropdown.selection = defaultIndex;
+    } 
+    
+    // Tlačítka (Zarovnání doprava, macOS pořadí: Zrušit -> Akce)
     var buttonGroup = dialog.add("group");
-    buttonGroup.add("button", undefined, "Spustit", {name: "ok"});
+    buttonGroup.orientation = "row";
+    buttonGroup.alignChildren = ["right", "center"];
+    buttonGroup.margins = [0, 10, 0, 0]; // Odstup od formuláře
+
     buttonGroup.add("button", undefined, "Zrušit", {name: "cancel"});
+    buttonGroup.add("button", undefined, "Spustit", {name: "ok"});
 
     // Zobrazení dialogu a kontrola zrušení
     if (dialog.show() == 2) {
@@ -79,7 +109,13 @@ function main() {
     var sourceFolder = new Folder(sourcePath.text);
     var outputFolder = new Folder(outputPath.text);
     var prefix = prefixInput.text;
-    var preset = presetInput.text;
+    var preset = "";
+    if (presetDropdown.selection) {
+        preset = presetDropdown.selection.text;
+    } else {
+        // Fallback pokud by user nejak odvybral (coz u dropdownu nejde snadno, ale pro jistotu)
+         preset = presetDropdown.text; 
+    }
 
     if (!templateFile.exists || !templateFile.name.match(/\.ai$/i)) {
         alert("Chyba: Neplatná šablona AI."); return;
@@ -91,7 +127,7 @@ function main() {
         alert("Chyba: Výstupní složka neexistuje."); return;
     }
     if (preset === "") {
-        alert("Chyba: Název PDF Presetu nesmí být prázdný."); return;
+        alert("Chyba: Musíte vybrat PDF Preset."); return;
     }
 
     var pdfFiles = sourceFolder.getFiles("*.pdf");
@@ -121,7 +157,8 @@ function main() {
 
     for (var i = 0; i < totalFiles; i++) {
         var currentFile = pdfFiles[i];
-        var sourceFileName = decodeURI(currentFile.name);
+        // FIX: displayName je bezpečnější, fallback na decodeURI(name) jen pokud displayName neexistuje
+        var sourceFileName = currentFile.displayName ? currentFile.displayName : decodeURI(currentFile.name);
         
         statusText.text = "Zpracovávám: " + sourceFileName + " (" + (i + 1) + " z " + totalFiles + ")";
         progressBar.value = i;
@@ -200,22 +237,35 @@ function main() {
         }
     }
     
-    // --- 4. FINÁLNÍ ZPRÁVA ---
+    // --- 4. FINÁLNÍ ZPRÁVA (Scrollable Log) ---
     
     progressBar.value = totalFiles;
     progressDialog.close();
 
     app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
 
-    var summaryMessage = "Zpracování dokončeno!\n\n" +
-                         "Úspěšně zpracováno: " + successCount + "\n" +
-                         "Chyby: " + errorCount;
+    var logWindow = new Window("dialog", "Výsledek Zpracování");
+    logWindow.orientation = "column";
+    logWindow.alignChildren = ["fill", "fill"];
+
+    var summaryText = "Zpracování dokončeno!\n" +
+                      "Úspěšně zpracováno: " + successCount + "\n" +
+                      "Chyby: " + errorCount + "\n";
     
     if (errorCount > 0) {
-        summaryMessage += "\n\nDetaily chyb:\n" + errors.join("\n");
+        summaryText += "\n--- Detaily chyb ---\n" + errors.join("\n");
+    } else {
+        summaryText += "\nVše proběhlo bez chyb.";
     }
 
-    alert(summaryMessage);
+    // Scrollable text area
+    var logBox = logWindow.add("edittext", undefined, summaryText, {multiline: true, scrolling: true, readonly: true});
+    logBox.preferredSize = [500, 300]; // Fixní velikost okna
+
+    var closeBtn = logWindow.add("button", undefined, "Zavřít");
+    closeBtn.onClick = function() { logWindow.close(); };
+
+    logWindow.show();
 }
 
 // Spustit skript
