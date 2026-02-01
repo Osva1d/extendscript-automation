@@ -333,15 +333,44 @@ var PMA = {
 
         getLay: function(n){ try{return app.activeDocument.layers.getByName(n);}catch(e){ var l=app.activeDocument.layers.add(); l.name=n; return l;} },
         movePaths: function(t, names) {
-            var items=app.activeDocument.pathItems, found=false;
-            for(var i=items.length-1; i>=0; i--){ var m=false;
-                for(var n=0; n<names.length; n++){
-                    var s=names[n].toLowerCase();
-                    try{if(items[i].strokeColor.spot.name.toLowerCase()===s) m=true;}catch(e){}
-                    if(!m) try{if(items[i].fillColor.spot.name.toLowerCase()===s) m=true;}catch(e){}
+            var items = app.activeDocument.pathItems;
+            var snapshot = [];
+            
+            // 1. Snapshot Pattern: Collect references first to avoid Live Collection Trap
+            for (var i = 0; i < items.length; i++) {
+                snapshot.push(items[i]);
+            }
+
+            var found = false;
+            for (var i = 0; i < snapshot.length; i++) {
+                var item = snapshot[i];
+                var m = false;
+                
+                // 2. Performance Optimization: Eliminate try-catch in loop
+                for (var n = 0; n < names.length; n++) {
+                    var s = names[n].toLowerCase();
+                    
+                    // Check Stroke
+                    if (item.stroked && item.strokeColor.typename === "SpotColor") {
+                         if (item.strokeColor.spot.name.toLowerCase() === s) m = true;
+                    }
+                    
+                    // Check Fill (if not already matched)
+                    if (!m && item.filled && item.fillColor.typename === "SpotColor") {
+                        if (item.fillColor.spot.name.toLowerCase() === s) m = true;
+                    }
                 }
-                if(m){ items[i].move(t, ElementPlacement.PLACEATEND); found=true; }
-            } return found;
+
+                if (m) {
+                    try {
+                        item.move(t, ElementPlacement.PLACEATEND);
+                        found = true;
+                    } catch(e) {
+                         // Fallback for rare cases where item might have become invalid
+                    }
+                }
+            }
+            return found;
         },
         getCol: function(){ try{return app.activeDocument.swatches.getByName("[Registration]").color;}catch(e){var b=new CMYKColor(); b.black=100; return b;} }
     },
