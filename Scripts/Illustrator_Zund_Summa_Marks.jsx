@@ -40,8 +40,7 @@ var PMA = {
                 mode: "ZUND", gapInner: 10, gapOuter: 0, maxDist: 400,
                 feedTop: 70, feedBottom: 50, drawRed: false,
                 thruActive: true, thruName: "cut",
-                kissActive: false, kissName: "",
-                lockStates: {}
+                kissActive: false, kissName: ""
             };
         }
     },
@@ -163,16 +162,16 @@ var PMA = {
             var pGeo = w.add("panel", undefined, "2. Nastaven\u00ED mezer");
             pGeo.alignChildren = ["fill", "top"]; pGeo.margins=15; pGeo.spacing=10;
             
-            var rGapGZ = this.addRow(pGeo, l.gapGZ, init.gapInner, "gapInner", init);
-            var rGapZO = this.addRow(pGeo, l.gapZO, init.gapOuter, "gapOuter", init);
-            var rMaxD  = this.addRow(pGeo, l.maxDist, init.maxDist, "maxDist", init);
+            var rGapGZ = this.addRow(pGeo, l.gapGZ, init.gapInner, "gapInner", init, "Vzd\u00E1lenost zna\u010Dek od \u010Dist\u00E9ho form\u00E1tu (grafiky).");
+            var rGapZO = this.addRow(pGeo, l.gapZO, init.gapOuter, "gapOuter", init, "Vzd\u00E1lenost zna\u010Dek od okraje artboardu.");
+            var rMaxD  = this.addRow(pGeo, l.maxDist, init.maxDist, "maxDist", init, "Maxim\u00E1ln\u00ED rozestup mezi zna\u010Dkami (automaticky se vlo\u017E\u00ED dal\u0161\u00ED).");
 
             // PANEL 3: FEED (Summa Only)
             var pFeed = w.add("panel", undefined, "3. Nastaven\u00ED role (Feed)");
             pFeed.alignChildren = ["fill", "top"]; pFeed.margins=15; pFeed.spacing=10;
             
-            var rFT = this.addRow(pFeed, l.feedTop, init.feedTop, "feedTop", init);
-            var rFB = this.addRow(pFeed, l.feedBottom, init.feedBottom, "feedBottom", init);
+            var rFT = this.addRow(pFeed, l.feedTop, init.feedTop, "feedTop", init, "Horn\u00ED okraj pro chycen\u00ED do stroje (Feed).");
+            var rFB = this.addRow(pFeed, l.feedBottom, init.feedBottom, "feedBottom", init, "Spodn\u00ED okraj pro chycen\u00ED do stroje (Feed).");
             var chRed = pFeed.add("checkbox", undefined, l.redLines); chRed.value = init.drawRed;
 
             // PANEL 4: LAYERS (Merged)
@@ -186,7 +185,7 @@ var PMA = {
             var grpB = w.add("group"); grpB.alignment = "right"; grpB.spacing = 20;
             var btnCan = grpB.add("button", undefined, "Zru\u0161it", {name: "cancel"});
             var btnOk = grpB.add("button", undefined, "Generovat data", {name: "ok"});
-            btnOk.preferredSize = [150, 40];
+            // btnOk.preferredSize removed for standard UI consistency
 
             // LOGIC
             function update() {
@@ -232,21 +231,20 @@ var PMA = {
                     feedBottom: (!isZ) ? Number(rFB.inp.text) : 0,
                     drawRed: (!isZ) ? chRed.value : false,
                     thruActive: tLay.chk.value, thruName: tLay.inp.text,
-                    kissActive: kLay.chk.value, kissName: kLay.inp.text,
-                    lockStates: {} 
+                    kissActive: kLay.chk.value, kissName: kLay.inp.text
                 };
             }
             return null;
         },
 
-        addRow: function(p, lbl, val, id, init) {
+        addRow: function(p, lbl, val, id, init, tip) {
             var g = p.add("group"); g.alignment = "fill";
             var st = g.add("statictext", undefined, lbl); st.preferredSize.width=140; // Fixed Width
+            if(tip) st.helpTip = tip;
             var et = g.add("edittext", undefined, String(val)); et.preferredSize.width=60; // Fixed Width
+            if(tip) et.helpTip = tip;
             g.add("statictext", undefined, "mm");
-            var btn = g.add("button", undefined, "\uD83D\uDD12"); btn.size=[25,25];
-            et.enabled=true; 
-            btn.onClick=function(){ et.enabled=!et.enabled; };
+            // Lock button removed per user request (useless persistence)
             return { inp:et, group:g };
         },
 
