@@ -1,12 +1,11 @@
 /*
-  Script: Automatizace pro ECHO/ZUND - Board Workflow (v9 - Commented)
+  Script: Automatizace pro ECHO/ZUND - Board Workflow (v10 - Intuitive Config)
   Popis: Vytváří ořezové značky, třídí vrstvy a upravuje velikost plátna.
 */
 
 // @target illustrator
 
 function main() {
-    // Kontrola otevřeného dokumentu
     if (app.documents.length === 0) {
         alert("Není otevřený žádný dokument.");
         return;
@@ -14,128 +13,112 @@ function main() {
 
     var doc = app.activeDocument;
 
-    // =========================================================================
-    //  NASTAVENÍ - ZDE MŮŽETE MĚNIT PARAMETRY
-    // =========================================================================
-    
-    // 1. VELIKOST ZNAČKY
-    // Průměr registrační tečky v mm. Standard pro iEcho/Zund je 5-6mm.
-    var markDiameterMm = 5;       
-    
-    // 2. POZICE ZNAČKY OD KRAJE MÉDIA (STŘED ZNAČKY)
-    // Určuje, jak daleko bude střed značky od okraje papíru/řezu.
-    // Příklad: Pokud chcete 10mm čistého místa a značka má poloměr 2.5mm,
-    // nastavte zde 12.5 (10 + 2.5).
-    var markFromEdgeMm = 12.5;    
+    try {
+        // =====================================================================
+        //  NASTAVENÍ (ECHO/ZUND Board Workflow)
+        // =====================================================================
+        var CFG = {
+            MARK_DIAMETER: 5,        // Průměr značky (mm)
+            GAP_GRAPHIC: 10,       // Mezera: Grafika -> Značka (mm)
+            GAP_EDGE: 10,          // Mezera: Značka -> Okraj média (mm)
+            MAX_DIST: 500,         // Max vzdálenost mezi značkami (mm)
+            ORIENT_GAP: 100,       // Mezera pro orientační bod (mm)
+            CUT_COLOR_NAME: "Cut"  // Název spot barvy pro přesun do vrstvy CUT
+        };
+        // =====================================================================
 
-    // 3. CELKOVÝ OKRAJ (PADDING)
-    // O kolik mm se má zvětšit plátno na každou stranu od vaší grafiky.
-    // Toto číslo musí být VĚTŠÍ než 'markFromEdgeMm'.
-    // Rozdíl mezi 'totalPaddingMm' a 'markFromEdgeMm' určuje mezeru mezi grafikou a značkou.
-    // Příklad: 25 - 12.5 = 12.5mm (vzdálenost středu značky od grafiky).
-    var totalPaddingMm = 25;      
-    
-    // 4. PRŮBĚŽNÉ ZNAČKY (INTERMEDIATE MARKS)
-    // Maximální vzdálenost mezi značkami v mm.
-    // Pokud je strana delší než toto číslo, skript přidá další značky.
-    // Nastavte např. 300 pro značku každých 30cm.
-    // Nastavte 9000 pro vypnutí této funkce.
-    var maxDistanceMm = 500; 
+        // 0. VALIDACE BAREV
+        try {
+            doc.spots.getByName(CFG.CUT_COLOR_NAME);
+        } catch (e) {
+            // Pouze upozornění, neblokuje běh (uživatel možná barvu teprve vytvoří)
+            // alert("Upozornění: Barva '" + CFG.CUT_COLOR_NAME + "' nebyla v dokumentu nalezena.");
+        }
 
-    // 5. ORIENTAČNÍ BOD (ASYMETRIE)
-    // Vzdálenost 5. značky od startovního bodu (Levý dolní roh) směrem doprava.
-    var orientationDistMm = 100;
+        // --- PŘEPOČET JEDNOTEK (mm -> pt) ---
+        var mm2pt = 2.834645;
+        var markRadiusPt = (CFG.MARK_DIAMETER / 2) * mm2pt;
+        var paddingPt = (CFG.GAP_GRAPHIC + CFG.MARK_DIAMETER + CFG.GAP_EDGE) * mm2pt;
+        var markOffsetPt = (CFG.GAP_EDGE + (CFG.MARK_DIAMETER / 2)) * mm2pt;
+        var orientDistPt = (CFG.ORIENT_GAP + CFG.MARK_DIAMETER) * mm2pt;
+        var maxDistPts = CFG.MAX_DIST * mm2pt;
 
-    // 6. NÁZEV BARVY PRO OŘEZ
-    // Skript hledá tahy (stroke) s touto přímou barvou a přesouvá je do vrstvy CUT.
-    var spotColorName = "Cut";    
+        // 1. PŘÍPRAVA (Unlock & Measure)
+        unlockAllLayers(doc);
+        doc.selection = null;
+        app.executeMenuCommand('unlockAll');
+        app.executeMenuCommand('selectall');
+        
+        var sel = doc.selection;
+        if (sel.length === 0) {
+            alert("Dokument je prázdný.");
+            return;
+        }
 
-    // =========================================================================
-    //  KONEC NASTAVENÍ - NÍŽE UŽ NENÍ TŘEBA ZASAHOVAT
-    // =========================================================================
+        var bounds = getSmartBounds(sel);
+        doc.selection = null; 
 
-    var mm2pt = 2.834645;
-    var padding = totalPaddingMm * mm2pt;
-    var markOffset = markFromEdgeMm * mm2pt;
-    var markRadius = (markDiameterMm * mm2pt) / 2;
-    var orientDist = orientationDistMm * mm2pt;
-    var maxDistPts = maxDistanceMm * mm2pt;
+        if (!bounds) {
+            alert("Nepodařilo se zaměřit grafiku.");
+            return;
+        }
 
-    // 1. PŘÍPRAVA (Unlock & Measure)
-    unlockAllLayers(doc);
-    doc.selection = null;
-    app.executeMenuCommand('unlockAll');
-    app.executeMenuCommand('selectall');
-    
-    var sel = doc.selection;
-    if (sel.length === 0) {
-        alert("Dokument je prázdný.");
-        return;
+        // 2. NASTAVENÍ ARTBOARDU
+        var abLeft = bounds[0] - paddingPt;
+        var abTop = bounds[1] + paddingPt;
+        var abRight = bounds[2] + paddingPt;
+        var abBottom = bounds[3] - paddingPt;
+
+        var newRect = [abLeft, abTop, abRight, abBottom];
+        doc.artboards[0].artboardRect = newRect;
+
+        // 3. PŘESUN VRSTEV
+        var layerReg = getOrCreateLayer(doc, "REGMARKS");
+        var layerCut = getOrCreateLayer(doc, "CUT");
+        
+        layerReg.zOrder(ZOrderMethod.BRINGTOFRONT);
+        layerCut.zOrder(ZOrderMethod.BRINGTOFRONT);
+        layerCut.move(layerReg, ElementPlacement.PLACEAFTER);
+        
+        processCutPaths(doc, layerCut, CFG.CUT_COLOR_NAME);
+
+        // 4. VÝPOČET A VYKRESLENÍ ZNAČEK
+        doc.activeLayer = layerReg;
+        var regColor = getRegistrationColor();
+
+        // Středy značek (odsazené od kraje plátna)
+        var xL = newRect[0] + markOffsetPt;
+        var xR = newRect[2] - markOffsetPt;
+        var yT = newRect[1] - markOffsetPt;
+        var yB = newRect[3] + markOffsetPt;
+
+        var pLB = [xL, yB]; 
+        var pLT = [xL, yT];
+        var pRT = [xR, yT];
+        var pRB = [xR, yB];
+
+        // A) 4 Rohy
+        drawCircle(doc, pLB[0], pLB[1], markRadiusPt, regColor);
+        drawCircle(doc, pLT[0], pLT[1], markRadiusPt, regColor);
+        drawCircle(doc, pRT[0], pRT[1], markRadiusPt, regColor);
+        drawCircle(doc, pRB[0], pRB[1], markRadiusPt, regColor);
+
+        // B) Průběžné značky
+        if (CFG.MAX_DIST < 9999) {
+            drawIntermediate(doc, pLB, pLT, maxDistPts, markRadiusPt, regColor);
+            drawIntermediate(doc, pLT, pRT, maxDistPts, markRadiusPt, regColor);
+            drawIntermediate(doc, pRT, pRB, maxDistPts, markRadiusPt, regColor);
+            drawIntermediate(doc, pRB, pLB, maxDistPts, markRadiusPt, regColor);
+        }
+
+        // C) 5. Orientační značka (u pLB směrem doprava)
+        drawCircle(doc, pLB[0] + orientDistPt, pLB[1], markRadiusPt, regColor);
+
+        doc.selection = null;
+
+    } catch (e) {
+        alert("Chyba při běhu skriptu:\n" + e);
     }
-
-    var bounds = getSmartBounds(sel);
-    doc.selection = null; 
-
-    if (!bounds) {
-        alert("Nepodařilo se zaměřit grafiku.");
-        return;
-    }
-
-    // 2. NASTAVENÍ ARTBOARDU
-    var abLeft = bounds[0] - padding;
-    var abTop = bounds[1] + padding;
-    var abRight = bounds[2] + padding;
-    var abBottom = bounds[3] - padding;
-
-    var newRect = [abLeft, abTop, abRight, abBottom];
-    doc.artboards[0].artboardRect = newRect;
-
-    // 3. PŘESUN VRSTEV
-    var layerReg = getOrCreateLayer(doc, "REGMARKS");
-    var layerCut = getOrCreateLayer(doc, "CUT");
-    
-    layerReg.zOrder(ZOrderMethod.BRINGTOFRONT);
-    layerCut.zOrder(ZOrderMethod.BRINGTOFRONT);
-    layerCut.move(layerReg, ElementPlacement.PLACEAFTER);
-    
-    processCutPaths(doc, layerCut, spotColorName);
-
-    // 4. VÝPOČET A VYKRESLENÍ ZNAČEK
-    doc.activeLayer = layerReg;
-    var regColor = getRegistrationColor();
-
-    var rLeft = newRect[0];
-    var rTop = newRect[1];
-    var rRight = newRect[2];
-    var rBottom = newRect[3];
-
-    // Souřadnice pro značky (odsazené od kraje dovnitř)
-    var xL = rLeft + markOffset;
-    var xR = rRight - markOffset;
-    var yT = rTop - markOffset;
-    var yB = rBottom + markOffset;
-
-    var pLB = [xL, yB]; // Start Point
-    var pLT = [xL, yT];
-    var pRT = [xR, yT];
-    var pRB = [xR, yB];
-
-    // A) 4 Rohy
-    drawCircle(doc, pLB[0], pLB[1], markRadius, regColor);
-    drawCircle(doc, pLT[0], pLT[1], markRadius, regColor);
-    drawCircle(doc, pRT[0], pRT[1], markRadius, regColor);
-    drawCircle(doc, pRB[0], pRB[1], markRadius, regColor);
-
-    // B) Průběžné značky
-    drawIntermediate(doc, pLB, pLT, maxDistPts, markRadius, regColor);
-    drawIntermediate(doc, pLT, pRT, maxDistPts, markRadius, regColor);
-    drawIntermediate(doc, pRT, pRB, maxDistPts, markRadius, regColor);
-    drawIntermediate(doc, pRB, pLB, maxDistPts, markRadius, regColor);
-
-    // C) 5. Orientační značka
-    drawCircle(doc, pLB[0] + orientDist, pLB[1], markRadius, regColor);
-
-    doc.selection = null;
 }
 
 // --- FUNKCE ---
