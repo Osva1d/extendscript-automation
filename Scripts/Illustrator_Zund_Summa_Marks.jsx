@@ -1,6 +1,6 @@
 /*
   Script: Illustrator_Zund_Summa_Marks_Refactor.jsx
-  Generated: Tue Feb  3 23:27:37 CET 2026
+  Generated: Tue Feb  3 23:42:29 CET 2026
   Description: Modular refactor of Zund/Summa marks generator.
 */
 
@@ -251,8 +251,8 @@ var Core = {
         var abBot = markBotY - Utils.mm2pt(rMax) - Utils.mm2pt(feedB);
 
         var reqHalfW = Utils.pt2mm(gW/2) + outX + rMax + s.gapOuter;
-        var abW_mm = reqHalfW * 2; 
-        var abH_mm = Utils.pt2mm(abTop - abBot);
+        var abW_mm = Math.ceil(reqHalfW * 2); 
+        var abH_mm = Math.ceil(Utils.pt2mm(abTop - abBot));
         
         var finalW = Utils.mm2pt(abW_mm);
         var finalH = Utils.mm2pt(abH_mm);
