@@ -1,0 +1,32 @@
+INSTALACE SKRIPTU NA MACOS
+=========================
+
+Tento návod vás provede instalací skriptu Zund & Summa Marks do Adobe Illustratoru.
+
+1. UMISTENI SOUBORU
+-------------------
+Hlavní soubor skriptu je:
+Illustrator_Zund_Summa_Marks_Refactor.jsx
+
+2. INSTALACE DO MENU ILLUSTRATORU
+---------------------------------
+Aby se skript zobrazoval přímo v menu Soubor > Skripty, zkopírujte jej do následující složky:
+
+1. Otevřete Finder.
+2. Stiskněte Cmd + Shift + G a vložte cestu (upravte verzi a jazyk dle potřeby):
+   /Applications/Adobe Illustrator 2024/Presets/cs_CZ/Scripts/
+   (Nebo en_US pokud máte anglickou verzi).
+3. Vložte soubor Illustrator_Zund_Summa_Marks_Refactor.jsx do této složky.
+4. Restartujte Illustrator.
+
+3. RYCHLE SPUSTENI (BEZ INSTALACE)
+----------------------------------
+Pokud nechcete skript instalovat napevno:
+1. V Illustratoru jděte na Soubor > Skripty > Jiný skript... (Cmd + F12).
+2. Vyberte tento soubor a klikněte na Otevřít.
+
+DULEZITE POZNAMKY
+-----------------
+- Skript vyžaduje otevřený dokument.
+- Pokud máte zamknuté vrstvy, skript se je pokusí odemknout pro správný výpočet a kreslení.
+- Safe Zone se vytvoří v netisknutelné vrstvě Guide_Zone jako nativní vodítko.
