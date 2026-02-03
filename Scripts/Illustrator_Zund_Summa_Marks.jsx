@@ -1,6 +1,6 @@
 /*
   Script: Illustrator_Zund_Summa_Marks_Refactor.jsx
-  Generated: Tue Feb  3 10:18:38 CET 2026
+  Generated: Tue Feb  3 23:27:37 CET 2026
   Description: Modular refactor of Zund/Summa marks generator.
 */
 
@@ -244,31 +244,29 @@ var Core = {
         var markTopY = gT + Utils.mm2pt(outY); 
         var markBotY = gB - Utils.mm2pt(outY); 
         
-        var feedT = (s.mode !== "ZUND") ? s.feedTop : s.gapOuter + cfg.rulerBuffer;
-        var feedB = (s.mode !== "ZUND") ? s.feedBottom : s.gapOuter + cfg.rulerBuffer;
+        var feedT = (s.mode !== "ZUND") ? s.feedTop : s.gapOuter;
+        var feedB = (s.mode !== "ZUND") ? s.feedBottom : s.gapOuter;
         
         var abTop = markTopY + Utils.mm2pt(rMax) + Utils.mm2pt(feedT); 
         var abBot = markBotY - Utils.mm2pt(rMax) - Utils.mm2pt(feedB);
 
-        var reqHalfW = Utils.pt2mm(gW/2) + outX + rMax + s.gapOuter + cfg.rulerBuffer;
-        var abW_mm = Math.ceil(reqHalfW * 2); 
-        var abH_mm = Math.ceil(Utils.pt2mm(abTop - abBot));
+        var reqHalfW = Utils.pt2mm(gW/2) + outX + rMax + s.gapOuter;
+        var abW_mm = reqHalfW * 2; 
+        var abH_mm = Utils.pt2mm(abTop - abBot);
         
         var finalW = Utils.mm2pt(abW_mm);
         var finalH = Utils.mm2pt(abH_mm);
         
-        // v26.2.1 Fixed Rect Logic [L, T, R, B]
         var abRect;
         if (s.useArtboardBounds) {
-            // Fixed Mode: Artboard is the reference and does not change
             abRect = b; 
         } else {
-            // Auto Mode: Artboard expands to fit marks
+            // Auto Mode: Perfectly centered on selection
             abRect = [
                 gCx - finalW/2, 
-                abTop,
+                gCy + finalH/2,
                 gCx + finalW/2,
-                abTop - finalH
+                gCy - finalH/2
             ];
         }
 
@@ -336,8 +334,13 @@ var Core = {
 
 var Draw = {
     getBounds: function(s) {
+        var doc = app.activeDocument;
+        // Unlock all layers to ensure we capture all objects in the selection bounds
+        for(var i=0; i<doc.layers.length; i++){ doc.layers[i].locked=false; doc.layers[i].visible=true; }
+
         if (s && s.useArtboardBounds) {
-             return app.activeDocument.artboards[0].artboardRect;
+             var activeArtboard = doc.artboards[doc.artboards.getActiveArtboardIndex()];
+             return activeArtboard.artboardRect;
         }
         app.executeMenuCommand('selectall'); var sel = app.activeDocument.selection; if(!sel || sel.length===0) return null;
         var b=[Infinity,-Infinity,-Infinity,Infinity], f=false;
@@ -357,7 +360,8 @@ var Draw = {
         for(var i=0;i<doc.layers.length;i++){ doc.layers[i].locked=false; doc.layers[i].visible=true; }
         
         if (!s.useArtboardBounds) {
-             doc.artboards[0].artboardRect = geo.ab;
+             var activeIdx = doc.artboards.getActiveArtboardIndex();
+             doc.artboards[activeIdx].artboardRect = geo.ab;
         }
         
         var reg = this.getLay("Regmarks"); reg.zOrder(ZOrderMethod.BRINGTOFRONT);
