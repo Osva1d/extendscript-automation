@@ -1,6 +1,6 @@
 /*
   Script: Illustrator_Zund_Summa_Marks_Refactor.jsx
-  Generated: Wed Feb  4 18:22:44 CET 2026
+  Generated: Wed Feb  4 18:42:00 CET 2026
   Description: Modular refactor of Zund/Summa marks generator.
 */
 
@@ -168,6 +168,15 @@ var Utils = {
     mm2pt: function(mm) { return mm * 2.83464567; },
     pt2mm: function(pt) { return pt / 2.83464567; },
     
+    getSF: function() {
+        try {
+            if (app.documents.length === 0) return 1;
+            return app.activeDocument.scaleFactor || 1;
+        } catch(e) {
+            return 1;
+        }
+    },
+    
     // Logger stub for future enhancement
     log: function(msg) {
         // $.writeln(msg); // Omitted for production speed unless debug is on
@@ -224,14 +233,21 @@ var Config = {
 
 var Core = {
     calculateAll: function(s, b) {
-        var cfg = Config; // dependency
-        var rZ = cfg.zundSize / 2, rS = cfg.summaSize / 2;
+        var cfg = Config; 
+        var sf = Utils.getSF(); // Large Canvas handling (1.0 or 10.0)
         
-        var offSX = cfg.summaXCenter; 
-        var offSY = cfg.summaYVisual + rS; 
+        // Normalize physical constants by scaleFactor for Document Space
+        var rZ = (cfg.zundSize / 2) / sf;
+        var rS = (cfg.summaSize / 2) / sf;
+        var offSX = cfg.summaXCenter / sf; 
+        var offSY = (cfg.summaYVisual / sf) + rS; 
         
-        var offZX = (s.mode === "ZUND") ? (s.gapInner + rZ) : (offSX + rS + cfg.hybridGap + rZ);
-        var offZY = (s.mode === "ZUND") ? (s.gapInner + rZ) : (offSY + rS + cfg.hybridGap + rZ);
+        var gapI = s.gapInner / sf;
+        var gapO = s.gapOuter / sf;
+        var hGap = cfg.hybridGap / sf;
+        
+        var offZX = (s.mode === "ZUND") ? (gapI + rZ) : (offSX + rS + hGap + rZ);
+        var offZY = (s.mode === "ZUND") ? (gapI + rZ) : (offSY + rS + hGap + rZ);
 
         var outX = (s.mode !== "SUMMA") ? offZX : offSX;
         var outY = (s.mode !== "SUMMA") ? offZY : offSY;
@@ -244,24 +260,24 @@ var Core = {
         var markTopY = gT + Utils.mm2pt(outY); 
         var markBotY = gB - Utils.mm2pt(outY); 
         
-        var feedT = (s.mode !== "ZUND") ? s.feedTop : s.gapOuter;
-        var feedB = (s.mode !== "ZUND") ? s.feedBottom : s.gapOuter;
+        var feedT = (s.mode !== "ZUND") ? (s.feedTop / sf) : gapO;
+        var feedB = (s.mode !== "ZUND") ? (s.feedBottom / sf) : gapO;
         
         var abTop = markTopY + Utils.mm2pt(rMax) + Utils.mm2pt(feedT); 
         var abBot = markBotY - Utils.mm2pt(rMax) - Utils.mm2pt(feedB);
 
-        var reqHalfW = Utils.pt2mm(gW/2) + outX + rMax + s.gapOuter;
-        var abW_mm = Math.ceil(reqHalfW * 2); 
-        var abH_mm = Math.ceil(Utils.pt2mm(abTop - abBot));
+        // Required physical half-width in mm
+        var reqHalfW_mm = Utils.pt2mm(gW/2)*sf + (outX + rMax + gapO)*sf;
+        var abW_mm = Math.ceil(reqHalfW_mm * 2); 
+        var abH_mm = Math.ceil(Utils.pt2mm(abTop - abBot) * sf);
         
-        var finalW = Utils.mm2pt(abW_mm);
-        var finalH = Utils.mm2pt(abH_mm);
+        var finalW = Utils.mm2pt(abW_mm / sf);
+        var finalH = Utils.mm2pt(abH_mm / sf);
         
         var abRect;
         if (s.useArtboardBounds) {
             abRect = b; 
         } else {
-            // Auto Mode: Perfectly centered on selection
             abRect = [
                 gCx - finalW/2, 
                 gCy + finalH/2,
@@ -275,49 +291,43 @@ var Core = {
         if(s.mode !== "SUMMA") {
             var xL, xR, yT, yB;
             if(s.useArtboardBounds) {
-                // Fixed Mode: INWARDS from Artboard using GAP OUTER
-                // Distance from Edge to Mark Center = gapOuter + rZ
-                var distFromEdge = s.gapOuter + rZ;
+                var distFromEdge = gapO + rZ;
                 xL = gL + Utils.mm2pt(distFromEdge); xR = gR - Utils.mm2pt(distFromEdge);
                 yT = gT - Utils.mm2pt(distFromEdge); yB = gB + Utils.mm2pt(distFromEdge);
             } else {
-                // Auto Mode: OUTWARDS from Selection using GAP INNER (standard offZX)
                 xL = gL - Utils.mm2pt(offZX); xR = gR + Utils.mm2pt(offZX);
                 yT = gT + Utils.mm2pt(offZY); yB = gB - Utils.mm2pt(offZY);
             }
             
             res.marksZ.push({cx:xL, cy:yB}, {cx:xL, cy:yT}, {cx:xR, cy:yT}, {cx:xR, cy:yB});
-            res.marksZ.push({cx:xL + Utils.mm2pt(cfg.orientDist + cfg.zundSize), cy:yB});
-            this.addSteps(res.marksZ, xL, yB, xL, yT, Utils.mm2pt(s.maxDist));
-            this.addSteps(res.marksZ, xL, yT, xR, yT, Utils.mm2pt(s.maxDist));
-            this.addSteps(res.marksZ, xR, yT, xR, yB, Utils.mm2pt(s.maxDist));
-            this.addSteps(res.marksZ, xR, yB, xL, yB, Utils.mm2pt(s.maxDist));
+            res.marksZ.push({cx:xL + Utils.mm2pt((cfg.orientDist + cfg.zundSize)/sf), cy:yB});
+            this.addSteps(res.marksZ, xL, yB, xL, yT, Utils.mm2pt(s.maxDist/sf));
+            this.addSteps(res.marksZ, xL, yT, xR, yT, Utils.mm2pt(s.maxDist/sf));
+            this.addSteps(res.marksZ, xR, yT, xR, yB, Utils.mm2pt(s.maxDist/sf));
+            this.addSteps(res.marksZ, xR, yB, xL, yB, Utils.mm2pt(s.maxDist/sf));
         }
 
         if(s.mode !== "ZUND") {
             var xL, xR, yT, yB;
             if(s.useArtboardBounds) {
-                // Fixed Mode: INWARDS from Artboard using GAP OUTER
-                // For Summa, logic is complex, simplified to: GapOuter + rS
-                var distFromEdge = s.gapOuter + rS;
+                var distFromEdge = gapO + rS;
                 xL = gL + Utils.mm2pt(distFromEdge); xR = gR - Utils.mm2pt(distFromEdge);
                 yT = gT - Utils.mm2pt(distFromEdge); yB = gB + Utils.mm2pt(distFromEdge);
             } else {
-                // Auto Mode: OUTWARDS from Selection
                 xL = gL - Utils.mm2pt(offSX); xR = gR + Utils.mm2pt(offSX);
                 yT = gT + Utils.mm2pt(offSY); yB = gB - Utils.mm2pt(offSY);
             }
             
             res.marksS.push({cx:xL, cy:yB}, {cx:xL, cy:yT}, {cx:xR, cy:yT}, {cx:xR, cy:yB});
-            this.addSteps(res.marksS, xL, yB, xL, yT, Utils.mm2pt(s.maxDist));
-            this.addSteps(res.marksS, xR, yT, xR, yB, Utils.mm2pt(s.maxDist));
+            this.addSteps(res.marksS, xL, yB, xL, yT, Utils.mm2pt(s.maxDist/sf));
+            this.addSteps(res.marksS, xR, yT, xR, yB, Utils.mm2pt(s.maxDist/sf));
             
-            var barY = gB - Utils.mm2pt(11.5); 
-            res.barS = { x1: gL, x2: gR, y: barY, w: Utils.mm2pt(3) };
+            var barY = gB - Utils.mm2pt(11.5 / sf); 
+            res.barS = { x1: gL, x2: gR, y: barY, w: Utils.mm2pt(3 / sf) };
         }
 
         if(s.mode !== "ZUND" && s.drawRed) {
-            var sw = 1.0; 
+            var sw = cfg.redLineWidth / sf; 
             var half = sw/2;
             res.red.push({x1:abRect[0], y1:abRect[1]-half, x2:abRect[2], y2:abRect[1]-half, w:sw});
             res.red.push({x1:abRect[0], y1:abRect[3]+half, x2:abRect[2], y2:abRect[3]+half, w:sw});
@@ -335,29 +345,27 @@ var Core = {
 var Draw = {
     getBounds: function(s) {
         var doc = app.activeDocument;
-        // Unlock all layers to ensure we capture all objects in the selection bounds
+        var sf = Utils.getSF();
         for(var i=0; i<doc.layers.length; i++){ doc.layers[i].locked=false; doc.layers[i].visible=true; }
 
         if (s && s.useArtboardBounds) {
              var activeArtboard = doc.artboards[doc.artboards.getActiveArtboardIndex()];
              return activeArtboard.artboardRect;
         }
-        app.executeMenuCommand('selectall'); var sel = app.activeDocument.selection; if(!sel || sel.length===0) return null;
+        app.executeMenuCommand('selectall'); var sel = doc.selection; if(!sel || sel.length===0) return null;
         var b=[Infinity,-Infinity,-Infinity,Infinity], f=false;
         for(var i=0; i<sel.length; i++){
             if(sel[i].layer && sel[i].layer.name==="Regmarks") continue;
-            var g=sel[i].geometricBounds;
+            var g = sel[i].geometricBounds;
             if(sel[i].typename==="GroupItem" && sel[i].clipped){
-                // In Illustrator, the clipping mask is always the first item in the group
+                // Robust Mask Detection: In clipping groups, the mask is always top-most child
                 try {
                     g = sel[i].pageItems[0].geometricBounds;
-                } catch(e) {
-                    // Fallback to group bounds if mask access fails
-                }
+                } catch(e) {}
             }
             if(g){ b[0]=Math.min(b[0],g[0]); b[1]=Math.max(b[1],g[1]); b[2]=Math.max(b[2],g[2]); b[3]=Math.min(b[3],g[3]); f=true; }
         }
-        app.activeDocument.selection=null; return f?b:null;
+        doc.selection=null; return f?b:null;
     },
 
     render: function(geo, s) {
@@ -392,7 +400,8 @@ var Draw = {
         var col = this.getCol(); doc.activeLayer = reg;
         
         // Draw Marks
-        var zSize = Number(Config.zundSize) || 5.0; // Defensive check
+        var sf = Utils.getSF();
+        var zSize = (Number(Config.zundSize) || 5.0) / sf; 
         var rZ = Utils.mm2pt(zSize / 2);
         for(var z=0; z<geo.marksZ.length; z++){ 
             var m=geo.marksZ[z]; 
@@ -400,7 +409,7 @@ var Draw = {
             c.fillColor=col; c.stroked=false; 
         }
         
-        var sSize = Number(Config.summaSize) || 3.0; // Defensive check
+        var sSize = (Number(Config.summaSize) || 3.0) / sf; 
         var rS = Utils.mm2pt(sSize / 2);
         for(var sm=0; sm<geo.marksS.length; sm++){ 
             var m=geo.marksS[sm]; 
@@ -408,7 +417,11 @@ var Draw = {
             q.fillColor=col; q.stroked=false; 
         }
         
-        if(geo.barS){ var l=reg.pathItems.add(); l.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]); l.strokeColor=col; l.strokeWidth=geo.barS.w; l.filled=false; }
+        if(geo.barS){ 
+            var l=reg.pathItems.add(); 
+            l.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]); 
+            l.strokeColor=col; l.strokeWidth=geo.barS.w; l.filled=false; 
+        }
         
         // Standardize Bottom Layer (Graphics) and Draw Red Lines
         var gfxLayer = doc.layers[doc.layers.length-1];
