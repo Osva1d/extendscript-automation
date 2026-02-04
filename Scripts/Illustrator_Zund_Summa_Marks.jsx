@@ -1,6 +1,6 @@
 /*
   Script: Illustrator_Zund_Summa_Marks_Refactor.jsx
-  Generated: Tue Feb  3 23:42:29 CET 2026
+  Generated: Wed Feb  4 18:22:44 CET 2026
   Description: Modular refactor of Zund/Summa marks generator.
 */
 
@@ -348,7 +348,12 @@ var Draw = {
             if(sel[i].layer && sel[i].layer.name==="Regmarks") continue;
             var g=sel[i].geometricBounds;
             if(sel[i].typename==="GroupItem" && sel[i].clipped){
-                for(var j=0; j<sel[i].pageItems.length; j++) if(sel[i].pageItems[j].clipping){ g=sel[i].pageItems[j].geometricBounds; break;}
+                // In Illustrator, the clipping mask is always the first item in the group
+                try {
+                    g = sel[i].pageItems[0].geometricBounds;
+                } catch(e) {
+                    // Fallback to group bounds if mask access fails
+                }
             }
             if(g){ b[0]=Math.min(b[0],g[0]); b[1]=Math.max(b[1],g[1]); b[2]=Math.max(b[2],g[2]); b[3]=Math.min(b[3],g[3]); f=true; }
         }
@@ -387,11 +392,21 @@ var Draw = {
         var col = this.getCol(); doc.activeLayer = reg;
         
         // Draw Marks
-        var rZ = Utils.mm2pt(Config.zundSize/2);
-        for(var z=0; z<geo.marksZ.length; z++){ var m=geo.marksZ[z]; var c=reg.pathItems.ellipse(m.cy+rZ, m.cx-rZ, rZ*2, rZ*2); c.fillColor=col; c.stroked=false; }
+        var zSize = Number(Config.zundSize) || 5.0; // Defensive check
+        var rZ = Utils.mm2pt(zSize / 2);
+        for(var z=0; z<geo.marksZ.length; z++){ 
+            var m=geo.marksZ[z]; 
+            var c=reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2); 
+            c.fillColor=col; c.stroked=false; 
+        }
         
-        var rS = Utils.mm2pt(Config.summaSize/2);
-        for(var sm=0; sm<geo.marksS.length; sm++){ var m=geo.marksS[sm]; var q=reg.pathItems.rectangle(m.cy+rS, m.cx-rS, rS*2, rS*2); q.fillColor=col; q.stroked=false; }
+        var sSize = Number(Config.summaSize) || 3.0; // Defensive check
+        var rS = Utils.mm2pt(sSize / 2);
+        for(var sm=0; sm<geo.marksS.length; sm++){ 
+            var m=geo.marksS[sm]; 
+            var q=reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2); 
+            q.fillColor=col; q.stroked=false; 
+        }
         
         if(geo.barS){ var l=reg.pathItems.add(); l.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]); l.strokeColor=col; l.strokeWidth=geo.barS.w; l.filled=false; }
         
