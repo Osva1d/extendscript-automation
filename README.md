@@ -1,75 +1,110 @@
 # ExtendScript automatizace pro Adobe Illustrator
 
-Sada nástrojů v jazyce JavaScript (.jsx) pro automatizaci předtiskové přípravy, zefektivnění práce a generování tiskových dat v Adobe Illustratoru.
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-## Skripty
+> Profesionální sada nástrojů v jazyce JavaScript (.jsx) pro automatizaci předtiskové přípravy a zefektivnění práce v Adobe Illustratoru.
 
-### 1. Zund Registration Marks (`Illustrator_Zund_Marks.jsx`)
-- *Starší verze / Legacy skript pouze pro Zund.*
-- Automatická příprava dat pro řezací stoly **Zund**.
-- Generuje 5mm registrační značky v bezpečném rozložení **10-5-10**.
-- Třídí vrstvy na `REGMARKS`, `CUT` a tisková data.
+---
 
-### 2. Batch Relink & Export (`Batch_Relink_Export.jsx`)
-- Hromadné vkládání PDF souborů do připravené šablony (impozice)
-- **Uživatelské rozhraní:** Přehledný dialog pro výběr šablony (.ai), zdrojové složky a cílové složky
-- **Inteligentní Relink:** Automaticky najde propojený objekt (placeholder) v šabloně a nahradí ho aktuálním souborem
-- Export s definovaným **PDF Presetem** (např. `[Tisková kvalita]`)
-- Možnost nastavení prefixu výstupních souborů
-- Detailní reportování chyb a progress bar
+## Obsah
 
-### 3. Zund & Summa Automation (`Illustrator_Zund_Summa_Marks.jsx`)
-- **Komplexní automatizace** pro řezací stoly **ZUND (Desky)** a **SUMMA (Role/OPOS)**.
-- **Inteligentní UI:** Jedno okno (350px) s dynamickým přepínáním voleb podle zvoleného stroje.
-- **Layer Engine:** Automatická správa vrstev `Regmarks`, `Thru-cut`, `Kiss-cut`.
-- **Logic:** Výpočet Artboardu na základě pozice značek (fixace grafiky proti posunu).
-- **Features:**
-  - Obsahuje správu vrstev, Feed logiku a Red Lines.
-  - Asymetrická značka pro kontrolu rotace.
-  - Generování OPOS Bar pro Summu.
-  - Automatické přejmenování spodní vrstvy na `Graphics`.
+- [Funkce](#funkce)
+- [Požadavky](#požadavky)
+- [Instalace](#instalace)
+- [Skripty](#skripty)
+- [Konfigurace](#konfigurace)
+- [Troubleshooting](#troubleshooting)
+- [Autor](#autor)
+
+---
+
+## Funkce
+
+- ✅ **Zund & Summa Marks:** Generování registračních značek pro ploché stoly i rolky.
+- ✅ **Batch Relink:** Automatické vkládání a export stovek PDF souborů do šablon.
+- ✅ **Layer Management:** Inteligentní správa vrstev (`Regmarks`, `Cut`, `Kiss-cut`).
+- ✅ **Large Canvas:** Podpora pro Illustrator Large Canvas (měřítko 1:10).
+- ✅ **Safe Workflow:** Fixace grafiky proti posunu a automatické čištění názvů.
+- ✅ **Grommet Marks:** Značky pro kroužkovou vazbu — nezávislé hrany, presety, globální offset.
+
+---
 
 ## Požadavky
 
-- **macOS** nebo **Windows**
-- **Adobe Illustrator** (testováno na verzích CC)
+- **Software:** Adobe Illustrator CC 2020+
+- **OS:** macOS 12.0+ / Windows 10+
+- **Hardware:** Podpora pro Zünd (ECHO) a Summa řezací stoly.
+
+---
 
 ## Instalace
 
-1. Stáhněte `.jsx` soubory ze složky `Scripts` v tomto repozitáři
-2. Přesuňte soubory do systémové složky Skripty v Adobe Illustratoru:
+1. Stáhněte nejnovější `.jsx` soubory ze složky `Scripts`.
+2. Zkopírujte soubory do složky skriptů Illustratoru:
    - **macOS:** `/Applications/Adobe Illustrator [Verze]/Presets.localized/cs_CZ/Scripts`
    - **Windows:** `C:\Program Files\Adobe\Adobe Illustrator [Verze]\Presets\cs_CZ\Skripty`
-3. Restartujte Adobe Illustrator
-4. Skripty naleznete v menu `Soubor` → `Skripty`
+3. Restartujte Adobe Illustrator.
+4. Skripty naleznete v menu `Soubor > Skripty`.
 
-### Spouštění klávesovou zkratkou
-Pro časté používání doporučuji vytvořit Akci:
-1. Otevřete panel Akce (`F9`)
-2. Vytvořte novou akci
-3. Přes menu panelu zvolte "Vložit položku nabídky..." (Insert Menu Item)
-4. Vyberte nainstalovaný skript z menu Soubor → Skripty
-5. Přiřaďte funkční klávesu (např. F5)
+---
 
-## Použití
+## Skripty
 
-### Příprava značek pro iEcho/Zund
-1. Otevřete grafiku v Illustratoru
-2. Zajistěte, aby ořezová cesta měla tah přímou barvou (Spot Color) s názvem "Cut" (nebo upravte název v nastavení skriptu)
-3. Spusťte `Echo_Zund_Marks.jsx`
-4. Skript automaticky roztáhne plátno, seřadí vrstvy a vloží značky
+### 1. [illustrator-zund-summa-marks.jsx](./Scripts/illustrator-zund-summa-marks.jsx)
+Komplexní generátor značek. Automaticky detekuje typ stroje a nastavuje parametry pro Zünd (ECHO) nebo Summa (OPOS Bar).
+- **Použití:** Otevřete grafiku -> Spusťte skript -> Vyberte stroj a parametry.
 
-### Hromadný export (Batch Relink)
-1. Připravte si šablonu `.ai`, kde je umístěn libovolný "linked" soubor jako zástupný objekt
-2. Spusťte `Batch_Relink_Export.jsx`
-3. V dialogovém okně vyberte:
-   - Šablonu (.ai)
-   - Složku se zdrojovými PDF
-   - Složku pro export
-4. Zadejte přesný název PDF presetu (musí existovat v Illustratoru)
-5. Klikněte na **Spustit**
+### 2. [illustrator-batch-relink-export.jsx](./Scripts/illustrator-batch-relink-export.jsx)
+Hromadný relink PDF souborů do připravené `.ai` šablony a následný export.
+- **Použití:** Spusťte skript -> Vyberte šablonu, zdroj a cíl -> Spustit hromadnou akci.
+
+### 3. [illustrator-zund-marks.jsx](./Scripts/illustrator-zund-marks.jsx)
+Specializovaný "Board Workflow" skript pro Zünd. Zaměřeno na maximální rychlost u deskových materiálů.
+
+### 4. [illustrator-grommet-marks.jsx](./Scripts/illustrator-grommet-marks.jsx)
+Generátor značek pro kroužkovou vazbu. Podporuje kruhové i čtvercové značky, nezávislou konfiguraci každé hrany, globální X/Y offset a persistenci nastavení.
+- **Použití:** Otevřete grafiku -> Spusťte skript -> Nastavte parametry pro každou hranu -> OK.
+
+---
+
+## Konfigurace
+
+Většinu parametrů lze měnit přímo v UI, ale základní konstanty jsou definovány v hlavičce souborů:
+
+| Proměnná | Výchozí | Popis |
+|----------|---------|-------|
+| `MARK_SIZE` | `5mm` | Průměr registrační značky |
+| `SAFE_ZONE` | `10mm` | Bezpečná zóna kolem grafiky |
+| `CUT_LAYER` | `"Cut"` | Název vrstvy pro ořez |
+| `MARK_SIZE` | `4mm` | Průměr/strana grommet značky |
+| `OFFSET_X/Y` | `0mm` | Globální posun všech značek |
+
+---
+
+## Troubleshooting
+
+### Časté dotazy (FAQ)
+
+<details>
+<summary><strong>Skript se nezobrazuje v menu</strong></summary>
+Zkontrolujte, zda je přípona souboru skutečně `.jsx` (nikoliv `.jsx.txt`) a zda je soubor ve správné složce podle jazykové mutace Illustratoru (např. `cs_CZ` vs `en_US`).
+</details>
+
+<details>
+<summary><strong>Chyba: "No document open"</strong></summary>
+Před spuštěním generátoru značek musíte mít otevřený aktivní dokument s grafikou.
+</details>
+
+<details>
+<summary><strong>Značky jsou mimo plátno</strong></summary>
+Ujistěte se, že nemáte zamknuté vrstvy nebo skryté ořezové cesty, které by mohly ovlivnit výpočet rozměrů.
+</details>
+
+---
 
 ## Autor
-- **Koncept a testování:** Ladislav Osvald
-- **Implementace:** Gemini (Google DeepMind) & Claude (Anthropic AI)
-- **Rok:** 2025
+
+- **Koncept:** Ladislav Osvald
+- **Vývoj:** AI Collaborative Project (Antigravity IDE)
+- **Rok:** 2026

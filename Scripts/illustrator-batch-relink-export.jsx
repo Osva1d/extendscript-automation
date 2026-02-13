@@ -1,5 +1,14 @@
-// Illustrator Batch Relink & Export Script (Revize 22)
-// Zjednodušený relink a export s přehledným UI dialogem (všechna pole najednou).
+/*
+ * ===========================================================================
+ * Script:      Illustrator Batch Relink & Export
+ * Version:     1.0.0
+ * Author:      Osva1d
+ * Updated:     2026-02-13
+ *
+ * Description:
+ *   Automates relinking of PDF files in an AI template and exporting to PDF.
+ * ===========================================================================
+ */
 
 #target illustrator
 

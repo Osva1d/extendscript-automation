@@ -1,9 +1,16 @@
 /*
-  Script: Automatizace pro ECHO/ZUND - Board Workflow (v10 - Intuitive Config)
-  Popis: Vytváří ořezové značky, třídí vrstvy a upravuje velikost plátna.
-*/
+ * ===========================================================================
+ * Script:      Illustrator Zund Marks
+ * Version:     10.0.0
+ * Author:      Osva1d
+ * Updated:     2026-02-13
+ *
+ * Description:
+ *   Registry marks generator for ECHO/ZUND Board Workflow.
+ * ===========================================================================
+ */
 
-// @target illustrator
+#target illustrator
 
 function main() {
     if (app.documents.length === 0) {
