@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.3.1
  * Author:      Osva1d
- * Updated:     2026-03-23
+ * Updated:     2026-03-29
  *
  * Copyright (c) 2025-2026 Osva1d. All rights reserved.
  * Licensed under a proprietary license. See LICENSE file for details.
@@ -195,8 +195,8 @@ ZSM.L = (function () {
             ERR_CRITICAL:        "CRITICAL ERROR: ",
             ERR_RENDER_CRITICAL: "Critical error during rendering: ",
             ERR_WRITE_SETTINGS:  "Cannot write settings file.",
-            ERR_COLOR_MISSING:   "Associated color not found: %s",
-            ERR_LAY_COLOR:       "Color missing for layer '%s'. Please select a color from the dropdown.",
+            ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
+            ERR_LAY_COLOR:       "No color selected for layer '%s'.",
             ERR_SWATCH:          "Swatch '%s' not found.",
             ERR_GENERIC:         "ERROR: %s",
 
@@ -210,11 +210,11 @@ ZSM.L = (function () {
             // --- UI: Technology ---
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
-            TIP_MODE:      "Target cutting technology selection (Zünd / Summa).",
+            TIP_MODE:      "Select cutting technology (Zünd / Summa).",
             SRC_AUTO:      "Auto-fit to selection",
             SRC_FIXED:     "Fixed to Artboard",
-            TIP_SRC_AUTO:  "Mark position adapts to selected graphics, Artboard automatically resized.",
-            TIP_SRC_FIXED: "Mark position based on current Artboard; size remains unchanged.",
+            TIP_SRC_AUTO:  "Marks adapt to selected graphics; Artboard resized automatically.",
+            TIP_SRC_FIXED: "Marks placed relative to current Artboard; size unchanged.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
@@ -229,31 +229,31 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
-            TIP_GAP_GZ: "Distance of marks from the clean format boundaries (graphics).",
+            TIP_GAP_GZ: "Distance from graphics edge to mark center.",
             GAP_ZO:    "Gap from edge:",
-            TIP_GAP_ZO: "Distance of the outer edge of marks from the Artboard edge.",
+            TIP_GAP_ZO: "Distance from mark outer edge to Artboard edge.",
             MAX_DIST:  "Mark spacing:",
-            TIP_MAX_DIST: "Maximum allowed spacing between marks. Intermediate points will be inserted if exceeded.",
-            MARK_SIZE_Z:  "Zünd Size:",
-            TIP_SIZE_Z:   "Physical size of Zünd mark (diameter).",
-            MARK_SIZE_S:  "Summa Size:",
-            TIP_SIZE_S:   "Physical size of Summa mark (side).",
-            MARK_COLOR:   "Mark Color (Spot):",
-            TIP_MARK_COLOR: "Spot color name for marks. Use '[Registration]' for standard.",
+            TIP_MAX_DIST: "Maximum spacing between marks; intermediate marks inserted if exceeded.",
+            MARK_SIZE_Z:  "Zünd size:",
+            TIP_SIZE_Z:   "Zünd mark diameter.",
+            MARK_SIZE_S:  "Summa size:",
+            TIP_SIZE_S:   "Summa mark side length.",
+            MARK_COLOR:   "Mark color (Spot):",
+            TIP_MARK_COLOR: "Spot color for marks. '[Registration]' = all separations.",
 
             // --- UI: Feed ---
-            FEED_TOP:  "Top Feed:",
-            TIP_FEED_TOP: "Top material excess for safe gripping in the feeder.",
-            FEED_BOT:  "Bottom Feed:",
-            TIP_FEED_BOT: "Bottom material excess for initial machine feed.",
+            FEED_TOP:  "Top feed:",
+            TIP_FEED_TOP: "Top material overhang for feeder grip.",
+            FEED_BOT:  "Bottom feed:",
+            TIP_FEED_BOT: "Bottom material overhang for initial feed.",
             DRAW_RED:  "Add trim lines",
-            TIP_DRAW_RED: "Draws red trim lines indicating physical boundaries including feed.",
+            TIP_DRAW_RED: "Red trim lines at sheet boundaries including feed overhang.",
 
             // --- UI: Layer mapping ---
             COL_COLOR:      "Color",
             COL_LAYER:      "Layer",
-            TIP_LAY_COLOR:  "Spot color assigned to this layer for path matching.",
-            TIP_LAY_NAME:   "Layer name (primary identifier). Select from list or type a custom name.",
+            TIP_LAY_COLOR:  "Spot color used to match paths to this layer.",
+            TIP_LAY_NAME:   "Layer name. Select from list or type custom.",
             TIP_BTN_REMOVE: "Remove this mapping row.",
             TIP_BTN_ADD:    "Add another layer mapping row.",
             BTN_ADD_LAYER:  "+ Add",
@@ -263,9 +263,9 @@ ZSM.L = (function () {
 
             // --- UI: Footer ---
             BTN_CANCEL: "Cancel",
-            TIP_CANCEL: "Cancel script without changes.",
+            TIP_CANCEL: "Close without changes.",
             BTN_OK:     "Generate",
-            TIP_OK:     "Run calculation and generate marks.",
+            TIP_OK:     "Calculate and generate marks.",
             PRESET_PLACEHOLDER: "My Preset"
         },
 
@@ -279,8 +279,8 @@ ZSM.L = (function () {
             ERR_CRITICAL:        "KRITICKÁ CHYBA: ",
             ERR_RENDER_CRITICAL: "Kritická chyba při vykreslování: ",
             ERR_WRITE_SETTINGS:  "Nelze zapsat soubor s nastavením.",
-            ERR_COLOR_MISSING:   "Nenalezena barva pro výřez (%s).",
-            ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Zadejte platný název nebo vyberte z nabídky.",
+            ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
+            ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
             ERR_GENERIC:         "CHYBA: %s",
 
@@ -313,31 +313,31 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",
-            TIP_GAP_GZ: "Vzdálenost značek od hranic čistého formátu (grafiky).",
+            TIP_GAP_GZ: "Vzdálenost středu značky od okraje grafiky.",
             GAP_ZO:    "Mezera od okraje:",
-            TIP_GAP_ZO: "Vzdálenost vnějšího okraje značek od hrany Artboardu.",
-            MAX_DIST:  "Roztek značek:",
-            TIP_MAX_DIST: "Maximální povolená rozteč mezi značkami. Při překročení budou vloženy mezilehlé body.",
+            TIP_GAP_ZO: "Vzdálenost vnějšího okraje značky od hrany artboardu.",
+            MAX_DIST:  "Rozteč značek:",
+            TIP_MAX_DIST: "Maximální rozteč mezi značkami; při překročení se vloží mezilehlé.",
             MARK_SIZE_Z:  "Velikost Zünd:",
-            TIP_SIZE_Z:   "Fyzická velikost značky Zünd (průměr).",
+            TIP_SIZE_Z:   "Průměr značky Zünd.",
             MARK_SIZE_S:  "Velikost Summa:",
-            TIP_SIZE_S:   "Fyzická velikost značky Summa (strana).",
+            TIP_SIZE_S:   "Délka strany značky Summa.",
             MARK_COLOR:   "Barva značek (Spot):",
-            TIP_MARK_COLOR: "Název přímé barvy pro značky. Použijte ‘[Registration]’ pro standard.",
+            TIP_MARK_COLOR: "Přímá barva značek. ‘[Registration]’ = výchozí pro všechny separace.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Horní výjezd (Top):",
-            TIP_FEED_TOP: "Horní přesah materiálu pro bezpečné uchopení v podavači (Feed).",
+            TIP_FEED_TOP: "Horní přesah materiálu pro uchycení v podavači.",
             FEED_BOT:  "Spodní nájezd (Bottom):",
-            TIP_FEED_BOT: "Spodní nájezd materiálu pro počáteční nájezd stroje (Feed).",
+            TIP_FEED_BOT: "Spodní přesah materiálu pro počáteční najetí stroje.",
             DRAW_RED:  "Přidat ořezové linky",
-            TIP_DRAW_RED: "Vykreslí červené ořezové linky označující fyzické hranice archu včetně přesahů (feedu).",
+            TIP_DRAW_RED: "Vykreslí červené ořezové linky na hranicích archu včetně přesahů.",
 
             // --- UI: Layer mapping ---
             COL_COLOR:      "Barva",
             COL_LAYER:      "Vrstva",
-            TIP_LAY_COLOR:  "Přímá barva přiřazená k této vrstvě pro rozpoznání cest.",
-            TIP_LAY_NAME:   "Název vrstvy (primární identifikátor). Vyberte ze seznamu nebo napište vlastní název.",
+            TIP_LAY_COLOR:  "Přímá barva pro rozpoznání cest na této vrstvě.",
+            TIP_LAY_NAME:   "Název vrstvy. Vyberte ze seznamu nebo napište vlastní.",
             TIP_BTN_REMOVE: "Odebrat toto mapování.",
             TIP_BTN_ADD:    "Přidat další mapování vrstvy.",
             BTN_ADD_LAYER:  "+ Přidat",
@@ -347,9 +347,9 @@ ZSM.L = (function () {
 
             // --- UI: Footer ---
             BTN_CANCEL: "Zrušit",
-            TIP_CANCEL: "Zruší skript bez provedení změn.",
+            TIP_CANCEL: "Zavřít bez změn.",
             BTN_OK:     "Generovat",
-            TIP_OK:     "Spustí výpočet a vygeneruje značky do dokumentu.",
+            TIP_OK:     "Spustit výpočet a vygenerovat značky.",
             PRESET_PLACEHOLDER: "Moje předvolba"
         }
     };
@@ -685,22 +685,39 @@ ZSM.Core = {
         var abTop = markTopY + ZSM.Utils.mm2pt(rMax) + ZSM.Utils.mm2pt(feedT);
         var abBot = markBotY - ZSM.Utils.mm2pt(rMax) - ZSM.Utils.mm2pt(feedB);
 
-        // We want to snap artboard edges to whole millimetres, but not
-        // blindly centre the box: vertical offsets differ when feedTop/
-        // feedBottom aren’t equal.  Compute left/right margin based on
-        // symmetric horizontal requirements, but handle top/bottom
-        // independently.
+        // Snap artboard edges to whole millimetres.
+        // Use snapCeil helper to round up with 0.01mm tolerance, eliminating
+        // floating-point cliff effects from pt↔mm conversion (BUG-2 fix).
+        // For vertical edges: when feedTop === feedBottom (Zünd gapOuter),
+        // round the total height and centre it to guarantee symmetric margins
+        // (BUG-1 fix). SUMMA mode intentionally has asymmetric feeds, so
+        // top/bottom are rounded independently there.
         //
         // For fixed bounds we just keep the supplied rectangle.
         var abRect;
+        /** Round up to whole mm, but treat values within 0.01mm of an
+         *  integer as already there (avoids fp cliff-effect). */
+        function snapCeil(v) { return Math.ceil(Math.round(v * 100) / 100); }
+        /** Round down with same tolerance. */
+        function snapFloor(v) { return Math.floor(Math.round(v * 100) / 100); }
+
         if (s.useArtboardBounds) {
             abRect = b; // Fixed mode: leave artboard untouched
         } else {
-            // snap top/bottom individually
             var abTop_mm = ZSM.Utils.pt2mm(abTop) * sf;
             var abBot_mm = ZSM.Utils.pt2mm(abBot) * sf;
-            abTop = ZSM.Utils.mm2pt(Math.ceil(abTop_mm) / sf);
-            abBot = ZSM.Utils.mm2pt(Math.floor(abBot_mm) / sf);
+
+            if (feedT === feedB) {
+                // Symmetric feeds (Zünd gapOuter): round total height, then centre
+                var abH_mm = snapCeil(abTop_mm - abBot_mm);
+                var abMid  = (abTop + abBot) / 2;
+                abTop = abMid + ZSM.Utils.mm2pt((abH_mm / 2) / sf);
+                abBot = abMid - ZSM.Utils.mm2pt((abH_mm / 2) / sf);
+            } else {
+                // Asymmetric feeds (Summa): snap each edge independently
+                abTop = ZSM.Utils.mm2pt(snapCeil(abTop_mm) / sf);
+                abBot = ZSM.Utils.mm2pt(snapFloor(abBot_mm) / sf);
+            }
 
             // horizontal edges: compute required half width then round outwards
             var reqHalfW_mm = ZSM.Utils.pt2mm(gW / 2) * sf + (outX + rMax + gapO) * sf;
@@ -712,7 +729,7 @@ ZSM.Core = {
                 if (orientRight_mm > reqHalfW_mm) reqHalfW_mm = orientRight_mm;
             }
 
-            var abHalfW_mm = Math.ceil(reqHalfW_mm);
+            var abHalfW_mm = snapCeil(reqHalfW_mm);
             var abLeft  = gCx - ZSM.Utils.mm2pt(abHalfW_mm / sf);
             var abRight = gCx + ZSM.Utils.mm2pt(abHalfW_mm / sf);
 
@@ -1010,8 +1027,9 @@ ZSM.Draw = {
                 var m = marksZ[z];
                 try {
                     var circle = reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
-                    circle.fillColor = col;
-                    circle.stroked   = false;
+                    circle.fillColor     = col;
+                    circle.fillOverprint = true;
+                    circle.stroked       = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
                 }
@@ -1028,8 +1046,9 @@ ZSM.Draw = {
                 var m = marksS[sm];
                 try {
                     var sq = reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
-                    sq.fillColor = col;
-                    sq.stroked   = false;
+                    sq.fillColor     = col;
+                    sq.fillOverprint = true;
+                    sq.stroked       = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
                 }
@@ -1040,9 +1059,10 @@ ZSM.Draw = {
                 try {
                     var bar = reg.pathItems.add();
                     bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
-                    bar.strokeColor = col;
-                    bar.strokeWidth = geo.barS.w;
-                    bar.filled      = false;
+                    bar.strokeColor     = col;
+                    bar.strokeOverprint = true;
+                    bar.strokeWidth     = geo.barS.w;
+                    bar.filled          = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw OPOS bar");
                 }
@@ -1467,17 +1487,20 @@ var ZSM = ZSM || {};
 
 ZSM.UI = {
 
+    // =====================================================================
+    // Public entry point
+    // =====================================================================
+
     /**
-     * Builds and displays the main settings dialog.
-     * Receives and returns the full preset wrapper {presets, activePreset},
-     * not a flat settings object. Returns null if the user cancels.
+     * Builds and displays the settings dialog for the active mode.
+     * Switching modes closes the current dialog and reopens with the new
+     * layout — no hidden panels, no ghost spacing.
      *
      * @param {Object} pData - Preset wrapper from Storage.load() or getDefaults().
      * @returns {Object|null} Updated preset wrapper, or null on cancel.
      */
     show: function (pData) {
         var c = ZSM.Config;
-        var l = ZSM.L;
 
         // Safety: ensure wrapper structure is valid
         if (!pData || !pData.presets) {
@@ -1488,18 +1511,57 @@ ZSM.UI = {
             pData.activePreset = c.PRESET_KEY_DEFAULT;
         }
 
-        var sData = pData.presets[pData.activePreset]; // Current preset values
+        // Fetch live document data once (expensive DOM queries)
+        var docData = {
+            swatches:      ZSM.Draw.getSwatchNames(),
+            layers:        ZSM.Draw.getLayerNames(),
+            detectedColor: ZSM.Draw.detectCutColor()
+        };
 
-        // -----------------------------------------------------------------------
-        // Live document data (swatches, layers) — fetched once at dialog open
-        // -----------------------------------------------------------------------
-        var docSwatches   = ZSM.Draw.getSwatchNames();
-        var docLayers     = ZSM.Draw.getLayerNames();
-        var detectedColor = ZSM.Draw.detectCutColor();
+        // Determine initial mode from [Last Settings] or active preset
+        var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
+        var mode = (initPreset && initPreset.mode === "SUMMA") ? "SUMMA" : "ZUND";
 
-        // -----------------------------------------------------------------------
+        // Mode-switch loop: buildDialog returns result or a switch signal
+        for (;;) {
+            var outcome = this.buildDialog(mode, pData, docData);
+            if (outcome && outcome._switchTo) {
+                mode = outcome._switchTo;
+                continue;
+            }
+            return outcome; // null (cancel) or pData (OK)
+        }
+    },
+
+    // =====================================================================
+    // Dialog builder — creates a mode-specific dialog
+    // =====================================================================
+
+    /**
+     * Constructs and shows a dialog tailored to the given mode.
+     * Returns the updated pData wrapper on OK, null on Cancel,
+     * or {_switchTo: "ZUND"|"SUMMA"} when the user switches mode.
+     *
+     * @param {string} mode    - "ZUND" or "SUMMA"
+     * @param {Object} pData   - Preset wrapper (mutated in place on OK/Save)
+     * @param {Object} docData - {swatches, layers, detectedColor}
+     * @returns {Object|null}
+     */
+    buildDialog: function (mode, pData, docData) {
+        var c = ZSM.Config;
+        var l = ZSM.L;
+        var self = this;
+        var isZ = (mode === "ZUND");
+        var isS = (mode === "SUMMA");
+
+        // Resolve initial values: [Last Settings] → active preset → defaults
+        var sData = pData.presets["[Last Settings]"]
+                 || pData.presets[pData.activePreset]
+                 || c.getDefaults();
+
+        // =================================================================
         // Window
-        // -----------------------------------------------------------------------
+        // =================================================================
         var w = new Window("dialog", c.ui.title);
         w.orientation    = "column";
         w.alignChildren  = ["fill", "top"];
@@ -1507,9 +1569,9 @@ ZSM.UI = {
         w.spacing        = 15;
         w.preferredSize.width = 390;
 
-        // -----------------------------------------------------------------------
+        // =================================================================
         // Panel: Presets
-        // -----------------------------------------------------------------------
+        // =================================================================
         var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
         pPreset.margins = 15;
@@ -1528,69 +1590,88 @@ ZSM.UI = {
         var btnDel = grpPresetRow.add("button", undefined, l.BTN_DEL);
         btnDel.helpTip = l.TIP_DEL;
 
-        // -----------------------------------------------------------------------
-        // Panel 1: Technology
-        // -----------------------------------------------------------------------
+        // =================================================================
+        // Panel: Technology
+        // =================================================================
         var pSystem = w.add("panel", undefined, l.PANEL_TECH);
         pSystem.alignChildren = ["fill", "top"];
         pSystem.margins = 15;
 
         var dMode = pSystem.add("dropdownlist", undefined, [l.MODE_ZUND, l.MODE_SUMMA]);
-        dMode.selection = (sData.mode === "SUMMA") ? 1 : 0;
+        dMode.selection = isS ? 1 : 0;
         dMode.helpTip   = l.TIP_MODE;
 
-        var grpSrc = pSystem.add("group");
-        grpSrc.orientation   = "row";
-        grpSrc.alignChildren = "left";
-        var rbAuto  = grpSrc.add("radiobutton", undefined, l.SRC_AUTO);
-        var rbFixed = grpSrc.add("radiobutton", undefined, l.SRC_FIXED);
-        if (sData.useArtboardBounds) rbFixed.value = true;
-        else rbAuto.value = true;
-        rbAuto.helpTip  = l.TIP_SRC_AUTO;
-        rbFixed.helpTip = l.TIP_SRC_FIXED;
+        // --- ZUND only: source radio buttons ---
+        var grpSrc, rbAuto, rbFixed;
+        if (isZ) {
+            grpSrc = pSystem.add("group");
+            grpSrc.orientation   = "row";
+            grpSrc.alignChildren = "left";
+            rbAuto  = grpSrc.add("radiobutton", undefined, l.SRC_AUTO);
+            rbFixed = grpSrc.add("radiobutton", undefined, l.SRC_FIXED);
+            if (sData.useArtboardBounds) rbFixed.value = true;
+            else rbAuto.value = true;
+            rbAuto.helpTip  = l.TIP_SRC_AUTO;
+            rbFixed.helpTip = l.TIP_SRC_FIXED;
+        }
 
-        // -----------------------------------------------------------------------
-        // Panel 2: Gap / Geometry
-        // -----------------------------------------------------------------------
+        // =================================================================
+        // Panel: Gap / Geometry (mode-specific rows)
+        // =================================================================
         var pGeo = w.add("panel", undefined, l.PANEL_GEO);
         pGeo.alignChildren = ["fill", "top"];
         pGeo.margins = 15;
         pGeo.spacing = 10;
 
-        var rGapGZ = this.addRow(pGeo, l.GAP_GZ,      sData.gapInner,       l.TIP_GAP_GZ);
-        var rGapZO = this.addRow(pGeo, l.GAP_ZO,      sData.gapOuter,       l.TIP_GAP_ZO);
-        var rMaxD  = this.addRow(pGeo, l.MAX_DIST,     sData.maxDist,        l.TIP_MAX_DIST);
-        var rSizeZ = this.addRow(pGeo, l.MARK_SIZE_Z,  sData.markSizeZ || 5, l.TIP_SIZE_Z);
-        var rSizeS = this.addRow(pGeo, l.MARK_SIZE_S,  sData.markSizeS || 3, l.TIP_SIZE_S);
+        // ZUND only: gap from graphic
+        var rGapGZ;
+        if (isZ) {
+            rGapGZ = self.addRow(pGeo, l.GAP_GZ, sData.gapInner, l.TIP_GAP_GZ);
+            // Gap from graphic is irrelevant in Fixed mode
+            rGapGZ.inp.enabled = !(sData.useArtboardBounds);
+        }
 
-        // Mark color — dropdown from live document swatches (fixes UX-03)
-        var rColor = this.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docSwatches, l.TIP_MARK_COLOR);
+        // Shared rows
+        var rGapZO = self.addRow(pGeo, l.GAP_ZO,  sData.gapOuter, l.TIP_GAP_ZO);
+        var rMaxD  = self.addRow(pGeo, l.MAX_DIST, sData.maxDist,  l.TIP_MAX_DIST);
 
-        // -----------------------------------------------------------------------
-        // Panel 3: Feed (Summa only)
-        // -----------------------------------------------------------------------
-        var pFeed = w.add("panel", undefined, l.PANEL_FEED);
-        pFeed.alignChildren = ["fill", "top"];
-        pFeed.margins = 15;
-        pFeed.spacing = 10;
+        // Mode-specific mark size
+        var rMarkSize;
+        if (isZ) {
+            rMarkSize = self.addRow(pGeo, l.MARK_SIZE_Z, sData.markSizeZ || 5, l.TIP_SIZE_Z);
+        } else {
+            rMarkSize = self.addRow(pGeo, l.MARK_SIZE_S, sData.markSizeS || 3, l.TIP_SIZE_S);
+        }
 
-        var rFT   = this.addRow(pFeed, l.FEED_TOP, sData.feedTop,    l.TIP_FEED_TOP);
-        var rFB   = this.addRow(pFeed, l.FEED_BOT, sData.feedBottom, l.TIP_FEED_BOT);
-        var chRed = pFeed.add("checkbox", undefined, l.DRAW_RED);
-        chRed.value   = sData.drawRed;
-        chRed.helpTip = l.TIP_DRAW_RED;
+        // Shared: mark color
+        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR);
 
-        // -----------------------------------------------------------------------
-        // Panel 4: Layer to Color mapping (dynamic rows)
-        // -----------------------------------------------------------------------
+        // =================================================================
+        // Panel: Feed (SUMMA only — not created for ZUND)
+        // =================================================================
+        var rFT, rFB, chRed;
+        if (isS) {
+            var pFeed = w.add("panel", undefined, l.PANEL_FEED);
+            pFeed.alignChildren = ["fill", "top"];
+            pFeed.margins = 15;
+            pFeed.spacing = 10;
+
+            rFT   = self.addRow(pFeed, l.FEED_TOP, sData.feedTop,    l.TIP_FEED_TOP);
+            rFB   = self.addRow(pFeed, l.FEED_BOT, sData.feedBottom, l.TIP_FEED_BOT);
+            chRed = pFeed.add("checkbox", undefined, l.DRAW_RED);
+            chRed.value   = sData.drawRed;
+            chRed.helpTip = l.TIP_DRAW_RED;
+        }
+
+        // =================================================================
+        // Panel: Layer to Color mapping (shared, dynamic rows)
+        // =================================================================
         var pLay = w.add("panel", undefined, l.PANEL_LAYERS);
         pLay.alignChildren = ["fill", "top"];
         pLay.margins = 15;
         pLay.spacing = 10;
 
-        // Column headers above rows (enterprise table convention)
-        // Spacer mirrors the minus-button column so ScriptUI compresses
-        // header and data rows at the same ratio → columns stay aligned.
+        // Column headers
         var grpHeaders = pLay.add("group");
         grpHeaders.alignment = "fill";
         grpHeaders.spacing   = 5;
@@ -1601,8 +1682,7 @@ ZSM.UI = {
         var hdrSpacer = grpHeaders.add("statictext", undefined, "");
         hdrSpacer.preferredSize.width = 30;
 
-        // Dedicated container for mapping rows — add button lives outside
-        // so we never need to remove/re-add it (ScriptUI limitation).
+        // Row container (add button lives outside — ScriptUI limitation)
         var layContainer = pLay.add("group");
         layContainer.orientation   = "column";
         layContainer.alignChildren = ["fill", "top"];
@@ -1611,10 +1691,6 @@ ZSM.UI = {
         var layRows    = [];
         var MAX_LAYERS = 8;
 
-        /**
-         * Updates minus button enabled state across all rows.
-         * Disabled when only 1 row remains (minimum-one enforcement).
-         */
         function updateRemoveButtons() {
             var canRemove = layRows.length > 1;
             for (var r = 0; r < layRows.length; r++) {
@@ -1623,58 +1699,43 @@ ZSM.UI = {
         }
 
         /**
-         * Builds a single layer-to-color mapping row inside layContainer.
-         * Row structure: [layer edittext/dropdown stack] [spot color dropdown] [minus btn]
-         *
-         * Layer name uses Harbs pattern: edittext overlaid on dropdownlist
-         * via stack orientation. Edittext is narrower to expose dropdown arrow.
-         * User can type a custom name or pick from the predefined list.
-         *
+         * Builds a single layer-to-color mapping row (Harbs pattern).
          * @param {Object} def - {name, color}
-         * @returns {Object} {grp, ddColor, etLayer, ddLayer, btnRemove}
          */
         function buildLayerRow(def) {
             var grp = layContainer.add("group");
             grp.alignment = "fill";
             grp.spacing   = 5;
 
-            // Layer name — Harbs pattern (edittext stacked over dropdownlist)
             var stack = grp.add("group");
             stack.orientation   = "stack";
             stack.alignChildren = ["left", "center"];
             stack.preferredSize.width = 200;
 
-            // Dropdown first (bottom of stack, full width)
-            var ddLayer = stack.add("dropdownlist", undefined, docLayers);
+            var ddLayer = stack.add("dropdownlist", undefined, docData.layers);
             ddLayer.preferredSize.width = 200;
             ddLayer.helpTip = l.TIP_LAY_NAME;
 
-            // Edittext on top, narrower to expose dropdown arrow (~20px)
             var etLayer = stack.add("edittext", undefined, def.name || "");
             etLayer.preferredSize.width = 180;
             etLayer.helpTip = l.TIP_LAY_NAME;
 
-            // Dropdown selection syncs into edittext
             ddLayer.onChange = function () {
                 if (ddLayer.selection) etLayer.text = ddLayer.selection.text;
             };
-
-            // Pre-select dropdown if saved name matches a list item
             ZSM.UI.selectDDL(ddLayer, def.name || "");
 
-            // Spot color dropdown (attribute — what to match)
-            var ddColor = grp.add("dropdownlist", undefined, docSwatches);
+            var ddColor = grp.add("dropdownlist", undefined, docData.swatches);
             ddColor.preferredSize.width = 150;
             ddColor.helpTip = l.TIP_LAY_COLOR;
-            ZSM.UI.selectDDL(ddColor, def.color || (docSwatches.length > 0 ? docSwatches[0] : ""));
+            ZSM.UI.selectDDL(ddColor, def.color || (docData.swatches.length > 0 ? docData.swatches[0] : ""));
 
-            // Remove button (Unicode minus sign, not hyphen)
             var btnRemove = grp.add("button", undefined, "\u2212");
             btnRemove.preferredSize = [30, 25];
             btnRemove.helpTip = l.TIP_BTN_REMOVE;
 
             btnRemove.onClick = function () {
-                if (layRows.length <= 1) return; // safety guard
+                if (layRows.length <= 1) return;
                 for (var r = 0; r < layRows.length; r++) {
                     if (layRows[r].grp === grp) {
                         layContainer.remove(grp);
@@ -1691,17 +1752,16 @@ ZSM.UI = {
             return { grp: grp, ddColor: ddColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
         }
 
-        // Populate initial rows from saved settings
+        // Populate initial layer rows
         var initLayers = (sData.layers && sData.layers.length > 0)
             ? sData.layers
-            : [{ name: "Cut", color: detectedColor }];
+            : [{ name: "Cut", color: docData.detectedColor }];
 
         for (var i = 0; i < initLayers.length; i++) {
             layRows.push(buildLayerRow(initLayers[i]));
         }
         updateRemoveButtons();
 
-        // Add button — lives in pLay below layContainer, never removed
         var btnAddLayer = pLay.add("button", undefined, l.BTN_ADD_LAYER);
         btnAddLayer.alignment = "left";
         btnAddLayer.helpTip   = l.TIP_BTN_ADD;
@@ -1709,7 +1769,7 @@ ZSM.UI = {
 
         btnAddLayer.onClick = function () {
             if (layRows.length >= MAX_LAYERS) return;
-            var newRow = buildLayerRow({ name: "", color: detectedColor });
+            var newRow = buildLayerRow({ name: "", color: docData.detectedColor });
             layRows.push(newRow);
             if (layRows.length >= MAX_LAYERS) btnAddLayer.enabled = false;
             updateRemoveButtons();
@@ -1717,9 +1777,9 @@ ZSM.UI = {
             w.size.height = w.preferredSize.height + 10;
         };
 
-        // -----------------------------------------------------------------------
+        // =================================================================
         // Footer — action buttons
-        // -----------------------------------------------------------------------
+        // =================================================================
         var grpButtons = w.add("group");
         grpButtons.alignment = ["right", "center"];
         grpButtons.spacing   = 8;
@@ -1728,71 +1788,81 @@ ZSM.UI = {
         var btnOk  = grpButtons.add("button", undefined, l.BTN_OK,     { name: "ok" });
         btnOk.helpTip  = l.TIP_OK;
 
-        // -----------------------------------------------------------------------
+        // =================================================================
         // Internal helpers
-        // -----------------------------------------------------------------------
+        // =================================================================
+
+        /** Parse a numeric edittext value (comma-safe). */
+        function parseNum(et) {
+            return parseFloat(et.text.replace(/,/g, "."));
+        }
 
         /**
-         * Reads current UI state and returns a flat settings object.
-         * @returns {Object} Flat settings (mode, gaps, layers, etc.)
+         * Reads current UI state into a flat settings object.
+         * Only reads controls that exist in the current mode;
+         * missing-mode values are preserved from the previous preset.
          */
         function getUIValues() {
-            var mode = dMode.selection.text;
-            var isZ  = (mode === "ZUND");
-            var isS  = (mode === "SUMMA");
+            var prev = pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var colorSel = layRows[i].ddColor.selection
+                var cSel = layRows[i].ddColor.selection
                     ? layRows[i].ddColor.selection.text
                     : (layRows[i].ddColor.items.length > 0 ? layRows[i].ddColor.items[0].text : "[Registration]");
-                // Layer name comes from edittext (user may have typed a custom name)
-                var layName = layRows[i].etLayer.text || "";
-                layers.push({
-                    name:   layName,
-                    color:  colorSel
-                });
+                layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
             }
-            var colorSel = rColor.ddl.selection
-                ? rColor.ddl.selection.text
-                : "[Registration]";
-            var prev = pData.presets[pData.activePreset] || c.getDefaults();
+            var markColorSel = rColor.ddl.selection
+                ? rColor.ddl.selection.text : "[Registration]";
+
             return {
-                mode:             mode,
-                gapInner:         parseFloat(rGapGZ.inp.text.replace(/,/g, ".")),
-                gapOuter:         parseFloat(rGapZO.inp.text.replace(/,/g, ".")),
-                maxDist:          parseFloat(rMaxD.inp.text.replace(/,/g, ".")),
-                feedTop:          isS ? parseFloat(rFT.inp.text.replace(/,/g, ".")) : prev.feedTop,
-                feedBottom:       isS ? parseFloat(rFB.inp.text.replace(/,/g, ".")) : prev.feedBottom,
-                drawRed:          isS ? chRed.value : prev.drawRed,
-                useArtboardBounds: isZ && rbFixed.value,
-                markSizeZ:        isZ ? parseFloat(rSizeZ.inp.text.replace(/,/g, ".")) : prev.markSizeZ,
-                markSizeS:        isS ? parseFloat(rSizeS.inp.text.replace(/,/g, ".")) : prev.markSizeS,
-                markColor:        colorSel,
-                layers:           layers
+                mode:              mode,
+                gapInner:          isZ ? parseNum(rGapGZ.inp) : prev.gapInner,
+                gapOuter:          parseNum(rGapZO.inp),
+                maxDist:           parseNum(rMaxD.inp),
+                feedTop:           isS ? parseNum(rFT.inp)    : prev.feedTop,
+                feedBottom:        isS ? parseNum(rFB.inp)    : prev.feedBottom,
+                drawRed:           isS ? chRed.value          : prev.drawRed,
+                useArtboardBounds: isZ ? rbFixed.value        : false,
+                markSizeZ:         isZ ? parseNum(rMarkSize.inp) : prev.markSizeZ,
+                markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
+                markColor:         markColorSel,
+                layers:            layers
             };
         }
 
         /**
          * Fills the UI from a flat settings object.
-         * Rebuilds layer rows (remove old → insert new before button).
-         * @param {Object} obj - Flat settings object.
+         * Only writes to controls that exist in the current mode.
          */
         function setUIValues(obj) {
             if (!obj) return;
+
+            // Mode dropdown (visual only — actual mode is fixed for this dialog)
             dMode.selection = (obj.mode === "SUMMA") ? 1 : 0;
-            rbFixed.value   = !!obj.useArtboardBounds;
-            rbAuto.value    = !obj.useArtboardBounds;
-            rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
+
+            // Shared controls
             rGapZO.inp.text = String(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
             rMaxD.inp.text  = String(obj.maxDist   !== undefined ? obj.maxDist   : 500);
-            rSizeZ.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
-            rSizeS.inp.text = String(obj.markSizeS !== undefined ? obj.markSizeS : 3);
             ZSM.UI.selectDDL(rColor.ddl, obj.markColor || "[Registration]");
-            rFT.inp.text    = String(obj.feedTop    !== undefined ? obj.feedTop    : 70);
-            rFB.inp.text    = String(obj.feedBottom !== undefined ? obj.feedBottom : 50);
-            chRed.value     = !!obj.drawRed;
 
-            // Clear layer rows from container (button stays in pLay untouched)
+            // ZUND-specific
+            if (isZ) {
+                rbFixed.value   = !!obj.useArtboardBounds;
+                rbAuto.value    = !obj.useArtboardBounds;
+                rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
+                rGapGZ.inp.enabled = !rbFixed.value;
+                rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
+            }
+
+            // SUMMA-specific
+            if (isS) {
+                rFT.inp.text    = String(obj.feedTop    !== undefined ? obj.feedTop    : 70);
+                rFB.inp.text    = String(obj.feedBottom !== undefined ? obj.feedBottom : 50);
+                chRed.value     = !!obj.drawRed;
+                rMarkSize.inp.text = String(obj.markSizeS !== undefined ? obj.markSizeS : 3);
+            }
+
+            // Rebuild layer rows
             while (layContainer.children.length > 0) {
                 layContainer.remove(layContainer.children[0]);
             }
@@ -1800,57 +1870,17 @@ ZSM.UI = {
 
             var newLayers = (obj.layers && obj.layers.length > 0)
                 ? obj.layers
-                : [{ name: "Cut", color: detectedColor }];
+                : [{ name: "Cut", color: docData.detectedColor }];
             for (var i = 0; i < newLayers.length; i++) {
                 layRows.push(buildLayerRow(newLayers[i]));
             }
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
-
-            update();
         }
 
-        // -----------------------------------------------------------------------
-        // Visibility / enabled logic (called on mode change)
-        // -----------------------------------------------------------------------
-        function update() {
-            var isZ = (dMode.selection.text === "ZUND");
-            var isS = (dMode.selection.text === "SUMMA");
-
-            rGapGZ.group.visible            = isZ;
-            rGapGZ.group.maximumSize.height = isZ ? 1000 : 0;
-            // Gap from graphic is irrelevant in Fixed mode (marks measure from artboard edge)
-            rGapGZ.inp.enabled              = isZ && !rbFixed.value;
-            grpSrc.visible                  = isZ;
-            grpSrc.maximumSize.height       = isZ ? 1000 : 0;
-            rSizeZ.group.visible            = isZ;
-            rSizeZ.group.maximumSize.height = isZ ? 1000 : 0;
-            rSizeS.group.visible            = isS;
-            rSizeS.group.maximumSize.height = isS ? 1000 : 0;
-            pFeed.visible                   = isS;
-            pFeed.maximumSize.height        = isS ? 1000 : 0;
-            chRed.enabled                   = isS;
-
-            // Reset hidden mode inputs to preset values (not defaults)
-            // so switching modes doesn't lose custom values (fixes H/I visual)
-            var prevU = pData.presets[pData.activePreset] || c.getDefaults();
-            if (!isZ) rSizeZ.inp.text = String(prevU.markSizeZ);
-            if (!isS) {
-                rSizeS.inp.text = String(prevU.markSizeS);
-                chRed.value = prevU.drawRed;
-            }
-
-            w.layout.layout(true);
-            w.preferredSize.height = -1;
-            w.layout.layout(true);
-            if (w.preferredSize.height > 0) w.size.height = w.preferredSize.height + 10;
-        }
-
-        // -----------------------------------------------------------------------
+        // =================================================================
         // Preset logic
-        // -----------------------------------------------------------------------
-        // sortedKeys is shared between updatePresetList and init sync below.
-        // Declared here so the init block can reference it after the first call.
+        // =================================================================
         var sortedKeys = [];
 
         function updatePresetList() {
@@ -1858,7 +1888,6 @@ ZSM.UI = {
             sortedKeys = [];
             var keys = [];
             for (var k in pData.presets) {
-                // [Last Settings] is an internal auto-save key — never shown in dropdown
                 if (pData.presets.hasOwnProperty(k) && k !== "[Last Settings]") keys.push(k);
             }
             keys.sort();
@@ -1877,7 +1906,6 @@ ZSM.UI = {
             if (!ddPreset.selection) return;
             var sel = sortedKeys[ddPreset.selection.index];
             if (!sel || sel === pData.activePreset) return;
-            // Load only — no auto-save (matches Adobe standard: switching never overwrites)
             pData.activePreset = sel;
             btnDel.enabled = (sel !== c.PRESET_KEY_DEFAULT);
             if (pData.presets[sel]) setUIValues(pData.presets[sel]);
@@ -1906,36 +1934,65 @@ ZSM.UI = {
             setUIValues(pData.presets[c.PRESET_KEY_DEFAULT]);
         };
 
-        // -----------------------------------------------------------------------
-        // Event wiring
-        // -----------------------------------------------------------------------
-        dMode.onChange   = function () { update(); };
-        rbAuto.onClick   = function () { update(); };
-        rbFixed.onClick  = function () { update(); };
+        // =================================================================
+        // Mode switch handler
+        // =================================================================
+        var switchTarget = null;
 
-        // -----------------------------------------------------------------------
+        dMode.onChange = function () {
+            var newMode = dMode.selection ? dMode.selection.text : mode;
+            if (newMode === mode) return;
+
+            // Snapshot current UI state into [Last Settings] so nothing is lost
+            pData.presets["[Last Settings]"] = getUIValues();
+            // Tag the snapshot with the TARGET mode so the next dialog opens correctly
+            pData.presets["[Last Settings]"].mode = newMode;
+
+            // Preserve window position across mode switch
+            docData._lastBounds = w.bounds;
+
+            switchTarget = newMode;
+            w.close(2); // code 2 = mode switch (not OK, not Cancel)
+        };
+
+        // ZUND: source radio buttons update gapGZ enabled state
+        if (isZ) {
+            rbAuto.onClick  = function () { rGapGZ.inp.enabled = true; };
+            rbFixed.onClick = function () { rGapGZ.inp.enabled = false; };
+        }
+
+        // =================================================================
         // OK: validate → build result → close
-        // -----------------------------------------------------------------------
+        // =================================================================
         var result = null;
 
         btnOk.onClick = function () {
-            var mode = dMode.selection.text;
-            var isZ  = (mode === "ZUND");
-            var isS  = (mode === "SUMMA");
-
             // Validation — each call shows a localized alert and returns null on failure
-            var gapI   = ZSM.Utils.validateNumber(rGapGZ.inp.text, 0,   1000, l.GAP_GZ);    if (gapI   === null) return;
-            var gapO   = ZSM.Utils.validateNumber(rGapZO.inp.text, 0,   1000, l.GAP_ZO);    if (gapO   === null) return;
-            var maxD   = ZSM.Utils.validateNumber(rMaxD.inp.text,  50,  5000, l.MAX_DIST);  if (maxD   === null) return;
+            var gapO = ZSM.Utils.validateNumber(rGapZO.inp.text, 0, 1000, l.GAP_ZO);
+            if (gapO === null) return;
+            var maxD = ZSM.Utils.validateNumber(rMaxD.inp.text, 50, 5000, l.MAX_DIST);
+            if (maxD === null) return;
+
             var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
-            var markSZ = isZ ? ZSM.Utils.validateNumber(rSizeZ.inp.text, 0.1, 50, l.MARK_SIZE_Z) : prevOk.markSizeZ;
-            if (isZ && markSZ === null) return;
-            var markSS = isS ? ZSM.Utils.validateNumber(rSizeS.inp.text, 0.1, 50, l.MARK_SIZE_S) : prevOk.markSizeS;
-            if (isS && markSS === null) return;
-            var fTop = prevOk.feedTop || 0, fBot = prevOk.feedBottom || 0;
-            if (isS) {
-                fTop = ZSM.Utils.validateNumber(rFT.inp.text, 0, 1000, l.FEED_TOP); if (fTop === null) return;
-                fBot = ZSM.Utils.validateNumber(rFB.inp.text, 0, 1000, l.FEED_BOT); if (fBot === null) return;
+            var gapI, markSZ, markSS, fTop, fBot;
+
+            if (isZ) {
+                gapI = ZSM.Utils.validateNumber(rGapGZ.inp.text, 0, 1000, l.GAP_GZ);
+                if (gapI === null) return;
+                markSZ = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_Z);
+                if (markSZ === null) return;
+                markSS = prevOk.markSizeS;
+                fTop = prevOk.feedTop || 0;
+                fBot = prevOk.feedBottom || 0;
+            } else {
+                gapI = prevOk.gapInner;
+                markSS = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_S);
+                if (markSS === null) return;
+                markSZ = prevOk.markSizeZ;
+                fTop = ZSM.Utils.validateNumber(rFT.inp.text, 0, 1000, l.FEED_TOP);
+                if (fTop === null) return;
+                fBot = ZSM.Utils.validateNumber(rFB.inp.text, 0, 1000, l.FEED_BOT);
+                if (fBot === null) return;
             }
 
             var layers = [];
@@ -1943,16 +2000,11 @@ ZSM.UI = {
                 var colorSel = layRows[i].ddColor.selection
                     ? layRows[i].ddColor.selection.text
                     : (layRows[i].ddColor.items.length > 0 ? layRows[i].ddColor.items[0].text : "[Registration]");
-                var layName = layRows[i].etLayer.text || "";
-                layers.push({
-                    name:   layName,
-                    color:  colorSel
-                });
+                layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
 
-            var colorSel = rColor.ddl.selection
-                ? rColor.ddl.selection.text
-                : "[Registration]";
+            var markColorSel = rColor.ddl.selection
+                ? rColor.ddl.selection.text : "[Registration]";
 
             var finalSettings = {
                 mode:              mode,
@@ -1962,17 +2014,17 @@ ZSM.UI = {
                 feedTop:           fTop,
                 feedBottom:        fBot,
                 drawRed:           isS ? chRed.value : prevOk.drawRed,
-                useArtboardBounds: isZ && rbFixed.value,
+                useArtboardBounds: isZ ? rbFixed.value : false,
                 markSizeZ:         markSZ,
                 markSizeS:         markSS,
-                markColor:         colorSel,
+                markColor:         markColorSel,
                 layers:            layers
             };
 
-            // Always persist last run as [Last Settings]
+            // Always persist last run
             pData.presets["[Last Settings]"] = finalSettings;
 
-            // Auto-save modifications back to the active named preset
+            // Auto-save to active named preset
             if (pData.activePreset !== c.PRESET_KEY_DEFAULT && pData.activePreset !== "[Last Settings]") {
                 pData.presets[pData.activePreset] = finalSettings;
             } else {
@@ -1983,19 +2035,18 @@ ZSM.UI = {
             w.close(1);
         };
 
-        // -----------------------------------------------------------------------
+        // =================================================================
         // Init and show
-        // -----------------------------------------------------------------------
+        // =================================================================
 
-        // 1. Populate dropdown (without [Last Settings])
+        // 1. Populate preset dropdown
         updatePresetList();
 
-        // 2. Load values from [Last Settings] if it exists (transparent state restore),
-        //    otherwise fall back to the active preset
+        // 2. Load initial values
         var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
         if (initPreset) setUIValues(initPreset);
 
-        // 3. Sync dropdown selection to activePreset — setUIValues() does not touch the dropdown
+        // 3. Sync dropdown selection to activePreset
         for (var initIdx = 0; initIdx < sortedKeys.length; initIdx++) {
             if (sortedKeys[initIdx] === pData.activePreset) {
                 ddPreset.selection = initIdx;
@@ -2003,14 +2054,22 @@ ZSM.UI = {
             }
         }
 
-        update();
+        // Restore window position from previous mode-switch (if any)
+        if (docData._lastBounds) {
+            w.layout.layout(true);
+            w.location = [docData._lastBounds.x, docData._lastBounds.y];
+        }
+
         w.show();
+
+        // Interpret close code
+        if (switchTarget) return { _switchTo: switchTarget };
         return result;
     },
 
-    // -------------------------------------------------------------------------
-    // Shared UI helpers (also used inside show() via ZSM.UI.x)
-    // -------------------------------------------------------------------------
+    // =====================================================================
+    // Shared UI helpers
+    // =====================================================================
 
     /**
      * Adds a labeled edittext row with a "mm" suffix.
@@ -2035,7 +2094,6 @@ ZSM.UI = {
 
     /**
      * Adds a labeled color row using a dropdownlist of document swatches.
-     * Replaces the old edittext-based addColorRow (fixes UX-03).
      * @param {Object} parent      - ScriptUI container.
      * @param {string} label       - Row label.
      * @param {string} value       - Initial swatch name.

@@ -4,7 +4,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     3.1.0
  * Author:      Osva1d
- * Updated:     2026-03-23
+ * Updated:     2026-03-29
  *
  * Description:
  *   Grommet mark generator for banner production.
