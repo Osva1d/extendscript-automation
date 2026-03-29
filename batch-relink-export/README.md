@@ -45,3 +45,8 @@ Typický postup pro tisk vstupenek, vizitek apod.:
 - Nested try-catch kolem každé kritické operace (open, relink, export, close)
 - ES3 compliant, žádné violations
 - UI v češtině
+
+## Changelog
+
+### v2.0.0 / v1.0.0
+- Aktuální verze

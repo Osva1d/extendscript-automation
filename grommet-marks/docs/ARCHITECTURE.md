@@ -1,6 +1,6 @@
 # Architecture: Grommet Marks v3.1.0
 
-> Technický brief pro Antigravity agenty.
+> Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
 
 ---

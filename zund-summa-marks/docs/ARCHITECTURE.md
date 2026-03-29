@@ -1,7 +1,7 @@
 # Architecture: Zünd & Summa Marks v26.3.1
 
 > Copyright © 2025-2026 Osva1d. All rights reserved.
-> Technický brief pro Antigravity agenty.
+> Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
 
 ---

@@ -1,13 +1,9 @@
 # Test Plan: Zünd & Summa Marks v26.3
 
-> **Note:** Tento test plan byl napsán pro v26.3.0. Projekt je nyní v26.3.1.
-> Testovací případy jsou stále platné, ale drobné detaily (čísla řádků, velikosti)
-> se mohou lišit.
-
 **Skript:** `illustrator-zund-summa-marks.jsx`
-**Verze:** 26.3.0
+**Verze:** 26.3.1
 **Namespace:** `ZSM.*`
-**Datum:** 2026-02-21
+**Datum:** 2026-03-29
 
 ---
 
