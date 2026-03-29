@@ -20,8 +20,8 @@ ZSM.L = (function () {
             ERR_CRITICAL:        "CRITICAL ERROR: ",
             ERR_RENDER_CRITICAL: "Critical error during rendering: ",
             ERR_WRITE_SETTINGS:  "Cannot write settings file.",
-            ERR_COLOR_MISSING:   "Associated color not found: %s",
-            ERR_LAY_COLOR:       "Color missing for layer '%s'. Please select a color from the dropdown.",
+            ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
+            ERR_LAY_COLOR:       "No color selected for layer '%s'.",
             ERR_SWATCH:          "Swatch '%s' not found.",
             ERR_GENERIC:         "ERROR: %s",
 
@@ -35,11 +35,11 @@ ZSM.L = (function () {
             // --- UI: Technology ---
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
-            TIP_MODE:      "Target cutting technology selection (Zünd / Summa).",
+            TIP_MODE:      "Select cutting technology (Zünd / Summa).",
             SRC_AUTO:      "Auto-fit to selection",
             SRC_FIXED:     "Fixed to Artboard",
-            TIP_SRC_AUTO:  "Mark position adapts to selected graphics, Artboard automatically resized.",
-            TIP_SRC_FIXED: "Mark position based on current Artboard; size remains unchanged.",
+            TIP_SRC_AUTO:  "Marks adapt to selected graphics; Artboard resized automatically.",
+            TIP_SRC_FIXED: "Marks placed relative to current Artboard; size unchanged.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
@@ -54,31 +54,31 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
-            TIP_GAP_GZ: "Distance of marks from the clean format boundaries (graphics).",
+            TIP_GAP_GZ: "Distance from graphics edge to mark center.",
             GAP_ZO:    "Gap from edge:",
-            TIP_GAP_ZO: "Distance of the outer edge of marks from the Artboard edge.",
+            TIP_GAP_ZO: "Distance from mark outer edge to Artboard edge.",
             MAX_DIST:  "Mark spacing:",
-            TIP_MAX_DIST: "Maximum allowed spacing between marks. Intermediate points will be inserted if exceeded.",
-            MARK_SIZE_Z:  "Zünd Size:",
-            TIP_SIZE_Z:   "Physical size of Zünd mark (diameter).",
-            MARK_SIZE_S:  "Summa Size:",
-            TIP_SIZE_S:   "Physical size of Summa mark (side).",
-            MARK_COLOR:   "Mark Color (Spot):",
-            TIP_MARK_COLOR: "Spot color name for marks. Use '[Registration]' for standard.",
+            TIP_MAX_DIST: "Maximum spacing between marks; intermediate marks inserted if exceeded.",
+            MARK_SIZE_Z:  "Zünd size:",
+            TIP_SIZE_Z:   "Zünd mark diameter.",
+            MARK_SIZE_S:  "Summa size:",
+            TIP_SIZE_S:   "Summa mark side length.",
+            MARK_COLOR:   "Mark color (Spot):",
+            TIP_MARK_COLOR: "Spot color for marks. '[Registration]' = all separations.",
 
             // --- UI: Feed ---
-            FEED_TOP:  "Top Feed:",
-            TIP_FEED_TOP: "Top material excess for safe gripping in the feeder.",
-            FEED_BOT:  "Bottom Feed:",
-            TIP_FEED_BOT: "Bottom material excess for initial machine feed.",
+            FEED_TOP:  "Top feed:",
+            TIP_FEED_TOP: "Top material overhang for feeder grip.",
+            FEED_BOT:  "Bottom feed:",
+            TIP_FEED_BOT: "Bottom material overhang for initial feed.",
             DRAW_RED:  "Add trim lines",
-            TIP_DRAW_RED: "Draws red trim lines indicating physical boundaries including feed.",
+            TIP_DRAW_RED: "Red trim lines at sheet boundaries including feed overhang.",
 
             // --- UI: Layer mapping ---
             COL_COLOR:      "Color",
             COL_LAYER:      "Layer",
-            TIP_LAY_COLOR:  "Spot color assigned to this layer for path matching.",
-            TIP_LAY_NAME:   "Layer name (primary identifier). Select from list or type a custom name.",
+            TIP_LAY_COLOR:  "Spot color used to match paths to this layer.",
+            TIP_LAY_NAME:   "Layer name. Select from list or type custom.",
             TIP_BTN_REMOVE: "Remove this mapping row.",
             TIP_BTN_ADD:    "Add another layer mapping row.",
             BTN_ADD_LAYER:  "+ Add",
@@ -88,9 +88,9 @@ ZSM.L = (function () {
 
             // --- UI: Footer ---
             BTN_CANCEL: "Cancel",
-            TIP_CANCEL: "Cancel script without changes.",
+            TIP_CANCEL: "Close without changes.",
             BTN_OK:     "Generate",
-            TIP_OK:     "Run calculation and generate marks.",
+            TIP_OK:     "Calculate and generate marks.",
             PRESET_PLACEHOLDER: "My Preset"
         },
 
@@ -104,8 +104,8 @@ ZSM.L = (function () {
             ERR_CRITICAL:        "KRITICKÁ CHYBA: ",
             ERR_RENDER_CRITICAL: "Kritická chyba při vykreslování: ",
             ERR_WRITE_SETTINGS:  "Nelze zapsat soubor s nastavením.",
-            ERR_COLOR_MISSING:   "Nenalezena barva pro výřez (%s).",
-            ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Zadejte platný název nebo vyberte z nabídky.",
+            ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
+            ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
             ERR_GENERIC:         "CHYBA: %s",
 
@@ -138,31 +138,31 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",
-            TIP_GAP_GZ: "Vzdálenost značek od hranic čistého formátu (grafiky).",
+            TIP_GAP_GZ: "Vzdálenost středu značky od okraje grafiky.",
             GAP_ZO:    "Mezera od okraje:",
-            TIP_GAP_ZO: "Vzdálenost vnějšího okraje značek od hrany Artboardu.",
-            MAX_DIST:  "Roztek značek:",
-            TIP_MAX_DIST: "Maximální povolená rozteč mezi značkami. Při překročení budou vloženy mezilehlé body.",
+            TIP_GAP_ZO: "Vzdálenost vnějšího okraje značky od hrany artboardu.",
+            MAX_DIST:  "Rozteč značek:",
+            TIP_MAX_DIST: "Maximální rozteč mezi značkami; při překročení se vloží mezilehlé.",
             MARK_SIZE_Z:  "Velikost Zünd:",
-            TIP_SIZE_Z:   "Fyzická velikost značky Zünd (průměr).",
+            TIP_SIZE_Z:   "Průměr značky Zünd.",
             MARK_SIZE_S:  "Velikost Summa:",
-            TIP_SIZE_S:   "Fyzická velikost značky Summa (strana).",
+            TIP_SIZE_S:   "Délka strany značky Summa.",
             MARK_COLOR:   "Barva značek (Spot):",
-            TIP_MARK_COLOR: "Název přímé barvy pro značky. Použijte ‘[Registration]’ pro standard.",
+            TIP_MARK_COLOR: "Přímá barva značek. ‘[Registration]’ = výchozí pro všechny separace.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Horní výjezd (Top):",
-            TIP_FEED_TOP: "Horní přesah materiálu pro bezpečné uchopení v podavači (Feed).",
+            TIP_FEED_TOP: "Horní přesah materiálu pro uchycení v podavači.",
             FEED_BOT:  "Spodní nájezd (Bottom):",
-            TIP_FEED_BOT: "Spodní nájezd materiálu pro počáteční nájezd stroje (Feed).",
+            TIP_FEED_BOT: "Spodní přesah materiálu pro počáteční najetí stroje.",
             DRAW_RED:  "Přidat ořezové linky",
-            TIP_DRAW_RED: "Vykreslí červené ořezové linky označující fyzické hranice archu včetně přesahů (feedu).",
+            TIP_DRAW_RED: "Vykreslí červené ořezové linky na hranicích archu včetně přesahů.",
 
             // --- UI: Layer mapping ---
             COL_COLOR:      "Barva",
             COL_LAYER:      "Vrstva",
-            TIP_LAY_COLOR:  "Přímá barva přiřazená k této vrstvě pro rozpoznání cest.",
-            TIP_LAY_NAME:   "Název vrstvy (primární identifikátor). Vyberte ze seznamu nebo napište vlastní název.",
+            TIP_LAY_COLOR:  "Přímá barva pro rozpoznání cest na této vrstvě.",
+            TIP_LAY_NAME:   "Název vrstvy. Vyberte ze seznamu nebo napište vlastní.",
             TIP_BTN_REMOVE: "Odebrat toto mapování.",
             TIP_BTN_ADD:    "Přidat další mapování vrstvy.",
             BTN_ADD_LAYER:  "+ Přidat",
@@ -172,9 +172,9 @@ ZSM.L = (function () {
 
             // --- UI: Footer ---
             BTN_CANCEL: "Zrušit",
-            TIP_CANCEL: "Zruší skript bez provedení změn.",
+            TIP_CANCEL: "Zavřít bez změn.",
             BTN_OK:     "Generovat",
-            TIP_OK:     "Spustí výpočet a vygeneruje značky do dokumentu.",
+            TIP_OK:     "Spustit výpočet a vygenerovat značky.",
             PRESET_PLACEHOLDER: "Moje předvolba"
         }
     };

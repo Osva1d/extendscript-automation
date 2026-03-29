@@ -50,22 +50,39 @@ ZSM.Core = {
         var abTop = markTopY + ZSM.Utils.mm2pt(rMax) + ZSM.Utils.mm2pt(feedT);
         var abBot = markBotY - ZSM.Utils.mm2pt(rMax) - ZSM.Utils.mm2pt(feedB);
 
-        // We want to snap artboard edges to whole millimetres, but not
-        // blindly centre the box: vertical offsets differ when feedTop/
-        // feedBottom aren’t equal.  Compute left/right margin based on
-        // symmetric horizontal requirements, but handle top/bottom
-        // independently.
+        // Snap artboard edges to whole millimetres.
+        // Use snapCeil helper to round up with 0.01mm tolerance, eliminating
+        // floating-point cliff effects from pt↔mm conversion (BUG-2 fix).
+        // For vertical edges: when feedTop === feedBottom (Zünd gapOuter),
+        // round the total height and centre it to guarantee symmetric margins
+        // (BUG-1 fix). SUMMA mode intentionally has asymmetric feeds, so
+        // top/bottom are rounded independently there.
         //
         // For fixed bounds we just keep the supplied rectangle.
         var abRect;
+        /** Round up to whole mm, but treat values within 0.01mm of an
+         *  integer as already there (avoids fp cliff-effect). */
+        function snapCeil(v) { return Math.ceil(Math.round(v * 100) / 100); }
+        /** Round down with same tolerance. */
+        function snapFloor(v) { return Math.floor(Math.round(v * 100) / 100); }
+
         if (s.useArtboardBounds) {
             abRect = b; // Fixed mode: leave artboard untouched
         } else {
-            // snap top/bottom individually
             var abTop_mm = ZSM.Utils.pt2mm(abTop) * sf;
             var abBot_mm = ZSM.Utils.pt2mm(abBot) * sf;
-            abTop = ZSM.Utils.mm2pt(Math.ceil(abTop_mm) / sf);
-            abBot = ZSM.Utils.mm2pt(Math.floor(abBot_mm) / sf);
+
+            if (feedT === feedB) {
+                // Symmetric feeds (Zünd gapOuter): round total height, then centre
+                var abH_mm = snapCeil(abTop_mm - abBot_mm);
+                var abMid  = (abTop + abBot) / 2;
+                abTop = abMid + ZSM.Utils.mm2pt((abH_mm / 2) / sf);
+                abBot = abMid - ZSM.Utils.mm2pt((abH_mm / 2) / sf);
+            } else {
+                // Asymmetric feeds (Summa): snap each edge independently
+                abTop = ZSM.Utils.mm2pt(snapCeil(abTop_mm) / sf);
+                abBot = ZSM.Utils.mm2pt(snapFloor(abBot_mm) / sf);
+            }
 
             // horizontal edges: compute required half width then round outwards
             var reqHalfW_mm = ZSM.Utils.pt2mm(gW / 2) * sf + (outX + rMax + gapO) * sf;
@@ -77,7 +94,7 @@ ZSM.Core = {
                 if (orientRight_mm > reqHalfW_mm) reqHalfW_mm = orientRight_mm;
             }
 
-            var abHalfW_mm = Math.ceil(reqHalfW_mm);
+            var abHalfW_mm = snapCeil(reqHalfW_mm);
             var abLeft  = gCx - ZSM.Utils.mm2pt(abHalfW_mm / sf);
             var abRight = gCx + ZSM.Utils.mm2pt(abHalfW_mm / sf);
 

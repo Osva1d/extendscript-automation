@@ -380,6 +380,79 @@ ZSM.Utils.getSF = origSF2;
 
 
 // =====================================================
+// TEST 12: BUG-1 — Symmetric vertical margins in ZUND mode
+// =====================================================
+console.log("\n=== TEST 12: BUG-1 — Symmetric vertical margins (ZUND) ===");
+
+// Non-integer graphic height: margins above/below marks must be equal
+var boundsAsymm = [0, mm2pt(503.7), mm2pt(300), 0]; // 300 x 503.7mm
+var settingsB1 = merge(settingsZ, { gapInner: 5, gapOuter: 0 });
+var geoB1 = ZSM.Core.calculateAll(settingsB1, boundsAsymm);
+
+var abTopMm = pt2mm(geoB1.ab[1]);
+var abBotMm = pt2mm(geoB1.ab[3]);
+var markTopMm = pt2mm(geoB1.marksZ[1].cy); // TL corner mark Y
+var markBotMm = pt2mm(geoB1.marksZ[0].cy); // BL corner mark Y
+
+var marginTop = abTopMm - markTopMm;
+var marginBot = markBotMm - abBotMm;
+assertClose(marginTop, marginBot, 0.02, "BUG-1: Top margin (" + marginTop.toFixed(3) +
+    ") == bottom margin (" + marginBot.toFixed(3) + ")");
+
+// Another non-integer case: 701.3mm height
+var boundsAsymm2 = [0, mm2pt(701.3), mm2pt(400), 0];
+var geoB1b = ZSM.Core.calculateAll(settingsB1, boundsAsymm2);
+var mTop2 = pt2mm(geoB1b.ab[1]) - pt2mm(geoB1b.marksZ[1].cy);
+var mBot2 = pt2mm(geoB1b.marksZ[0].cy) - pt2mm(geoB1b.ab[3]);
+assertClose(mTop2, mBot2, 0.02, "BUG-1b: Symmetric margins for 701.3mm graphic");
+
+// SUMMA with asymmetric feed must remain asymmetric (no regression)
+var settingsB1S = merge(settingsS, { feedTop: 70, feedBottom: 50 });
+var geoB1S = ZSM.Core.calculateAll(settingsB1S, boundsStd);
+var sAbove = pt2mm(geoB1S.ab[1] - boundsStd[1]);
+var sBelow = pt2mm(boundsStd[3] - geoB1S.ab[3]);
+assert(Math.abs(sAbove - sBelow) > 10, "BUG-1: SUMMA asymmetric feed preserved (above=" +
+    sAbove.toFixed(1) + ", below=" + sBelow.toFixed(1) + ")");
+
+
+// =====================================================
+// TEST 13: BUG-2 — Consistent width for near-integer half-widths
+// =====================================================
+console.log("\n=== TEST 13: BUG-2 — Cliff-effect rounding ===");
+
+// Two graphics differing by 0.001mm should produce same artboard width
+var boundsA = [0, mm2pt(500), mm2pt(400.000), 0];
+var boundsB = [0, mm2pt(500), mm2pt(400.001), 0];
+var settingsB2 = merge(settingsZ, { gapInner: 5, gapOuter: 0 });
+var geoA = ZSM.Core.calculateAll(settingsB2, boundsA);
+var geoB = ZSM.Core.calculateAll(settingsB2, boundsB);
+var widthA = pt2mm(geoA.ab[2] - geoA.ab[0]);
+var widthB = pt2mm(geoB.ab[2] - geoB.ab[0]);
+assertClose(widthA, widthB, 0.1, "BUG-2: Width consistent for 400.000 vs 400.001mm (" +
+    widthA.toFixed(3) + " vs " + widthB.toFixed(3) + ")");
+
+// Edge case: graphic dimension exactly whole mm — no extra rounding
+var boundsExact = [0, mm2pt(500), mm2pt(400), 0];
+var geoExact = ZSM.Core.calculateAll(settingsB2, boundsExact);
+var widthExact = pt2mm(geoExact.ab[2] - geoExact.ab[0]);
+assertClose(widthExact, Math.round(widthExact), 0.05,
+    "BUG-2: Exact mm graphic → whole mm AB width (" + widthExact.toFixed(3) + ")");
+
+// Edge case: graphic at .999mm — should snap up, not double-round
+var boundsAlmost = [0, mm2pt(500), mm2pt(399.999), 0];
+var geoAlmost = ZSM.Core.calculateAll(settingsB2, boundsAlmost);
+var widthAlmost = pt2mm(geoAlmost.ab[2] - geoAlmost.ab[0]);
+assertClose(widthAlmost, widthExact, 0.1,
+    "BUG-2: 399.999mm and 400mm produce same AB width (" + widthAlmost.toFixed(3) + " vs " + widthExact.toFixed(3) + ")");
+
+// Vertical cliff-effect: heights should also be consistent
+var heightA = pt2mm(geoA.ab[1] - geoA.ab[3]);
+var heightB = pt2mm(geoB.ab[1] - geoB.ab[3]);
+assertClose(heightA, heightB, 0.1, "BUG-2: Height consistent for near-identical graphics (" +
+    heightA.toFixed(3) + " vs " + heightB.toFixed(3) + ")");
+
+
+// =====================================================
 // SUMMARY
 // =====================================================
 console.log("\n" + "=".repeat(50));

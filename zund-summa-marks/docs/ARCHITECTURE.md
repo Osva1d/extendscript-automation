@@ -131,7 +131,7 @@ Draw.endSession()            → obnoví zámky a viditelnost vrstev
 |-------|-----|-------|
 | `ZSM.Core` | Počítat, volat `ZSM.Utils` | DOM, alert, UI |
 | `ZSM.Draw` | DOM, volat `ZSM.Utils`, `ZSM.Config` | UI, počítání geometrie |
-| `ZSM.UI` | ScriptUI, volat `ZSM.Draw` (getSwatchNames/getLayerNames), validovat | DOM rendering, core math |
+| `ZSM.UI` | ScriptUI, volat `ZSM.Draw` (getSwatchNames/getLayerNames), validovat. Dva mód-specifické dialogy (ZUND/SUMMA), mode-switch loop. | DOM rendering, core math |
 | `ZSM.Config` | Konstanty, Storage, getDefaults | DOM, UI, math |
 
 Tato separace je záměrná — Core je testovatelné bez Illustratoru.
@@ -170,7 +170,7 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 | Detekci bounds (výběr / artboard) | `src/draw.js` → `getBounds()` |
 | Přesun cest na vrstvy | `src/draw.js` → `movePaths()` |
 | Barvu ze swatche | `src/draw.js` → `getCol()` |
-| Dialog a presety | `src/ui.js` → `ZSM.UI.show()` |
+| Dialog a presety | `src/ui.js` → `ZSM.UI.show()` → `ZSM.UI.buildDialog(mode, ...)` |
 | Lokalizaci | `src/locale.js` |
 | Ukládání nastavení | `src/config.js` → `Storage` |
 | Build systém | `tools/build.sh` |
@@ -182,8 +182,9 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 | Soubor | Obsah |
 |--------|-------|
 | `README.md` | Uživatelská + vývojářská dokumentace |
+| `docs/ARCHITECTURE.md` | Tento technický brief |
 | `docs/TEST_PLAN_MASTER.md` | 28 testovacích případů (P0–P2) s konkrétními vstupy a měřeními |
-| `tests/test_core_math.js` | Jednotkové testy pro `ZSM.Core` |
+| `tests/test_core_math.js` | Jednotkové testy pro `ZSM.Core` (81 testů) |
 
 ---
 
@@ -195,24 +196,16 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 **Co je hotovo:**
 - Všechny src/ moduly přepsány (ZSM namespace, locale, dynamické vrstvy, presety)
 - Code review: všechny nalezené bugy opraveny (C1–C2, W2–W7)
-- UI refaktorizace: Layer → Color model, sjednocení spacing
+- UI: dva mód-specifické dialogy (ZUND/SUMMA) místo jednoho s hidden panely
+  - Eliminuje ghost spacing (BUG-3), pFeedWrap wrapper odstraněn
+  - Mode-switch loop: přepnutí módu → uloží stav → zavře → otevře nový dialog
+  - Žádné visible/maximumSize hacky, čistý ScriptUI layout
+- BUG-1: symetrické vertikální okraje v ZUND (snapCeil celkové výšky, centrování)
+- BUG-2: konzistentní šířka artboardu — 0.01mm tolerance v zaokrouhlení (snapCeil/snapFloor)
 - Guides: vodítka ignorována v getBounds()
 - Copyright a proprietární licence přidány
 - dist/ = build z src/ (synchronizovaný)
-- README, ARCHITECTURE a TEST_PLAN aktuální
-- Druhý audit (2026-03): opraveny nalezené bugy:
-  - B: hardcoded anglický ERR_WRITE_SETTINGS → lokalizační klíč
-  - F: f.encoding = "UTF-8" před f.open() (save + load)
-  - G: forward-fill nových default klíčů přes všechny presety
-  - H/I: feed hodnoty a markSize neaktivního módu se zachovávají z presetu
-  - J: artboard šířka zohledňuje orientation mark (úzké grafiky)
-  - Q: odstraněno duplicitní endSession()
-  - C1: movePaths() zpracovává CompoundPathItems atomicky
-  - Vnořené clipping groups: _getEffectiveBounds() rekurzivní detekce
-  - Iterace spotů: per-item try/catch v getSwatchNames() a detectCutColor()
-  - Dead code: gCy, defaults, duplicitní PANEL_PRESET odstraněny
-  - Escapované české znaky "[Výchozí]" → literál v config.js
-  - Test coverage: TEST 10 pro orient mark na úzkých grafikách (63 testů)
+- Test coverage: 81 testů včetně BUG-1 symetrie a BUG-2 cliff-effect
 
 **Otevřené úkoly:**
 - Manuální testování dle TEST_PLAN_MASTER.md (TC-001 až TC-028)

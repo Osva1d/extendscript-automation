@@ -195,8 +195,9 @@ ZSM.Draw = {
                 var m = marksZ[z];
                 try {
                     var circle = reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
-                    circle.fillColor = col;
-                    circle.stroked   = false;
+                    circle.fillColor     = col;
+                    circle.fillOverprint = true;
+                    circle.stroked       = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
                 }
@@ -213,8 +214,9 @@ ZSM.Draw = {
                 var m = marksS[sm];
                 try {
                     var sq = reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
-                    sq.fillColor = col;
-                    sq.stroked   = false;
+                    sq.fillColor     = col;
+                    sq.fillOverprint = true;
+                    sq.stroked       = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
                 }
@@ -225,9 +227,10 @@ ZSM.Draw = {
                 try {
                     var bar = reg.pathItems.add();
                     bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
-                    bar.strokeColor = col;
-                    bar.strokeWidth = geo.barS.w;
-                    bar.filled      = false;
+                    bar.strokeColor     = col;
+                    bar.strokeOverprint = true;
+                    bar.strokeWidth     = geo.barS.w;
+                    bar.filled          = false;
                 } catch (e) {
                     ZSM.Utils.log("render: failed to draw OPOS bar");
                 }
