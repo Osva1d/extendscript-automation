@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.3.1
  * Author:      Osva1d
- * Updated:     2026-03-29
+ * Updated:     2026-04-09
  *
  * Copyright (c) 2025-2026 Osva1d. All rights reserved.
  * Licensed under a proprietary license. See LICENSE file for details.
@@ -238,6 +238,8 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Zünd mark diameter.",
             MARK_SIZE_S:  "Summa size:",
             TIP_SIZE_S:   "Summa mark side length.",
+            ORIENT_DIST:    "Orient mark offset:",
+            TIP_ORIENT_DIST: "Distance from corner mark to orientation mark.",
             MARK_COLOR:   "Mark color (Spot):",
             TIP_MARK_COLOR: "Spot color for marks. '[Registration]' = all separations.",
 
@@ -322,6 +324,8 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Průměr značky Zünd.",
             MARK_SIZE_S:  "Velikost Summa:",
             TIP_SIZE_S:   "Délka strany značky Summa.",
+            ORIENT_DIST:    "Vzdálenost orient. značky:",
+            TIP_ORIENT_DIST: "Vzdálenost od rohové značky k orientační značce.",
             MARK_COLOR:   "Barva značek (Spot):",
             TIP_MARK_COLOR: "Přímá barva značek. ‘[Registration]’ = výchozí pro všechny separace.",
 
@@ -450,7 +454,6 @@ ZSM.Config = {
     scriptName: "Zund & Summa Marks",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
-    orientDist:  100, // mm, orientation mark offset from corner
 
     summaXCenter: 10,  // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,  // mm: gap from graphic edge to Summa mark outer edge (Y)
@@ -485,6 +488,7 @@ ZSM.Config = {
             useArtboardBounds: false,
             markSizeZ:        5,
             markSizeS:        3,
+            orientDist:       100,
             markColor:        "[Registration]",
             layers: [
                 { name: "Cut", color: "[Registration]" }
@@ -725,7 +729,7 @@ ZSM.Core = {
             // Ensure artboard covers the Zünd orientation mark (offset from BL corner)
             if (s.mode === "ZUND") {
                 var orientRight_mm = -(ZSM.Utils.pt2mm(gW / 2) * sf + outX * sf)
-                                     + cfg.orientDist + s.markSizeZ + (s.markSizeZ / 2) + gapO * sf;
+                                     + s.orientDist + s.markSizeZ + (s.markSizeZ / 2) + gapO * sf;
                 if (orientRight_mm > reqHalfW_mm) reqHalfW_mm = orientRight_mm;
             }
 
@@ -757,7 +761,7 @@ ZSM.Core = {
             // Four corners + orientation mark (offset from BL corner)
             res.marksZ.push({ cx: xL, cy: yB }, { cx: xL, cy: yT },
                              { cx: xR, cy: yT }, { cx: xR, cy: yB });
-            res.marksZ.push({ cx: xL + ZSM.Utils.mm2pt((cfg.orientDist + s.markSizeZ) / sf), cy: yB });
+            res.marksZ.push({ cx: xL + ZSM.Utils.mm2pt((s.orientDist + s.markSizeZ) / sf), cy: yB });
 
             // Intermediate marks along each edge
             this.addSteps(res.marksZ, xL, yB, xL, yT, ZSM.Utils.mm2pt(s.maxDist / sf));
@@ -836,9 +840,9 @@ ZSM.Draw = {
     /** @type {Array} AUTO_SPOT_COLOR - CMYK fallback for auto-created spot swatches [C,M,Y,K] */
     AUTO_SPOT_COLOR: [0, 100, 0, 0],
 
-    /** @private Storage for layer names locked at session start, restored on end. */
+    /** @private Storage for layers locked at session start {index, name}, restored on end. */
     _lockedLayers: [],
-    /** @private Storage for layer names hidden at session start, restored on end. */
+    /** @private Storage for layers hidden at session start {index, name}, restored on end. */
     _hiddenLayers: [],
 
     // -------------------------------------------------------------------------
@@ -855,12 +859,16 @@ ZSM.Draw = {
         this._hiddenLayers = [];
         for (var i = 0; i < doc.layers.length; i++) {
             try {
+                // Skip artifact layers (bracket-prefixed names like <Clip Group>)
+                // — modifying their state can crash Illustrator at C++ level.
+                if (this._isArtifactLayer(doc.layers[i])) continue;
+
                 if (doc.layers[i].locked) {
-                    this._lockedLayers.push(doc.layers[i].name);
+                    this._lockedLayers.push({ idx: i, name: doc.layers[i].name });
                     doc.layers[i].locked = false;
                 }
                 if (!doc.layers[i].visible) {
-                    this._hiddenLayers.push(doc.layers[i].name);
+                    this._hiddenLayers.push({ idx: i, name: doc.layers[i].name });
                     doc.layers[i].visible = true;
                 }
             } catch (e) {
@@ -874,14 +882,25 @@ ZSM.Draw = {
      */
     endSession: function () {
         var doc = app.activeDocument;
+        // Restore by index first (stable after script adds/removes layers at
+        // the top of the stack). Fall back to getByName if the index no longer
+        // points to the same layer (e.g. user layers were reordered by render).
         for (var i = 0; i < this._lockedLayers.length; i++) {
             try {
-                doc.layers.getByName(this._lockedLayers[i]).locked = true;
+                var rec = this._lockedLayers[i];
+                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
+                    ? doc.layers[rec.idx]
+                    : doc.layers.getByName(rec.name);
+                lay.locked = true;
             } catch (e) {}
         }
         for (var i = 0; i < this._hiddenLayers.length; i++) {
             try {
-                doc.layers.getByName(this._hiddenLayers[i]).visible = false;
+                var rec = this._hiddenLayers[i];
+                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
+                    ? doc.layers[rec.idx]
+                    : doc.layers.getByName(rec.name);
+                lay.visible = false;
             } catch (e) {}
         }
         this._lockedLayers = [];
@@ -893,18 +912,20 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns combined geometric bounds of current selection or all page items.
+     * Returns combined geometric bounds of all artwork items.
      * In Fixed/Artboard mode returns the active artboard rect directly.
-     * Skips items on the Regmarks layer to avoid measuring our own output.
+     * Skips items on system layers (Regmarks, Graphics) and hidden layers.
      * Handles clipped groups by measuring the clip mask path, not the group.
      *
-     * Uses selectall + doc.selection (not doc.pageItems) because doc.selection
-     * provides a hierarchical view where clipped groups appear as single
-     * GroupItem entries. doc.pageItems is a flat recursive collection that
-     * exposes group children individually — their .parent chain is unreliable
-     * in Illustrator's ExtendScript DOM, so _isInsideClippedGroup() cannot
-     * safely filter them out. Unfiltered children would contribute their full
-     * unclipped geometricBounds, inflating the measured area.
+     * Iterates doc.pageItems directly instead of using the former
+     * app.executeMenuCommand('selectall') approach. selectall goes through
+     * Illustrator's C++ command pipeline and can crash the application when
+     * the DOM is in an inconsistent state (e.g. after partial undo of a
+     * previous script run). doc.pageItems is a flat recursive collection,
+     * so items nested inside groups are skipped via a parent check —
+     * groups themselves are measured via _getEffectiveBounds() which
+     * respects clipping masks. If .parent is unreliable (known ExtendScript
+     * edge case), the item is skipped conservatively.
      *
      * @param {Object} s - Settings (uses s.useArtboardBounds).
      * @returns {Array|null} [L, T, R, B] in document points, or null.
@@ -917,53 +938,76 @@ ZSM.Draw = {
             return ab.artboardRect;
         }
 
-        // Use selectall to get a hierarchical selection — groups as atomic
-        // units, children not exposed. This is the only reliable way to
-        // measure clipping groups by their mask bounds in ExtendScript.
-        app.executeMenuCommand('selectall');
-        var sel = doc.selection;
-        if (!sel || sel.length === 0) {
-            doc.selection = null;
-            return null;
-        }
-
         var b = [Infinity, -Infinity, -Infinity, Infinity];
         var found = false;
+        var pageItems = doc.pageItems;
+        // Cache length — ExtendScript re-queries the live DOM on each access
+        var piLen = pageItems.length;
 
-        for (var i = 0; i < sel.length; i++) {
-            var item = sel[i];
-            if (item.layer && item.layer.name === ZSM.Config.layerRegmarks) continue;
+        for (var i = 0; i < piLen; i++) {
+            try {
+                var item = pageItems[i];
 
-            // Skip guide paths — guides placed far outside the canvas would
-            // inflate bounds to extreme values, causing artboard resize to fail.
-            // PathItem and CompoundPathItem expose .guides; other types return
-            // undefined (falsy) so the check is safe for any item typename.
-            if ((item.typename === "PathItem" || item.typename === "CompoundPathItem") && item.guides) continue;
+                // Skip item types that cannot reliably report bounds
+                // (PluginItems, RasterItems with missing links, graph objects)
+                var tn = item.typename;
+                if (tn === "PluginItem" || tn === "NonNativeItem") continue;
 
-            // Skip items from layers that were hidden before session started (C2)
-            if (item.layer) {
-                var wasHidden = false;
-                for (var h = 0; h < this._hiddenLayers.length; h++) {
-                    if (item.layer.name === this._hiddenLayers[h]) { wasHidden = true; break; }
+                // Skip items nested inside groups — their bounds are accounted
+                // for when we measure the parent group via _getEffectiveBounds.
+                // .parent can be unreliable in rare ExtendScript edge cases;
+                // failures are caught and the item is skipped conservatively.
+                try {
+                    if (item.parent && item.parent.typename === "GroupItem") continue;
+                } catch (pe) { continue; }
+
+                // Skip system and artifact layers
+                try {
+                    if (item.layer) {
+                        var layName = item.layer.name;
+                        if (layName === ZSM.Config.layerRegmarks) continue;
+
+                        // Skip items on artifact layers (bracket-prefixed names)
+                        var fc = layName.charAt(0);
+                        if (fc === '<' || fc === '(') continue;
+
+                        // Skip trim-line sublayer inside Graphics (from previous run).
+                        // Don't skip the Graphics layer itself — it contains user artwork.
+                        if (layName === "Trim") {
+                            try { if (item.layer.parent.name === ZSM.Config.layerGraphics) continue; } catch (e2) {}
+                        }
+
+                        // Skip items from layers hidden before session started
+                        var wasHidden = false;
+                        for (var h = 0; h < this._hiddenLayers.length; h++) {
+                            if (layName === this._hiddenLayers[h]) { wasHidden = true; break; }
+                        }
+                        if (wasHidden) continue;
+                    }
+                } catch (le) { continue; }
+
+                // Skip guide paths — guides placed far outside the canvas would
+                // inflate bounds to extreme values, causing artboard resize to fail.
+                if ((item.typename === "PathItem" || item.typename === "CompoundPathItem") && item.guides) continue;
+
+                // For clipped groups (including nested), measure the clip mask
+                // path instead of the whole group. Clip mask is always the
+                // first child (top-most) in a clipping group — AI convention.
+                var g = this._getEffectiveBounds(item);
+
+                if (g) {
+                    b[0] = Math.min(b[0], g[0]);
+                    b[1] = Math.max(b[1], g[1]);
+                    b[2] = Math.max(b[2], g[2]);
+                    b[3] = Math.min(b[3], g[3]);
+                    found = true;
                 }
-                if (wasHidden) continue;
-            }
-
-            // For clipped groups (including nested), measure the clip mask
-            // path instead of the whole group. Clip mask is always the
-            // first child (top-most) in a clipping group — AI convention.
-            var g = this._getEffectiveBounds(item);
-
-            if (g) {
-                b[0] = Math.min(b[0], g[0]);
-                b[1] = Math.max(b[1], g[1]);
-                b[2] = Math.max(b[2], g[2]);
-                b[3] = Math.min(b[3], g[3]);
-                found = true;
+            } catch (e) {
+                // Skip items that cannot be accessed safely (zombie/corrupted
+                // references after undo or DOM inconsistency).
             }
         }
 
-        doc.selection = null;
         return found ? b : null;
     },
 
@@ -984,13 +1028,24 @@ ZSM.Draw = {
 
         try {
             // 1. Resize artboard (Auto-fit mode only)
+            // Validate bounds before setting — coordinates beyond ~16383pt
+            // (227in / 5765mm) crash Illustrator at C++ level.
             if (!s.useArtboardBounds) {
+                var abMax = 16383;
+                if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
+                    Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
+                    ZSM.Utils.error(ZSM.L.ERR_GENERIC
+                        ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
+                        : "Artboard exceeds maximum size.");
+                    return;
+                }
                 var activeIdx = doc.artboards.getActiveArtboardIndex();
                 doc.artboards[activeIdx].artboardRect = geo.ab;
             }
 
-            // 2. Prepare Regmarks layer at front
+            // 2. Prepare Regmarks layer at front — clear old content first
             var reg = this.getLay(ZSM.Config.layerRegmarks);
+            this._clearLayer(reg);
             reg.zOrder(ZOrderMethod.BRINGTOFRONT);
             var refLayer = reg;
 
@@ -1019,12 +1074,14 @@ ZSM.Draw = {
             var zSize = (Number(s.markSizeZ) || 5.0) / sf;
             var rZ   = ZSM.Utils.mm2pt(zSize / 2);
 
-            // Snapshot to avoid live-collection mutation during iteration
-            var marksZ = [];
-            for (var i = 0; i < geo.marksZ.length; i++) marksZ.push(geo.marksZ[i]);
+            // Illustrator max coordinate ~16383pt (227in). Creating items
+            // beyond this crashes at C++ level — validate before drawing.
+            var MAX_COORD = 16383;
 
+            var marksZ = geo.marksZ;
             for (var z = 0; z < marksZ.length; z++) {
                 var m = marksZ[z];
+                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var circle = reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
                     circle.fillColor     = col;
@@ -1039,11 +1096,10 @@ ZSM.Draw = {
             var sSize = (Number(s.markSizeS) || 3.0) / sf;
             var rS   = ZSM.Utils.mm2pt(sSize / 2);
 
-            var marksS = [];
-            for (var i = 0; i < geo.marksS.length; i++) marksS.push(geo.marksS[i]);
-
+            var marksS = geo.marksS;
             for (var sm = 0; sm < marksS.length; sm++) {
                 var m = marksS[sm];
+                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var sq = reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
                     sq.fillColor     = col;
@@ -1072,7 +1128,7 @@ ZSM.Draw = {
             //    Assumption: the bottom-most layer is the user's artwork layer.
             //    In multi-layer documents, only the absolute bottom layer is renamed.
             var gfxLayer = doc.layers[doc.layers.length - 1];
-            if (gfxLayer.name !== ZSM.Config.layerRegmarks) {
+            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !this._isArtifactLayer(gfxLayer)) {
                 // Track rename so endSession() can restore locks/visibility (W3)
                 var oldGfxName = gfxLayer.name;
                 gfxLayer.name    = ZSM.Config.layerGraphics;
@@ -1093,6 +1149,11 @@ ZSM.Draw = {
                 if (geo.red.length > 0) {
                     // Draw trim lines into a sublayer to keep them
                     // separate from artwork but inside the print layer.
+                    // Remove previous Trim sublayer to prevent accumulation.
+                    try {
+                        var oldTrim = gfxLayer.layers.getByName("Trim");
+                        oldTrim.remove();
+                    } catch (e) { /* no previous Trim — first run */ }
                     var trimLayer = gfxLayer.layers.add();
                     trimLayer.name = "Trim";
 
@@ -1129,6 +1190,46 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
 
     /**
+     * Removes all page items and sublayers from a layer, leaving it empty.
+     * Used to clear old Regmarks before re-rendering.
+     * @param {Layer} layer - Layer to clear.
+     * @private
+     */
+    _clearLayer: function (layer) {
+        try {
+            // Remove sublayers first
+            while (layer.layers.length > 0) {
+                try { layer.layers[0].remove(); } catch (e) { break; }
+            }
+            // Remove page items (iterate backwards to avoid index shifts)
+            var items = layer.pageItems;
+            for (var i = items.length - 1; i >= 0; i--) {
+                try { items[i].remove(); } catch (e) {}
+            }
+        } catch (e) {
+            ZSM.Utils.log("_clearLayer: " + e.message);
+        }
+    },
+
+    /**
+     * Detects Illustrator artifact layers with bracket-prefixed names.
+     * These are auto-created by operations like Release Clipping Mask
+     * (<Clip Group>), Release Compound Path (<Compound Path>), or
+     * Isolation Mode artifacts. Modifying their lock/visibility state
+     * can cause C++ level crashes that try/catch cannot intercept.
+     *
+     * @param {Layer} layer - Layer to test.
+     * @returns {boolean} True if layer has a bracket-prefixed name.
+     * @private
+     */
+    _isArtifactLayer: function (layer) {
+        try {
+            var c = layer.name.charAt(0);
+            return c === '<' || c === '(';
+        } catch (e) { return true; }
+    },
+
+    /**
      * Returns effective geometric bounds of an item, respecting clipping
      * masks at any nesting depth. For a clipped group, returns the clip
      * mask bounds. For a non-clipped group, recursively merges children's
@@ -1140,30 +1241,48 @@ ZSM.Draw = {
      * @private
      */
     _getEffectiveBounds: function (item) {
+        // Iterative traversal using an explicit stack to avoid stack overflow.
+        // ExtendScript has a call stack limit of ~100-200 frames; deeply nested
+        // groups (common in programmatically generated or imported SVG files)
+        // would crash with a recursive approach.
         try {
-            if (item.typename === "GroupItem") {
-                if (item.clipped) {
-                    // Clip mask is always pageItems[0] (topmost child)
-                    return item.pageItems[0].geometricBounds;
-                }
-                // Non-clipped group: merge effective bounds of children
-                var b = [Infinity, -Infinity, -Infinity, Infinity];
-                var found = false;
-                for (var i = 0; i < item.pageItems.length; i++) {
-                    var cb = this._getEffectiveBounds(item.pageItems[i]);
-                    if (cb) {
-                        b[0] = Math.min(b[0], cb[0]);
-                        b[1] = Math.max(b[1], cb[1]);
-                        b[2] = Math.max(b[2], cb[2]);
-                        b[3] = Math.min(b[3], cb[3]);
+            var stack = [item];
+            var b = [Infinity, -Infinity, -Infinity, Infinity];
+            var found = false;
+
+            while (stack.length > 0) {
+                var cur = stack.pop();
+                try {
+                    if (cur.typename === "GroupItem") {
+                        if (cur.clipped) {
+                            // Clip mask is always pageItems[0] (topmost child)
+                            var cb = cur.pageItems[0].geometricBounds;
+                            b[0] = Math.min(b[0], cb[0]);
+                            b[1] = Math.max(b[1], cb[1]);
+                            b[2] = Math.max(b[2], cb[2]);
+                            b[3] = Math.min(b[3], cb[3]);
+                            found = true;
+                        } else {
+                            // Non-clipped group: push children for processing
+                            for (var i = 0; i < cur.pageItems.length; i++) {
+                                stack.push(cur.pageItems[i]);
+                            }
+                        }
+                    } else {
+                        var lb = cur.geometricBounds;
+                        b[0] = Math.min(b[0], lb[0]);
+                        b[1] = Math.max(b[1], lb[1]);
+                        b[2] = Math.max(b[2], lb[2]);
+                        b[3] = Math.min(b[3], lb[3]);
                         found = true;
                     }
+                } catch (ie) {
+                    // Skip items whose bounds can't be read (corrupt, PluginItem, etc.)
                 }
-                return found ? b : item.geometricBounds;
             }
-            return item.geometricBounds;
+            return found ? b : null;
         } catch (e) {
-            return item.geometricBounds;
+            return null;
         }
     },
 
@@ -1232,6 +1351,8 @@ ZSM.Draw = {
 
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
+                // Skip items on artifact layers — moving them could crash AI
+                try { var fc = cp.layer.name.charAt(0); if (fc === '<' || fc === '(') continue; } catch (e) {}
                 if (this._isInsideClippedGroup(cp)) continue;
                 if (cp.pathItems.length === 0) continue;
 
@@ -1257,6 +1378,9 @@ ZSM.Draw = {
 
             for (var i = 0; i < snapshot.length; i++) {
                 var item = snapshot[i];
+
+                // Skip items on artifact layers — moving them could crash AI
+                try { var fc2 = item.layer.name.charAt(0); if (fc2 === '<' || fc2 === '(') continue; } catch (e) {}
 
                 // Skip items nested inside clipped groups — moving them out
                 // would break the group structure and trigger MRAP errors.
@@ -1465,6 +1589,9 @@ ZSM.Draw = {
             for (var i = 0; i < layers.length; i++) {
                 var n = layers[i].name;
                 if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics) continue;
+                // Skip artifact layers (bracket-prefixed names like <Clip Group>)
+                var fc = n.charAt(0);
+                if (fc === '<' || fc === '(') continue;
                 docNames.push(n);
             }
         } catch (e) {}
@@ -1641,6 +1768,12 @@ ZSM.UI = {
             rMarkSize = self.addRow(pGeo, l.MARK_SIZE_Z, sData.markSizeZ || 5, l.TIP_SIZE_Z);
         } else {
             rMarkSize = self.addRow(pGeo, l.MARK_SIZE_S, sData.markSizeS || 3, l.TIP_SIZE_S);
+        }
+
+        // ZUND only: orientation mark offset
+        var rOrientDist;
+        if (isZ) {
+            rOrientDist = self.addRow(pGeo, l.ORIENT_DIST, sData.orientDist !== undefined ? sData.orientDist : 100, l.TIP_ORIENT_DIST);
         }
 
         // Shared: mark color
@@ -1825,6 +1958,7 @@ ZSM.UI = {
                 useArtboardBounds: isZ ? rbFixed.value        : false,
                 markSizeZ:         isZ ? parseNum(rMarkSize.inp) : prev.markSizeZ,
                 markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
+                orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
                 layers:            layers
             };
@@ -1852,6 +1986,7 @@ ZSM.UI = {
                 rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
                 rGapGZ.inp.enabled = !rbFixed.value;
                 rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
+                rOrientDist.inp.text = String(obj.orientDist !== undefined ? obj.orientDist : 100);
             }
 
             // SUMMA-specific
@@ -1974,18 +2109,21 @@ ZSM.UI = {
             if (maxD === null) return;
 
             var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
-            var gapI, markSZ, markSS, fTop, fBot;
+            var gapI, markSZ, markSS, oDist, fTop, fBot;
 
             if (isZ) {
                 gapI = ZSM.Utils.validateNumber(rGapGZ.inp.text, 0, 1000, l.GAP_GZ);
                 if (gapI === null) return;
                 markSZ = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_Z);
                 if (markSZ === null) return;
+                oDist = ZSM.Utils.validateNumber(rOrientDist.inp.text, 10, 2000, l.ORIENT_DIST);
+                if (oDist === null) return;
                 markSS = prevOk.markSizeS;
                 fTop = prevOk.feedTop || 0;
                 fBot = prevOk.feedBottom || 0;
             } else {
                 gapI = prevOk.gapInner;
+                oDist = prevOk.orientDist;
                 markSS = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_S);
                 if (markSS === null) return;
                 markSZ = prevOk.markSizeZ;
@@ -2017,6 +2155,7 @@ ZSM.UI = {
                 useArtboardBounds: isZ ? rbFixed.value : false,
                 markSizeZ:         markSZ,
                 markSizeS:         markSS,
+                orientDist:        oDist,
                 markColor:         markColorSel,
                 layers:            layers
             };

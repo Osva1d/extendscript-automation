@@ -90,7 +90,7 @@ ZSM.Core = {
             // Ensure artboard covers the Zünd orientation mark (offset from BL corner)
             if (s.mode === "ZUND") {
                 var orientRight_mm = -(ZSM.Utils.pt2mm(gW / 2) * sf + outX * sf)
-                                     + cfg.orientDist + s.markSizeZ + (s.markSizeZ / 2) + gapO * sf;
+                                     + s.orientDist + s.markSizeZ + (s.markSizeZ / 2) + gapO * sf;
                 if (orientRight_mm > reqHalfW_mm) reqHalfW_mm = orientRight_mm;
             }
 
@@ -122,7 +122,7 @@ ZSM.Core = {
             // Four corners + orientation mark (offset from BL corner)
             res.marksZ.push({ cx: xL, cy: yB }, { cx: xL, cy: yT },
                              { cx: xR, cy: yT }, { cx: xR, cy: yB });
-            res.marksZ.push({ cx: xL + ZSM.Utils.mm2pt((cfg.orientDist + s.markSizeZ) / sf), cy: yB });
+            res.marksZ.push({ cx: xL + ZSM.Utils.mm2pt((s.orientDist + s.markSizeZ) / sf), cy: yB });
 
             // Intermediate marks along each edge
             this.addSteps(res.marksZ, xL, yB, xL, yT, ZSM.Utils.mm2pt(s.maxDist / sf));

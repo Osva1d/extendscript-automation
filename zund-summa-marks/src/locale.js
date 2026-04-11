@@ -63,6 +63,8 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Zünd mark diameter.",
             MARK_SIZE_S:  "Summa size:",
             TIP_SIZE_S:   "Summa mark side length.",
+            ORIENT_DIST:    "Orient mark offset:",
+            TIP_ORIENT_DIST: "Distance from corner mark to orientation mark.",
             MARK_COLOR:   "Mark color (Spot):",
             TIP_MARK_COLOR: "Spot color for marks. '[Registration]' = all separations.",
 
@@ -147,6 +149,8 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Průměr značky Zünd.",
             MARK_SIZE_S:  "Velikost Summa:",
             TIP_SIZE_S:   "Délka strany značky Summa.",
+            ORIENT_DIST:    "Vzdálenost orient. značky:",
+            TIP_ORIENT_DIST: "Vzdálenost od rohové značky k orientační značce.",
             MARK_COLOR:   "Barva značek (Spot):",
             TIP_MARK_COLOR: "Přímá barva značek. ‘[Registration]’ = výchozí pro všechny separace.",
 

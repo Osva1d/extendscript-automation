@@ -4,7 +4,6 @@ ZSM.Config = {
     scriptName: "Zund & Summa Marks",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
-    orientDist:  100, // mm, orientation mark offset from corner
 
     summaXCenter: 10,  // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,  // mm: gap from graphic edge to Summa mark outer edge (Y)
@@ -39,6 +38,7 @@ ZSM.Config = {
             useArtboardBounds: false,
             markSizeZ:        5,
             markSizeS:        3,
+            orientDist:       100,
             markColor:        "[Registration]",
             layers: [
                 { name: "Cut", color: "[Registration]" }

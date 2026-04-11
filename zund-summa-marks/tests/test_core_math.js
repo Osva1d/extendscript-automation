@@ -33,7 +33,6 @@ ZSM.Utils = {
 ZSM.Config = {
     zundSize: 5,
     summaSize: 3,
-    orientDist: 100,
     summaXCenter: 10,
     summaYVisual: 10,
     redLineWidth: 1,
@@ -93,7 +92,7 @@ assertClose(mm2pt(25.4), 72.0, 0.01, "25.4mm (1 inch) = 72pt");
 console.log("\n=== TEST 2: ZUND Mode (100x100mm, default settings) ===");
 var settingsZ = {
     mode: "ZUND", markSizeZ: 5, markSizeS: 3,
-    gapInner: 10, gapOuter: 0, maxDist: 400,
+    gapInner: 10, gapOuter: 0, maxDist: 400, orientDist: 100,
     feedTop: 70, feedBottom: 50, drawRed: false,
     useArtboardBounds: false, thruActive: true, thruName: "cut",
     kissActive: false, kissName: ""
@@ -135,7 +134,7 @@ assert(Math.ceil(abWmm) === abWmm || Math.abs(abWmm - Math.round(abWmm)) < 0.02,
 console.log("\n=== TEST 3: SUMMA Mode (100x100mm, default settings) ===");
 var settingsS = {
     mode: "SUMMA", markSizeZ: 5, markSizeS: 3,
-    gapInner: 10, gapOuter: 0, maxDist: 400,
+    gapInner: 10, gapOuter: 0, maxDist: 400, orientDist: 100,
     feedTop: 70, feedBottom: 50, drawRed: true,
     useArtboardBounds: false, thruActive: false, thruName: "",
     kissActive: true, kissName: "cut"
@@ -221,7 +220,7 @@ console.log("\n=== TEST 6: Fixed Artboard Mode ===");
 var boundsAB = [0, mm2pt(200), mm2pt(300), 0]; // 300x200mm artboard
 var settingsFixed = {
     mode: "ZUND", markSizeZ: 5, markSizeS: 3,
-    gapInner: 10, gapOuter: 5, maxDist: 400,
+    gapInner: 10, gapOuter: 5, maxDist: 400, orientDist: 100,
     feedTop: 0, feedBottom: 0, drawRed: false,
     useArtboardBounds: true, thruActive: true, thruName: "cut",
     kissActive: false, kissName: ""
@@ -334,6 +333,20 @@ assert(orientVN <= geoVN.ab[2], "VeryNarrow: Orient mark inside AB (orient=" +
 // Standard 100mm — orient mark should NOT inflate AB (normal case still works)
 assert(geoZ.marksZ[4].cx + mm2pt(2.5) <= geoZ.ab[2],
     "Standard: Orient mark inside AB for 100mm graphic");
+
+// Non-default orientDist: 150mm → mark should land at BL + (150+5)mm = 155mm
+var settingsOD150 = merge(settingsZ, { orientDist: 150 });
+var geoOD150 = ZSM.Core.calculateAll(settingsOD150, boundsStd);
+var orientExpected150 = geoOD150.marksZ[0].cx + mm2pt(155);
+assertClose(geoOD150.marksZ[4].cx, orientExpected150, 0.01, "OrientDist=150: mark at BL + 155mm");
+assertClose(geoOD150.marksZ[4].cy, geoOD150.marksZ[0].cy, 0.01, "OrientDist=150: same Y as BL corner");
+
+// Non-default orientDist on narrow graphic: must still fit in artboard
+var settingsOD200Narrow = merge(settingsZ, { orientDist: 200, gapInner: 5, gapOuter: 0 });
+var geoOD200N = ZSM.Core.calculateAll(settingsOD200Narrow, boundsNarrow);
+var orientOD200Edge = geoOD200N.marksZ[4].cx + mm2pt(2.5);
+assert(orientOD200Edge <= geoOD200N.ab[2] + 0.01, "OrientDist=200 narrow: mark inside AB (orient=" +
+    pt2mm(orientOD200Edge).toFixed(1) + "mm, AB right=" + pt2mm(geoOD200N.ab[2]).toFixed(1) + "mm)");
 
 
 // =====================================================

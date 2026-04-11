@@ -158,6 +158,12 @@ ZSM.UI = {
             rMarkSize = self.addRow(pGeo, l.MARK_SIZE_S, sData.markSizeS || 3, l.TIP_SIZE_S);
         }
 
+        // ZUND only: orientation mark offset
+        var rOrientDist;
+        if (isZ) {
+            rOrientDist = self.addRow(pGeo, l.ORIENT_DIST, sData.orientDist !== undefined ? sData.orientDist : 100, l.TIP_ORIENT_DIST);
+        }
+
         // Shared: mark color
         var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR);
 
@@ -340,6 +346,7 @@ ZSM.UI = {
                 useArtboardBounds: isZ ? rbFixed.value        : false,
                 markSizeZ:         isZ ? parseNum(rMarkSize.inp) : prev.markSizeZ,
                 markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
+                orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
                 layers:            layers
             };
@@ -367,6 +374,7 @@ ZSM.UI = {
                 rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
                 rGapGZ.inp.enabled = !rbFixed.value;
                 rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
+                rOrientDist.inp.text = String(obj.orientDist !== undefined ? obj.orientDist : 100);
             }
 
             // SUMMA-specific
@@ -489,18 +497,21 @@ ZSM.UI = {
             if (maxD === null) return;
 
             var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
-            var gapI, markSZ, markSS, fTop, fBot;
+            var gapI, markSZ, markSS, oDist, fTop, fBot;
 
             if (isZ) {
                 gapI = ZSM.Utils.validateNumber(rGapGZ.inp.text, 0, 1000, l.GAP_GZ);
                 if (gapI === null) return;
                 markSZ = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_Z);
                 if (markSZ === null) return;
+                oDist = ZSM.Utils.validateNumber(rOrientDist.inp.text, 10, 2000, l.ORIENT_DIST);
+                if (oDist === null) return;
                 markSS = prevOk.markSizeS;
                 fTop = prevOk.feedTop || 0;
                 fBot = prevOk.feedBottom || 0;
             } else {
                 gapI = prevOk.gapInner;
+                oDist = prevOk.orientDist;
                 markSS = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_S);
                 if (markSS === null) return;
                 markSZ = prevOk.markSizeZ;
@@ -532,6 +543,7 @@ ZSM.UI = {
                 useArtboardBounds: isZ ? rbFixed.value : false,
                 markSizeZ:         markSZ,
                 markSizeS:         markSS,
+                orientDist:        oDist,
                 markColor:         markColorSel,
                 layers:            layers
             };
