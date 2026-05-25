@@ -1,0 +1,11 @@
+{
+    "name": "grommet-marks",
+    "version": "4.0.0",
+    "description": "Grommet mark generator for banner production (Adobe Illustrator).",
+    "scripts": {
+        "build": "bash tools/build.sh",
+        "test": "bash tests/run_all.sh",
+        "verify": "npm run build && npm test"
+    },
+    "private": true
+}
