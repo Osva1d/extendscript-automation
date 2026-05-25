@@ -1,6 +1,10 @@
 // ------------------------------------------------------------------------
-// Localization
+// Module: GM.L — localization (EN/CS string tables)
+// Part of: Illustrator Grommet Marks
+// Depends on: (none — self-contained IIFE)
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.L = (function () {
     // Detect Illustrator UI language
     var lang = "en";
@@ -58,9 +62,11 @@ GM.L = (function () {
             LOAD: "Load:",
             DELETE: "Delete",
             SAVE: "Save",
-            SAVE_TITLE: "Save preset",
-            PRESET_NAME: "Name:",
-            REPLACE_EXISTING: "Replace existing:",
+            BTN_SAVE_AS: "Save As…",
+            TIP_SAVE_AS: "Save current settings as a new preset.",
+            BTN_RESET: "Reset",
+            TIP_RESET: "Reset all settings to factory defaults.",
+            PROMPT_SAVE_AS: "Save current settings as new preset:",
 
             // Buttons
             OK: "Generate",
@@ -83,6 +89,7 @@ GM.L = (function () {
             TIP_SHAPE_ROUND: "Marks will be circular",
             TIP_SHAPE_SQUARE: "Marks will be square",
             TIP_PRESET_LOAD: "Select saved preset",
+            TIP_SAVE: "Save settings to the active preset.",
 
             // Errors
             ERR_NO_DOC: "Open a document before running the script.",
@@ -100,6 +107,12 @@ GM.L = (function () {
             ERR_SWATCH_NOT_FOUND: "Swatch \"%s\" not found.",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
+            ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
+            ERR_PRESET_EXISTS: "Preset already exists. Overwrite?",
+            ERR_MUST_BE_NUMBER: "%s must be a number!",
+            ERR_MUST_BE_INTEGER: "%s must be a whole number!",
+            ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
+            PRESET_PLACEHOLDER: "My Preset",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -155,9 +168,11 @@ GM.L = (function () {
             LOAD: "Načíst:",
             DELETE: "Smazat",
             SAVE: "Uložit",
-            SAVE_TITLE: "Uložit nastavení",
-            PRESET_NAME: "Název:",
-            REPLACE_EXISTING: "Nahradit existující:",
+            BTN_SAVE_AS: "Uložit jako…",
+            TIP_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu.",
+            BTN_RESET: "Reset",
+            TIP_RESET: "Obnovit všechna nastavení na výchozí hodnoty.",
+            PROMPT_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu:",
 
             // Buttons
             OK: "Generovat",
@@ -180,6 +195,7 @@ GM.L = (function () {
             TIP_SHAPE_ROUND: "Značka bude kruhová",
             TIP_SHAPE_SQUARE: "Značka bude čtvercová",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
+            TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
 
             // Errors
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
@@ -197,6 +213,12 @@ GM.L = (function () {
             ERR_SWATCH_NOT_FOUND: "Vzorník \"%s\" nenalezen.",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
+            ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
+            ERR_PRESET_EXISTS: "Předvolba již existuje. Přepsat?",
+            ERR_MUST_BE_NUMBER: "%s musí být číslo!",
+            ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
+            ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
+            PRESET_PLACEHOLDER: "Moje předvolba",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
