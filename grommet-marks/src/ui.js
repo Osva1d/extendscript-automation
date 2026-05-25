@@ -1,6 +1,10 @@
 // ------------------------------------------------------------------------
-// UI (ScriptUI Dialog)
+// Module: GM.UI — ScriptUI dialog builder
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.UI = {
     /**
      * Returns localized display names for unit dropdown.
@@ -40,9 +44,8 @@ GM.UI = {
 
     /**
      * Maps a stored value to its display string for dropdowns.
-     * Converts SENTINEL_CREATE to localized CREATE_LABEL.
      * @param {string} value - Stored value
-     * @returns {string} Display string for dropdown matching
+     * @returns {string} Display string
      */
     toDisplay: function (value) {
         if (value === GM.CONSTANTS.SENTINEL_CREATE) return GM.L.CREATE_LABEL;
@@ -51,7 +54,6 @@ GM.UI = {
 
     /**
      * Maps a dropdown display string back to its storage value.
-     * Converts localized CREATE_LABEL to SENTINEL_CREATE.
      * @param {string} displayText - Dropdown selection text
      * @returns {string} Value for storage
      */
@@ -71,15 +73,13 @@ GM.UI = {
     buildEdgePanel: function (parent, label, defaultCfg, width) {
         var pnl = parent.add("panel", undefined, "");
         pnl.alignChildren = ["left", "top"];
-        pnl.margins = [12, 12, 12, 8]; // Compact — intentional for 2×2 edge grid
+        pnl.margins = [12, 12, 12, 8];
         if (width) pnl.preferredSize.width = width;
 
         var cb = pnl.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
 
-        // Layout: Count or Spacing — two-column grid
-        // Radio buttons share one parent (radioCol) for native ScriptUI exclusion
         var modeGrp = pnl.add("group");
         modeGrp.orientation = "row";
         modeGrp.alignChildren = ["left", "center"];
@@ -148,45 +148,22 @@ GM.UI = {
     },
 
     /**
-     * Rebuilds the preset dropdown from allSettings.
-     * Default preset is always first, shown with localized display name.
-     * @param {DropDownList} ddl - Preset dropdown
-     * @param {Object} allSettings - All presets
-     * @returns {Array<string>} Sorted internal preset keys
-     */
-    rebuildPresets: function (ddl, allSettings) {
-        ddl.removeAll();
-        var SD = GM.CONSTANTS.SENTINEL_DEFAULT;
-        var sortedKeys = [SD];
-        for (var k in allSettings) {
-            if (allSettings.hasOwnProperty(k) && k !== SD) {
-                sortedKeys.push(k);
-            }
-        }
-        for (var j = 0; j < sortedKeys.length; j++) {
-            // Display localized name for default, raw name for user presets
-            var display = (sortedKeys[j] === SD) ? GM.L.DEFAULT_PRESET : sortedKeys[j];
-            ddl.add("item", display);
-        }
-        return sortedKeys;
-    },
-
-    /**
      * Builds the main ScriptUI dialog.
-     * @param {Object} allSettings - All saved presets
+     * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} layerInfo - Layer names and existence flags
      * @param {Object} swatchInfo - Swatch names and existence flags
      * @returns {Object} Dialog object with window and gatherAll methods
      */
-    buildDialog: function (allSettings, layerInfo, swatchInfo) {
-        var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME);
+    buildDialog: function (pData, layerInfo, swatchInfo) {
+        var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
         dlg.alignChildren = ["fill", "top"];
         dlg.margins  = 20;
         dlg.spacing  = 15;
         var defCfg = GM.Config.getDefaults();
+        var sortedKeys = [];
 
         // =================================================================
-        // Settings Panel (first — matches ZSM preset-first layout)
+        // Settings Panel
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
         setPanel.orientation = "row";
@@ -198,12 +175,12 @@ GM.UI = {
         loadDDL.preferredSize.width = 200;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
-        var sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-        loadDDL.selection = 0;
-
+        var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
+        saveBtn.helpTip = GM.L.TIP_SAVE || "";
+        var saveAsBtn = setPanel.add("button", undefined, GM.L.BTN_SAVE_AS);
+        saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
         var deleteBtn = setPanel.add("button", undefined, GM.L.DELETE);
         deleteBtn.enabled = false;
-        var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
 
         // =================================================================
         // Global Position Panel
@@ -240,7 +217,6 @@ GM.UI = {
         row2.orientation = "row";
         row2.alignChildren = ["fill", "top"];
 
-        // Bottom column
         var bottomOuter = row2.add("group");
         bottomOuter.orientation = "column";
         bottomOuter.alignChildren = ["fill", "top"];
@@ -252,7 +228,6 @@ GM.UI = {
         bottomMirrorCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
         var bottomUI = GM.UI.buildEdgePanel(bottomOuter, GM.L.BOTTOM_CUSTOM, defCfg.bottom, 280);
 
-        // Right column
         var rightOuter = row2.add("group");
         rightOuter.orientation = "column";
         rightOuter.alignChildren = ["fill", "top"];
@@ -264,7 +239,6 @@ GM.UI = {
         rightMirrorCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
         var rightUI = GM.UI.buildEdgePanel(rightOuter, GM.L.RIGHT_CUSTOM, defCfg.right, 280);
 
-        // Mirror Logic
         function updateMirrors() {
             var bm = bottomMirrorCB.value;
             bottomUI.cb.enabled = !bm;
@@ -316,7 +290,6 @@ GM.UI = {
         appPanel.margins = [15, 10, 15, 15];
         appPanel.spacing = 10;
 
-        // Layer
         var layerGrp = appPanel.add("group");
         layerGrp.add("statictext", undefined, GM.L.LAYER);
         var layerDDL = layerGrp.add("dropdownlist", undefined, layerInfo.names);
@@ -324,7 +297,6 @@ GM.UI = {
         layerDDL.helpTip = GM.L.TIP_LAYER;
         GM.UI.selectDDL(layerDDL, GM.L.CREATE_LABEL);
 
-        // Fill
         var fillGrp = appPanel.add("group");
         var fillCB = fillGrp.add("checkbox", undefined, GM.L.FILL);
         fillCB.value = defCfg.fillEnabled;
@@ -336,7 +308,6 @@ GM.UI = {
         fillOPCB.value = defCfg.fillOverprint;
         fillOPCB.helpTip = GM.L.TIP_OVERPRINT;
 
-        // Stroke
         var strokeGrp = appPanel.add("group");
         var strokeCB = strokeGrp.add("checkbox", undefined, GM.L.STROKE);
         strokeCB.value = defCfg.strokeEnabled;
@@ -350,7 +321,6 @@ GM.UI = {
         strokeOPCB.helpTip = GM.L.TIP_OVERPRINT;
         strokeOPCB.enabled = defCfg.strokeEnabled;
 
-        // Weight
         var wGrp = appPanel.add("group");
         wGrp.add("statictext", undefined, GM.L.WEIGHT);
         var weightInput = wGrp.add("edittext", undefined, String(defCfg.strokeWeight));
@@ -359,7 +329,6 @@ GM.UI = {
         weightInput.helpTip = GM.L.TIP_WEIGHT;
         wGrp.add("statictext", undefined, GM.L.POINTS);
 
-        // Handlers
         fillCB.onClick = function () {
             fillDDL.enabled = fillCB.value;
             fillOPCB.enabled = fillCB.value;
@@ -393,13 +362,30 @@ GM.UI = {
         };
 
         // =================================================================
-        // Footer — action buttons
+        // Copyright footer
+        // =================================================================
+        var grpCopy = dlg.add("group");
+        grpCopy.alignment = ["fill", "top"];
+        var stCopy = grpCopy.add("statictext", undefined,
+            "© 2025–2026 Osva1d — " + GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
+        stCopy.enabled = false;
+
+        // =================================================================
+        // Footer — Reset + action buttons
         // =================================================================
         var footerGrp = dlg.add("group");
-        footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing   = 8;
+        footerGrp.alignment = ["fill", "center"];
+        footerGrp.spacing = 8;
+
+        var resetBtn = footerGrp.add("button", undefined, GM.L.BTN_RESET);
+        resetBtn.helpTip = GM.L.TIP_RESET;
+        resetBtn.alignment = ["left", "center"];
+
+        var spacer = footerGrp.add("group");
+        spacer.alignment = ["fill", "fill"];
+
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, GM.L.OK,     { name: "ok" });
+        footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
 
         // =================================================================
         // Gather & Apply
@@ -429,8 +415,6 @@ GM.UI = {
         }
 
         function applyAll(s) {
-            // Stored values are in the stored unit — set currentUnit first,
-            // then write raw values. No conversion needed (intentional).
             GM.UI.selectUnit(unitsDDL, s.units || GM.CONSTANTS.UNIT.MM);
             currentUnit = s.units || GM.CONSTANTS.UNIT.MM;
 
@@ -444,8 +428,6 @@ GM.UI = {
 
             bottomMirrorCB.value = s.bottomMirror;
             rightMirrorCB.value = s.rightMirror;
-            // updateMirrors() must run AFTER both mirror CBs and edge panels
-            // are set — it disables/enables controls based on mirror state.
             updateMirrors();
 
             sizeInput.text = s.markSize;
@@ -470,67 +452,133 @@ GM.UI = {
         }
 
         // =================================================================
-        // Preset Handlers
+        // Preset Handlers (delegating to GM.UIState)
         // =================================================================
-        applyAll(allSettings[GM.CONSTANTS.SENTINEL_DEFAULT]);
+        function refreshModifiedIndicator() {
+            var modified;
+            try { modified = GM.UIState.isModified(pData, gatherAll()); } catch (e) { modified = false; }
+            try { saveBtn.enabled = modified; } catch (e) {}
 
-        loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var idx = loadDDL.selection.index;
             var key = sortedKeys[idx];
-            deleteBtn.enabled = (key !== GM.CONSTANTS.SENTINEL_DEFAULT);
-            var s = allSettings[key];
-            if (s) applyAll(s);
+            if (key !== pData.activePreset) return;
+            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.DEFAULT_PRESET : key;
+            if (modified) displayText += " *";
+            try { loadDDL.items[idx].text = displayText; } catch (e) {
+                updatePresetList();
+            }
+        }
+
+        function updatePresetList() {
+            loadDDL.removeAll();
+            var entries = GM.UIState.formatPresetList(pData, gatherAll(), GM.L);
+            sortedKeys = [];
+            var selIdx = 0;
+            for (var i = 0; i < entries.length; i++) {
+                loadDDL.add("item", entries[i].displayText);
+                sortedKeys.push(entries[i].key);
+                if (entries[i].isActive) selIdx = i;
+            }
+            if (loadDDL.items.length > 0) loadDDL.selection = selIdx;
+            deleteBtn.enabled = (pData.activePreset !== GM.Config.PRESET_KEY_DEFAULT);
+        }
+
+        // Load initial values from [Last Settings] or active preset
+        var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
+        if (initPreset) applyAll(initPreset);
+        updatePresetList();
+
+        loadDDL.onChange = function () {
+            if (!loadDDL.selection) return;
+            var key = sortedKeys[loadDDL.selection.index];
+            if (!key || key === pData.activePreset) return;
+            var r = GM.UIState.selectPreset(pData, key);
+            if (!r.ok) return;
+            deleteBtn.enabled = (key !== GM.Config.PRESET_KEY_DEFAULT);
+            applyAll(r.settings);
+            refreshModifiedIndicator();
+        };
+
+        saveBtn.onClick = function () {
+            var r = GM.UIState.save(pData, gatherAll());
+            if (r.ok) {
+                updatePresetList();
+                try { GM.Storage.save(pData); } catch (e) {}
+                return;
+            }
+            if (r.reason === "needs-name") saveAsBtn.onClick();
+        };
+
+        saveAsBtn.onClick = function () {
+            var raw = prompt(GM.L.PROMPT_SAVE_AS, "");
+            if (raw === null || raw === "") return;
+            var clean = GM.UIState.validatePresetName(raw);
+            if (!clean) { alert(GM.L.ERR_RESERVED_NAME); return; }
+            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function () {
+                return confirm(GM.L.ERR_PRESET_EXISTS);
+            });
+            if (!r.ok) return;
+            updatePresetList();
+            refreshModifiedIndicator();
+            try { GM.Storage.save(pData); } catch (e) {}
         };
 
         deleteBtn.onClick = function () {
             if (!loadDDL.selection) return;
-            var idx = loadDDL.selection.index;
-            var key = sortedKeys[idx];
-            if (key === GM.CONSTANTS.SENTINEL_DEFAULT) {
-                alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);
-                return;
-            }
+            var key = sortedKeys[loadDDL.selection.index];
             var displayName = loadDDL.selection.text;
             if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, displayName))) return;
-            delete allSettings[key];
-            sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-            loadDDL.selection = 0;
-            deleteBtn.enabled = false;
-            applyAll(allSettings[sortedKeys[0]]);
-        };
-
-        saveBtn.onClick = function () {
-            var sd = new Window("dialog", GM.L.SAVE_TITLE);
-            sd.alignChildren = ["fill", "top"];
-            var ng = sd.add("group");
-            ng.add("statictext", undefined, GM.L.PRESET_NAME);
-            var ni = ng.add("edittext", undefined, "");
-            ni.characters = 25;
-            ni.active = true;
-
-            var bg = sd.add("group");
-            bg.alignment = "center";
-            bg.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-            bg.add("button", undefined, GM.L.OK, { name: "ok" });
-
-            if (sd.show() === 1) {
-                var sn = ni.text.replace(/^\s+|\s+$/g, "");
-                if (!sn || !sn.length) { alert(GM.L.ERR_ENTER_NAME); return; }
-                if (sn === GM.CONSTANTS.SENTINEL_CREATE || sn === GM.CONSTANTS.SENTINEL_DEFAULT) {
-                    alert(GM.L.ERR_ENTER_NAME); return;
-                }
-                if (allSettings[sn]) {
-                    if (!confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, sn))) return;
-                }
-                allSettings[sn] = gatherAll();
-                sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-                // Select saved preset — find by key in sortedKeys
-                for (var si = 0; si < sortedKeys.length; si++) {
-                    if (sortedKeys[si] === sn) { loadDDL.selection = si; break; }
-                }
+            var r = GM.UIState.deleteActive(pData);
+            if (!r.ok) {
+                if (r.reason === "reserved") alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);
+                return;
             }
+            updatePresetList();
+            applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
+            refreshModifiedIndicator();
+            try { GM.Storage.save(pData); } catch (e) {}
         };
+
+        resetBtn.onClick = function () {
+            applyAll(GM.Config.getDefaults());
+            refreshModifiedIndicator();
+        };
+
+        // =================================================================
+        // Live Validation
+        // =================================================================
+        var numericFields = [offsetXIn, offsetYIn, sizeInput];
+        if (weightInput) numericFields.push(weightInput);
+
+        function liveValidateAll() {
+            var allValid = true;
+            for (var i = 0; i < numericFields.length; i++) {
+                var et = numericFields[i];
+                if (!et.enabled) continue;
+                var str = String(et.text || "").replace(/,/g, ".");
+                var n = parseFloat(str);
+                var valid = !isNaN(n) && n >= 0;
+                try {
+                    var g = et.graphics;
+                    if (g && g.newPen) {
+                        var color = valid
+                            ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
+                            : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                        g.foregroundColor = color;
+                    }
+                } catch (e) {}
+                if (!valid) allValid = false;
+            }
+            return allValid;
+        }
+
+        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput];
+        for (var ei = 0; ei < allEdits.length; ei++) {
+            if (!allEdits[ei]) continue;
+            allEdits[ei].onChange = function () { refreshModifiedIndicator(); liveValidateAll(); };
+            allEdits[ei].onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
+        }
 
         return {
             window: dlg,
