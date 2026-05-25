@@ -1,15 +1,20 @@
-﻿#target illustrator
-/*
+﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     3.1.0
+ * Version:     4.0.0
  * Author:      Osva1d
- * Updated:     2026-03-29
+ * Updated:     2026-05-25
+ *
+ * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
+ * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
+ * <https://www.gnu.org/licenses/gpl-3.0.txt> for full terms.
  *
  * Description:
  *   Grommet mark generator for banner production.
  * ===========================================================================
  */
+
+#target illustrator
 
 (function () {
 
@@ -146,20 +151,22 @@ if (typeof JSON !== 'object') { JSON = {}; }
 var GM = {};
 
 // ------------------------------------------------------------------------
-// Constants
+// Module: GM.CONSTANTS — script-wide constants
+// Part of: Illustrator Grommet Marks
+// Depends on: (none)
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "3.1.0",
+    VERSION: "4.0.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
-    // Functional identifiers (not displayed in UI)
     LAYER_NAME: "Grommet Marks",
     SWATCH_NAME: "Grommet Marks",
 
-    // Internal sentinel values — never displayed, used in logic only
+    // Layer/swatch auto-creation sentinel — never displayed, used in logic only
     SENTINEL_CREATE: "__create__",
-    SENTINEL_DEFAULT: "__default__",
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
@@ -172,8 +179,12 @@ GM.CONSTANTS = {
 };
 
 // ------------------------------------------------------------------------
-// Localization
+// Module: GM.L — localization (EN/CS string tables)
+// Part of: Illustrator Grommet Marks
+// Depends on: (none — self-contained IIFE)
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.L = (function () {
     // Detect Illustrator UI language
     var lang = "en";
@@ -231,9 +242,11 @@ GM.L = (function () {
             LOAD: "Load:",
             DELETE: "Delete",
             SAVE: "Save",
-            SAVE_TITLE: "Save preset",
-            PRESET_NAME: "Name:",
-            REPLACE_EXISTING: "Replace existing:",
+            BTN_SAVE_AS: "Save As…",
+            TIP_SAVE_AS: "Save current settings as a new preset.",
+            BTN_RESET: "Reset",
+            TIP_RESET: "Reset all settings to factory defaults.",
+            PROMPT_SAVE_AS: "Save current settings as new preset:",
 
             // Buttons
             OK: "Generate",
@@ -256,6 +269,7 @@ GM.L = (function () {
             TIP_SHAPE_ROUND: "Marks will be circular",
             TIP_SHAPE_SQUARE: "Marks will be square",
             TIP_PRESET_LOAD: "Select saved preset",
+            TIP_SAVE: "Save settings to the active preset.",
 
             // Errors
             ERR_NO_DOC: "Open a document before running the script.",
@@ -273,6 +287,12 @@ GM.L = (function () {
             ERR_SWATCH_NOT_FOUND: "Swatch \"%s\" not found.",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
+            ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
+            ERR_PRESET_EXISTS: "Preset already exists. Overwrite?",
+            ERR_MUST_BE_NUMBER: "%s must be a number!",
+            ERR_MUST_BE_INTEGER: "%s must be a whole number!",
+            ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
+            PRESET_PLACEHOLDER: "My Preset",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -328,9 +348,11 @@ GM.L = (function () {
             LOAD: "Načíst:",
             DELETE: "Smazat",
             SAVE: "Uložit",
-            SAVE_TITLE: "Uložit nastavení",
-            PRESET_NAME: "Název:",
-            REPLACE_EXISTING: "Nahradit existující:",
+            BTN_SAVE_AS: "Uložit jako…",
+            TIP_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu.",
+            BTN_RESET: "Reset",
+            TIP_RESET: "Obnovit všechna nastavení na výchozí hodnoty.",
+            PROMPT_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu:",
 
             // Buttons
             OK: "Generovat",
@@ -353,6 +375,7 @@ GM.L = (function () {
             TIP_SHAPE_ROUND: "Značka bude kruhová",
             TIP_SHAPE_SQUARE: "Značka bude čtvercová",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
+            TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
 
             // Errors
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
@@ -370,6 +393,12 @@ GM.L = (function () {
             ERR_SWATCH_NOT_FOUND: "Vzorník \"%s\" nenalezen.",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
+            ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
+            ERR_PRESET_EXISTS: "Předvolba již existuje. Přepsat?",
+            ERR_MUST_BE_NUMBER: "%s musí být číslo!",
+            ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
+            ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
+            PRESET_PLACEHOLDER: "Moje předvolba",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
@@ -395,16 +424,91 @@ GM.L = (function () {
 })();
 
 // ------------------------------------------------------------------------
-// Configuration & Persistence
+// Module: GM.Utils — shared utility functions
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
+GM.Utils = {
+    /**
+     * Writes a debug message to the ExtendScript console.
+     * @param {string} msg - Message to log.
+     */
+    log: function (msg) {
+        $.writeln("[GM] " + msg);
+    },
+
+    /**
+     * Displays a user-facing error alert prefixed with script name.
+     * @param {string} msg - Error message body.
+     */
+    error: function (msg) {
+        alert(GM.CONSTANTS.SCRIPT_NAME + ": " + msg);
+    },
+
+    /**
+     * Returns a deep copy of a JSON-serializable object.
+     * @param {Object} obj - Source object.
+     * @returns {Object} Independent copy.
+     */
+    deepCopy: function (obj) {
+        return JSON.parse(JSON.stringify(obj));
+    },
+
+    /**
+     * Deep-equality test for two GM settings objects.
+     * Used by the UI to detect "modified" state (UI values diverged
+     * from the stored preset). Numeric coercion via String() so 5
+     * and "5" compare equal — UI inputs are strings, stored values
+     * may be numbers.
+     *
+     * @param {Object} a - First settings object.
+     * @param {Object} b - Second settings object.
+     * @returns {boolean} True if all schema fields are equal.
+     */
+    presetEquals: function (a, b) {
+        if (!a || !b) return false;
+        var keys = [
+            "offsetX", "offsetY", "bottomMirror", "rightMirror",
+            "units", "markSize", "isRound",
+            "markLayerName", "fillEnabled", "fillSwatchName", "fillOverprint",
+            "strokeEnabled", "strokeSwatchName", "strokeOverprint", "strokeWeight"
+        ];
+        for (var i = 0; i < keys.length; i++) {
+            if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
+        }
+        // Compare edge sub-objects
+        var edgeNames = ["top", "left", "bottom", "right"];
+        var edgeKeys = ["enabled", "useNumber", "number", "spacing"];
+        for (var ei = 0; ei < edgeNames.length; ei++) {
+            var aE = a[edgeNames[ei]] || {};
+            var bE = b[edgeNames[ei]] || {};
+            for (var ek = 0; ek < edgeKeys.length; ek++) {
+                if (String(aE[edgeKeys[ek]]) !== String(bE[edgeKeys[ek]])) return false;
+            }
+        }
+        return true;
+    }
+};
+
+// ------------------------------------------------------------------------
+// Module: GM.Config — default settings and preset constants
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS
+// ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Config = {
+    PRESET_KEY_DEFAULT: "[Default]",
+
     /**
      * Creates an edge definition (per-edge settings).
-     * @param {boolean} enabled - Edge active
-     * @param {boolean} useNum - True = fixed count, False = preferred spacing
-     * @param {number} num - Number of marks
-     * @param {number} spacing - Preferred spacing between mark centers
-     * @returns {Object} Edge definition
+     * @param {boolean} enabled - Edge active.
+     * @param {boolean} useNum - True = fixed count, false = preferred spacing.
+     * @param {number} num - Number of marks.
+     * @param {number} spacing - Preferred spacing between mark centers.
+     * @returns {Object} Edge definition.
      */
     createEdgeDef: function (enabled, useNum, num, spacing) {
         return {
@@ -415,6 +519,10 @@ GM.Config = {
         };
     },
 
+    /**
+     * Returns a fresh default settings object.
+     * @returns {Object} Default settings.
+     */
     getDefaults: function () {
         var c = GM.Config.createEdgeDef;
         var S = GM.CONSTANTS.SENTINEL_CREATE;
@@ -439,21 +547,61 @@ GM.Config = {
             strokeOverprint: true,
             strokeWeight: 1
         };
-    },
+    }
+};
 
-    getSettingsFile: function () {
-        var folder = Folder(Folder.userData + "/GrommetMarks");
+// ------------------------------------------------------------------------
+// Module: GM.Storage — settings persistence + migrations
+// Part of: Illustrator Grommet Marks
+//
+// Responsible for reading/writing the JSON settings file and migrating
+// older formats forward. Pure I/O + data transformation; no DOM, no UI.
+//
+// Depends on: GM.Utils (logging), GM.Config (getDefaults, PRESET_KEY_DEFAULT)
+// ------------------------------------------------------------------------
+var GM = GM || {};
+
+GM.Storage = {
+    PRESET_KEY_LAST: "[Last Settings]",
+
+    /**
+     * Returns the settings File object, creating the folder if needed.
+     * @returns {File} JSON settings file.
+     */
+    getFile: function () {
+        var folder = new Folder(Folder.userData + "/GrommetMarks");
         if (!folder.exists) folder.create();
-        return File(folder + "/" + GM.CONSTANTS.SETTINGS_FILE_NAME);
+        return new File(folder.fsName + "/" + GM.CONSTANTS.SETTINGS_FILE_NAME);
     },
 
     /**
-     * Migrates older settings formats to current version.
-     * - v2.x had per-edge x/y offsets -> v3 uses global offsetX/offsetY
-     * - v3.0 used localized unit names -> v3.1 uses internal keys (mm/cm/in)
-     * - v3.0 used localized sentinel strings -> v3.1 uses __create__/__default__
+     * Serializes and saves the full preset wrapper to disk.
+     * @param {Object} data - Full preset wrapper {activePreset, presets}.
      */
-    migrate: function (preset) {
+    save: function (data) {
+        try {
+            var f = GM.Storage.getFile();
+            f.encoding = "UTF-8";
+            if (!f.open("w")) {
+                GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+                return;
+            }
+            f.write(JSON.stringify(data));
+            f.close();
+        } catch (e) {
+            GM.Utils.log("Storage.save failed: " + e.message);
+        }
+    },
+
+    /**
+     * Migrates a single preset's values from older formats.
+     * - v2.x per-edge x/y offsets -> v3 global offsetX/offsetY
+     * - v3.0 localized unit names -> v3.1 internal keys (mm/cm/in)
+     * - v3.0 localized sentinel strings -> internal __create__
+     * @param {Object} preset - Single preset object (mutated).
+     * @returns {Object} Migrated preset.
+     */
+    migratePreset: function (preset) {
         // v2 -> v3: per-edge x/y to global offsets
         if (typeof preset.offsetX === "undefined") {
             var topX = (preset.top && typeof preset.top.x !== "undefined") ? preset.top.x : 7;
@@ -462,17 +610,12 @@ GM.Config = {
             preset.offsetY = topY;
         }
 
-        // Strip legacy per-edge x/y fields
         var edges = ["top", "left", "bottom", "right"];
         for (var i = 0; i < edges.length; i++) {
             var e = preset[edges[i]];
-            if (e) {
-                delete e.x;
-                delete e.y;
-            }
+            if (e) { delete e.x; delete e.y; }
         }
 
-        // Ensure mirror flags exist
         if (typeof preset.bottomMirror === "undefined") preset.bottomMirror = true;
         if (typeof preset.rightMirror === "undefined") preset.rightMirror = true;
 
@@ -485,7 +628,7 @@ GM.Config = {
             preset.units = unitMap[preset.units];
         }
 
-        // v3.0 -> v3.1: localized sentinel strings to internal keys
+        // v3.0 -> v3.1: localized sentinel strings to __create__
         var legacySentinels = [
             "[Vytvořit 'Grommet Marks']",
             "[Create 'Grommet Marks']"
@@ -507,79 +650,370 @@ GM.Config = {
     },
 
     /**
-     * Migrates preset keys (names) from localized to internal sentinels.
-     * @param {Object} allSettings - All presets keyed by name
-     * @returns {Object} Migrated settings
+     * Loads settings from disk and runs format migrations.
+     * Migration chain:
+     *   1. Flat {presetName: settings} -> wrapper {activePreset, presets}
+     *   2. __default__ -> [Default] key rename
+     *   3. Per-preset value migrations (v2->v3, v3.0->v3.1)
+     *   4. Forward-fill new default keys
+     * Returns null on failure; caller falls back to getDefaults().
+     * @returns {Object|null} Full preset wrapper or null.
      */
-    migrateKeys: function (allSettings) {
-        var legacyDefaults = ["[Výchozí]", "[Default]"];
-        for (var i = 0; i < legacyDefaults.length; i++) {
-            var old = legacyDefaults[i];
-            if (allSettings[old] && !allSettings[GM.CONSTANTS.SENTINEL_DEFAULT]) {
-                allSettings[GM.CONSTANTS.SENTINEL_DEFAULT] = allSettings[old];
-                delete allSettings[old];
-            }
-        }
-        return allSettings;
-    },
-
     load: function () {
-        var defaults = {};
-        defaults[GM.CONSTANTS.SENTINEL_DEFAULT] = GM.Config.getDefaults();
+        var f = GM.Storage.getFile();
+        if (!f.exists) return null;
 
         try {
-            var file = GM.Config.getSettingsFile();
-            if (!file.exists) return defaults;
+            f.encoding = "UTF-8";
+            f.open("r");
+            var content = f.read();
+            f.close();
+            if (!content) return null;
 
-            file.encoding = "UTF-8";
-            file.open("r");
-            var content = file.read();
-            file.close();
+            var data = JSON.parse(content);
+            var DEF = GM.Config.PRESET_KEY_DEFAULT;
 
-            var parsed = JSON.parse(content);
+            // MIGRATION 1: flat -> wrapper
+            if (!data.presets) {
+                var flat = data;
+                var wrapper = { activePreset: DEF, presets: {} };
 
-            // Migrate preset keys first
-            parsed = GM.Config.migrateKeys(parsed);
-
-            // Ensure default preset exists
-            if (!parsed[GM.CONSTANTS.SENTINEL_DEFAULT]) {
-                parsed[GM.CONSTANTS.SENTINEL_DEFAULT] = GM.Config.getDefaults();
+                for (var fk in flat) {
+                    if (flat.hasOwnProperty(fk)) {
+                        wrapper.presets[fk] = flat[fk];
+                    }
+                }
+                data = wrapper;
             }
 
-            // Migrate each preset's values and forward-fill new default keys
+            // MIGRATION 2: __default__ -> [Default]
+            if (data.presets["__default__"] && !data.presets[DEF]) {
+                data.presets[DEF] = data.presets["__default__"];
+                delete data.presets["__default__"];
+            }
+            if (data.activePreset === "__default__") {
+                data.activePreset = DEF;
+            }
+
+            // Also migrate old localized default keys
+            var legacyDefaults = ["[Výchozí]"];
+            for (var ld = 0; ld < legacyDefaults.length; ld++) {
+                var oldKey = legacyDefaults[ld];
+                if (data.presets[oldKey] && !data.presets[DEF]) {
+                    data.presets[DEF] = data.presets[oldKey];
+                    delete data.presets[oldKey];
+                    if (data.activePreset === oldKey) data.activePreset = DEF;
+                }
+            }
+
+            // Ensure [Default] exists
+            if (!data.presets[DEF]) {
+                data.presets[DEF] = GM.Config.getDefaults();
+            }
+
+            // Ensure activePreset is valid
+            if (!data.presets[data.activePreset]) {
+                data.activePreset = DEF;
+            }
+
+            // MIGRATION 3: per-preset value migrations + forward-fill
             var dflt = GM.Config.getDefaults();
-            for (var k in parsed) {
-                if (parsed.hasOwnProperty(k)) {
-                    parsed[k] = GM.Config.migrate(parsed[k]);
-                    for (var dk in dflt) {
-                        if (dflt.hasOwnProperty(dk) && typeof parsed[k][dk] === "undefined") {
-                            parsed[k][dk] = dflt[dk];
-                        }
+            for (var pk in data.presets) {
+                if (!data.presets.hasOwnProperty(pk)) continue;
+                data.presets[pk] = GM.Storage.migratePreset(data.presets[pk]);
+                for (var dk in dflt) {
+                    if (dflt.hasOwnProperty(dk) && typeof data.presets[pk][dk] === "undefined") {
+                        data.presets[pk][dk] = dflt[dk];
                     }
                 }
             }
-            return parsed;
-        } catch (e) {
-            return defaults;
-        }
-    },
 
-    save: function (allSettings) {
-        try {
-            var file = GM.Config.getSettingsFile();
-            file.encoding = "UTF-8";
-            file.open("w");
-            file.write(JSON.stringify(allSettings));
-            file.close();
+            return data;
         } catch (e) {
-            alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_WRITE_SETTINGS);
+            GM.Utils.log("Storage.load failed: " + e.message);
+            return null;
         }
     }
 };
 
 // ------------------------------------------------------------------------
-// Core Logic (Geometry & Math)
+// Module: GM.Validation — rules-based input validation
+// Part of: Illustrator Grommet Marks
+//
+// Pure validation logic decoupled from ScriptUI. Numeric checks use
+// a shared validateNumber helper. Can be tested in Node without Illustrator.
+//
+// Depends on: GM.L (error messages)
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
+GM.Validation = {
+    rules: {
+        offsetX:      { min: 0,    max: 9999, integer: false },
+        offsetY:      { min: 0,    max: 9999, integer: false },
+        markSize:     { min: 0.01, max: 9999, integer: false },
+        strokeWeight: { min: 0.01, max: 100,  integer: false },
+        edgeCount:    { min: 1,    max: 9999, integer: true  },
+        edgeSpacing:  { min: 0.01, max: 9999, integer: false }
+    },
+
+    /**
+     * Validates a numeric value against a rule.
+     * Normalizes Czech decimal separator (comma -> dot).
+     * @param {string|number} val - Raw value.
+     * @param {Object} rule - {min, max, integer}.
+     * @param {string} label - Display name for error messages.
+     * @param {Object} L - Locale object (GM.L).
+     * @returns {number|null} Parsed number or null if invalid.
+     */
+    validateNumber: function (val, rule, label, L) {
+        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
+        var n = (str === "") ? NaN : Number(str);
+        if (isNaN(n)) {
+            alert(L.format(L.ERR_MUST_BE_NUMBER || "%s must be a number!", label));
+            return null;
+        }
+        if (rule.integer && n !== Math.floor(n)) {
+            alert(L.format(L.ERR_MUST_BE_INTEGER || "%s must be a whole number!", label));
+            return null;
+        }
+        if (n < rule.min || n > rule.max) {
+            alert(L.format(L.ERR_OUT_OF_RANGE || "%s must be between %s and %s!", label, rule.min, rule.max));
+            return null;
+        }
+        return n;
+    },
+
+    /**
+     * Validates the full gathered configuration.
+     * Returns {valid: true, settings} or {valid: false, settings: null}.
+     *
+     * @param {Object} cfg - Raw config from gatherAll().
+     * @param {Object} L - Locale object.
+     * @returns {Object} {valid: boolean, settings: Object|null}
+     */
+    validate: function (cfg, L) {
+        if (!cfg) return { valid: false, settings: null };
+        var rules = GM.Validation.rules;
+        var vn = GM.Validation.validateNumber;
+
+        var offsetX = vn(cfg.offsetX, rules.offsetX, L.OFFSET_X || "Offset X", L);
+        if (offsetX === null) return { valid: false, settings: null };
+
+        var offsetY = vn(cfg.offsetY, rules.offsetY, L.OFFSET_Y || "Offset Y", L);
+        if (offsetY === null) return { valid: false, settings: null };
+
+        var markSize = vn(cfg.markSize, rules.markSize, L.SIZE_LABEL || "Mark size", L);
+        if (markSize === null) return { valid: false, settings: null };
+
+        var strokeWeight = cfg.strokeWeight;
+        if (cfg.strokeEnabled) {
+            strokeWeight = vn(cfg.strokeWeight, rules.strokeWeight, L.WEIGHT || "Stroke weight", L);
+            if (strokeWeight === null) return { valid: false, settings: null };
+        }
+
+        // Appearance check
+        if (!cfg.fillEnabled && !cfg.strokeEnabled) {
+            alert(L.ERR_NO_APPEARANCE);
+            return { valid: false, settings: null };
+        }
+
+        // Edge enabled check (accounting for mirrors)
+        var topOn = cfg.top.enabled;
+        var leftOn = cfg.left.enabled;
+        var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
+        var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
+        if (!topOn && !leftOn && !bottomOn && !rightOn) {
+            alert(L.ERR_NO_EDGE);
+            return { valid: false, settings: null };
+        }
+
+        // Validate non-mirrored enabled edges
+        var edgeKeys = ["top", "left"];
+        if (!cfg.bottomMirror) edgeKeys.push("bottom");
+        if (!cfg.rightMirror) edgeKeys.push("right");
+
+        for (var i = 0; i < edgeKeys.length; i++) {
+            var e = cfg[edgeKeys[i]];
+            if (!e.enabled) continue;
+            if (e.useNumber) {
+                var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
+                if (cnt === null) return { valid: false, settings: null };
+            } else {
+                var spc = vn(e.spacing, rules.edgeSpacing, L.SPACING || "Spacing", L);
+                if (spc === null) return { valid: false, settings: null };
+            }
+        }
+
+        // Build clean settings (parsed numbers replace raw strings)
+        var settings = GM.Utils.deepCopy(cfg);
+        settings.offsetX = offsetX;
+        settings.offsetY = offsetY;
+        settings.markSize = markSize;
+        if (cfg.strokeEnabled) settings.strokeWeight = strokeWeight;
+
+        return { valid: true, settings: settings };
+    }
+};
+
+// ------------------------------------------------------------------------
+// Module: GM.UIState — pure preset state-transition logic
+// Part of: Illustrator Grommet Marks
+//
+// Extracted from ScriptUI event handlers so it can be unit-tested without
+// a real dialog. The dialog (ui.js) wires these to button onClick handlers;
+// everything UI-specific (alerts, prompts, control updates) stays in ui.js.
+//
+// Depends on: GM.Utils (presetEquals), GM.Config (PRESET_KEY_DEFAULT)
+// ------------------------------------------------------------------------
+var GM = GM || {};
+
+GM.UIState = {
+    PRESET_KEY_DEFAULT: "[Default]",
+    PRESET_KEY_LAST:    "[Last Settings]",
+
+    /**
+     * Validates a preset name.
+     * @param {string} rawName - User-entered name.
+     * @returns {string|null} Trimmed name, or null if invalid/reserved.
+     */
+    validatePresetName: function (rawName) {
+        var name = String(rawName == null ? "" : rawName).replace(/^\s+|\s+$/g, "");
+        if (!name) return null;
+        if (name === this.PRESET_KEY_DEFAULT || name === this.PRESET_KEY_LAST) return null;
+        return name;
+    },
+
+    /**
+     * Returns true if the active preset has unsaved changes.
+     * @param {Object} pData - Preset wrapper {activePreset, presets}.
+     * @param {Object} currentValues - Current UI values.
+     * @returns {boolean}
+     */
+    isModified: function (pData, currentValues) {
+        if (!pData || !currentValues) return false;
+        var preset = pData.presets[pData.activePreset];
+        if (!preset) return false;
+        return !GM.Utils.presetEquals(currentValues, preset);
+    },
+
+    /**
+     * Builds dropdown list data: ordered keys with display text + modified indicator.
+     * @param {Object} pData - Preset wrapper.
+     * @param {Object} currentValues - Current UI values.
+     * @param {Object} L - Locale (for [Default] display).
+     * @returns {Array} [{key, displayText, isActive, isModified}, ...]
+     */
+    formatPresetList: function (pData, currentValues, L) {
+        L = L || {};
+        var defaultDisplay = L.DEFAULT_PRESET || this.PRESET_KEY_DEFAULT;
+        var DEF = this.PRESET_KEY_DEFAULT;
+        var keys = [];
+        for (var k in pData.presets) {
+            if (pData.presets.hasOwnProperty(k) && k !== this.PRESET_KEY_LAST) keys.push(k);
+        }
+        keys.sort(function (a, b) {
+            if (a === DEF) return -1;
+            if (b === DEF) return 1;
+            return a < b ? -1 : (a > b ? 1 : 0);
+        });
+
+        var modified = this.isModified(pData, currentValues);
+
+        var result = [];
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            var displayText = (key === DEF) ? defaultDisplay : key;
+            var isActive = (key === pData.activePreset);
+            if (isActive && modified) displayText += " *";
+            result.push({
+                key: key,
+                displayText: displayText,
+                isActive: isActive,
+                isModified: isActive && modified
+            });
+        }
+        return result;
+    },
+
+    /**
+     * Save current UI values to the active named preset.
+     * If active is [Default] or [Last Settings], returns needs-name.
+     * @param {Object} pData - Preset wrapper (mutated).
+     * @param {Object} currentValues - UI values to save.
+     * @returns {Object} {ok, reason?}
+     */
+    save: function (pData, currentValues) {
+        if (!pData || !currentValues) return { ok: false, reason: "missing-input" };
+        var active = pData.activePreset;
+        if (active === this.PRESET_KEY_DEFAULT || active === this.PRESET_KEY_LAST || !active) {
+            return { ok: false, reason: "needs-name" };
+        }
+        pData.presets[active] = currentValues;
+        return { ok: true };
+    },
+
+    /**
+     * Save current UI values as a new (or replacing existing) named preset.
+     * @param {Object} pData - Preset wrapper (mutated).
+     * @param {string} name - New preset name (raw user input).
+     * @param {Object} currentValues - UI values.
+     * @param {Function} confirmOverwrite - Optional callback (returns bool).
+     * @returns {Object} {ok, reason?, name?}
+     */
+    saveAs: function (pData, name, currentValues, confirmOverwrite) {
+        if (!pData || !currentValues) return { ok: false, reason: "missing-input" };
+        var clean = this.validatePresetName(name);
+        if (!clean) return { ok: false, reason: "invalid-name" };
+        if (pData.presets[clean]) {
+            if (typeof confirmOverwrite === "function" && !confirmOverwrite(clean)) {
+                return { ok: false, reason: "user-cancelled" };
+            }
+        }
+        pData.presets[clean] = currentValues;
+        pData.activePreset = clean;
+        return { ok: true, name: clean };
+    },
+
+    /**
+     * Delete the active preset (cannot delete [Default] or [Last Settings]).
+     * On success, activePreset reverts to [Default].
+     * @param {Object} pData - Preset wrapper (mutated).
+     * @returns {Object} {ok, reason?}
+     */
+    deleteActive: function (pData) {
+        if (!pData) return { ok: false, reason: "missing-input" };
+        var active = pData.activePreset;
+        if (active === this.PRESET_KEY_DEFAULT || active === this.PRESET_KEY_LAST) {
+            return { ok: false, reason: "reserved" };
+        }
+        if (!pData.presets[active]) return { ok: false, reason: "not-found" };
+        delete pData.presets[active];
+        pData.activePreset = this.PRESET_KEY_DEFAULT;
+        return { ok: true };
+    },
+
+    /**
+     * Switch to a different preset.
+     * @param {Object} pData - Preset wrapper (mutated).
+     * @param {string} name - Target preset key.
+     * @returns {Object} {ok, settings?, reason?}
+     */
+    selectPreset: function (pData, name) {
+        if (!pData) return { ok: false, reason: "missing-input" };
+        if (!pData.presets[name]) return { ok: false, reason: "not-found" };
+        pData.activePreset = name;
+        return { ok: true, settings: pData.presets[name] };
+    }
+};
+
+// ------------------------------------------------------------------------
+// Module: GM.Core — geometry and math (pure, no DOM)
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS
+// ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Core = {
     /**
      * Converts a value between units.
@@ -664,8 +1098,12 @@ GM.Core = {
 };
 
 // ------------------------------------------------------------------------
-// Illustrator DOM Adapter
+// Module: GM.Illustrator — Adobe Illustrator DOM adapter
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS, GM.L
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Illustrator = {
     doc: null,
 
@@ -811,8 +1249,12 @@ GM.Illustrator = {
 };
 
 // ------------------------------------------------------------------------
-// UI (ScriptUI Dialog)
+// Module: GM.UI — ScriptUI dialog builder
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.UI = {
     /**
      * Returns localized display names for unit dropdown.
@@ -852,9 +1294,8 @@ GM.UI = {
 
     /**
      * Maps a stored value to its display string for dropdowns.
-     * Converts SENTINEL_CREATE to localized CREATE_LABEL.
      * @param {string} value - Stored value
-     * @returns {string} Display string for dropdown matching
+     * @returns {string} Display string
      */
     toDisplay: function (value) {
         if (value === GM.CONSTANTS.SENTINEL_CREATE) return GM.L.CREATE_LABEL;
@@ -863,7 +1304,6 @@ GM.UI = {
 
     /**
      * Maps a dropdown display string back to its storage value.
-     * Converts localized CREATE_LABEL to SENTINEL_CREATE.
      * @param {string} displayText - Dropdown selection text
      * @returns {string} Value for storage
      */
@@ -883,15 +1323,13 @@ GM.UI = {
     buildEdgePanel: function (parent, label, defaultCfg, width) {
         var pnl = parent.add("panel", undefined, "");
         pnl.alignChildren = ["left", "top"];
-        pnl.margins = [12, 12, 12, 8]; // Compact — intentional for 2×2 edge grid
+        pnl.margins = [12, 12, 12, 8];
         if (width) pnl.preferredSize.width = width;
 
         var cb = pnl.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
 
-        // Layout: Count or Spacing — two-column grid
-        // Radio buttons share one parent (radioCol) for native ScriptUI exclusion
         var modeGrp = pnl.add("group");
         modeGrp.orientation = "row";
         modeGrp.alignChildren = ["left", "center"];
@@ -960,45 +1398,22 @@ GM.UI = {
     },
 
     /**
-     * Rebuilds the preset dropdown from allSettings.
-     * Default preset is always first, shown with localized display name.
-     * @param {DropDownList} ddl - Preset dropdown
-     * @param {Object} allSettings - All presets
-     * @returns {Array<string>} Sorted internal preset keys
-     */
-    rebuildPresets: function (ddl, allSettings) {
-        ddl.removeAll();
-        var SD = GM.CONSTANTS.SENTINEL_DEFAULT;
-        var sortedKeys = [SD];
-        for (var k in allSettings) {
-            if (allSettings.hasOwnProperty(k) && k !== SD) {
-                sortedKeys.push(k);
-            }
-        }
-        for (var j = 0; j < sortedKeys.length; j++) {
-            // Display localized name for default, raw name for user presets
-            var display = (sortedKeys[j] === SD) ? GM.L.DEFAULT_PRESET : sortedKeys[j];
-            ddl.add("item", display);
-        }
-        return sortedKeys;
-    },
-
-    /**
      * Builds the main ScriptUI dialog.
-     * @param {Object} allSettings - All saved presets
+     * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} layerInfo - Layer names and existence flags
      * @param {Object} swatchInfo - Swatch names and existence flags
      * @returns {Object} Dialog object with window and gatherAll methods
      */
-    buildDialog: function (allSettings, layerInfo, swatchInfo) {
-        var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME);
+    buildDialog: function (pData, layerInfo, swatchInfo) {
+        var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
         dlg.alignChildren = ["fill", "top"];
         dlg.margins  = 20;
         dlg.spacing  = 15;
         var defCfg = GM.Config.getDefaults();
+        var sortedKeys = [];
 
         // =================================================================
-        // Settings Panel (first — matches ZSM preset-first layout)
+        // Settings Panel
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
         setPanel.orientation = "row";
@@ -1010,12 +1425,12 @@ GM.UI = {
         loadDDL.preferredSize.width = 200;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
-        var sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-        loadDDL.selection = 0;
-
+        var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
+        saveBtn.helpTip = GM.L.TIP_SAVE || "";
+        var saveAsBtn = setPanel.add("button", undefined, GM.L.BTN_SAVE_AS);
+        saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
         var deleteBtn = setPanel.add("button", undefined, GM.L.DELETE);
         deleteBtn.enabled = false;
-        var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
 
         // =================================================================
         // Global Position Panel
@@ -1052,7 +1467,6 @@ GM.UI = {
         row2.orientation = "row";
         row2.alignChildren = ["fill", "top"];
 
-        // Bottom column
         var bottomOuter = row2.add("group");
         bottomOuter.orientation = "column";
         bottomOuter.alignChildren = ["fill", "top"];
@@ -1064,7 +1478,6 @@ GM.UI = {
         bottomMirrorCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
         var bottomUI = GM.UI.buildEdgePanel(bottomOuter, GM.L.BOTTOM_CUSTOM, defCfg.bottom, 280);
 
-        // Right column
         var rightOuter = row2.add("group");
         rightOuter.orientation = "column";
         rightOuter.alignChildren = ["fill", "top"];
@@ -1076,7 +1489,6 @@ GM.UI = {
         rightMirrorCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
         var rightUI = GM.UI.buildEdgePanel(rightOuter, GM.L.RIGHT_CUSTOM, defCfg.right, 280);
 
-        // Mirror Logic
         function updateMirrors() {
             var bm = bottomMirrorCB.value;
             bottomUI.cb.enabled = !bm;
@@ -1128,7 +1540,6 @@ GM.UI = {
         appPanel.margins = [15, 10, 15, 15];
         appPanel.spacing = 10;
 
-        // Layer
         var layerGrp = appPanel.add("group");
         layerGrp.add("statictext", undefined, GM.L.LAYER);
         var layerDDL = layerGrp.add("dropdownlist", undefined, layerInfo.names);
@@ -1136,7 +1547,6 @@ GM.UI = {
         layerDDL.helpTip = GM.L.TIP_LAYER;
         GM.UI.selectDDL(layerDDL, GM.L.CREATE_LABEL);
 
-        // Fill
         var fillGrp = appPanel.add("group");
         var fillCB = fillGrp.add("checkbox", undefined, GM.L.FILL);
         fillCB.value = defCfg.fillEnabled;
@@ -1148,7 +1558,6 @@ GM.UI = {
         fillOPCB.value = defCfg.fillOverprint;
         fillOPCB.helpTip = GM.L.TIP_OVERPRINT;
 
-        // Stroke
         var strokeGrp = appPanel.add("group");
         var strokeCB = strokeGrp.add("checkbox", undefined, GM.L.STROKE);
         strokeCB.value = defCfg.strokeEnabled;
@@ -1162,7 +1571,6 @@ GM.UI = {
         strokeOPCB.helpTip = GM.L.TIP_OVERPRINT;
         strokeOPCB.enabled = defCfg.strokeEnabled;
 
-        // Weight
         var wGrp = appPanel.add("group");
         wGrp.add("statictext", undefined, GM.L.WEIGHT);
         var weightInput = wGrp.add("edittext", undefined, String(defCfg.strokeWeight));
@@ -1171,7 +1579,6 @@ GM.UI = {
         weightInput.helpTip = GM.L.TIP_WEIGHT;
         wGrp.add("statictext", undefined, GM.L.POINTS);
 
-        // Handlers
         fillCB.onClick = function () {
             fillDDL.enabled = fillCB.value;
             fillOPCB.enabled = fillCB.value;
@@ -1205,13 +1612,30 @@ GM.UI = {
         };
 
         // =================================================================
-        // Footer — action buttons
+        // Copyright footer
+        // =================================================================
+        var grpCopy = dlg.add("group");
+        grpCopy.alignment = ["fill", "top"];
+        var stCopy = grpCopy.add("statictext", undefined,
+            "© 2025–2026 Osva1d — " + GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
+        stCopy.enabled = false;
+
+        // =================================================================
+        // Footer — Reset + action buttons
         // =================================================================
         var footerGrp = dlg.add("group");
-        footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing   = 8;
+        footerGrp.alignment = ["fill", "center"];
+        footerGrp.spacing = 8;
+
+        var resetBtn = footerGrp.add("button", undefined, GM.L.BTN_RESET);
+        resetBtn.helpTip = GM.L.TIP_RESET;
+        resetBtn.alignment = ["left", "center"];
+
+        var spacer = footerGrp.add("group");
+        spacer.alignment = ["fill", "fill"];
+
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, GM.L.OK,     { name: "ok" });
+        footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
 
         // =================================================================
         // Gather & Apply
@@ -1241,8 +1665,6 @@ GM.UI = {
         }
 
         function applyAll(s) {
-            // Stored values are in the stored unit — set currentUnit first,
-            // then write raw values. No conversion needed (intentional).
             GM.UI.selectUnit(unitsDDL, s.units || GM.CONSTANTS.UNIT.MM);
             currentUnit = s.units || GM.CONSTANTS.UNIT.MM;
 
@@ -1256,8 +1678,6 @@ GM.UI = {
 
             bottomMirrorCB.value = s.bottomMirror;
             rightMirrorCB.value = s.rightMirror;
-            // updateMirrors() must run AFTER both mirror CBs and edge panels
-            // are set — it disables/enables controls based on mirror state.
             updateMirrors();
 
             sizeInput.text = s.markSize;
@@ -1282,67 +1702,133 @@ GM.UI = {
         }
 
         // =================================================================
-        // Preset Handlers
+        // Preset Handlers (delegating to GM.UIState)
         // =================================================================
-        applyAll(allSettings[GM.CONSTANTS.SENTINEL_DEFAULT]);
+        function refreshModifiedIndicator() {
+            var modified;
+            try { modified = GM.UIState.isModified(pData, gatherAll()); } catch (e) { modified = false; }
+            try { saveBtn.enabled = modified; } catch (e) {}
 
-        loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var idx = loadDDL.selection.index;
             var key = sortedKeys[idx];
-            deleteBtn.enabled = (key !== GM.CONSTANTS.SENTINEL_DEFAULT);
-            var s = allSettings[key];
-            if (s) applyAll(s);
+            if (key !== pData.activePreset) return;
+            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.DEFAULT_PRESET : key;
+            if (modified) displayText += " *";
+            try { loadDDL.items[idx].text = displayText; } catch (e) {
+                updatePresetList();
+            }
+        }
+
+        function updatePresetList() {
+            loadDDL.removeAll();
+            var entries = GM.UIState.formatPresetList(pData, gatherAll(), GM.L);
+            sortedKeys = [];
+            var selIdx = 0;
+            for (var i = 0; i < entries.length; i++) {
+                loadDDL.add("item", entries[i].displayText);
+                sortedKeys.push(entries[i].key);
+                if (entries[i].isActive) selIdx = i;
+            }
+            if (loadDDL.items.length > 0) loadDDL.selection = selIdx;
+            deleteBtn.enabled = (pData.activePreset !== GM.Config.PRESET_KEY_DEFAULT);
+        }
+
+        // Load initial values from [Last Settings] or active preset
+        var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
+        if (initPreset) applyAll(initPreset);
+        updatePresetList();
+
+        loadDDL.onChange = function () {
+            if (!loadDDL.selection) return;
+            var key = sortedKeys[loadDDL.selection.index];
+            if (!key || key === pData.activePreset) return;
+            var r = GM.UIState.selectPreset(pData, key);
+            if (!r.ok) return;
+            deleteBtn.enabled = (key !== GM.Config.PRESET_KEY_DEFAULT);
+            applyAll(r.settings);
+            refreshModifiedIndicator();
+        };
+
+        saveBtn.onClick = function () {
+            var r = GM.UIState.save(pData, gatherAll());
+            if (r.ok) {
+                updatePresetList();
+                try { GM.Storage.save(pData); } catch (e) {}
+                return;
+            }
+            if (r.reason === "needs-name") saveAsBtn.onClick();
+        };
+
+        saveAsBtn.onClick = function () {
+            var raw = prompt(GM.L.PROMPT_SAVE_AS, "");
+            if (raw === null || raw === "") return;
+            var clean = GM.UIState.validatePresetName(raw);
+            if (!clean) { alert(GM.L.ERR_RESERVED_NAME); return; }
+            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function () {
+                return confirm(GM.L.ERR_PRESET_EXISTS);
+            });
+            if (!r.ok) return;
+            updatePresetList();
+            refreshModifiedIndicator();
+            try { GM.Storage.save(pData); } catch (e) {}
         };
 
         deleteBtn.onClick = function () {
             if (!loadDDL.selection) return;
-            var idx = loadDDL.selection.index;
-            var key = sortedKeys[idx];
-            if (key === GM.CONSTANTS.SENTINEL_DEFAULT) {
-                alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);
-                return;
-            }
+            var key = sortedKeys[loadDDL.selection.index];
             var displayName = loadDDL.selection.text;
             if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, displayName))) return;
-            delete allSettings[key];
-            sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-            loadDDL.selection = 0;
-            deleteBtn.enabled = false;
-            applyAll(allSettings[sortedKeys[0]]);
-        };
-
-        saveBtn.onClick = function () {
-            var sd = new Window("dialog", GM.L.SAVE_TITLE);
-            sd.alignChildren = ["fill", "top"];
-            var ng = sd.add("group");
-            ng.add("statictext", undefined, GM.L.PRESET_NAME);
-            var ni = ng.add("edittext", undefined, "");
-            ni.characters = 25;
-            ni.active = true;
-
-            var bg = sd.add("group");
-            bg.alignment = "center";
-            bg.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-            bg.add("button", undefined, GM.L.OK, { name: "ok" });
-
-            if (sd.show() === 1) {
-                var sn = ni.text.replace(/^\s+|\s+$/g, "");
-                if (!sn || !sn.length) { alert(GM.L.ERR_ENTER_NAME); return; }
-                if (sn === GM.CONSTANTS.SENTINEL_CREATE || sn === GM.CONSTANTS.SENTINEL_DEFAULT) {
-                    alert(GM.L.ERR_ENTER_NAME); return;
-                }
-                if (allSettings[sn]) {
-                    if (!confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, sn))) return;
-                }
-                allSettings[sn] = gatherAll();
-                sortedKeys = GM.UI.rebuildPresets(loadDDL, allSettings);
-                // Select saved preset — find by key in sortedKeys
-                for (var si = 0; si < sortedKeys.length; si++) {
-                    if (sortedKeys[si] === sn) { loadDDL.selection = si; break; }
-                }
+            var r = GM.UIState.deleteActive(pData);
+            if (!r.ok) {
+                if (r.reason === "reserved") alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);
+                return;
             }
+            updatePresetList();
+            applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
+            refreshModifiedIndicator();
+            try { GM.Storage.save(pData); } catch (e) {}
         };
+
+        resetBtn.onClick = function () {
+            applyAll(GM.Config.getDefaults());
+            refreshModifiedIndicator();
+        };
+
+        // =================================================================
+        // Live Validation
+        // =================================================================
+        var numericFields = [offsetXIn, offsetYIn, sizeInput];
+        if (weightInput) numericFields.push(weightInput);
+
+        function liveValidateAll() {
+            var allValid = true;
+            for (var i = 0; i < numericFields.length; i++) {
+                var et = numericFields[i];
+                if (!et.enabled) continue;
+                var str = String(et.text || "").replace(/,/g, ".");
+                var n = parseFloat(str);
+                var valid = !isNaN(n) && n >= 0;
+                try {
+                    var g = et.graphics;
+                    if (g && g.newPen) {
+                        var color = valid
+                            ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
+                            : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                        g.foregroundColor = color;
+                    }
+                } catch (e) {}
+                if (!valid) allValid = false;
+            }
+            return allValid;
+        }
+
+        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput];
+        for (var ei = 0; ei < allEdits.length; ei++) {
+            if (!allEdits[ei]) continue;
+            allEdits[ei].onChange = function () { refreshModifiedIndicator(); liveValidateAll(); };
+            allEdits[ei].onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
+        }
 
         return {
             window: dlg,
@@ -1362,75 +1848,45 @@ GM.UI = {
 };
 
 // ------------------------------------------------------------------------
-// Main App
+// Module: GM.Main — entry point and artboard processing loop
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.Illustrator, GM.Storage, GM.Validation, GM.Core, GM.UI, GM.Config
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Main = {
-    /**
-     * Validates gathered configuration before processing.
-     * Returns first error message string, or null if all valid.
-     * @param {Object} cfg - Configuration from gatherAll()
-     * @returns {string|null} Localized error message or null
-     */
-    validate: function (cfg) {
-        if (isNaN(cfg.offsetX) || cfg.offsetX < 0) return GM.L.ERR_INVALID_OFFSET;
-        if (isNaN(cfg.offsetY) || cfg.offsetY < 0) return GM.L.ERR_INVALID_OFFSET;
-        if (isNaN(cfg.markSize) || cfg.markSize <= 0) return GM.L.ERR_MARK_SIZE;
-        if (cfg.strokeEnabled && (isNaN(cfg.strokeWeight) || cfg.strokeWeight <= 0)) return GM.L.ERR_INVALID_WEIGHT;
-
-        // Check appearance
-        if (!cfg.fillEnabled && !cfg.strokeEnabled) return GM.L.ERR_NO_APPEARANCE;
-
-        // Resolve effective enabled state (mirror = copy from opposite)
-        var topOn = cfg.top.enabled;
-        var leftOn = cfg.left.enabled;
-        var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
-        var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
-        if (!topOn && !leftOn && !bottomOn && !rightOn) return GM.L.ERR_NO_EDGE;
-
-        // Validate enabled, non-mirrored edges only
-        var edgeKeys = ["top", "left"];
-        if (!cfg.bottomMirror) edgeKeys.push("bottom");
-        if (!cfg.rightMirror) edgeKeys.push("right");
-
-        for (var i = 0; i < edgeKeys.length; i++) {
-            var e = cfg[edgeKeys[i]];
-            if (!e.enabled) continue;
-            if (e.useNumber) {
-                if (isNaN(e.number) || e.number < 1) return GM.L.ERR_EDGE_COUNT;
-            } else {
-                if (isNaN(e.spacing) || e.spacing <= 0) return GM.L.ERR_EDGE_SPACING;
-            }
-        }
-
-        return null;
-    },
-
     run: function () {
         if (!GM.Illustrator.init()) {
             alert(GM.L.ERR_NO_DOC);
             return;
         }
 
-        var settings = GM.Config.load();
+        var pData = GM.Storage.load();
+        if (!pData) {
+            pData = {
+                activePreset: GM.Config.PRESET_KEY_DEFAULT,
+                presets: {}
+            };
+            pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
+        }
+
         var layerInfo = GM.Illustrator.getLayerNames();
         var swatchInfo = GM.Illustrator.getSwatchNames();
 
-        var ui = GM.UI.buildDialog(settings, layerInfo, swatchInfo);
+        var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
 
         if (ui.window.show() !== 1) return;
 
-        // Persist all preset mutations (saves, deletes) only on OK
-        GM.Config.save(settings);
-
         var cfg = ui.gatherAll();
 
-        var err = GM.Main.validate(cfg);
-        if (err) {
-            alert(err);
-            return;
-        }
+        var result = GM.Validation.validate(cfg, GM.L);
+        if (!result.valid) return;
 
-        GM.Main.process(cfg);
+        // Auto-save [Last Settings]
+        pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
+        GM.Storage.save(pData);
+
+        GM.Main.process(result.settings);
 
         app.redraw();
     },
@@ -1439,7 +1895,6 @@ GM.Main = {
         try {
             var doc = GM.Illustrator.doc;
 
-            // Resolve effective edge configs (mirror = copy from opposite)
             var topCfg = cfg.top;
             var leftCfg = cfg.left;
             var bottomCfg = cfg.bottomMirror ? topCfg : cfg.bottom;
