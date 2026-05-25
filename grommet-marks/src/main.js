@@ -1,73 +1,43 @@
 // ------------------------------------------------------------------------
-// Main App
+// Module: GM.Main — entry point and artboard processing loop
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.Illustrator, GM.Storage, GM.Validation, GM.Core, GM.UI, GM.Config
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Main = {
-    /**
-     * Validates gathered configuration before processing.
-     * Returns first error message string, or null if all valid.
-     * @param {Object} cfg - Configuration from gatherAll()
-     * @returns {string|null} Localized error message or null
-     */
-    validate: function (cfg) {
-        if (isNaN(cfg.offsetX) || cfg.offsetX < 0) return GM.L.ERR_INVALID_OFFSET;
-        if (isNaN(cfg.offsetY) || cfg.offsetY < 0) return GM.L.ERR_INVALID_OFFSET;
-        if (isNaN(cfg.markSize) || cfg.markSize <= 0) return GM.L.ERR_MARK_SIZE;
-        if (cfg.strokeEnabled && (isNaN(cfg.strokeWeight) || cfg.strokeWeight <= 0)) return GM.L.ERR_INVALID_WEIGHT;
-
-        // Check appearance
-        if (!cfg.fillEnabled && !cfg.strokeEnabled) return GM.L.ERR_NO_APPEARANCE;
-
-        // Resolve effective enabled state (mirror = copy from opposite)
-        var topOn = cfg.top.enabled;
-        var leftOn = cfg.left.enabled;
-        var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
-        var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
-        if (!topOn && !leftOn && !bottomOn && !rightOn) return GM.L.ERR_NO_EDGE;
-
-        // Validate enabled, non-mirrored edges only
-        var edgeKeys = ["top", "left"];
-        if (!cfg.bottomMirror) edgeKeys.push("bottom");
-        if (!cfg.rightMirror) edgeKeys.push("right");
-
-        for (var i = 0; i < edgeKeys.length; i++) {
-            var e = cfg[edgeKeys[i]];
-            if (!e.enabled) continue;
-            if (e.useNumber) {
-                if (isNaN(e.number) || e.number < 1) return GM.L.ERR_EDGE_COUNT;
-            } else {
-                if (isNaN(e.spacing) || e.spacing <= 0) return GM.L.ERR_EDGE_SPACING;
-            }
-        }
-
-        return null;
-    },
-
     run: function () {
         if (!GM.Illustrator.init()) {
             alert(GM.L.ERR_NO_DOC);
             return;
         }
 
-        var settings = GM.Config.load();
+        var pData = GM.Storage.load();
+        if (!pData) {
+            pData = {
+                activePreset: GM.Config.PRESET_KEY_DEFAULT,
+                presets: {}
+            };
+            pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
+        }
+
         var layerInfo = GM.Illustrator.getLayerNames();
         var swatchInfo = GM.Illustrator.getSwatchNames();
 
-        var ui = GM.UI.buildDialog(settings, layerInfo, swatchInfo);
+        var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
 
         if (ui.window.show() !== 1) return;
 
-        // Persist all preset mutations (saves, deletes) only on OK
-        GM.Config.save(settings);
-
         var cfg = ui.gatherAll();
 
-        var err = GM.Main.validate(cfg);
-        if (err) {
-            alert(err);
-            return;
-        }
+        var result = GM.Validation.validate(cfg, GM.L);
+        if (!result.valid) return;
 
-        GM.Main.process(cfg);
+        // Auto-save [Last Settings]
+        pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
+        GM.Storage.save(pData);
+
+        GM.Main.process(result.settings);
 
         app.redraw();
     },
@@ -76,7 +46,6 @@ GM.Main = {
         try {
             var doc = GM.Illustrator.doc;
 
-            // Resolve effective edge configs (mirror = copy from opposite)
             var topCfg = cfg.top;
             var leftCfg = cfg.left;
             var bottomCfg = cfg.bottomMirror ? topCfg : cfg.bottom;
