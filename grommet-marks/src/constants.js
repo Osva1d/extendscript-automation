@@ -1,18 +1,20 @@
 // ------------------------------------------------------------------------
-// Constants
+// Module: GM.CONSTANTS — script-wide constants
+// Part of: Illustrator Grommet Marks
+// Depends on: (none)
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "3.1.0",
+    VERSION: "4.0.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
-    // Functional identifiers (not displayed in UI)
     LAYER_NAME: "Grommet Marks",
     SWATCH_NAME: "Grommet Marks",
 
-    // Internal sentinel values — never displayed, used in logic only
+    // Layer/swatch auto-creation sentinel — never displayed, used in logic only
     SENTINEL_CREATE: "__create__",
-    SENTINEL_DEFAULT: "__default__",
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
