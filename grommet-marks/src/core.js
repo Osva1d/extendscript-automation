@@ -1,6 +1,10 @@
 // ------------------------------------------------------------------------
-// Core Logic (Geometry & Math)
+// Module: GM.Core — geometry and math (pure, no DOM)
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Core = {
     /**
      * Converts a value between units.

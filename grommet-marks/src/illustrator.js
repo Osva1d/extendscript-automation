@@ -1,6 +1,10 @@
 // ------------------------------------------------------------------------
-// Illustrator DOM Adapter
+// Module: GM.Illustrator — Adobe Illustrator DOM adapter
+// Part of: Illustrator Grommet Marks
+// Depends on: GM.CONSTANTS, GM.L
 // ------------------------------------------------------------------------
+var GM = GM || {};
+
 GM.Illustrator = {
     doc: null,
 
