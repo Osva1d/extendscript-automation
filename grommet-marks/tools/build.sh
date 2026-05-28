@@ -1,9 +1,9 @@
 #!/bin/bash
 # ===========================================================================
 # Script:      build.sh
-# Version:     4.0.0
+# Version:     4.1.0
 # Author:      Osva1d
-# Updated:     2026-05-25
+# Updated:     2026-05-28
 #
 # Description:
 #   Concatenates Grommet Marks source modules into production script.
