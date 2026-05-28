@@ -23,6 +23,7 @@ fi
 SUITES=(
     "tests/test_core_math.js"
     "tests/test_storage_migrations.js"
+    "tests/test_preview_model.js"
 )
 
 TOTAL_SUITES=${#SUITES[@]}
