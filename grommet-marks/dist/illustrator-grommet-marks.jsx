@@ -175,17 +175,6 @@ GM.CONSTANTS = {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,
         "in": 72
-    },
-
-    // Schematic preview (dialog diagram) — renderer visuals, px + [r,g,b,a].
-    // Geometry/dot-count logic lives in GM.PreviewModel; these are draw-only.
-    PREVIEW: {
-        WIDTH:      220,
-        HEIGHT:     150,
-        DOT_RADIUS: 3,
-        LINE_WIDTH: 1,
-        RECT_COLOR: [0.55, 0.55, 0.58, 1],   // neutral grey — visible on dark/light theme
-        DOT_COLOR:  [0.93, 0.52, 0.15, 1]    // warm accent — visible on dark/light theme
     }
 };
 
@@ -217,9 +206,6 @@ GM.L = (function () {
             // Position panel
             POSITION_PANEL: "Mark position",
             EDGES_PANEL: "Edges",
-            PREVIEW_PANEL: "Preview",
-            PREVIEW_ACTIVE_EDGES: "Active edges: %s",
-            PREVIEW_NONE: "No active edges",
             EDGE_TOP: "Top",
             EDGE_LEFT: "Left",
             EDGE_BOTTOM: "Bottom",
@@ -331,9 +317,6 @@ GM.L = (function () {
             // Position panel
             POSITION_PANEL: "Pozice značek",
             EDGES_PANEL: "Hrany",
-            PREVIEW_PANEL: "Náhled",
-            PREVIEW_ACTIVE_EDGES: "Aktivní hrany: %s",
-            PREVIEW_NONE: "Žádné aktivní hrany",
             EDGE_TOP: "Horní",
             EDGE_LEFT: "Levá",
             EDGE_BOTTOM: "Dolní",
@@ -1035,122 +1018,6 @@ GM.UIState = {
 };
 
 // ------------------------------------------------------------------------
-// Module: GM.PreviewModel — schematic preview geometry (pure, no DOM)
-// Part of: Illustrator Grommet Marks
-//
-// Computes the data behind the dialog's schematic diagram: the artboard
-// rectangle and a representative set of grommet-mark dots per active edge.
-// Self-contained pure math — testable in Node, reused by the ui.js renderer.
-// The output is illustrative (legibility-capped), NOT pixel-accurate to the
-// real artboard.
-//
-// Depends on: (none)
-// ------------------------------------------------------------------------
-var GM = GM || {};
-
-GM.PreviewModel = {
-    // Layout constants for the schematic (px, relative to the preview canvas).
-    CONFIG: {
-        DISPLAY_CAP:   12,  // max dots drawn per edge (legibility)
-        SPACING_COUNT: 6,   // representative dot count in "spacing" mode
-        MARGIN:        16,  // rect inset from the canvas edge
-        EDGE_INSET:    6,   // dot inset inward from the rect border
-        CORNER_INSET:  10   // dot inset from corners along the edge
-    },
-
-    /**
-     * Resolves an edge's effective dot count for the schematic.
-     * @param {Object} cfg - Effective edge config {useNumber, number, spacing}.
-     * @returns {number} Dot count, clamped to [1, DISPLAY_CAP].
-     */
-    edgeDotCount: function (cfg) {
-        var C = GM.PreviewModel.CONFIG;
-        if (!cfg) return 0;
-        if (!cfg.useNumber) return C.SPACING_COUNT;
-        var n = parseInt(cfg.number, 10);
-        if (isNaN(n) || n < 1) n = 1;
-        if (n > C.DISPLAY_CAP) n = C.DISPLAY_CAP;
-        return n;
-    },
-
-    /**
-     * Spreads n positions evenly within [a, b].
-     * One position centers at (a+b)/2; otherwise endpoints included.
-     * @param {number} a - Range start.
-     * @param {number} b - Range end.
-     * @param {number} n - Count (>= 1).
-     * @returns {Array<number>} Positions.
-     */
-    spread: function (a, b, n) {
-        var out = [];
-        if (n <= 1) { out.push((a + b) / 2); return out; }
-        var step = (b - a) / (n - 1);
-        for (var i = 0; i < n; i++) out.push(a + i * step);
-        return out;
-    },
-
-    /**
-     * Computes the schematic geometry for the current settings.
-     * @param {Object} settings - Gathered config (edges + mirror flags).
-     * @param {number} canvasW - Preview surface width (px).
-     * @param {number} canvasH - Preview surface height (px).
-     * @returns {Object} { rect:{x,y,w,h}, dots:[{x,y,edge}], edges:{top,left,bottom,right} }
-     */
-    compute: function (settings, canvasW, canvasH) {
-        var C = GM.PreviewModel.CONFIG;
-        settings = settings || {};
-
-        var rect = {
-            x: C.MARGIN,
-            y: C.MARGIN,
-            w: Math.max(canvasW - 2 * C.MARGIN, 0),
-            h: Math.max(canvasH - 2 * C.MARGIN, 0)
-        };
-
-        // Effective edge configs (mirror copies the opposite edge)
-        var topCfg    = settings.top  || {};
-        var leftCfg   = settings.left || {};
-        var bottomCfg = settings.bottomMirror ? topCfg  : (settings.bottom || {});
-        var rightCfg  = settings.rightMirror  ? leftCfg : (settings.right  || {});
-
-        // Active flags (after mirror resolution)
-        var topOn    = !!topCfg.enabled;
-        var leftOn   = !!leftCfg.enabled;
-        var bottomOn = settings.bottomMirror ? topOn  : !!(settings.bottom && settings.bottom.enabled);
-        var rightOn  = settings.rightMirror  ? leftOn : !!(settings.right  && settings.right.enabled);
-
-        var edges = { top: topOn, left: leftOn, bottom: bottomOn, right: rightOn };
-
-        var x0 = rect.x + C.CORNER_INSET;
-        var x1 = rect.x + rect.w - C.CORNER_INSET;
-        var y0 = rect.y + C.CORNER_INSET;
-        var y1 = rect.y + rect.h - C.CORNER_INSET;
-
-        var dots = [];
-        var i, xs, ys;
-
-        if (topOn) {
-            xs = GM.PreviewModel.spread(x0, x1, GM.PreviewModel.edgeDotCount(topCfg));
-            for (i = 0; i < xs.length; i++) dots.push({ x: xs[i], y: rect.y + C.EDGE_INSET, edge: "top" });
-        }
-        if (bottomOn) {
-            xs = GM.PreviewModel.spread(x0, x1, GM.PreviewModel.edgeDotCount(bottomCfg));
-            for (i = 0; i < xs.length; i++) dots.push({ x: xs[i], y: rect.y + rect.h - C.EDGE_INSET, edge: "bottom" });
-        }
-        if (leftOn) {
-            ys = GM.PreviewModel.spread(y0, y1, GM.PreviewModel.edgeDotCount(leftCfg));
-            for (i = 0; i < ys.length; i++) dots.push({ x: rect.x + C.EDGE_INSET, y: ys[i], edge: "left" });
-        }
-        if (rightOn) {
-            ys = GM.PreviewModel.spread(y0, y1, GM.PreviewModel.edgeDotCount(rightCfg));
-            for (i = 0; i < ys.length; i++) dots.push({ x: rect.x + rect.w - C.EDGE_INSET, y: ys[i], edge: "right" });
-        }
-
-        return { rect: rect, dots: dots, edges: edges };
-    }
-};
-
-// ------------------------------------------------------------------------
 // Module: GM.Core — geometry and math (pure, no DOM)
 // Part of: Illustrator Grommet Marks
 // Depends on: GM.CONSTANTS
@@ -1394,8 +1261,7 @@ GM.Illustrator = {
 // ------------------------------------------------------------------------
 // Module: GM.UI — ScriptUI dialog builder
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState,
-//             GM.PreviewModel, GM.Storage
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -1463,7 +1329,7 @@ GM.UI = {
      * that gates the section lives in the section). Toggling mirror on disables
      * the edge controls; toggling off restores the previous enabled state
      * (TD-003). All user interaction calls api.onChange() so the dialog can
-     * refresh the modified indicator and the schematic preview.
+     * refresh the modified indicator and live validation.
      *
      * @param {Object} parent - ScriptUI container.
      * @param {string} label - Edge enable label.
@@ -1576,7 +1442,18 @@ GM.UI = {
     },
 
     /**
-     * Builds the main ScriptUI dialog.
+     * Adds a thin horizontal separator inside a column container.
+     * @param {Object} parent - ScriptUI container.
+     */
+    addSeparator: function (parent) {
+        var sep = parent.add("panel");
+        sep.alignment = ["fill", "top"];
+        sep.preferredSize.height = 1;
+        return sep;
+    },
+
+    /**
+     * Builds the main ScriptUI dialog (canonical single column).
      * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} layerInfo - Layer names and existence flags
      * @param {Object} swatchInfo - Swatch names and existence flags
@@ -1602,7 +1479,7 @@ GM.UI = {
 
         setPanel.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = setPanel.add("dropdownlist", undefined, []);
-        loadDDL.preferredSize.width = 200;
+        loadDDL.preferredSize.width = 180;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
         var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
@@ -1613,54 +1490,12 @@ GM.UI = {
         deleteBtn.enabled = false;
 
         // =================================================================
-        // Mid row: schematic preview | edges
+        // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
-        var midRow = dlg.add("group");
-        midRow.orientation = "row";
-        midRow.alignChildren = ["top", "top"];
-        midRow.spacing = 12;
-
-        // --- Preview panel (custom-drawn schematic; non-blocking enhancement) ---
-        var PV = GM.CONSTANTS.PREVIEW;
-        var previewPanel = midRow.add("panel", undefined, GM.L.PREVIEW_PANEL);
-        previewPanel.orientation = "column";
-        previewPanel.alignChildren = ["fill", "top"];
-        previewPanel.margins = 12;
-        previewPanel.spacing = 6;
-
-        var previewCanvas = previewPanel.add("group");
-        previewCanvas.preferredSize = [PV.WIDTH, PV.HEIGHT];
-
-        var previewSummary = previewPanel.add("statictext", undefined, "", { truncate: "middle" });
-        previewSummary.preferredSize.width = PV.WIDTH;
-
-        var previewModel = null;
-        previewCanvas.onDraw = function () {
-            var g = this.graphics;
-            try {
-                var m = previewModel;
-                if (!m) return;
-                var penRect = g.newPen(g.PenType.SOLID_COLOR, PV.RECT_COLOR, PV.LINE_WIDTH);
-                g.newPath();
-                g.rectPath(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
-                g.strokePath(penRect);
-
-                var brush = g.newBrush(g.BrushType.SOLID_COLOR, PV.DOT_COLOR);
-                var r = PV.DOT_RADIUS;
-                for (var i = 0; i < m.dots.length; i++) {
-                    var d = m.dots[i];
-                    g.newPath();
-                    g.ellipsePath(d.x - r, d.y - r, r * 2, r * 2);
-                    g.fillPath(brush);
-                }
-            } catch (e) {}
-        };
-
-        // --- Edges panel (offsets + 4 compact edge rows, mirror inline) ---
-        var edgesPanel = midRow.add("panel", undefined, GM.L.EDGES_PANEL);
+        var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
-        edgesPanel.margins = 12;
+        edgesPanel.margins = 15;
         edgesPanel.spacing = 6;
 
         var offGrp = edgesPanel.add("group");
@@ -1676,8 +1511,13 @@ GM.UI = {
         offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
+        GM.UI.addSeparator(edgesPanel);
+
         var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
         var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
+
+        GM.UI.addSeparator(edgesPanel);
+
         var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
         var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
 
@@ -1845,32 +1685,6 @@ GM.UI = {
         }
 
         // =================================================================
-        // Schematic preview refresh
-        // =================================================================
-        function redrawPreview() {
-            try {
-                previewModel = GM.PreviewModel.compute(gatherAll(), PV.WIDTH, PV.HEIGHT);
-            } catch (e) { previewModel = null; }
-
-            // Text summary — always correct even if custom drawing fails.
-            try {
-                var names = [];
-                if (previewModel) {
-                    if (previewModel.edges.top)    names.push(GM.L.EDGE_TOP);
-                    if (previewModel.edges.left)   names.push(GM.L.EDGE_LEFT);
-                    if (previewModel.edges.bottom) names.push(GM.L.EDGE_BOTTOM);
-                    if (previewModel.edges.right)  names.push(GM.L.EDGE_RIGHT);
-                }
-                previewSummary.text = names.length
-                    ? GM.L.format(GM.L.PREVIEW_ACTIVE_EDGES, names.join(", "))
-                    : GM.L.PREVIEW_NONE;
-            } catch (e2) {}
-
-            // Trigger repaint of the custom canvas.
-            try { previewCanvas.notify("onDraw"); } catch (e3) {}
-        }
-
-        // =================================================================
         // Unit Conversion
         // =================================================================
         var currentUnit = GM.CONSTANTS.UNIT.MM;
@@ -1922,12 +1736,11 @@ GM.UI = {
         }
 
         // =================================================================
-        // Shared change hook — modified indicator + validation + preview
+        // Shared change hook — modified indicator + validation
         // =================================================================
         function onUserChange() {
             refreshModifiedIndicator();
             liveValidateAll();
-            redrawPreview();
         }
 
         // =================================================================
@@ -1996,7 +1809,6 @@ GM.UI = {
         var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
         if (initPreset) applyAll(initPreset);
         updatePresetList();
-        redrawPreview();
 
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
@@ -2007,7 +1819,6 @@ GM.UI = {
             deleteBtn.enabled = (key !== GM.Config.PRESET_KEY_DEFAULT);
             applyAll(r.settings);
             refreshModifiedIndicator();
-            redrawPreview();
         };
 
         saveBtn.onClick = function () {
@@ -2046,14 +1857,12 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            redrawPreview();
             try { GM.Storage.save(pData); } catch (e) {}
         };
 
         resetBtn.onClick = function () {
             applyAll(GM.Config.getDefaults());
             refreshModifiedIndicator();
-            redrawPreview();
         };
 
         // Wire numeric edits to the shared change hook.

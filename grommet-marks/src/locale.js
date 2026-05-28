@@ -26,9 +26,6 @@ GM.L = (function () {
             // Position panel
             POSITION_PANEL: "Mark position",
             EDGES_PANEL: "Edges",
-            PREVIEW_PANEL: "Preview",
-            PREVIEW_ACTIVE_EDGES: "Active edges: %s",
-            PREVIEW_NONE: "No active edges",
             EDGE_TOP: "Top",
             EDGE_LEFT: "Left",
             EDGE_BOTTOM: "Bottom",
@@ -140,9 +137,6 @@ GM.L = (function () {
             // Position panel
             POSITION_PANEL: "Pozice značek",
             EDGES_PANEL: "Hrany",
-            PREVIEW_PANEL: "Náhled",
-            PREVIEW_ACTIVE_EDGES: "Aktivní hrany: %s",
-            PREVIEW_NONE: "Žádné aktivní hrany",
             EDGE_TOP: "Horní",
             EDGE_LEFT: "Levá",
             EDGE_BOTTOM: "Dolní",

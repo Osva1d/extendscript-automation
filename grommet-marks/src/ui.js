@@ -1,8 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: GM.UI — ScriptUI dialog builder
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState,
-//             GM.PreviewModel, GM.Storage
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -70,7 +69,7 @@ GM.UI = {
      * that gates the section lives in the section). Toggling mirror on disables
      * the edge controls; toggling off restores the previous enabled state
      * (TD-003). All user interaction calls api.onChange() so the dialog can
-     * refresh the modified indicator and the schematic preview.
+     * refresh the modified indicator and live validation.
      *
      * @param {Object} parent - ScriptUI container.
      * @param {string} label - Edge enable label.
@@ -183,7 +182,18 @@ GM.UI = {
     },
 
     /**
-     * Builds the main ScriptUI dialog.
+     * Adds a thin horizontal separator inside a column container.
+     * @param {Object} parent - ScriptUI container.
+     */
+    addSeparator: function (parent) {
+        var sep = parent.add("panel");
+        sep.alignment = ["fill", "top"];
+        sep.preferredSize.height = 1;
+        return sep;
+    },
+
+    /**
+     * Builds the main ScriptUI dialog (canonical single column).
      * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} layerInfo - Layer names and existence flags
      * @param {Object} swatchInfo - Swatch names and existence flags
@@ -209,7 +219,7 @@ GM.UI = {
 
         setPanel.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = setPanel.add("dropdownlist", undefined, []);
-        loadDDL.preferredSize.width = 200;
+        loadDDL.preferredSize.width = 180;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
         var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
@@ -220,54 +230,12 @@ GM.UI = {
         deleteBtn.enabled = false;
 
         // =================================================================
-        // Mid row: schematic preview | edges
+        // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
-        var midRow = dlg.add("group");
-        midRow.orientation = "row";
-        midRow.alignChildren = ["top", "top"];
-        midRow.spacing = 12;
-
-        // --- Preview panel (custom-drawn schematic; non-blocking enhancement) ---
-        var PV = GM.CONSTANTS.PREVIEW;
-        var previewPanel = midRow.add("panel", undefined, GM.L.PREVIEW_PANEL);
-        previewPanel.orientation = "column";
-        previewPanel.alignChildren = ["fill", "top"];
-        previewPanel.margins = 12;
-        previewPanel.spacing = 6;
-
-        var previewCanvas = previewPanel.add("group");
-        previewCanvas.preferredSize = [PV.WIDTH, PV.HEIGHT];
-
-        var previewSummary = previewPanel.add("statictext", undefined, "", { truncate: "middle" });
-        previewSummary.preferredSize.width = PV.WIDTH;
-
-        var previewModel = null;
-        previewCanvas.onDraw = function () {
-            var g = this.graphics;
-            try {
-                var m = previewModel;
-                if (!m) return;
-                var penRect = g.newPen(g.PenType.SOLID_COLOR, PV.RECT_COLOR, PV.LINE_WIDTH);
-                g.newPath();
-                g.rectPath(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
-                g.strokePath(penRect);
-
-                var brush = g.newBrush(g.BrushType.SOLID_COLOR, PV.DOT_COLOR);
-                var r = PV.DOT_RADIUS;
-                for (var i = 0; i < m.dots.length; i++) {
-                    var d = m.dots[i];
-                    g.newPath();
-                    g.ellipsePath(d.x - r, d.y - r, r * 2, r * 2);
-                    g.fillPath(brush);
-                }
-            } catch (e) {}
-        };
-
-        // --- Edges panel (offsets + 4 compact edge rows, mirror inline) ---
-        var edgesPanel = midRow.add("panel", undefined, GM.L.EDGES_PANEL);
+        var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
-        edgesPanel.margins = 12;
+        edgesPanel.margins = 15;
         edgesPanel.spacing = 6;
 
         var offGrp = edgesPanel.add("group");
@@ -283,8 +251,13 @@ GM.UI = {
         offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
+        GM.UI.addSeparator(edgesPanel);
+
         var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
         var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
+
+        GM.UI.addSeparator(edgesPanel);
+
         var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
         var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
 
@@ -452,32 +425,6 @@ GM.UI = {
         }
 
         // =================================================================
-        // Schematic preview refresh
-        // =================================================================
-        function redrawPreview() {
-            try {
-                previewModel = GM.PreviewModel.compute(gatherAll(), PV.WIDTH, PV.HEIGHT);
-            } catch (e) { previewModel = null; }
-
-            // Text summary — always correct even if custom drawing fails.
-            try {
-                var names = [];
-                if (previewModel) {
-                    if (previewModel.edges.top)    names.push(GM.L.EDGE_TOP);
-                    if (previewModel.edges.left)   names.push(GM.L.EDGE_LEFT);
-                    if (previewModel.edges.bottom) names.push(GM.L.EDGE_BOTTOM);
-                    if (previewModel.edges.right)  names.push(GM.L.EDGE_RIGHT);
-                }
-                previewSummary.text = names.length
-                    ? GM.L.format(GM.L.PREVIEW_ACTIVE_EDGES, names.join(", "))
-                    : GM.L.PREVIEW_NONE;
-            } catch (e2) {}
-
-            // Trigger repaint of the custom canvas.
-            try { previewCanvas.notify("onDraw"); } catch (e3) {}
-        }
-
-        // =================================================================
         // Unit Conversion
         // =================================================================
         var currentUnit = GM.CONSTANTS.UNIT.MM;
@@ -529,12 +476,11 @@ GM.UI = {
         }
 
         // =================================================================
-        // Shared change hook — modified indicator + validation + preview
+        // Shared change hook — modified indicator + validation
         // =================================================================
         function onUserChange() {
             refreshModifiedIndicator();
             liveValidateAll();
-            redrawPreview();
         }
 
         // =================================================================
@@ -603,7 +549,6 @@ GM.UI = {
         var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
         if (initPreset) applyAll(initPreset);
         updatePresetList();
-        redrawPreview();
 
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
@@ -614,7 +559,6 @@ GM.UI = {
             deleteBtn.enabled = (key !== GM.Config.PRESET_KEY_DEFAULT);
             applyAll(r.settings);
             refreshModifiedIndicator();
-            redrawPreview();
         };
 
         saveBtn.onClick = function () {
@@ -653,14 +597,12 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            redrawPreview();
             try { GM.Storage.save(pData); } catch (e) {}
         };
 
         resetBtn.onClick = function () {
             applyAll(GM.Config.getDefaults());
             refreshModifiedIndicator();
-            redrawPreview();
         };
 
         // Wire numeric edits to the shared change hook.
