@@ -1,4 +1,4 @@
-# Architecture: Grommet Marks v4.0.0
+# Architecture: Grommet Marks v4.1.0
 
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
@@ -27,7 +27,8 @@ src/
 │   ├── utils.js            GM.Utils — log, error, deepCopy, presetEquals
 │   ├── storage.js          GM.Storage — čtení/zápis JSON, migrační řetěz
 │   ├── validation.js       GM.Validation — rules-based validace vstupů
-│   └── ui_state.js         GM.UIState — pure state-transition logika pro presety
+│   ├── ui_state.js         GM.UIState — pure state-transition logika pro presety
+│   └── preview_model.js    GM.PreviewModel — pure geometrie schématického náhledu
 ├── config.js               GM.Config — getDefaults(), PRESET_KEY_DEFAULT, createEdgeDef()
 ├── core.js                 GM.Core — calcPositions(), convertVal() — PURE MATH, žádný DOM
 ├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMark(), getOrCreateLayer/Swatch()
@@ -38,8 +39,8 @@ src/
 **Load order (dependencies first):**
 ```
 json2.js → constants.js → locale.js → lib/utils.js → config.js →
-lib/storage.js → lib/validation.js → lib/ui_state.js → core.js →
-illustrator.js → ui.js → main.js
+lib/storage.js → lib/validation.js → lib/ui_state.js → lib/preview_model.js →
+core.js → illustrator.js → ui.js → main.js
 ```
 
 **Build:**
@@ -133,7 +134,8 @@ GM.Storage.load()
 | `GM.Storage` | File I/O, migrace, volat `GM.Utils`/`GM.Config` | DOM, UI |
 | `GM.Validation` | Validace vstupů, alert (chybové hlášky) | DOM, UI, File I/O |
 | `GM.UIState` | State transitions presetů, volat `GM.Utils` | DOM, UI, File I/O |
-| `GM.UI` | ScriptUI, volat `GM.UIState`/`GM.Storage`/`GM.Core` | DOM rendering |
+| `GM.PreviewModel` | Geometrie náhledu (dots/rect), pure math | DOM, UI, File I/O, kreslení |
+| `GM.UI` | ScriptUI, kreslení náhledu, volat `GM.UIState`/`GM.Storage`/`GM.Core`/`GM.PreviewModel` | — |
 | `GM.Config` | Konstanty, getDefaults | DOM, UI, File I/O |
 
 ---
@@ -154,10 +156,15 @@ GM.Storage.load()
 tests/
 ├── run_all.sh                  Test runner (bash, ANSI output)
 ├── test_core_math.js           GM.Core: calcPositions, convertVal, round
-└── test_storage_migrations.js  GM.Storage: celý migrační řetěz
+├── test_storage_migrations.js  GM.Storage: celý migrační řetěz
+├── test_preview_model.js       GM.PreviewModel: mirror, dot counts, cap, bounds
+├── test_ui_state.js            GM.UIState: validate/save/saveAs/delete/select/list
+└── test_validation.js          GM.Validation: validateNumber + validate
 ```
 
 Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock objekty (File, Folder, alert, $).
+Pokrývají pure moduly (žádné ScriptUI). Schématický náhled je testován přes `GM.PreviewModel`;
+samotné kreslení (`onDraw`) se ověřuje manuálně v Illustratoru.
 
 ---
 
@@ -186,6 +193,9 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 | Vykreslování v Illustratoru | `src/illustrator.js` → `placeMark()` |
 | Vytvoření vrstvy / swatche | `src/illustrator.js` → `getOrCreateLayer/Swatch()` |
 | Dialog a presety | `src/ui.js` → `GM.UI.buildDialog()` |
+| Schématický náhled (geometrie) | `src/lib/preview_model.js` → `GM.PreviewModel.compute()` |
+| Schématický náhled (kreslení) | `src/ui.js` → `previewCanvas.onDraw` / `redrawPreview()` |
+| Edge panel + mirror inline | `src/ui.js` → `GM.UI.buildEdgePanel()` |
 | Preset state transitions | `src/lib/ui_state.js` → `GM.UIState` |
 | Validaci vstupů | `src/lib/validation.js` → `GM.Validation` |
 | Ukládání nastavení / migraci | `src/lib/storage.js` → `GM.Storage` |
@@ -196,25 +206,46 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 
 ---
 
+## Layout dialogu (v4.1.0)
+
+```
+Window("dialog")
+ ├─ Panel: Předvolby            (load / Save / Save As / Delete)
+ ├─ Group (řádek):
+ │    ├─ Panel: Náhled          schématický diagram (onDraw) + textové shrnutí
+ │    └─ Panel: Hrany           offsety + 4 kompaktní edge řádky (mirror inline)
+ ├─ Panel: Značka               jednotky / velikost / tvar
+ ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka
+ ├─ Group: Footer               šedý copyright
+ └─ Group: Tlačítka             Reset (vlevo) · Storno · OK (vpravo)
+```
+
+Náhled je **informativní, neblokující**: dialog je plně funkční i bez něj. Pokud `onDraw`
+na dané verzi Illustratoru nekreslí, textové shrnutí aktivních hran zůstává správné.
+
+---
+
 ## Aktuální stav projektu
 
-**Verze:** 4.0.0
-**Fáze:** Cyklus 1 kompletní — architektonicky shodný se ZSM, připravený pro UI redesign v cyklu 2.
+**Verze:** 4.1.0
+**Fáze:** Cyklus 2 kompletní — UI redesign (schématický náhled), připraveno k manuálnímu testu a deployi.
 
-**Co je hotovo (v4.0.0):**
+**Co je hotovo (v4.1.0 — cyklus 2):**
+- Schématický náhled artboardu (`GM.PreviewModel` + ScriptUIGraphics) s live textovým shrnutím
+- Reflow layoutu na řádek [náhled | hrany]; offsety přesunuty do panelu Hrany
+- TD-001: mirror checkbox uvnitř edge skupiny (`buildEdgePanel`)
+- TD-003: obnova předchozího stavu při vypnutí mirror (`_prevEnabled`)
+- Sdílený `onUserChange` hook (modified indicator + live validace + překreslení náhledu)
+- Rozšířená test suite: + preview_model, ui_state, validation (5 suit)
+
+**Co je hotovo (v4.0.0 — cyklus 1):**
 - Modulární lib/ extrakce (utils, storage, validation, ui_state)
 - Wrapper persistence formát s `[Last Settings]` auto-save
 - Migrační řetěz flat→wrapper + sentinel rename
 - Namespace guards a module headers na všech souborech
-- Rules-based validace (GM.Validation)
-- Modified indicator, Save As, Reset, live validation v UI
-- Copyright footer a verze v titulku dialogu
-- Verze z package.json v build.sh
-- Test suite: core math + storage migrations (50 testů)
-- `set -euo pipefail` v build.sh
+- Rules-based validace, modified indicator, Save As, Reset, live validace
+- Verze z package.json v build.sh, `set -euo pipefail`
 
-**Otevřené úkoly (cyklus 2):**
-- UI layout redesign (inspirace Mars Premedia)
-- TD-001: mirror checkbox mimo panel
-- TD-002: undo grouping
-- TD-003: mirror checkbox neobnovuje stav
+**Otevřené úkoly:**
+- Manuální P0 test v Illustratoru (viz `TEST_PLAN.md`), zvlášť ověření `onDraw` náhledu
+- TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)

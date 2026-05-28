@@ -9,6 +9,7 @@
 ## TD-001 — Mirror checkbox mimo panel (strukturální)
 
 **Závažnost:** Střední
+**Stav:** ✅ Vyřešeno ve v4.1.0
 **Soubor:** `src/ui.js` — `buildDialog()`
 
 **Popis:**
@@ -25,14 +26,18 @@ v jednom panelu.
 
 **Vzor:** InDesign / Logic Pro — control který gate-uje sekci patří DO té sekce.
 
-**Proč nebylo opraveno:** Vyžaduje změnu signatury `buildEdgePanel()` a refaktor
-všech čtyř volání. Mimo prioritu aktuálního releasu.
+**Řešení (v4.1.0):** `buildEdgePanel()` nyní přijímá volitelné parametry
+`mirrorLabel`/`mirrorTip`. Pokud jsou předány (dolní/pravá hrana), mirror
+checkbox se vykreslí jako první prvek uvnitř edge skupiny; při zapnutí mirror
+se ostatní controls skupiny disablují. Celá logika je vizuálně obsažena
+v jedné sekci.
 
 ---
 
 ## TD-002 — Bez undo groupingu (funkční)
 
 **Závažnost:** Střední
+**Stav:** ⏸ Odloženo (mimo scope v4.1.0)
 **Soubor:** `src/main.js` — `process()`
 
 **Popis:**
@@ -46,23 +51,27 @@ pokud to cílová verze Illustratoru podporuje. Alternativně dokumentovat jako 
 **Proč nebylo opraveno:** `app.doScript()` v ExtendScriptu nemá stabilní podporu
 across verzí Illustratoru. Vyžaduje testování na cílových verzích.
 
+**Rozhodnutí (cyklus 2):** Záměrně odloženo. Illustrator nemá spolehlivé
+cross-version API pro seskupení undo kroků; zařazení do UI-zaměřeného releasu
+v4.1.0 by přidalo nejistotu za malý zisk. Zůstává sledováno zde.
+
 ---
 
 ## TD-003 — Mirror checkbox neobnovuje předchozí stav (UX)
 
 **Závažnost:** Nízká
-**Soubor:** `src/ui.js` — `updateMirrors()`
+**Stav:** ✅ Vyřešeno ve v4.1.0
+**Soubor:** `src/ui.js` — `buildEdgePanel()`
 
 **Popis:**
 Při zapnutí mirror checkboxu je `bottomUI.cb.value` vynucen na `false`.
 Po vypnutí mirror se checkbox neobnoví do předchozího stavu — uživatel ho musí
 znovu zapnout ručně.
 
-**Správné řešení:**
-Uložit předchozí stav `cb.value` před vynucením `false` a obnovit při vypnutí mirror.
-
-**Proč nebylo opraveno:** Nízká priorita, vyžaduje sledování stavu v closure.
+**Řešení (v4.1.0):** `buildEdgePanel()` drží v closure `_prevEnabled`. Při
+zapnutí mirror se uloží aktuální `cb.value` a vynutí `false`; při vypnutí se
+`cb.value` obnoví z `_prevEnabled`.
 
 ---
 
-*Poslední aktualizace: 2026-03-22*
+*Poslední aktualizace: 2026-05-28*
