@@ -1,13 +1,12 @@
 # Grommet Marks — Test Plan v4.1.0
 
 > **Version:** 4.1.0
-> **Test Coverage:** 8 manual test cases + automated suites (`npm test`)
+> **Test Coverage:** 7 manual test cases + automated suites (`npm test`)
 > **Last Updated:** 2026-05-28
 >
 > Automated suites (`npm test`) cover the pure modules: core math, storage
-> migrations, preview model, UI state, validation. The cases below are the
-> manual P0 checks that require a running Illustrator — especially the
-> schematic preview's custom drawing, which cannot be unit-tested.
+> migrations, UI state, validation. The cases below are the manual P0 checks
+> that require a running Illustrator.
 
 ---
 
@@ -354,32 +353,7 @@ Build complete: dist/illustrator-grommet-marks.jsx (~1537 lines)
 
 ---
 
-## Test Case 7: Schematic Preview (v4.1.0)
-
-**Objective:** Verify the Náhled (preview) panel renders and updates, and that it degrades gracefully.
-
-### Test Steps
-
-1. Run `dist/illustrator-grommet-marks.jsx` on any open document.
-2. Observe the **Náhled** panel: an artboard rectangle with dots on the active edges, plus a text line "Aktivní hrany: …" below.
-3. Toggle the **Horní** edge off → its dots disappear and the summary updates.
-4. Change **Horní** count (e.g. 10 → 3) → the number of top dots changes.
-5. Enable **Zrcadlit horní** on the Dolní edge → bottom dots mirror the top configuration.
-6. Switch a preset / click **Reset** → preview reflects the loaded values.
-
-### Pass Criteria
-✅ Rectangle + dots render for active edges
-✅ Diagram updates live on edge enable / count / mirror changes
-✅ Text summary always matches the active edges (even if the drawing does not render)
-✅ No ExtendScript console errors
-
-> **Graceful degradation:** if the rectangle/dots do not render on this Illustrator
-> version, the dialog must still be fully usable and the "Aktivní hrany" summary
-> must still be correct. Report the Illustrator version if drawing fails.
-
----
-
-## Test Case 8: Mirror Inline + State Restore (TD-001 / TD-003)
+## Test Case 7: Mirror Inline + State Restore (TD-001 / TD-003)
 
 **Objective:** Verify the mirror checkbox lives inside its edge group and restores state.
 

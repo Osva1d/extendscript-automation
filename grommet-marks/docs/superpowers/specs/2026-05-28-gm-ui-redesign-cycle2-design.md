@@ -1,4 +1,4 @@
-# Grommet Marks v4.1.0 — Cycle 2: UI Redesign (Schematic Preview)
+# Grommet Marks v4.1.0 — Cycle 2: UI Redesign (Canonical Column)
 
 > Cyklus 2 ze dvou. Tento cyklus: vizuální redesign dialogu + zbylý tech debt.
 > Cyklus 1 (v4.0.0): architektura, persistence, naming, testy — hotovo.
@@ -11,8 +11,15 @@ Přepracovat UI dialogu Grommet Marks vlastním směrem, odlišeným od komerčn
 Mars Premedia (původní inspirace), při zachování ScriptUI best practices
 (`extendscript-ui-standards`, `ui-ux-principles`). Výsledek: GM v4.1.0.
 
-Zvolený směr: **schématický náhled** — nakreslený diagram artboardu zobrazující
-aktivní hrany a reprezentativní rozmístění ok, s ovládáním okolo.
+**Zvolený směr: kanonický jednosloupcový layout (Concept A).**
+
+> **Pozn. k vývoji rozhodnutí:** Nejprve byl prototypován *schématický náhled*
+> (Concept B) — nakreslený diagram artboardu s aktivními hranami. Po vizuálním
+> vyhodnocení (HTML mockupy variant A/B/C) byl náhled vyhodnocen jako nadbytečný
+> pro uživatele, který už zná význam hran, a nesl technické riziko (`onDraw`
+> kreslení napříč verzemi Illustratoru). Zvolen čistý kanonický sloupec.
+> Stejný princip (jednosloupcový layout) potvrzen i pro ZSM — to už ho má,
+> takže ZSM beze změny.
 
 ---
 
@@ -20,48 +27,32 @@ aktivní hrany a reprezentativní rozmístění ok, s ovládáním okolo.
 
 ```
 Window("dialog") — "Illustrator Grommet Marks v4.1.0"
- ├─ Panel: Předvolby            load / Save / Save As / Delete
- ├─ Group (řádek):
- │    ├─ Panel: Náhled          custom-drawn schéma (~220×150) + textové shrnutí
- │    └─ Panel: Hrany           offset X/Y + 4 kompaktní edge řádky, mirror inline
+ ├─ Panel: Předvolby            Načíst / Uložit / Uložit jako… / Smazat
+ ├─ Panel: Hrany                offset X/Y + 4 kompaktní edge řádky, mirror inline
  ├─ Panel: Značka               jednotky / velikost / tvar
  ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka
  ├─ Group: Footer               šedý copyright
  └─ Group: Tlačítka             Reset (vlevo) · Storno · OK (vpravo)
 ```
 
-Rozměry dle `extendscript-ui-standards`: dialog margins 20, panel margins ~12–15,
-spacing 8–12, numeric inputs 44–60 px.
+Rozměry dle `extendscript-ui-standards`: dialog margins 20, panel margins 15,
+spacing 8–12, numeric inputs 44–60 px. Hrany jsou kompaktní řádky; oddělovač
+odděluje horní/levou od dolní/pravé.
 
 ---
 
-## Náhled (klíčový prvek)
+## Změny modulů
 
-- **Neblokující / enhancement-only** — dialog je plně funkční i bez náhledu.
-- **Semi-live** — překresluje se při změně relevantních ovládacích prvků
-  (enable hrany, mirror, počet/rozestup). Schématický, ne pixel-přesný.
-- **Graceful degradation** — pokud `onDraw` na cílové verzi nekreslí spolehlivě,
-  zůstává textové shrnutí ("Aktivní hrany: …") jako správný informační kanál.
-
-### Moduly
-
-**NOVÝ `src/lib/preview_model.js` → `GM.PreviewModel`** (pure, bez DOM, testovatelné):
-- `compute(settings, canvasW, canvasH)` → `{ rect, dots:[{x,y,edge}], edges }`.
-- Resolves mirror (bottom=top, right=left); per aktivní hranu emituje
-  reprezentativní dots (count mode → `min(number, DISPLAY_CAP)`, spacing mode →
-  `SPACING_COUNT`); dots jsou uvnitř `rect`.
-- Vlastní geometrické konstanty v `CONFIG` (cap, počty, insety, margin).
-
-**`src/ui.js`** — kreslení (`previewCanvas.onDraw` přes ScriptUIGraphics:
-`rectPath`/`strokePath`, `ellipsePath`/`fillPath`), `redrawPreview()` přepočítá
-model + aktualizuje shrnutí + vyvolá překreslení. Vizuální konstanty
-(`WIDTH/HEIGHT/DOT_RADIUS/colors`) v `GM.CONSTANTS.PREVIEW`.
-
-`buildEdgePanel()` — volitelné `mirrorLabel`/`mirrorTip`: mirror checkbox uvnitř
-edge skupiny (TD-001); `_prevEnabled` obnova stavu (TD-003); `onChange` hook.
+**`src/ui.js`** — `buildDialog` přepsán na jednosloupcový layout. `buildEdgePanel`
+přijímá volitelné `mirrorLabel`/`mirrorTip`: mirror checkbox uvnitř edge skupiny
+(TD-001); `_prevEnabled` obnova stavu při vypnutí mirror (TD-003). Sdílený
+`onUserChange` hook = modified indicator + live validace.
 
 **Kontrakt:** `gatherAll()`/`applyAll()` zachovávají tvar výstupu → `main.js`,
 `GM.Validation`, `GM.Storage` beze změny.
+
+**`src/locale.js`** — přidány `EDGES_PANEL`, `EDGE_TOP/LEFT/BOTTOM/RIGHT`.
+**`src/constants.js`** — `VERSION` 4.1.0.
 
 ---
 
@@ -73,18 +64,17 @@ edge skupiny (TD-001); `_prevEnabled` obnova stavu (TD-003); `onChange` hook.
 
 ## Testy (pure moduly, Node)
 
-- `test_preview_model.js` — mirror, dot counts, cap, all-off, bounds.
 - `test_ui_state.js` — validate/save/saveAs/delete/select/list.
 - `test_validation.js` — validateNumber + validate (valid/invalid, mirror-aware).
 
-Kreslení (`onDraw`) se ověřuje manuálně v Illustratoru (`TEST_PLAN.md` TC7/TC8).
+Plus stávající `test_core_math.js`, `test_storage_migrations.js`. Celkem 4 suity.
 
 ---
 
 ## Verze
 
-**v4.1.0** — MINOR (nová funkce, bez breaking změny persistence/schématu).
+**v4.1.0** — MINOR (nová funkce / UI, bez breaking změny persistence/schématu).
 
 ---
 
-*Schváleno: 2026-05-28*
+*Schváleno: 2026-05-28 (pivot na Concept A: 2026-05-28)*
