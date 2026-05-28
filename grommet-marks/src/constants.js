@@ -23,5 +23,16 @@ GM.CONSTANTS = {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,
         "in": 72
+    },
+
+    // Schematic preview (dialog diagram) — renderer visuals, px + [r,g,b,a].
+    // Geometry/dot-count logic lives in GM.PreviewModel; these are draw-only.
+    PREVIEW: {
+        WIDTH:      220,
+        HEIGHT:     150,
+        DOT_RADIUS: 3,
+        LINE_WIDTH: 1,
+        RECT_COLOR: [0.55, 0.55, 0.58, 1],   // neutral grey — visible on dark/light theme
+        DOT_COLOR:  [0.93, 0.52, 0.15, 1]    // warm accent — visible on dark/light theme
     }
 };

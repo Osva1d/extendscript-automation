@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: GM.UI — ScriptUI dialog builder
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState,
+//             GM.PreviewModel, GM.Storage
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -63,88 +64,122 @@ GM.UI = {
     },
 
     /**
-     * Builds a simplified edge panel with enable checkbox + count/spacing radio.
-     * @param {Panel} parent - Parent UI container
-     * @param {string} label - Edge label
-     * @param {Object} defaultCfg - Default edge configuration
-     * @param {number} width - Panel width in pixels
-     * @returns {Object} Edge panel with gather/apply methods
+     * Builds a compact edge row: enable checkbox + count/spacing radios.
+     * When mirrorLabel is supplied (bottom/right edges), a mirror checkbox is
+     * rendered ABOVE the row inside the same container (TD-001 — the control
+     * that gates the section lives in the section). Toggling mirror on disables
+     * the edge controls; toggling off restores the previous enabled state
+     * (TD-003). All user interaction calls api.onChange() so the dialog can
+     * refresh the modified indicator and the schematic preview.
+     *
+     * @param {Object} parent - ScriptUI container.
+     * @param {string} label - Edge enable label.
+     * @param {Object} defaultCfg - Default edge config {enabled,useNumber,number,spacing}.
+     * @param {string} [mirrorLabel] - Mirror checkbox label (bottom/right only).
+     * @param {string} [mirrorTip] - Mirror checkbox helpTip.
+     * @returns {Object} Edge panel API.
      */
-    buildEdgePanel: function (parent, label, defaultCfg, width) {
-        var pnl = parent.add("panel", undefined, "");
-        pnl.alignChildren = ["left", "top"];
-        pnl.margins = [12, 12, 12, 8];
-        if (width) pnl.preferredSize.width = width;
+    buildEdgePanel: function (parent, label, defaultCfg, mirrorLabel, mirrorTip) {
+        var grp = parent.add("group");
+        grp.orientation = "column";
+        grp.alignChildren = ["left", "top"];
+        grp.spacing = 4;
 
-        var cb = pnl.add("checkbox", undefined, label);
+        var api = { onChange: function () {} };
+
+        var mirrorCB = null;
+        if (mirrorLabel) {
+            mirrorCB = grp.add("checkbox", undefined, mirrorLabel);
+            mirrorCB.value = false;
+            mirrorCB.helpTip = mirrorTip || "";
+        }
+
+        var row = grp.add("group");
+        row.orientation = "row";
+        row.alignChildren = ["left", "center"];
+        row.spacing = 6;
+
+        var cb = row.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
+        cb.preferredSize.width = 64;
 
-        var modeGrp = pnl.add("group");
-        modeGrp.orientation = "row";
-        modeGrp.alignChildren = ["left", "center"];
-
-        var radioCol = modeGrp.add("group");
-        radioCol.orientation = "column";
-        radioCol.alignChildren = ["left", "center"];
-        radioCol.spacing = 8;
-
-        var inputCol = modeGrp.add("group");
-        inputCol.orientation = "column";
-        inputCol.alignChildren = ["fill", "center"];
-        inputCol.spacing = 8;
-
-        var numRB = radioCol.add("radiobutton", undefined, GM.L.COUNT);
+        var numRB = row.add("radiobutton", undefined, GM.L.COUNT);
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
-        var numIn = inputCol.add("edittext", undefined, String(defaultCfg.number));
-        numIn.preferredSize.width = 60;
+        var numIn = row.add("edittext", undefined, String(defaultCfg.number));
+        numIn.preferredSize.width = 44;
         numIn.helpTip = GM.L.TIP_COUNT;
 
-        var spcRB = radioCol.add("radiobutton", undefined, GM.L.SPACING);
+        var spcRB = row.add("radiobutton", undefined, GM.L.SPACING);
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
-        var spcIn = inputCol.add("edittext", undefined, String(defaultCfg.spacing));
-        spcIn.preferredSize.width = 60;
+        var spcIn = row.add("edittext", undefined, String(defaultCfg.spacing));
+        spcIn.preferredSize.width = 44;
         spcIn.helpTip = GM.L.TIP_SPACING;
 
-        spcIn.enabled = !defaultCfg.useNumber;
-        numIn.enabled = defaultCfg.useNumber;
+        var _prevEnabled = defaultCfg.enabled;
 
-        numRB.onClick = function () { numIn.enabled = true; spcIn.enabled = false; };
-        spcRB.onClick = function () { numIn.enabled = false; spcIn.enabled = true; };
-
-        function setAllEnabled(state) {
+        function setModeEnabled(state) {
             numRB.enabled = state;
             spcRB.enabled = state;
             numIn.enabled = state && numRB.value;
             spcIn.enabled = state && spcRB.value;
         }
-        cb.onClick = function () { setAllEnabled(cb.value); };
-        setAllEnabled(cb.value);
 
-        return {
-            panel: pnl, cb: cb,
-            numRB: numRB, numIn: numIn, spcRB: spcRB, spcIn: spcIn,
-            setAllEnabled: setAllEnabled,
-            gather: function () {
-                return {
-                    enabled: cb.value,
-                    useNumber: numRB.value,
-                    number: parseInt(numIn.text.replace(/,/g, "."), 10),
-                    spacing: parseFloat(spcIn.text.replace(/,/g, "."))
-                };
-            },
-            apply: function (e) {
-                cb.value = e.enabled;
-                numRB.value = e.useNumber;
-                spcRB.value = !e.useNumber;
-                numIn.text = e.number;
-                spcIn.text = e.spacing;
-                setAllEnabled(e.enabled);
-            },
-            getConvertFields: function () { return [spcIn]; }
+        // Gate the whole row by mirror state; cb itself disabled when mirrored.
+        function refresh() {
+            var mirrored = !!(mirrorCB && mirrorCB.value);
+            cb.enabled = !mirrored;
+            setModeEnabled(!mirrored && cb.value);
+        }
+
+        numRB.onClick = function () { numIn.enabled = true; spcIn.enabled = false; api.onChange(); };
+        spcRB.onClick = function () { numIn.enabled = false; spcIn.enabled = true; api.onChange(); };
+        cb.onClick = function () { setModeEnabled(cb.value); api.onChange(); };
+        numIn.onChanging = function () { api.onChange(); };
+        numIn.onChange   = function () { api.onChange(); };
+        spcIn.onChanging = function () { api.onChange(); };
+        spcIn.onChange   = function () { api.onChange(); };
+
+        if (mirrorCB) {
+            mirrorCB.onClick = function () {
+                if (mirrorCB.value) { _prevEnabled = cb.value; cb.value = false; }
+                else { cb.value = _prevEnabled; }
+                refresh();
+                api.onChange();
+            };
+        }
+
+        refresh();
+
+        api.panel = grp;
+        api.cb = cb;
+        api.mirrorCB = mirrorCB;
+        api.numRB = numRB; api.numIn = numIn; api.spcRB = spcRB; api.spcIn = spcIn;
+        api.setAllEnabled = function (state) { setModeEnabled(state); };
+        api.refresh = refresh;
+        api.gather = function () {
+            return {
+                enabled: cb.value,
+                useNumber: numRB.value,
+                number: parseInt(numIn.text.replace(/,/g, "."), 10),
+                spacing: parseFloat(spcIn.text.replace(/,/g, "."))
+            };
         };
+        api.apply = function (e) {
+            cb.value = e.enabled;
+            _prevEnabled = e.enabled;
+            numRB.value = e.useNumber;
+            spcRB.value = !e.useNumber;
+            numIn.text = e.number;
+            spcIn.text = e.spacing;
+            refresh();
+        };
+        api.setMirror = function (v) { if (mirrorCB) mirrorCB.value = v; };
+        api.getMirror = function () { return mirrorCB ? mirrorCB.value : false; };
+        api.getConvertFields = function () { return [spcIn]; };
+        return api;
     },
 
     /**
@@ -156,19 +191,21 @@ GM.UI = {
      */
     buildDialog: function (pData, layerInfo, swatchInfo) {
         var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
+        dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
-        dlg.margins  = 20;
-        dlg.spacing  = 15;
+        dlg.margins = 20;
+        dlg.spacing = 12;
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
 
         // =================================================================
-        // Settings Panel
+        // Presets Panel
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
         setPanel.orientation = "row";
         setPanel.alignChildren = ["left", "center"];
         setPanel.margins = 15;
+        setPanel.spacing = 8;
 
         setPanel.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = setPanel.add("dropdownlist", undefined, []);
@@ -183,78 +220,73 @@ GM.UI = {
         deleteBtn.enabled = false;
 
         // =================================================================
-        // Global Position Panel
+        // Mid row: schematic preview | edges
         // =================================================================
-        var posPanel = dlg.add("panel", undefined, GM.L.POSITION_PANEL);
-        posPanel.orientation = "row";
-        posPanel.alignChildren = ["left", "center"];
-        posPanel.margins = 15;
+        var midRow = dlg.add("group");
+        midRow.orientation = "row";
+        midRow.alignChildren = ["top", "top"];
+        midRow.spacing = 12;
 
-        posPanel.add("statictext", undefined, GM.L.OFFSET_X);
-        var offsetXIn = posPanel.add("edittext", undefined, String(defCfg.offsetX));
-        offsetXIn.preferredSize.width = 60;
+        // --- Preview panel (custom-drawn schematic; non-blocking enhancement) ---
+        var PV = GM.CONSTANTS.PREVIEW;
+        var previewPanel = midRow.add("panel", undefined, GM.L.PREVIEW_PANEL);
+        previewPanel.orientation = "column";
+        previewPanel.alignChildren = ["fill", "top"];
+        previewPanel.margins = 12;
+        previewPanel.spacing = 6;
+
+        var previewCanvas = previewPanel.add("group");
+        previewCanvas.preferredSize = [PV.WIDTH, PV.HEIGHT];
+
+        var previewSummary = previewPanel.add("statictext", undefined, "", { truncate: "middle" });
+        previewSummary.preferredSize.width = PV.WIDTH;
+
+        var previewModel = null;
+        previewCanvas.onDraw = function () {
+            var g = this.graphics;
+            try {
+                var m = previewModel;
+                if (!m) return;
+                var penRect = g.newPen(g.PenType.SOLID_COLOR, PV.RECT_COLOR, PV.LINE_WIDTH);
+                g.newPath();
+                g.rectPath(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
+                g.strokePath(penRect);
+
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, PV.DOT_COLOR);
+                var r = PV.DOT_RADIUS;
+                for (var i = 0; i < m.dots.length; i++) {
+                    var d = m.dots[i];
+                    g.newPath();
+                    g.ellipsePath(d.x - r, d.y - r, r * 2, r * 2);
+                    g.fillPath(brush);
+                }
+            } catch (e) {}
+        };
+
+        // --- Edges panel (offsets + 4 compact edge rows, mirror inline) ---
+        var edgesPanel = midRow.add("panel", undefined, GM.L.EDGES_PANEL);
+        edgesPanel.orientation = "column";
+        edgesPanel.alignChildren = ["left", "top"];
+        edgesPanel.margins = 12;
+        edgesPanel.spacing = 6;
+
+        var offGrp = edgesPanel.add("group");
+        offGrp.orientation = "row";
+        offGrp.alignChildren = ["left", "center"];
+        offGrp.spacing = 6;
+        offGrp.add("statictext", undefined, GM.L.OFFSET_X);
+        var offsetXIn = offGrp.add("edittext", undefined, String(defCfg.offsetX));
+        offsetXIn.preferredSize.width = 44;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
-
-        posPanel.add("statictext", undefined, GM.L.OFFSET_Y);
-        var offsetYIn = posPanel.add("edittext", undefined, String(defCfg.offsetY));
-        offsetYIn.preferredSize.width = 60;
+        offGrp.add("statictext", undefined, GM.L.OFFSET_Y);
+        var offsetYIn = offGrp.add("edittext", undefined, String(defCfg.offsetY));
+        offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
-        // =================================================================
-        // Edge Panels — Row 1: Top + Left
-        // =================================================================
-        var row1 = dlg.add("group");
-        row1.orientation = "row";
-        row1.alignChildren = ["fill", "top"];
-
-        var topUI = GM.UI.buildEdgePanel(row1, GM.L.TOP, defCfg.top, 280);
-        var leftUI = GM.UI.buildEdgePanel(row1, GM.L.LEFT, defCfg.left, 280);
-
-        // =================================================================
-        // Edge Panels — Row 2: Bottom (mirror) + Right (mirror)
-        // =================================================================
-        var row2 = dlg.add("group");
-        row2.orientation = "row";
-        row2.alignChildren = ["fill", "top"];
-
-        var bottomOuter = row2.add("group");
-        bottomOuter.orientation = "column";
-        bottomOuter.alignChildren = ["fill", "top"];
-        bottomOuter.preferredSize.width = 280;
-        var bottomMirrorGrp = bottomOuter.add("group");
-        bottomMirrorGrp.margins = [12, 4, 0, 0];
-        var bottomMirrorCB = bottomMirrorGrp.add("checkbox", undefined, GM.L.BOTTOM_MIRROR);
-        bottomMirrorCB.value = defCfg.bottomMirror;
-        bottomMirrorCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
-        var bottomUI = GM.UI.buildEdgePanel(bottomOuter, GM.L.BOTTOM_CUSTOM, defCfg.bottom, 280);
-
-        var rightOuter = row2.add("group");
-        rightOuter.orientation = "column";
-        rightOuter.alignChildren = ["fill", "top"];
-        rightOuter.preferredSize.width = 280;
-        var rightMirrorGrp = rightOuter.add("group");
-        rightMirrorGrp.margins = [12, 4, 0, 0];
-        var rightMirrorCB = rightMirrorGrp.add("checkbox", undefined, GM.L.RIGHT_MIRROR);
-        rightMirrorCB.value = defCfg.rightMirror;
-        rightMirrorCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
-        var rightUI = GM.UI.buildEdgePanel(rightOuter, GM.L.RIGHT_CUSTOM, defCfg.right, 280);
-
-        function updateMirrors() {
-            var bm = bottomMirrorCB.value;
-            bottomUI.cb.enabled = !bm;
-            bottomUI.setAllEnabled(!bm && bottomUI.cb.value);
-            if (bm) bottomUI.cb.value = false;
-
-            var rm = rightMirrorCB.value;
-            rightUI.cb.enabled = !rm;
-            rightUI.setAllEnabled(!rm && rightUI.cb.value);
-            if (rm) rightUI.cb.value = false;
-        }
-        bottomMirrorCB.onClick = updateMirrors;
-        rightMirrorCB.onClick = updateMirrors;
-        bottomUI.cb.onClick = function () { bottomUI.setAllEnabled(bottomUI.cb.value); };
-        rightUI.cb.onClick = function () { rightUI.setAllEnabled(rightUI.cb.value); };
-        updateMirrors();
+        var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
+        var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
+        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
+        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
 
         // =================================================================
         // Mark Panel (units, size, shape)
@@ -263,6 +295,7 @@ GM.UI = {
         markPanel.orientation = "row";
         markPanel.alignChildren = ["left", "center"];
         markPanel.margins = 15;
+        markPanel.spacing = 8;
 
         markPanel.add("statictext", undefined, GM.L.UNIT_LABEL);
         var unitsDDL = markPanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
@@ -329,38 +362,6 @@ GM.UI = {
         weightInput.helpTip = GM.L.TIP_WEIGHT;
         wGrp.add("statictext", undefined, GM.L.POINTS);
 
-        fillCB.onClick = function () {
-            fillDDL.enabled = fillCB.value;
-            fillOPCB.enabled = fillCB.value;
-        };
-        strokeCB.onClick = function () {
-            strokeDDL.enabled = strokeCB.value;
-            strokeOPCB.enabled = strokeCB.value;
-            weightInput.enabled = strokeCB.value;
-        };
-
-        // =================================================================
-        // Unit Conversion
-        // =================================================================
-        var currentUnit = GM.CONSTANTS.UNIT.MM;
-        unitsDDL.onChange = function () {
-            var newUnit = GM.UI.getUnitKey(unitsDDL);
-            if (newUnit === currentUnit) return;
-            var fields = [offsetXIn, offsetYIn, sizeInput]
-                .concat(topUI.getConvertFields())
-                .concat(leftUI.getConvertFields())
-                .concat(bottomUI.getConvertFields())
-                .concat(rightUI.getConvertFields());
-
-            for (var i = 0; i < fields.length; i++) {
-                var v = parseFloat(fields[i].text.replace(/,/g, "."));
-                if (!isNaN(v)) {
-                    fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
-                }
-            }
-            currentUnit = newUnit;
-        };
-
         // =================================================================
         // Copyright footer
         // =================================================================
@@ -388,7 +389,7 @@ GM.UI = {
         footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
 
         // =================================================================
-        // Gather & Apply
+        // Gather & Apply  (output shapes are the contract with main.js)
         // =================================================================
         function gatherAll() {
             return {
@@ -398,8 +399,8 @@ GM.UI = {
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
                 right: rightUI.gather(),
-                bottomMirror: bottomMirrorCB.value,
-                rightMirror: rightMirrorCB.value,
+                bottomMirror: bottomUI.getMirror(),
+                rightMirror: rightUI.getMirror(),
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
                 isRound: roundRB.value,
@@ -426,9 +427,8 @@ GM.UI = {
             bottomUI.apply(s.bottom);
             rightUI.apply(s.right);
 
-            bottomMirrorCB.value = s.bottomMirror;
-            rightMirrorCB.value = s.rightMirror;
-            updateMirrors();
+            bottomUI.setMirror(s.bottomMirror); bottomUI.refresh();
+            rightUI.setMirror(s.rightMirror);   rightUI.refresh();
 
             sizeInput.text = s.markSize;
             roundRB.value = s.isRound;
@@ -450,6 +450,121 @@ GM.UI = {
             strokeOPCB.enabled = s.strokeEnabled;
             weightInput.enabled = s.strokeEnabled;
         }
+
+        // =================================================================
+        // Schematic preview refresh
+        // =================================================================
+        function redrawPreview() {
+            try {
+                previewModel = GM.PreviewModel.compute(gatherAll(), PV.WIDTH, PV.HEIGHT);
+            } catch (e) { previewModel = null; }
+
+            // Text summary — always correct even if custom drawing fails.
+            try {
+                var names = [];
+                if (previewModel) {
+                    if (previewModel.edges.top)    names.push(GM.L.EDGE_TOP);
+                    if (previewModel.edges.left)   names.push(GM.L.EDGE_LEFT);
+                    if (previewModel.edges.bottom) names.push(GM.L.EDGE_BOTTOM);
+                    if (previewModel.edges.right)  names.push(GM.L.EDGE_RIGHT);
+                }
+                previewSummary.text = names.length
+                    ? GM.L.format(GM.L.PREVIEW_ACTIVE_EDGES, names.join(", "))
+                    : GM.L.PREVIEW_NONE;
+            } catch (e2) {}
+
+            // Trigger repaint of the custom canvas.
+            try { previewCanvas.notify("onDraw"); } catch (e3) {}
+        }
+
+        // =================================================================
+        // Unit Conversion
+        // =================================================================
+        var currentUnit = GM.CONSTANTS.UNIT.MM;
+        unitsDDL.onChange = function () {
+            var newUnit = GM.UI.getUnitKey(unitsDDL);
+            if (newUnit === currentUnit) return;
+            var fields = [offsetXIn, offsetYIn, sizeInput]
+                .concat(topUI.getConvertFields())
+                .concat(leftUI.getConvertFields())
+                .concat(bottomUI.getConvertFields())
+                .concat(rightUI.getConvertFields());
+
+            for (var i = 0; i < fields.length; i++) {
+                var v = parseFloat(fields[i].text.replace(/,/g, "."));
+                if (!isNaN(v)) {
+                    fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
+                }
+            }
+            currentUnit = newUnit;
+            onUserChange();
+        };
+
+        // =================================================================
+        // Live Validation
+        // =================================================================
+        var numericFields = [offsetXIn, offsetYIn, sizeInput];
+        if (weightInput) numericFields.push(weightInput);
+
+        function liveValidateAll() {
+            var allValid = true;
+            for (var i = 0; i < numericFields.length; i++) {
+                var et = numericFields[i];
+                if (!et.enabled) continue;
+                var str = String(et.text || "").replace(/,/g, ".");
+                var n = parseFloat(str);
+                var valid = !isNaN(n) && n >= 0;
+                try {
+                    var g = et.graphics;
+                    if (g && g.newPen) {
+                        var color = valid
+                            ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
+                            : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                        g.foregroundColor = color;
+                    }
+                } catch (e) {}
+                if (!valid) allValid = false;
+            }
+            return allValid;
+        }
+
+        // =================================================================
+        // Shared change hook — modified indicator + validation + preview
+        // =================================================================
+        function onUserChange() {
+            refreshModifiedIndicator();
+            liveValidateAll();
+            redrawPreview();
+        }
+
+        // =================================================================
+        // Appearance handlers
+        // =================================================================
+        fillCB.onClick = function () {
+            fillDDL.enabled = fillCB.value;
+            fillOPCB.enabled = fillCB.value;
+            refreshModifiedIndicator();
+        };
+        strokeCB.onClick = function () {
+            strokeDDL.enabled = strokeCB.value;
+            strokeOPCB.enabled = strokeCB.value;
+            weightInput.enabled = strokeCB.value;
+            refreshModifiedIndicator();
+            liveValidateAll();
+        };
+        fillOPCB.onClick = refreshModifiedIndicator;
+        strokeOPCB.onClick = refreshModifiedIndicator;
+        layerDDL.onChange = refreshModifiedIndicator;
+        fillDDL.onChange = refreshModifiedIndicator;
+        strokeDDL.onChange = refreshModifiedIndicator;
+        roundRB.onClick = refreshModifiedIndicator;
+        squareRB.onClick = refreshModifiedIndicator;
+
+        // Edge panels notify on any internal change.
+        topUI.onChange    = onUserChange;
+        leftUI.onChange   = onUserChange;
+        bottomUI.onChange = onUserChange;
+        rightUI.onChange  = onUserChange;
 
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)
@@ -488,6 +603,7 @@ GM.UI = {
         var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
         if (initPreset) applyAll(initPreset);
         updatePresetList();
+        redrawPreview();
 
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
@@ -498,6 +614,7 @@ GM.UI = {
             deleteBtn.enabled = (key !== GM.Config.PRESET_KEY_DEFAULT);
             applyAll(r.settings);
             refreshModifiedIndicator();
+            redrawPreview();
         };
 
         saveBtn.onClick = function () {
@@ -526,7 +643,6 @@ GM.UI = {
 
         deleteBtn.onClick = function () {
             if (!loadDDL.selection) return;
-            var key = sortedKeys[loadDDL.selection.index];
             var displayName = loadDDL.selection.text;
             if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, displayName))) return;
             var r = GM.UIState.deleteActive(pData);
@@ -537,47 +653,22 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
+            redrawPreview();
             try { GM.Storage.save(pData); } catch (e) {}
         };
 
         resetBtn.onClick = function () {
             applyAll(GM.Config.getDefaults());
             refreshModifiedIndicator();
+            redrawPreview();
         };
 
-        // =================================================================
-        // Live Validation
-        // =================================================================
-        var numericFields = [offsetXIn, offsetYIn, sizeInput];
-        if (weightInput) numericFields.push(weightInput);
-
-        function liveValidateAll() {
-            var allValid = true;
-            for (var i = 0; i < numericFields.length; i++) {
-                var et = numericFields[i];
-                if (!et.enabled) continue;
-                var str = String(et.text || "").replace(/,/g, ".");
-                var n = parseFloat(str);
-                var valid = !isNaN(n) && n >= 0;
-                try {
-                    var g = et.graphics;
-                    if (g && g.newPen) {
-                        var color = valid
-                            ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
-                            : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
-                        g.foregroundColor = color;
-                    }
-                } catch (e) {}
-                if (!valid) allValid = false;
-            }
-            return allValid;
-        }
-
+        // Wire numeric edits to the shared change hook.
         var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
-            allEdits[ei].onChange = function () { refreshModifiedIndicator(); liveValidateAll(); };
-            allEdits[ei].onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
+            allEdits[ei].onChange = onUserChange;
+            allEdits[ei].onChanging = onUserChange;
         }
 
         return {
