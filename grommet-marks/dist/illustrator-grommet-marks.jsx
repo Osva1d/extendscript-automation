@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     4.1.0
  * Author:      Osva1d
- * Updated:     2026-05-28
+ * Updated:     2026-05-29
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -203,8 +203,7 @@ GM.L = (function () {
             UNIT_CM: "Centimeters",
             UNIT_IN: "Inches",
 
-            // Position panel
-            POSITION_PANEL: "Mark position",
+            // Edges panel
             EDGES_PANEL: "Edges",
             EDGE_TOP: "Top",
             EDGE_LEFT: "Left",
@@ -314,8 +313,7 @@ GM.L = (function () {
             UNIT_CM: "Centimetry",
             UNIT_IN: "Palce",
 
-            // Position panel
-            POSITION_PANEL: "Pozice značek",
+            // Edges panel
             EDGES_PANEL: "Hrany",
             EDGE_TOP: "Horní",
             EDGE_LEFT: "Levá",
@@ -1619,7 +1617,7 @@ GM.UI = {
         spacer.alignment = ["fill", "fill"];
 
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
+        var okBtn = footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
 
         // =================================================================
         // Gather & Apply  (output shapes are the contract with main.js)
@@ -1732,6 +1730,10 @@ GM.UI = {
                 } catch (e) {}
                 if (!valid) allValid = false;
             }
+            // Gate the primary action: can't Generate with an invalid numeric
+            // field. Precise per-rule errors still surface on submit via
+            // GM.Validation; this is the coarse live guard.
+            try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;
         }
 
@@ -1873,6 +1875,10 @@ GM.UI = {
             allEdits[ei].onChanging = onUserChange;
         }
 
+        // Initial live-validation pass — paints any out-of-range stored value
+        // and sets the OK button's initial enabled state.
+        liveValidateAll();
+
         return {
             window: dlg,
             gatherAll: gatherAll
@@ -1899,39 +1905,56 @@ var GM = GM || {};
 
 GM.Main = {
     run: function () {
-        if (!GM.Illustrator.init()) {
-            alert(GM.L.ERR_NO_DOC);
-            return;
+        // Global error boundary — any uncaught failure (load, dialog, save)
+        // surfaces one localized alert instead of a raw ExtendScript crash.
+        try {
+            if (!GM.Illustrator.init()) {
+                alert(GM.L.ERR_NO_DOC);
+                return;
+            }
+
+            // Pin Y-up document coordinate system. A per-document
+            // "Y origin from artboard top-left" preference can flip the axis
+            // and mis-place marks; placeMark() and the artboard math assume
+            // Y-up. CS6 lacks the enum, so the swallow is safe (CS6 is Y-up).
+            try {
+                app.coordinateSystem = CoordinateSystem.DOCUMENTCOORDINATESYSTEM;
+            } catch (csErr) {
+                GM.Utils.log("coordinateSystem pin skipped: " + csErr.message);
+            }
+
+            var pData = GM.Storage.load();
+            if (!pData) {
+                pData = {
+                    activePreset: GM.Config.PRESET_KEY_DEFAULT,
+                    presets: {}
+                };
+                pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
+            }
+
+            var layerInfo = GM.Illustrator.getLayerNames();
+            var swatchInfo = GM.Illustrator.getSwatchNames();
+
+            var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
+
+            if (ui.window.show() !== 1) return;
+
+            var cfg = ui.gatherAll();
+
+            var result = GM.Validation.validate(cfg, GM.L);
+            if (!result.valid) return;
+
+            // Auto-save [Last Settings]
+            pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
+            GM.Storage.save(pData);
+
+            GM.Main.process(result.settings);
+
+            app.redraw();
+        } catch (e) {
+            alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " +
+                  e.message + (e.line ? " (line " + e.line + ")" : ""));
         }
-
-        var pData = GM.Storage.load();
-        if (!pData) {
-            pData = {
-                activePreset: GM.Config.PRESET_KEY_DEFAULT,
-                presets: {}
-            };
-            pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
-        }
-
-        var layerInfo = GM.Illustrator.getLayerNames();
-        var swatchInfo = GM.Illustrator.getSwatchNames();
-
-        var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
-
-        if (ui.window.show() !== 1) return;
-
-        var cfg = ui.gatherAll();
-
-        var result = GM.Validation.validate(cfg, GM.L);
-        if (!result.valid) return;
-
-        // Auto-save [Last Settings]
-        pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
-        GM.Storage.save(pData);
-
-        GM.Main.process(result.settings);
-
-        app.redraw();
     },
 
     process: function (cfg) {
@@ -1972,6 +1995,13 @@ GM.Main = {
 
             var offX = cfg.offsetX;
             var offY = cfg.offsetY;
+
+            // Layer session — unlock/show the target layer so placeMark can
+            // write to it (a locked layer would silently swallow every mark).
+            // The user's lock/visibility state is restored afterwards.
+            var prevLocked = false, prevVisible = true, sessionOpen = false;
+            try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
+            try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
 
             var placed = {};
             function place(x, y) {
@@ -2023,7 +2053,16 @@ GM.Main = {
                     }
                 }
             }
+
+            // Restore layer lock/visibility (normal path).
+            if (sessionOpen) {
+                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
+            }
         } catch (e) {
+            // Restore on error too — never leave the layer unlocked.
+            if (sessionOpen) {
+                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst2) {}
+            }
             alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " + e.message);
         }
     }

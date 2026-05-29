@@ -359,7 +359,7 @@ GM.UI = {
         spacer.alignment = ["fill", "fill"];
 
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
+        var okBtn = footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
 
         // =================================================================
         // Gather & Apply  (output shapes are the contract with main.js)
@@ -472,6 +472,10 @@ GM.UI = {
                 } catch (e) {}
                 if (!valid) allValid = false;
             }
+            // Gate the primary action: can't Generate with an invalid numeric
+            // field. Precise per-rule errors still surface on submit via
+            // GM.Validation; this is the coarse live guard.
+            try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;
         }
 
@@ -612,6 +616,10 @@ GM.UI = {
             allEdits[ei].onChange = onUserChange;
             allEdits[ei].onChanging = onUserChange;
         }
+
+        // Initial live-validation pass — paints any out-of-range stored value
+        // and sets the OK button's initial enabled state.
+        liveValidateAll();
 
         return {
             window: dlg,

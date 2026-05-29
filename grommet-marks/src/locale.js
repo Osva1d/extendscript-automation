@@ -23,8 +23,7 @@ GM.L = (function () {
             UNIT_CM: "Centimeters",
             UNIT_IN: "Inches",
 
-            // Position panel
-            POSITION_PANEL: "Mark position",
+            // Edges panel
             EDGES_PANEL: "Edges",
             EDGE_TOP: "Top",
             EDGE_LEFT: "Left",
@@ -134,8 +133,7 @@ GM.L = (function () {
             UNIT_CM: "Centimetry",
             UNIT_IN: "Palce",
 
-            // Position panel
-            POSITION_PANEL: "Pozice značek",
+            // Edges panel
             EDGES_PANEL: "Hrany",
             EDGE_TOP: "Horní",
             EDGE_LEFT: "Levá",
