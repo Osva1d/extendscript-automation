@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grommet Marks — Varianta A (kanonický sloupec)</title>
+<style>
+    :root {
+        --bg:#323232; --panel:#3a3a3a; --panel-bd:#4a4a4a; --txt:#d8d8d8;
+        --txt-dim:#8c8c8c; --field:#2b2b2b; --field-bd:#555; --accent:#2d8ceb;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:32px; background:#1e1e1e;
+        font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif; font-size:12px; color:var(--txt);
+        display:flex; flex-direction:column; align-items:center; gap:14px; }
+    .note { color:var(--txt-dim); max-width:680px; text-align:center; }
+    .dialog { background:var(--bg); border:1px solid #000; border-radius:6px;
+        box-shadow:0 10px 40px rgba(0,0,0,.6); width:430px; padding:20px;
+        display:flex; flex-direction:column; gap:12px; }
+    .titlebar { font-size:13px; font-weight:600; color:#eee; padding-bottom:8px; border-bottom:1px solid var(--panel-bd); }
+    .panel { position:relative; border:1px solid var(--panel-bd); border-radius:4px; padding:14px; background:var(--panel); }
+    .panel > .legend { position:absolute; top:-8px; left:10px; background:var(--bg); padding:0 6px; font-size:11px; color:var(--txt-dim); }
+    .row { display:flex; align-items:center; gap:8px; }
+    .wrap { flex-wrap:wrap; }
+    label.cb { display:inline-flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+    input[type=checkbox], input[type=radio] { accent-color:var(--accent); cursor:pointer; }
+    input[type=text] { background:var(--field); color:var(--txt); border:1px solid var(--field-bd); border-radius:3px; padding:3px 5px; width:42px; }
+    select { background:var(--field); color:var(--txt); border:1px solid var(--field-bd); border-radius:3px; padding:3px 6px; }
+    button { background:#4a4a4a; color:var(--txt); border:1px solid #5a5a5a; border-radius:4px; padding:5px 12px; cursor:pointer; }
+    button:hover { background:#555; } button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    button:disabled { opacity:.45; cursor:default; }
+    .buttons { display:flex; align-items:center; gap:8px; } .buttons .spacer { flex:1 1 auto; }
+    .footer { color:var(--txt-dim); font-size:11px; }
+    .muted { color:var(--txt-dim); }
+    .edge { display:flex; flex-direction:column; gap:3px; padding:2px 0; }
+    .edge .controls { display:flex; align-items:center; gap:6px; }
+    .edge .controls.disabled { opacity:.4; pointer-events:none; }
+    .ename { display:inline-block; width:52px; }
+    .sep { height:1px; background:var(--panel-bd); margin:5px 0; border:0; }
+</style>
+</head>
+<body>
+<div class="note"><strong>Varianta A — Kanonický sloupec.</strong>
+Jeden úzký sloupec dle <code>extendscript-ui-standards</code>. Hrany jako kompaktní stohované řádky, mirror inline. Nejjednodušší, nejmenší riziko.</div>
+
+<div class="dialog">
+    <div class="titlebar">Illustrator Grommet Marks v4.1.0</div>
+
+    <div class="panel">
+        <span class="legend">Předvolby</span>
+        <div class="row wrap">
+            <span>Načíst:</span>
+            <select style="width:170px"><option>[Výchozí]</option><option>Banner 400×150</option></select>
+            <button disabled>Uložit</button><button>Uložit jako…</button><button disabled>Smazat</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <span class="legend">Hrany</span>
+        <div class="row" style="margin-bottom:4px"><span>Odsazení X:</span><input type="text" value="7"><span>Y:</span><input type="text" value="7"></div>
+        <hr class="sep">
+        <div class="edge" data-edge="top">
+            <div class="controls">
+                <label class="cb"><input type="checkbox" class="enable" checked><span class="ename">Horní</span></label>
+                <label class="cb"><input type="radio" name="t" checked> Počet:</label><input type="text" value="10">
+                <label class="cb"><input type="radio" name="t"> Rozestup:</label><input type="text" value="105">
+            </div>
+        </div>
+        <div class="edge" data-edge="left">
+            <div class="controls">
+                <label class="cb"><input type="checkbox" class="enable" checked><span class="ename">Levá</span></label>
+                <label class="cb"><input type="radio" name="l" checked> Počet:</label><input type="text" value="10">
+                <label class="cb"><input type="radio" name="l"> Rozestup:</label><input type="text" value="105">
+            </div>
+        </div>
+        <hr class="sep">
+        <div class="edge" data-edge="bottom">
+            <label class="cb"><input type="checkbox" class="mirror-cb" checked> Zrcadlit horní</label>
+            <div class="controls disabled">
+                <label class="cb"><input type="checkbox" class="enable"><span class="ename">Dolní</span></label>
+                <label class="cb"><input type="radio" name="b" checked> Počet:</label><input type="text" value="10">
+                <label class="cb"><input type="radio" name="b"> Rozestup:</label><input type="text" value="105">
+            </div>
+        </div>
+        <div class="edge" data-edge="right">
+            <label class="cb"><input type="checkbox" class="mirror-cb" checked> Zrcadlit levou</label>
+            <div class="controls disabled">
+                <label class="cb"><input type="checkbox" class="enable"><span class="ename">Pravá</span></label>
+                <label class="cb"><input type="radio" name="r" checked> Počet:</label><input type="text" value="10">
+                <label class="cb"><input type="radio" name="r"> Rozestup:</label><input type="text" value="105">
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <span class="legend">Značka</span>
+        <div class="row wrap">
+            <span>Jednotky:</span><select><option>Milimetry</option><option>Centimetry</option><option>Palce</option></select>
+            <span>Velikost:</span><input type="text" value="3" style="width:50px">
+            <label class="cb"><input type="radio" name="shape" checked> Kruh</label>
+            <label class="cb"><input type="radio" name="shape"> Čtverec</label>
+        </div>
+    </div>
+
+    <div class="panel">
+        <span class="legend">Vzhled</span>
+        <div class="row" style="margin-bottom:8px"><span>Vrstva:</span><select style="width:200px"><option>[Vytvořit 'Grommet Marks']</option></select></div>
+        <div class="row" style="margin-bottom:8px"><label class="cb"><input type="checkbox" checked> Výplň:</label>
+            <select style="width:150px"><option>[Vytvořit…]</option></select><label class="cb"><input type="checkbox" checked> Přetisk</label></div>
+        <div class="row"><label class="cb"><input type="checkbox"> Obrys:</label>
+            <select style="width:150px" disabled><option>[Vytvořit…]</option></select>
+            <label class="cb muted"><input type="checkbox" disabled> Přetisk</label></div>
+        <div class="row" style="margin-top:8px"><span class="muted">Tloušťka:</span><input type="text" value="1" disabled style="width:50px"><span class="muted">pt</span></div>
+    </div>
+
+    <div class="footer">© 2025–2026 Osva1d — Illustrator Grommet Marks v4.1.0</div>
+    <div class="buttons"><button>Reset</button><span class="spacer"></span><button>Storno</button><button class="primary">Generovat</button></div>
+</div>
+
+<script>
+var prev = {};
+document.querySelectorAll('.edge[data-edge="bottom"], .edge[data-edge="right"]').forEach(function (el) {
+    var name = el.getAttribute('data-edge');
+    var mcb = el.querySelector('.mirror-cb'), ctr = el.querySelector('.controls'), en = el.querySelector('.enable');
+    prev[name] = en.checked;
+    mcb.addEventListener('change', function () {
+        if (mcb.checked) { prev[name] = en.checked; en.checked = false; }
+        else { en.checked = prev[name]; }
+        ctr.classList.toggle('disabled', mcb.checked);
+    });
+});
+</script>
+</body>
+</html>
