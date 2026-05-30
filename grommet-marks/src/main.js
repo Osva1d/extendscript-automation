@@ -74,22 +74,26 @@ GM.Main = {
             var rightOn = cfg.rightMirror ? leftOn : rightCfg.enabled;
 
             var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
+            // getOrCreateLayer always returns a layer (creates it if missing),
+            // so no not-found guard is needed; a genuine create failure throws
+            // up to the outer try/catch as an unexpected error.
             var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
-            if (!targetLayer) {
-                alert(GM.L.format(GM.L.ERR_LAYER_NOT_FOUND, cfg.markLayerName));
-                return;
-            }
+
+            // Missing named fill/stroke swatch → degrade to [Registration] +
+            // a non-blocking warning (collected, shown once at the end). Never
+            // hard-abort and never silently auto-create a surprise spot.
+            var warnings = [];
 
             var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
-            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
-
             if (cfg.fillEnabled && !fillColor) {
-                alert(GM.L.format(GM.L.ERR_SWATCH_NOT_FOUND, cfg.fillSwatchName));
-                return;
+                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
+                fillColor = GM.Illustrator.registrationColor();
             }
+
+            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
             if (cfg.strokeEnabled && !strokeColor) {
-                alert(GM.L.format(GM.L.ERR_SWATCH_NOT_FOUND, cfg.strokeSwatchName));
-                return;
+                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
+                strokeColor = GM.Illustrator.registrationColor();
             }
 
             var markSizePoints = cfg.markSize * unitFactor;
@@ -160,6 +164,10 @@ GM.Main = {
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
             }
+
+            // Surface any non-blocking colour-fallback warnings once, after the
+            // marks are placed (the operation still succeeded).
+            if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
             // Restore on error too — never leave the layer unlocked.
             if (sessionOpen) {

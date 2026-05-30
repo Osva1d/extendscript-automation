@@ -22,6 +22,18 @@ DESCRIPTION="Grommet mark generator for banner production."
 DIST_DIR="dist"
 SRC_DIR="src"
 
+# Version parity guard — the runtime constant GM.CONSTANTS.VERSION (shown in the
+# dialog title + footer) must match package.json (the dist-header source of
+# truth). Without this guard the two can silently drift, so the UI advertises a
+# different version than the file header. Fail the build loudly instead.
+# (sed -n .../p exits 0 even on no match, so it is safe under `set -o pipefail`.)
+SRC_VERSION="$(sed -n 's/.*VERSION:[[:space:]]*"\([^"]*\)".*/\1/p' "$SRC_DIR/constants.js" | head -1)"
+if [ "$SRC_VERSION" != "$VERSION" ]; then
+    echo "ERROR: version drift — package.json=$VERSION but src/constants.js VERSION=$SRC_VERSION" >&2
+    echo "       Sync the VERSION constant in src/constants.js with package.json before building." >&2
+    exit 1
+fi
+
 mkdir -p "$DIST_DIR"
 OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 

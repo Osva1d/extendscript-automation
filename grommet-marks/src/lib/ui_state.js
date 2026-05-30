@@ -11,6 +11,10 @@
 var GM = GM || {};
 
 GM.UIState = {
+    // These two are intentionally duplicated from GM.Config (kept local so
+    // ui_state can be unit-tested without loading Config). MUST stay in sync
+    // with GM.Config.PRESET_KEY_DEFAULT — if you rename a reserved preset
+    // key, change it in BOTH places.
     PRESET_KEY_DEFAULT: "[Default]",
     PRESET_KEY_LAST:    "[Last Settings]",
 

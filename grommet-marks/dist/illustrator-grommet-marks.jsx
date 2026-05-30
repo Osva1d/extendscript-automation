@@ -197,6 +197,7 @@ GM.L = (function () {
             // Sentinel display strings
             CREATE_LABEL: "[Create 'Grommet Marks']",
             DEFAULT_PRESET: "[Default]",
+            DDL_MISSING_SUFFIX: "(missing)",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -288,8 +289,8 @@ GM.L = (function () {
             ERR_EDGE_SPACING: "Mark spacing must be a positive number.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
-            ERR_LAYER_NOT_FOUND: "Layer \"%s\" not found.",
-            ERR_SWATCH_NOT_FOUND: "Swatch \"%s\" not found.",
+            WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
+            WARN_PREFIX: "WARNING: ",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
             ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
@@ -308,6 +309,7 @@ GM.L = (function () {
             // Sentinel display strings
             CREATE_LABEL: "[Vytvořit 'Grommet Marks']",
             DEFAULT_PRESET: "[Výchozí]",
+            DDL_MISSING_SUFFIX: "(chybí)",
 
             // Units
             UNIT_MM: "Milimetry",
@@ -399,8 +401,8 @@ GM.L = (function () {
             ERR_EDGE_SPACING: "Rozestup značek musí být kladné číslo.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
-            ERR_LAYER_NOT_FOUND: "Vrstva \"%s\" nenalezena.",
-            ERR_SWATCH_NOT_FOUND: "Vzorník \"%s\" nenalezen.",
+            WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
+            WARN_PREFIX: "UPOZORNĚNÍ: ",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
             ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
@@ -418,7 +420,7 @@ GM.L = (function () {
 
     var active = strings[lang] || strings["en"];
 
-    // Simple string formatter: GM.L.format(GM.L.ERR_LAYER_NOT_FOUND, layerName)
+    // Simple string formatter: GM.L.format(GM.L.WARN_SWATCH_FALLBACK, swatchName)
     active.format = function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) {
@@ -879,6 +881,10 @@ GM.Validation = {
 var GM = GM || {};
 
 GM.UIState = {
+    // These two are intentionally duplicated from GM.Config (kept local so
+    // ui_state can be unit-tested without loading Config). MUST stay in sync
+    // with GM.Config.PRESET_KEY_DEFAULT — if you rename a reserved preset
+    // key, change it in BOTH places.
     PRESET_KEY_DEFAULT: "[Default]",
     PRESET_KEY_LAST:    "[Last Settings]",
 
@@ -1170,26 +1176,27 @@ GM.Illustrator = {
     },
 
     /**
-     * Resolves layer by name or creates the default "Grommet Marks" layer.
-     * @param {string} layerName - Layer name or SENTINEL_CREATE
-     * @returns {Layer|null} Target layer or null on failure
+     * Resolves the target layer by name, creating it if absent.
+     *
+     * A layer is a low-risk container (unlike a colour, it cannot mis-separate
+     * on output), so a missing target is created and drawn into rather than
+     * aborting — matching the SENTINEL_CREATE default and ZSM's getLay. The
+     * sentinel resolves to the default "Grommet Marks" name; any other value is
+     * taken as an explicit layer name.
+     *
+     * @param {string} layerName - Layer name or SENTINEL_CREATE.
+     * @returns {Layer} Target layer (created if it didn't exist).
      */
     getOrCreateLayer: function (layerName) {
         var doc = GM.Illustrator.doc;
-        if (layerName === GM.CONSTANTS.SENTINEL_CREATE) {
-            try {
-                return doc.layers.getByName(GM.CONSTANTS.LAYER_NAME);
-            } catch (e) {
-                var l = doc.layers.add();
-                l.name = GM.CONSTANTS.LAYER_NAME;
-                return l;
-            }
-        } else {
-            try {
-                return doc.layers.getByName(layerName);
-            } catch (e) {
-                return null;
-            }
+        var name = (layerName === GM.CONSTANTS.SENTINEL_CREATE)
+            ? GM.CONSTANTS.LAYER_NAME : layerName;
+        try {
+            return doc.layers.getByName(name);
+        } catch (e) {
+            var l = doc.layers.add();
+            l.name = name;
+            return l;
         }
     },
 
@@ -1218,8 +1225,28 @@ GM.Illustrator = {
             try {
                 return doc.swatches.getByName(swatchName).color;
             } catch (e) {
+                // Named swatch missing → null signals the caller, which degrades
+                // to registrationColor() + a warning (never silently auto-create
+                // a surprise spot — unsafe for prepress output).
                 return null;
             }
+        }
+    },
+
+    /**
+     * Returns the document's [Registration] swatch colour (always swatches[1]
+     * in any AI locale; index 0 is [None]), or 100% K CMYK as a last-resort
+     * fallback. Used when a named fill/stroke swatch is missing — marks degrade
+     * to a safe, cutter-readable colour instead of being dropped or aborted.
+     * @returns {Color} Registration (or black) colour.
+     */
+    registrationColor: function () {
+        try {
+            return GM.Illustrator.doc.swatches[1].color;
+        } catch (e) {
+            var k = new CMYKColor();
+            k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
+            return k;
         }
     },
 
@@ -1641,12 +1668,12 @@ GM.UI = {
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
                 isRound: roundRB.value,
-                markLayerName: GM.UI.toStorage(layerDDL.selection ? layerDDL.selection.text : GM.L.CREATE_LABEL),
+                markLayerName: GM.UI.toStorage(GM.UI.ddlValue(layerDDL) || GM.L.CREATE_LABEL),
                 fillEnabled: fillCB.value,
-                fillSwatchName: GM.UI.toStorage(fillDDL.selection ? fillDDL.selection.text : GM.L.CREATE_LABEL),
+                fillSwatchName: GM.UI.toStorage(GM.UI.ddlValue(fillDDL) || GM.L.CREATE_LABEL),
                 fillOverprint: fillOPCB.value,
                 strokeEnabled: strokeCB.value,
-                strokeSwatchName: GM.UI.toStorage(strokeDDL.selection ? strokeDDL.selection.text : GM.L.CREATE_LABEL),
+                strokeSwatchName: GM.UI.toStorage(GM.UI.ddlValue(strokeDDL) || GM.L.CREATE_LABEL),
                 strokeOverprint: strokeOPCB.value,
                 strokeWeight: parseFloat(weightInput.text.replace(/,/g, "."))
             };
@@ -1837,6 +1864,22 @@ GM.UI = {
         if (initPreset) applyAll(initPreset);
         updatePresetList();
 
+        /**
+         * Persist the preset wrapper to disk with consistent error reporting.
+         * Single source of truth for all save call-sites (Save / Save As /
+         * Delete) so a failed write is never silently swallowed — a stale
+         * on-disk state that "resurrects" a deleted preset after restart is a
+         * data-integrity bug, not a cosmetic one.
+         */
+        function persistSettings() {
+            try {
+                GM.Storage.save(pData);
+            } catch (e) {
+                GM.Utils.log("Storage.save failed: " + e.message);
+                alert(GM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+            }
+        }
+
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var key = sortedKeys[loadDDL.selection.index];
@@ -1852,7 +1895,7 @@ GM.UI = {
             var r = GM.UIState.save(pData, gatherAll());
             if (r.ok) {
                 updatePresetList();
-                try { GM.Storage.save(pData); } catch (e) {}
+                persistSettings();
                 return;
             }
             if (r.reason === "needs-name") saveAsBtn.onClick();
@@ -1869,7 +1912,7 @@ GM.UI = {
             if (!r.ok) return;
             updatePresetList();
             refreshModifiedIndicator();
-            try { GM.Storage.save(pData); } catch (e) {}
+            persistSettings();
         };
 
         deleteBtn.onClick = function () {
@@ -1884,7 +1927,7 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            try { GM.Storage.save(pData); } catch (e) {}
+            persistSettings();
         };
 
         resetBtn.onClick = function () {
@@ -1911,14 +1954,50 @@ GM.UI = {
         };
     },
 
+    /**
+     * Selects a dropdown item by display text.
+     *
+     * When the requested value is NOT present in the current document (e.g. a
+     * preset references swatch "MyOrange" but this document has no such spot),
+     * we do NOT silently fall back to item 0 (= the "[Create …]" sentinel),
+     * which would discard the user's saved choice and create a fresh default
+     * swatch/layer on OK. Instead we insert a synthetic item that preserves the
+     * saved name with a "(missing)" marker and select it. The marker is
+     * display-only; GM.UI.ddlValue() reads back the raw name, so toStorage()
+     * and isModified() both see the original value — no silent swap, no false
+     * "modified" asterisk. Downstream getOrCreate{Layer,Swatch} then recreates
+     * the named layer/spot.
+     */
     selectDDL: function (ddl, name) {
+        // Purge any stale synthetic "missing" item so they don't accumulate
+        // across preset switches on a persistent dropdown.
+        for (var k = ddl.items.length - 1; k >= 0; k--) {
+            if (ddl.items[k]._gmMissing) ddl.remove(k);
+        }
         for (var i = 0; i < ddl.items.length; i++) {
             if (ddl.items[i].text === name) {
                 ddl.selection = i;
                 return;
             }
         }
-        ddl.selection = 0;
+        // Not in the document — preserve the saved name as a flagged item.
+        var suffix = (GM.L && GM.L.DDL_MISSING_SUFFIX) ? GM.L.DDL_MISSING_SUFFIX : "(missing)";
+        var missing = ddl.add("item", name + "  " + suffix);
+        missing._gmRawValue = name;
+        missing._gmMissing  = true;
+        ddl.selection = missing;
+    },
+
+    /**
+     * Reads the resolved value of a dropdown selection. For a synthetic
+     * "missing" item (added by selectDDL when a saved value wasn't in the
+     * document), returns the raw saved name without the display marker;
+     * otherwise returns the selection text. Empty string when nothing selected.
+     */
+    ddlValue: function (ddl) {
+        var sel = ddl.selection;
+        if (!sel) return "";
+        return (sel._gmRawValue != null) ? sel._gmRawValue : sel.text;
     }
 };
 
@@ -1998,22 +2077,26 @@ GM.Main = {
             var rightOn = cfg.rightMirror ? leftOn : rightCfg.enabled;
 
             var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
+            // getOrCreateLayer always returns a layer (creates it if missing),
+            // so no not-found guard is needed; a genuine create failure throws
+            // up to the outer try/catch as an unexpected error.
             var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
-            if (!targetLayer) {
-                alert(GM.L.format(GM.L.ERR_LAYER_NOT_FOUND, cfg.markLayerName));
-                return;
-            }
+
+            // Missing named fill/stroke swatch → degrade to [Registration] +
+            // a non-blocking warning (collected, shown once at the end). Never
+            // hard-abort and never silently auto-create a surprise spot.
+            var warnings = [];
 
             var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
-            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
-
             if (cfg.fillEnabled && !fillColor) {
-                alert(GM.L.format(GM.L.ERR_SWATCH_NOT_FOUND, cfg.fillSwatchName));
-                return;
+                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
+                fillColor = GM.Illustrator.registrationColor();
             }
+
+            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
             if (cfg.strokeEnabled && !strokeColor) {
-                alert(GM.L.format(GM.L.ERR_SWATCH_NOT_FOUND, cfg.strokeSwatchName));
-                return;
+                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
+                strokeColor = GM.Illustrator.registrationColor();
             }
 
             var markSizePoints = cfg.markSize * unitFactor;
@@ -2084,6 +2167,10 @@ GM.Main = {
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
             }
+
+            // Surface any non-blocking colour-fallback warnings once, after the
+            // marks are placed (the operation still succeeded).
+            if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
             // Restore on error too — never leave the layer unlocked.
             if (sessionOpen) {

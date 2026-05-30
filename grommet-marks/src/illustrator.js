@@ -61,26 +61,27 @@ GM.Illustrator = {
     },
 
     /**
-     * Resolves layer by name or creates the default "Grommet Marks" layer.
-     * @param {string} layerName - Layer name or SENTINEL_CREATE
-     * @returns {Layer|null} Target layer or null on failure
+     * Resolves the target layer by name, creating it if absent.
+     *
+     * A layer is a low-risk container (unlike a colour, it cannot mis-separate
+     * on output), so a missing target is created and drawn into rather than
+     * aborting — matching the SENTINEL_CREATE default and ZSM's getLay. The
+     * sentinel resolves to the default "Grommet Marks" name; any other value is
+     * taken as an explicit layer name.
+     *
+     * @param {string} layerName - Layer name or SENTINEL_CREATE.
+     * @returns {Layer} Target layer (created if it didn't exist).
      */
     getOrCreateLayer: function (layerName) {
         var doc = GM.Illustrator.doc;
-        if (layerName === GM.CONSTANTS.SENTINEL_CREATE) {
-            try {
-                return doc.layers.getByName(GM.CONSTANTS.LAYER_NAME);
-            } catch (e) {
-                var l = doc.layers.add();
-                l.name = GM.CONSTANTS.LAYER_NAME;
-                return l;
-            }
-        } else {
-            try {
-                return doc.layers.getByName(layerName);
-            } catch (e) {
-                return null;
-            }
+        var name = (layerName === GM.CONSTANTS.SENTINEL_CREATE)
+            ? GM.CONSTANTS.LAYER_NAME : layerName;
+        try {
+            return doc.layers.getByName(name);
+        } catch (e) {
+            var l = doc.layers.add();
+            l.name = name;
+            return l;
         }
     },
 
@@ -109,8 +110,28 @@ GM.Illustrator = {
             try {
                 return doc.swatches.getByName(swatchName).color;
             } catch (e) {
+                // Named swatch missing → null signals the caller, which degrades
+                // to registrationColor() + a warning (never silently auto-create
+                // a surprise spot — unsafe for prepress output).
                 return null;
             }
+        }
+    },
+
+    /**
+     * Returns the document's [Registration] swatch colour (always swatches[1]
+     * in any AI locale; index 0 is [None]), or 100% K CMYK as a last-resort
+     * fallback. Used when a named fill/stroke swatch is missing — marks degrade
+     * to a safe, cutter-readable colour instead of being dropped or aborted.
+     * @returns {Color} Registration (or black) colour.
+     */
+    registrationColor: function () {
+        try {
+            return GM.Illustrator.doc.swatches[1].color;
+        } catch (e) {
+            var k = new CMYKColor();
+            k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
+            return k;
         }
     },
 

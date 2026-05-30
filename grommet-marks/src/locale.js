@@ -17,6 +17,7 @@ GM.L = (function () {
             // Sentinel display strings
             CREATE_LABEL: "[Create 'Grommet Marks']",
             DEFAULT_PRESET: "[Default]",
+            DDL_MISSING_SUFFIX: "(missing)",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -108,8 +109,8 @@ GM.L = (function () {
             ERR_EDGE_SPACING: "Mark spacing must be a positive number.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
-            ERR_LAYER_NOT_FOUND: "Layer \"%s\" not found.",
-            ERR_SWATCH_NOT_FOUND: "Swatch \"%s\" not found.",
+            WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
+            WARN_PREFIX: "WARNING: ",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
             ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
@@ -128,6 +129,7 @@ GM.L = (function () {
             // Sentinel display strings
             CREATE_LABEL: "[Vytvořit 'Grommet Marks']",
             DEFAULT_PRESET: "[Výchozí]",
+            DDL_MISSING_SUFFIX: "(chybí)",
 
             // Units
             UNIT_MM: "Milimetry",
@@ -219,8 +221,8 @@ GM.L = (function () {
             ERR_EDGE_SPACING: "Rozestup značek musí být kladné číslo.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
-            ERR_LAYER_NOT_FOUND: "Vrstva \"%s\" nenalezena.",
-            ERR_SWATCH_NOT_FOUND: "Vzorník \"%s\" nenalezen.",
+            WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
+            WARN_PREFIX: "UPOZORNĚNÍ: ",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
             ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
@@ -238,7 +240,7 @@ GM.L = (function () {
 
     var active = strings[lang] || strings["en"];
 
-    // Simple string formatter: GM.L.format(GM.L.ERR_LAYER_NOT_FOUND, layerName)
+    // Simple string formatter: GM.L.format(GM.L.WARN_SWATCH_FALLBACK, swatchName)
     active.format = function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) {

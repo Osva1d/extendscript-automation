@@ -381,12 +381,12 @@ GM.UI = {
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
                 isRound: roundRB.value,
-                markLayerName: GM.UI.toStorage(layerDDL.selection ? layerDDL.selection.text : GM.L.CREATE_LABEL),
+                markLayerName: GM.UI.toStorage(GM.UI.ddlValue(layerDDL) || GM.L.CREATE_LABEL),
                 fillEnabled: fillCB.value,
-                fillSwatchName: GM.UI.toStorage(fillDDL.selection ? fillDDL.selection.text : GM.L.CREATE_LABEL),
+                fillSwatchName: GM.UI.toStorage(GM.UI.ddlValue(fillDDL) || GM.L.CREATE_LABEL),
                 fillOverprint: fillOPCB.value,
                 strokeEnabled: strokeCB.value,
-                strokeSwatchName: GM.UI.toStorage(strokeDDL.selection ? strokeDDL.selection.text : GM.L.CREATE_LABEL),
+                strokeSwatchName: GM.UI.toStorage(GM.UI.ddlValue(strokeDDL) || GM.L.CREATE_LABEL),
                 strokeOverprint: strokeOPCB.value,
                 strokeWeight: parseFloat(weightInput.text.replace(/,/g, "."))
             };
@@ -577,6 +577,22 @@ GM.UI = {
         if (initPreset) applyAll(initPreset);
         updatePresetList();
 
+        /**
+         * Persist the preset wrapper to disk with consistent error reporting.
+         * Single source of truth for all save call-sites (Save / Save As /
+         * Delete) so a failed write is never silently swallowed — a stale
+         * on-disk state that "resurrects" a deleted preset after restart is a
+         * data-integrity bug, not a cosmetic one.
+         */
+        function persistSettings() {
+            try {
+                GM.Storage.save(pData);
+            } catch (e) {
+                GM.Utils.log("Storage.save failed: " + e.message);
+                alert(GM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+            }
+        }
+
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var key = sortedKeys[loadDDL.selection.index];
@@ -592,7 +608,7 @@ GM.UI = {
             var r = GM.UIState.save(pData, gatherAll());
             if (r.ok) {
                 updatePresetList();
-                try { GM.Storage.save(pData); } catch (e) {}
+                persistSettings();
                 return;
             }
             if (r.reason === "needs-name") saveAsBtn.onClick();
@@ -609,7 +625,7 @@ GM.UI = {
             if (!r.ok) return;
             updatePresetList();
             refreshModifiedIndicator();
-            try { GM.Storage.save(pData); } catch (e) {}
+            persistSettings();
         };
 
         deleteBtn.onClick = function () {
@@ -624,7 +640,7 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            try { GM.Storage.save(pData); } catch (e) {}
+            persistSettings();
         };
 
         resetBtn.onClick = function () {
@@ -651,13 +667,49 @@ GM.UI = {
         };
     },
 
+    /**
+     * Selects a dropdown item by display text.
+     *
+     * When the requested value is NOT present in the current document (e.g. a
+     * preset references swatch "MyOrange" but this document has no such spot),
+     * we do NOT silently fall back to item 0 (= the "[Create …]" sentinel),
+     * which would discard the user's saved choice and create a fresh default
+     * swatch/layer on OK. Instead we insert a synthetic item that preserves the
+     * saved name with a "(missing)" marker and select it. The marker is
+     * display-only; GM.UI.ddlValue() reads back the raw name, so toStorage()
+     * and isModified() both see the original value — no silent swap, no false
+     * "modified" asterisk. Downstream getOrCreate{Layer,Swatch} then recreates
+     * the named layer/spot.
+     */
     selectDDL: function (ddl, name) {
+        // Purge any stale synthetic "missing" item so they don't accumulate
+        // across preset switches on a persistent dropdown.
+        for (var k = ddl.items.length - 1; k >= 0; k--) {
+            if (ddl.items[k]._gmMissing) ddl.remove(k);
+        }
         for (var i = 0; i < ddl.items.length; i++) {
             if (ddl.items[i].text === name) {
                 ddl.selection = i;
                 return;
             }
         }
-        ddl.selection = 0;
+        // Not in the document — preserve the saved name as a flagged item.
+        var suffix = (GM.L && GM.L.DDL_MISSING_SUFFIX) ? GM.L.DDL_MISSING_SUFFIX : "(missing)";
+        var missing = ddl.add("item", name + "  " + suffix);
+        missing._gmRawValue = name;
+        missing._gmMissing  = true;
+        ddl.selection = missing;
+    },
+
+    /**
+     * Reads the resolved value of a dropdown selection. For a synthetic
+     * "missing" item (added by selectDDL when a saved value wasn't in the
+     * document), returns the raw saved name without the display marker;
+     * otherwise returns the selection text. Empty string when nothing selected.
+     */
+    ddlValue: function (ddl) {
+        var sel = ddl.selection;
+        if (!sel) return "";
+        return (sel._gmRawValue != null) ? sel._gmRawValue : sel.text;
     }
 };
