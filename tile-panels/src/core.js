@@ -165,6 +165,7 @@ TP.Core = {
      *   params.bleedBottomPt {number}   - Bottom bleed in points.
      *   params.bleedLeftPt   {number}   - Left bleed in points.
      *   params.bleedRightPt  {number}   - Right bleed in points.
+     *   params.overlapBothSides {boolean} - If true, overlap is split ov/2 on each side of seam.
      * @returns {Object[]} Array of panel objects
      */
     calculateArtboardRects: function (params) {
@@ -176,6 +177,8 @@ TP.Core = {
         var bB = params.bleedBottomPt;
         var bL = params.bleedLeftPt;
         var bR = params.bleedRightPt;
+        var both = params.overlapBothSides || false;
+        var halfOv = both ? ov / 2 : 0;
 
         var numCols = sv.length + 1;
         var numRows = sh.length + 1;
@@ -205,20 +208,24 @@ TP.Core = {
                 var netTop    = rowEdges[row];
                 var netBottom = rowEdges[row + 1];
 
-                // Artboard boundaries with overlap/bleed
                 var left, right, top, bottom;
 
-                if (isLeft)  { left = netLeft - bL; }
-                else         { left = netLeft; }
-
-                if (isRight) { right = netRight + bR; }
-                else         { right = netRight + ov; }
-
-                if (isTop)    { top = netTop + bT; }
-                else          { top = netTop; }
-
-                if (isBottom) { bottom = netBottom - bB; }
-                else          { bottom = netBottom - ov; }
+                if (both) {
+                    // Both-sides overlap: ov/2 on every inner edge
+                    left   = isLeft   ? netLeft   - bL : netLeft   - halfOv;
+                    right  = isRight  ? netRight  + bR : netRight  + halfOv;
+                    top    = isTop    ? netTop    + bT : netTop    + halfOv;
+                    bottom = isBottom ? netBottom - bB : netBottom - halfOv;
+                } else {
+                    // One-directional overlap (right+down):
+                    //   Outer edge        → outer bleed
+                    //   Inner overlap side → overlap (right/bottom)
+                    //   Inner non-overlap  → flush (left/top of non-first panels)
+                    left   = isLeft   ? netLeft   - bL : netLeft;
+                    right  = isRight  ? netRight  + bR : netRight  + ov;
+                    top    = isTop    ? netTop    + bT : netTop;
+                    bottom = isBottom ? netBottom - bB : netBottom - ov;
+                }
 
                 panels.push({
                     row: row,
@@ -285,38 +292,59 @@ TP.Core = {
      * These show where the net panel ends and the overlap zone begins.
      *
      * @param {Object} panel - Panel object from calculateArtboardRects.
-     * @param {number} overlapPt - Overlap in document points.
+     * @param {number} overlapPt - Overlap in document points (full value).
      * @param {number} scale - Scale factor for real mm display.
+     * @param {boolean} bothSides - If true, indicators on all inner edges.
      * @returns {Object[]} Array of indicator objects
      */
-    calculateOverlapIndicators: function (panel, overlapPt, scale) {
+    calculateOverlapIndicators: function (panel, overlapPt, scale, bothSides) {
         var r = panel.rect;     // [L, T, R, B]
         var nr = panel.netRect; // [L, T, R, B]
         var indicators = [];
         var sc = scale || 1;
-        var overlapRealMM = TP.Utils.roundMM(TP.Utils.pt2mm(overlapPt) * sc, 1);
+        var u = TP.Utils;
+        var overlapRealMM = u.roundMM(u.pt2mm(overlapPt) * sc, 1);
         var labelText = TP.L.format(TP.L.MARK_OVERLAP_LABEL, overlapRealMM);
+        var effOv = bothSides ? overlapPt / 2 : overlapPt;
 
-        // Right inner edge: overlap zone runs from netRight to netRight + overlap
+        // Right inner edge
         if (!panel.isRightEdge) {
-            var x = nr[2]; // net right = split position
+            var x = nr[2];
             indicators.push({
-                p1: [x, r[1]],
-                p2: [x, r[3]],
-                labelPos: [x + overlapPt / 2, r[1] - TP.Utils.mm2pt(2 / sc)],
+                p1: [x, r[1]], p2: [x, r[3]],
+                labelPos: [x + effOv / 2, r[1] - u.mm2pt(2 / sc)],
                 labelText: labelText
             });
         }
 
-        // Bottom inner edge: overlap zone runs from netBottom downward
+        // Bottom inner edge
         if (!panel.isBottomEdge) {
-            var y = nr[3]; // net bottom = split position
+            var y = nr[3];
             indicators.push({
-                p1: [r[0], y],
-                p2: [r[2], y],
-                labelPos: [r[0] + TP.Utils.mm2pt(5 / sc), y - overlapPt / 2],
+                p1: [r[0], y], p2: [r[2], y],
+                labelPos: [r[0] + u.mm2pt(5 / sc), y - effOv / 2],
                 labelText: labelText
             });
+        }
+
+        // Both-sides mode: also show indicators on left and top inner edges
+        if (bothSides) {
+            if (!panel.isLeftEdge) {
+                var xl = nr[0];
+                indicators.push({
+                    p1: [xl, r[1]], p2: [xl, r[3]],
+                    labelPos: [xl - effOv / 2, r[1] - u.mm2pt(2 / sc)],
+                    labelText: labelText
+                });
+            }
+            if (!panel.isTopEdge) {
+                var yt = nr[1];
+                indicators.push({
+                    p1: [r[0], yt], p2: [r[2], yt],
+                    labelPos: [r[0] + u.mm2pt(5 / sc), yt + effOv / 2],
+                    labelText: labelText
+                });
+            }
         }
 
         return indicators;
@@ -327,30 +355,46 @@ TP.Core = {
      * Crosshairs at 1/4 and 3/4 of panel height/width within the overlap zone.
      *
      * @param {Object} panel - Panel object from calculateArtboardRects.
-     * @param {number} overlapPt - Overlap in points.
+     * @param {number} overlapPt - Overlap in points (full value).
      * @param {number} armPt - Crosshair arm length in points.
+     * @param {boolean} bothSides - If true, crosshairs on all inner edges.
      * @returns {Object[]} Array of crosshair objects: { center: [x,y], armPt: number }
      */
-    calculateCrosshairPositions: function (panel, overlapPt, armPt) {
+    calculateCrosshairPositions: function (panel, overlapPt, armPt, bothSides) {
         var r = panel.rect;
         var nr = panel.netRect;
         var positions = [];
+        var effOv = bothSides ? overlapPt / 2 : overlapPt;
 
-        var panelH = r[1] - r[3]; // top - bottom (positive)
-        var panelW = r[2] - r[0]; // right - left
+        var panelH = r[1] - r[3];
+        var panelW = r[2] - r[0];
 
         // Right overlap zone crosshairs
         if (!panel.isRightEdge) {
-            var cx = nr[2] + overlapPt / 2; // center of overlap zone
+            var cx = nr[2] + effOv / 2;
             positions.push({ center: [cx, r[3] + panelH * 0.25], armPt: armPt });
             positions.push({ center: [cx, r[3] + panelH * 0.75], armPt: armPt });
         }
 
         // Bottom overlap zone crosshairs
         if (!panel.isBottomEdge) {
-            var cy = nr[3] - overlapPt / 2; // center of overlap zone
+            var cy = nr[3] - effOv / 2;
             positions.push({ center: [r[0] + panelW * 0.25, cy], armPt: armPt });
             positions.push({ center: [r[0] + panelW * 0.75, cy], armPt: armPt });
+        }
+
+        // Both-sides: also on left and top inner edges
+        if (bothSides) {
+            if (!panel.isLeftEdge) {
+                var cxl = nr[0] - effOv / 2;
+                positions.push({ center: [cxl, r[3] + panelH * 0.25], armPt: armPt });
+                positions.push({ center: [cxl, r[3] + panelH * 0.75], armPt: armPt });
+            }
+            if (!panel.isTopEdge) {
+                var cyt = nr[1] + effOv / 2;
+                positions.push({ center: [r[0] + panelW * 0.25, cyt], armPt: armPt });
+                positions.push({ center: [r[0] + panelW * 0.75, cyt], armPt: armPt });
+            }
         }
 
         return positions;

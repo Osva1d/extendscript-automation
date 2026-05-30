@@ -103,11 +103,11 @@
 
             // Convert real mm values to document points
             // realMM / scale = documentMM, then mm2pt
-            var overlapPt    = u.mm2pt(options.overlap / scale);
-            var bleedTopPt   = u.mm2pt(options.bleedTop / scale);
+            var overlapPt     = u.mm2pt(options.overlap / scale);
+            var bleedTopPt    = u.mm2pt(options.bleedTop / scale);
             var bleedBottomPt = u.mm2pt(options.bleedBottom / scale);
-            var bleedLeftPt  = u.mm2pt(options.bleedLeft / scale);
-            var bleedRightPt = u.mm2pt(options.bleedRight / scale);
+            var bleedLeftPt   = u.mm2pt(options.bleedLeft / scale);
+            var bleedRightPt  = u.mm2pt(options.bleedRight / scale);
 
             // Calculate artboard rects from split positions
             var panels = TP.Core.calculateArtboardRects({
@@ -115,6 +115,7 @@
                 splitsH:       splitInfo.splitsH,
                 artworkBounds: artworkBounds,
                 overlapPt:     overlapPt,
+                overlapBothSides: options.overlapBothSides || false,
                 bleedTopPt:    bleedTopPt,
                 bleedBottomPt: bleedBottomPt,
                 bleedLeftPt:   bleedLeftPt,
@@ -127,20 +128,6 @@
                 alert(l.format(l.ERR_TOO_MANY_ARTBOARDS, totalNew));
                 return;
             }
-
-            // DEBUG: dump panel info
-            var _dbg = "DEBUG panels (" + panels.length + "):\n";
-            _dbg += "artworkBounds: [" + artworkBounds.join(", ") + "]\n";
-            _dbg += "splitsV: [" + splitInfo.splitsV.join(", ") + "]\n";
-            _dbg += "splitsH: [" + splitInfo.splitsH.join(", ") + "]\n";
-            _dbg += "overlapPt=" + overlapPt + " scale=" + scale + "\n";
-            for (var j = 0; j < Math.min(panels.length, 4); j++) {
-                var _r = panels[j].rect;
-                _dbg += panels[j].label + ": [" + _r.join(", ") + "] pw=" +
-                    u.roundMM(u.pt2mm(_r[2] - _r[0]), 1) + "mm ph=" +
-                    u.roundMM(u.pt2mm(_r[1] - _r[3]), 1) + "mm\n";
-            }
-            alert(_dbg);
 
             // Validate artboard dimensions
             for (var i = 0; i < panels.length; i++) {

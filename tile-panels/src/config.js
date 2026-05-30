@@ -74,6 +74,8 @@ TP.Config = {
             rows:           1,          // 1 = no horizontal splits
             // Common
             overlap:        20,         // real mm
+            overlapBothSides: false,    // false = right+down only, true = split overlap both sides
+
             bleedUniform:   true,
             bleed:          3,          // real mm (uniform value)
             bleedTop:       3,          // real mm

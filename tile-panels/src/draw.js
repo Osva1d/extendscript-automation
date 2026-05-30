@@ -244,6 +244,54 @@ TP.Draw = {
             label.name = cfg.SPLIT_H_PREFIX + (i + 1) + "_label";
         }
 
+        // Overlap zone boundary lines (cyan dashed)
+        var overlapPt = u.mm2pt((params.overlap || 0) / scale);
+        if (overlapPt > 0) {
+            var cyanCol = this.makeCMYK(100, 0, 0, 0);
+            var bothSides = params.overlapBothSides;
+
+            var _addCyanLine = function (p1, p2, name) {
+                var ovLine = lay.pathItems.add();
+                ovLine.setEntirePath([p1, p2]);
+                ovLine.stroked = true;
+                ovLine.strokeColor = cyanCol;
+                ovLine.strokeWidth = cfg.SPLIT_LINE_WEIGHT;
+                ovLine.strokeDashes = [cfg.SPLIT_LINE_DASH, cfg.SPLIT_LINE_GAP];
+                ovLine.filled = false;
+                ovLine.name = name;
+            };
+
+            for (var i = 0; i < vSplits.length; i++) {
+                var xPt = aL + u.mm2pt(vSplits[i] / scale);
+                if (bothSides) {
+                    // Two cyan lines: ov/2 on each side of red split
+                    _addCyanLine([xPt - overlapPt / 2, aT + extPt], [xPt - overlapPt / 2, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_ovL");
+                    _addCyanLine([xPt + overlapPt / 2, aT + extPt], [xPt + overlapPt / 2, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_ovR");
+                } else {
+                    // One cyan line at right edge of overlap zone
+                    _addCyanLine([xPt + overlapPt, aT + extPt], [xPt + overlapPt, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_overlap");
+                }
+            }
+
+            for (var i = 0; i < hSplits.length; i++) {
+                var yPt = aT - u.mm2pt(hSplits[i] / scale);
+                if (bothSides) {
+                    // Two cyan lines: ov/2 on each side of red split
+                    _addCyanLine([aL - extPt, yPt + overlapPt / 2], [aR + extPt, yPt + overlapPt / 2],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_ovT");
+                    _addCyanLine([aL - extPt, yPt - overlapPt / 2], [aR + extPt, yPt - overlapPt / 2],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_ovB");
+                } else {
+                    // One cyan line at bottom edge of overlap zone
+                    _addCyanLine([aL - extPt, yPt - overlapPt], [aR + extPt, yPt - overlapPt],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_overlap");
+                }
+            }
+        }
+
         // Store params for Phase 2
         this.storeParams(lay, params);
     },
@@ -306,35 +354,25 @@ TP.Draw = {
                 var item = items[i];
                 var name = item.name;
 
+                // Only match pure split lines (SplitV_1, SplitH_2, etc.)
+                // Skip overlap preview lines (_overlap, _ovL, _ovR, _ovT, _ovB)
                 if (name.indexOf(TP.Config.SPLIT_V_PREFIX) === 0) {
-                    // Vertical line: X position from geometricBounds [top, left, bottom, right]
+                    var suffix = name.substring(TP.Config.SPLIT_V_PREFIX.length);
+                    if (suffix.indexOf("_") !== -1) continue; // skip _overlap, _ovL, _ovR
                     var gb = item.geometricBounds;
-                    var xPos = (gb[1] + gb[3]) / 2; // average left+right for center
+                    var xPos = (gb[0] + gb[2]) / 2;
                     splitsV.push(xPos);
                 } else if (name.indexOf(TP.Config.SPLIT_H_PREFIX) === 0) {
-                    // Horizontal line: Y position from geometricBounds
+                    var suffix = name.substring(TP.Config.SPLIT_H_PREFIX.length);
+                    if (suffix.indexOf("_") !== -1) continue; // skip _overlap, _ovT, _ovB
                     var gb = item.geometricBounds;
-                    var yPos = (gb[0] + gb[2]) / 2; // average top+bottom for center
+                    var yPos = (gb[1] + gb[3]) / 2;
                     splitsH.push(yPos);
                 }
             }
         } catch (e) {
             TP.Utils.log("readSplitPositions failed: " + e.message);
         }
-
-        // DEBUG: dump all pathItems on the layer
-        var _dbgNames = [];
-        try {
-            var _lay = app.activeDocument.layers.getByName(TP.Config.LAYER_PREVIEW);
-            for (var _d = 0; _d < _lay.pathItems.length; _d++) {
-                _dbgNames.push(_lay.pathItems[_d].name);
-            }
-        } catch (_de) {}
-        alert("DEBUG readSplitPositions\n" +
-              "pathItems on layer: " + _dbgNames.length + "\n" +
-              "names: " + _dbgNames.join(", ") + "\n" +
-              "splitsV (raw): " + splitsV.length + " → [" + splitsV.join(", ") + "]\n" +
-              "splitsH (raw): " + splitsH.length + " → [" + splitsH.join(", ") + "]");
 
         // Sort: V splits ascending (left to right), H splits descending (top to bottom)
         splitsV.sort(function (a, b) { return a - b; });
@@ -446,12 +484,12 @@ TP.Draw = {
             }
 
             if (options.markOverlapIndicators) {
-                var indicators = TP.Core.calculateOverlapIndicators(p, overlapPt, scale);
+                var indicators = TP.Core.calculateOverlapIndicators(p, overlapPt, scale, options.overlapBothSides);
                 this._drawOverlapIndicators(lay, indicators);
             }
 
             if (options.markCrosshairs) {
-                var crosshairs = TP.Core.calculateCrosshairPositions(p, overlapPt, armPt);
+                var crosshairs = TP.Core.calculateCrosshairPositions(p, overlapPt, armPt, options.overlapBothSides);
                 this._drawCrosshairs(lay, crosshairs);
             }
         }

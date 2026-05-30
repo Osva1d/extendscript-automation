@@ -3,7 +3,7 @@
  * Script:      Illustrator Tile Panels
  * Version:     1.0.0
  * Author:      Osva1d
- * Updated:     2026-04-10
+ * Updated:     2026-05-30
  *
  * Copyright (c) 2026-2026 Osva1d. All rights reserved.
  * Licensed under a proprietary license. See LICENSE file for details.
@@ -225,6 +225,7 @@ TP.L = (function () {
 
             PANEL_OVERLAP:      "Overlap",
             LBL_OVERLAP:        "Overlap:",
+            LBL_OVERLAP_BOTH:   "Both sides",
 
             PANEL_BLEED:        "Bleed (outer edges)",
             LBL_BLEED_UNIFORM:  "Uniform",
@@ -277,6 +278,7 @@ TP.L = (function () {
             TIP_COLUMNS:        "Number of vertical panels (columns).",
             TIP_ROWS:           "Number of horizontal panels (rows). Set to 1 for vertical splits only.",
             TIP_OVERLAP:        "Amount of artwork duplicated between adjacent panels for alignment during installation. Value in real mm.",
+            TIP_OVERLAP_BOTH:   "When enabled, overlap is split equally to both sides of each seam (half left, half right). When disabled, overlap extends in one direction only (right and down).",
             TIP_BLEED_UNIFORM:  "Single bleed value applied to all outer edges. Value in real mm.",
             TIP_BLEED_PER_EDGE: "Individual bleed values for each outer edge. Values in real mm.",
             TIP_KEEP_ORIGINAL:  "Keep the original artboard alongside the new tiled artboards.",
@@ -334,6 +336,7 @@ TP.L = (function () {
 
             PANEL_OVERLAP:      "Překryv",
             LBL_OVERLAP:        "Překryv:",
+            LBL_OVERLAP_BOTH:   "Oboustranný",
 
             PANEL_BLEED:        "Spadnávka (vnější okraje)",
             LBL_BLEED_UNIFORM:  "Jednotná",
@@ -386,6 +389,7 @@ TP.L = (function () {
             TIP_COLUMNS:        "Počet svislých panelů (sloupců).",
             TIP_ROWS:           "Počet vodorovných panelů (řádků). 1 = pouze svislé dělení.",
             TIP_OVERLAP:        "Množství grafiky duplikované mezi sousedními panely pro zarovnání při instalaci. Hodnota v reálných mm.",
+            TIP_OVERLAP_BOTH:   "Překryv rozdělen rovnoměrně na obě strany švu (polovina vlevo, polovina vpravo). Při vypnutí se překryv rozšiřuje jen jedním směrem (vpravo a dolů).",
             TIP_BLEED_UNIFORM:  "Jedna hodnota spadnávky aplikovaná na všechny vnější okraje. Hodnota v reálných mm.",
             TIP_BLEED_PER_EDGE: "Individuální hodnoty spadnávky pro každý vnější okraj. Hodnoty v reálných mm.",
             TIP_KEEP_ORIGINAL:  "Ponechat původní plochu vedle nových dělených ploch.",
@@ -574,6 +578,8 @@ TP.Config = {
             rows:           1,          // 1 = no horizontal splits
             // Common
             overlap:        20,         // real mm
+            overlapBothSides: false,    // false = right+down only, true = split overlap both sides
+
             bleedUniform:   true,
             bleed:          3,          // real mm (uniform value)
             bleedTop:       3,          // real mm
@@ -811,6 +817,7 @@ TP.Core = {
      *   params.bleedBottomPt {number}   - Bottom bleed in points.
      *   params.bleedLeftPt   {number}   - Left bleed in points.
      *   params.bleedRightPt  {number}   - Right bleed in points.
+     *   params.overlapBothSides {boolean} - If true, overlap is split ov/2 on each side of seam.
      * @returns {Object[]} Array of panel objects
      */
     calculateArtboardRects: function (params) {
@@ -822,6 +829,8 @@ TP.Core = {
         var bB = params.bleedBottomPt;
         var bL = params.bleedLeftPt;
         var bR = params.bleedRightPt;
+        var both = params.overlapBothSides || false;
+        var halfOv = both ? ov / 2 : 0;
 
         var numCols = sv.length + 1;
         var numRows = sh.length + 1;
@@ -851,20 +860,24 @@ TP.Core = {
                 var netTop    = rowEdges[row];
                 var netBottom = rowEdges[row + 1];
 
-                // Artboard boundaries with overlap/bleed
                 var left, right, top, bottom;
 
-                if (isLeft)  { left = netLeft - bL; }
-                else         { left = netLeft; }
-
-                if (isRight) { right = netRight + bR; }
-                else         { right = netRight + ov; }
-
-                if (isTop)    { top = netTop + bT; }
-                else          { top = netTop; }
-
-                if (isBottom) { bottom = netBottom - bB; }
-                else          { bottom = netBottom - ov; }
+                if (both) {
+                    // Both-sides overlap: ov/2 on every inner edge
+                    left   = isLeft   ? netLeft   - bL : netLeft   - halfOv;
+                    right  = isRight  ? netRight  + bR : netRight  + halfOv;
+                    top    = isTop    ? netTop    + bT : netTop    + halfOv;
+                    bottom = isBottom ? netBottom - bB : netBottom - halfOv;
+                } else {
+                    // One-directional overlap (right+down):
+                    //   Outer edge        → outer bleed
+                    //   Inner overlap side → overlap (right/bottom)
+                    //   Inner non-overlap  → flush (left/top of non-first panels)
+                    left   = isLeft   ? netLeft   - bL : netLeft;
+                    right  = isRight  ? netRight  + bR : netRight  + ov;
+                    top    = isTop    ? netTop    + bT : netTop;
+                    bottom = isBottom ? netBottom - bB : netBottom - ov;
+                }
 
                 panels.push({
                     row: row,
@@ -931,38 +944,59 @@ TP.Core = {
      * These show where the net panel ends and the overlap zone begins.
      *
      * @param {Object} panel - Panel object from calculateArtboardRects.
-     * @param {number} overlapPt - Overlap in document points.
+     * @param {number} overlapPt - Overlap in document points (full value).
      * @param {number} scale - Scale factor for real mm display.
+     * @param {boolean} bothSides - If true, indicators on all inner edges.
      * @returns {Object[]} Array of indicator objects
      */
-    calculateOverlapIndicators: function (panel, overlapPt, scale) {
+    calculateOverlapIndicators: function (panel, overlapPt, scale, bothSides) {
         var r = panel.rect;     // [L, T, R, B]
         var nr = panel.netRect; // [L, T, R, B]
         var indicators = [];
         var sc = scale || 1;
-        var overlapRealMM = TP.Utils.roundMM(TP.Utils.pt2mm(overlapPt) * sc, 1);
+        var u = TP.Utils;
+        var overlapRealMM = u.roundMM(u.pt2mm(overlapPt) * sc, 1);
         var labelText = TP.L.format(TP.L.MARK_OVERLAP_LABEL, overlapRealMM);
+        var effOv = bothSides ? overlapPt / 2 : overlapPt;
 
-        // Right inner edge: overlap zone runs from netRight to netRight + overlap
+        // Right inner edge
         if (!panel.isRightEdge) {
-            var x = nr[2]; // net right = split position
+            var x = nr[2];
             indicators.push({
-                p1: [x, r[1]],
-                p2: [x, r[3]],
-                labelPos: [x + overlapPt / 2, r[1] - TP.Utils.mm2pt(2 / sc)],
+                p1: [x, r[1]], p2: [x, r[3]],
+                labelPos: [x + effOv / 2, r[1] - u.mm2pt(2 / sc)],
                 labelText: labelText
             });
         }
 
-        // Bottom inner edge: overlap zone runs from netBottom downward
+        // Bottom inner edge
         if (!panel.isBottomEdge) {
-            var y = nr[3]; // net bottom = split position
+            var y = nr[3];
             indicators.push({
-                p1: [r[0], y],
-                p2: [r[2], y],
-                labelPos: [r[0] + TP.Utils.mm2pt(5 / sc), y - overlapPt / 2],
+                p1: [r[0], y], p2: [r[2], y],
+                labelPos: [r[0] + u.mm2pt(5 / sc), y - effOv / 2],
                 labelText: labelText
             });
+        }
+
+        // Both-sides mode: also show indicators on left and top inner edges
+        if (bothSides) {
+            if (!panel.isLeftEdge) {
+                var xl = nr[0];
+                indicators.push({
+                    p1: [xl, r[1]], p2: [xl, r[3]],
+                    labelPos: [xl - effOv / 2, r[1] - u.mm2pt(2 / sc)],
+                    labelText: labelText
+                });
+            }
+            if (!panel.isTopEdge) {
+                var yt = nr[1];
+                indicators.push({
+                    p1: [r[0], yt], p2: [r[2], yt],
+                    labelPos: [r[0] + u.mm2pt(5 / sc), yt + effOv / 2],
+                    labelText: labelText
+                });
+            }
         }
 
         return indicators;
@@ -973,30 +1007,46 @@ TP.Core = {
      * Crosshairs at 1/4 and 3/4 of panel height/width within the overlap zone.
      *
      * @param {Object} panel - Panel object from calculateArtboardRects.
-     * @param {number} overlapPt - Overlap in points.
+     * @param {number} overlapPt - Overlap in points (full value).
      * @param {number} armPt - Crosshair arm length in points.
+     * @param {boolean} bothSides - If true, crosshairs on all inner edges.
      * @returns {Object[]} Array of crosshair objects: { center: [x,y], armPt: number }
      */
-    calculateCrosshairPositions: function (panel, overlapPt, armPt) {
+    calculateCrosshairPositions: function (panel, overlapPt, armPt, bothSides) {
         var r = panel.rect;
         var nr = panel.netRect;
         var positions = [];
+        var effOv = bothSides ? overlapPt / 2 : overlapPt;
 
-        var panelH = r[1] - r[3]; // top - bottom (positive)
-        var panelW = r[2] - r[0]; // right - left
+        var panelH = r[1] - r[3];
+        var panelW = r[2] - r[0];
 
         // Right overlap zone crosshairs
         if (!panel.isRightEdge) {
-            var cx = nr[2] + overlapPt / 2; // center of overlap zone
+            var cx = nr[2] + effOv / 2;
             positions.push({ center: [cx, r[3] + panelH * 0.25], armPt: armPt });
             positions.push({ center: [cx, r[3] + panelH * 0.75], armPt: armPt });
         }
 
         // Bottom overlap zone crosshairs
         if (!panel.isBottomEdge) {
-            var cy = nr[3] - overlapPt / 2; // center of overlap zone
+            var cy = nr[3] - effOv / 2;
             positions.push({ center: [r[0] + panelW * 0.25, cy], armPt: armPt });
             positions.push({ center: [r[0] + panelW * 0.75, cy], armPt: armPt });
+        }
+
+        // Both-sides: also on left and top inner edges
+        if (bothSides) {
+            if (!panel.isLeftEdge) {
+                var cxl = nr[0] - effOv / 2;
+                positions.push({ center: [cxl, r[3] + panelH * 0.25], armPt: armPt });
+                positions.push({ center: [cxl, r[3] + panelH * 0.75], armPt: armPt });
+            }
+            if (!panel.isTopEdge) {
+                var cyt = nr[1] + effOv / 2;
+                positions.push({ center: [r[0] + panelW * 0.25, cyt], armPt: armPt });
+                positions.push({ center: [r[0] + panelW * 0.75, cyt], armPt: armPt });
+            }
         }
 
         return positions;
@@ -1249,6 +1299,54 @@ TP.Draw = {
             label.name = cfg.SPLIT_H_PREFIX + (i + 1) + "_label";
         }
 
+        // Overlap zone boundary lines (cyan dashed)
+        var overlapPt = u.mm2pt((params.overlap || 0) / scale);
+        if (overlapPt > 0) {
+            var cyanCol = this.makeCMYK(100, 0, 0, 0);
+            var bothSides = params.overlapBothSides;
+
+            var _addCyanLine = function (p1, p2, name) {
+                var ovLine = lay.pathItems.add();
+                ovLine.setEntirePath([p1, p2]);
+                ovLine.stroked = true;
+                ovLine.strokeColor = cyanCol;
+                ovLine.strokeWidth = cfg.SPLIT_LINE_WEIGHT;
+                ovLine.strokeDashes = [cfg.SPLIT_LINE_DASH, cfg.SPLIT_LINE_GAP];
+                ovLine.filled = false;
+                ovLine.name = name;
+            };
+
+            for (var i = 0; i < vSplits.length; i++) {
+                var xPt = aL + u.mm2pt(vSplits[i] / scale);
+                if (bothSides) {
+                    // Two cyan lines: ov/2 on each side of red split
+                    _addCyanLine([xPt - overlapPt / 2, aT + extPt], [xPt - overlapPt / 2, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_ovL");
+                    _addCyanLine([xPt + overlapPt / 2, aT + extPt], [xPt + overlapPt / 2, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_ovR");
+                } else {
+                    // One cyan line at right edge of overlap zone
+                    _addCyanLine([xPt + overlapPt, aT + extPt], [xPt + overlapPt, aB - extPt],
+                        cfg.SPLIT_V_PREFIX + (i + 1) + "_overlap");
+                }
+            }
+
+            for (var i = 0; i < hSplits.length; i++) {
+                var yPt = aT - u.mm2pt(hSplits[i] / scale);
+                if (bothSides) {
+                    // Two cyan lines: ov/2 on each side of red split
+                    _addCyanLine([aL - extPt, yPt + overlapPt / 2], [aR + extPt, yPt + overlapPt / 2],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_ovT");
+                    _addCyanLine([aL - extPt, yPt - overlapPt / 2], [aR + extPt, yPt - overlapPt / 2],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_ovB");
+                } else {
+                    // One cyan line at bottom edge of overlap zone
+                    _addCyanLine([aL - extPt, yPt - overlapPt], [aR + extPt, yPt - overlapPt],
+                        cfg.SPLIT_H_PREFIX + (i + 1) + "_overlap");
+                }
+            }
+        }
+
         // Store params for Phase 2
         this.storeParams(lay, params);
     },
@@ -1311,35 +1409,25 @@ TP.Draw = {
                 var item = items[i];
                 var name = item.name;
 
+                // Only match pure split lines (SplitV_1, SplitH_2, etc.)
+                // Skip overlap preview lines (_overlap, _ovL, _ovR, _ovT, _ovB)
                 if (name.indexOf(TP.Config.SPLIT_V_PREFIX) === 0) {
-                    // Vertical line: X position from geometricBounds [top, left, bottom, right]
+                    var suffix = name.substring(TP.Config.SPLIT_V_PREFIX.length);
+                    if (suffix.indexOf("_") !== -1) continue; // skip _overlap, _ovL, _ovR
                     var gb = item.geometricBounds;
-                    var xPos = (gb[1] + gb[3]) / 2; // average left+right for center
+                    var xPos = (gb[0] + gb[2]) / 2;
                     splitsV.push(xPos);
                 } else if (name.indexOf(TP.Config.SPLIT_H_PREFIX) === 0) {
-                    // Horizontal line: Y position from geometricBounds
+                    var suffix = name.substring(TP.Config.SPLIT_H_PREFIX.length);
+                    if (suffix.indexOf("_") !== -1) continue; // skip _overlap, _ovT, _ovB
                     var gb = item.geometricBounds;
-                    var yPos = (gb[0] + gb[2]) / 2; // average top+bottom for center
+                    var yPos = (gb[1] + gb[3]) / 2;
                     splitsH.push(yPos);
                 }
             }
         } catch (e) {
             TP.Utils.log("readSplitPositions failed: " + e.message);
         }
-
-        // DEBUG: dump all pathItems on the layer
-        var _dbgNames = [];
-        try {
-            var _lay = app.activeDocument.layers.getByName(TP.Config.LAYER_PREVIEW);
-            for (var _d = 0; _d < _lay.pathItems.length; _d++) {
-                _dbgNames.push(_lay.pathItems[_d].name);
-            }
-        } catch (_de) {}
-        alert("DEBUG readSplitPositions\n" +
-              "pathItems on layer: " + _dbgNames.length + "\n" +
-              "names: " + _dbgNames.join(", ") + "\n" +
-              "splitsV (raw): " + splitsV.length + " → [" + splitsV.join(", ") + "]\n" +
-              "splitsH (raw): " + splitsH.length + " → [" + splitsH.join(", ") + "]");
 
         // Sort: V splits ascending (left to right), H splits descending (top to bottom)
         splitsV.sort(function (a, b) { return a - b; });
@@ -1451,12 +1539,12 @@ TP.Draw = {
             }
 
             if (options.markOverlapIndicators) {
-                var indicators = TP.Core.calculateOverlapIndicators(p, overlapPt, scale);
+                var indicators = TP.Core.calculateOverlapIndicators(p, overlapPt, scale, options.overlapBothSides);
                 this._drawOverlapIndicators(lay, indicators);
             }
 
             if (options.markCrosshairs) {
-                var crosshairs = TP.Core.calculateCrosshairPositions(p, overlapPt, armPt);
+                var crosshairs = TP.Core.calculateCrosshairPositions(p, overlapPt, armPt, options.overlapBothSides);
                 this._drawCrosshairs(lay, crosshairs);
             }
         }
@@ -1810,6 +1898,12 @@ TP.UI = {
         var rOverlap = self.addRow(pOverlap, l.LBL_OVERLAP, defaults.overlap,
                                    l.TIP_OVERLAP, l.UNIT_MM);
 
+        var grpOvBoth = pOverlap.add("group");
+        grpOvBoth.alignment = ["fill", "top"];
+        var cbOverlapBoth = grpOvBoth.add("checkbox", undefined, l.LBL_OVERLAP_BOTH);
+        cbOverlapBoth.value = defaults.overlapBothSides || false;
+        cbOverlapBoth.helpTip = l.TIP_OVERLAP_BOTH;
+
         // =================================================================
         // Panel: Bleed
         // =================================================================
@@ -2082,6 +2176,7 @@ TP.UI = {
                 columns:         cols,
                 rows:            rows,
                 overlap:         overlap,
+                overlapBothSides: cbOverlapBoth.value,
                 bleedUniform:    bleedUni,
                 bleed:           bleedVal,
                 bleedTop:        bT,
@@ -2158,6 +2253,12 @@ TP.UI = {
 
         var rOverlap = self.addRow(pOverlap, l.LBL_OVERLAP, defaults.overlap,
                                    l.TIP_OVERLAP, l.UNIT_MM);
+
+        var grpOvBoth = pOverlap.add("group");
+        grpOvBoth.alignment = ["fill", "top"];
+        var cbOverlapBoth = grpOvBoth.add("checkbox", undefined, l.LBL_OVERLAP_BOTH);
+        cbOverlapBoth.value = defaults.overlapBothSides || false;
+        cbOverlapBoth.helpTip = l.TIP_OVERLAP_BOTH;
 
         // =================================================================
         // Panel: Bleed
@@ -2283,6 +2384,7 @@ TP.UI = {
             w.result = {
                 scale:          defaults.scale,
                 overlap:        overlap,
+                overlapBothSides: cbOverlapBoth.value,
                 bleedUniform:   bleedUni,
                 bleed:          bleedVal,
                 bleedTop:       bT,
@@ -2410,11 +2512,11 @@ TP.UI = {
 
             // Convert real mm values to document points
             // realMM / scale = documentMM, then mm2pt
-            var overlapPt    = u.mm2pt(options.overlap / scale);
-            var bleedTopPt   = u.mm2pt(options.bleedTop / scale);
+            var overlapPt     = u.mm2pt(options.overlap / scale);
+            var bleedTopPt    = u.mm2pt(options.bleedTop / scale);
             var bleedBottomPt = u.mm2pt(options.bleedBottom / scale);
-            var bleedLeftPt  = u.mm2pt(options.bleedLeft / scale);
-            var bleedRightPt = u.mm2pt(options.bleedRight / scale);
+            var bleedLeftPt   = u.mm2pt(options.bleedLeft / scale);
+            var bleedRightPt  = u.mm2pt(options.bleedRight / scale);
 
             // Calculate artboard rects from split positions
             var panels = TP.Core.calculateArtboardRects({
@@ -2422,6 +2524,7 @@ TP.UI = {
                 splitsH:       splitInfo.splitsH,
                 artworkBounds: artworkBounds,
                 overlapPt:     overlapPt,
+                overlapBothSides: options.overlapBothSides || false,
                 bleedTopPt:    bleedTopPt,
                 bleedBottomPt: bleedBottomPt,
                 bleedLeftPt:   bleedLeftPt,
@@ -2434,20 +2537,6 @@ TP.UI = {
                 alert(l.format(l.ERR_TOO_MANY_ARTBOARDS, totalNew));
                 return;
             }
-
-            // DEBUG: dump panel info
-            var _dbg = "DEBUG panels (" + panels.length + "):\n";
-            _dbg += "artworkBounds: [" + artworkBounds.join(", ") + "]\n";
-            _dbg += "splitsV: [" + splitInfo.splitsV.join(", ") + "]\n";
-            _dbg += "splitsH: [" + splitInfo.splitsH.join(", ") + "]\n";
-            _dbg += "overlapPt=" + overlapPt + " scale=" + scale + "\n";
-            for (var j = 0; j < Math.min(panels.length, 4); j++) {
-                var _r = panels[j].rect;
-                _dbg += panels[j].label + ": [" + _r.join(", ") + "] pw=" +
-                    u.roundMM(u.pt2mm(_r[2] - _r[0]), 1) + "mm ph=" +
-                    u.roundMM(u.pt2mm(_r[1] - _r[3]), 1) + "mm\n";
-            }
-            alert(_dbg);
 
             // Validate artboard dimensions
             for (var i = 0; i < panels.length; i++) {

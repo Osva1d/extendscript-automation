@@ -50,6 +50,7 @@ TP.L = (function () {
 
             PANEL_OVERLAP:      "Overlap",
             LBL_OVERLAP:        "Overlap:",
+            LBL_OVERLAP_BOTH:   "Both sides",
 
             PANEL_BLEED:        "Bleed (outer edges)",
             LBL_BLEED_UNIFORM:  "Uniform",
@@ -102,6 +103,7 @@ TP.L = (function () {
             TIP_COLUMNS:        "Number of vertical panels (columns).",
             TIP_ROWS:           "Number of horizontal panels (rows). Set to 1 for vertical splits only.",
             TIP_OVERLAP:        "Amount of artwork duplicated between adjacent panels for alignment during installation. Value in real mm.",
+            TIP_OVERLAP_BOTH:   "When enabled, overlap is split equally to both sides of each seam (half left, half right). When disabled, overlap extends in one direction only (right and down).",
             TIP_BLEED_UNIFORM:  "Single bleed value applied to all outer edges. Value in real mm.",
             TIP_BLEED_PER_EDGE: "Individual bleed values for each outer edge. Values in real mm.",
             TIP_KEEP_ORIGINAL:  "Keep the original artboard alongside the new tiled artboards.",
@@ -159,6 +161,7 @@ TP.L = (function () {
 
             PANEL_OVERLAP:      "Překryv",
             LBL_OVERLAP:        "Překryv:",
+            LBL_OVERLAP_BOTH:   "Oboustranný",
 
             PANEL_BLEED:        "Spadnávka (vnější okraje)",
             LBL_BLEED_UNIFORM:  "Jednotná",
@@ -211,6 +214,7 @@ TP.L = (function () {
             TIP_COLUMNS:        "Počet svislých panelů (sloupců).",
             TIP_ROWS:           "Počet vodorovných panelů (řádků). 1 = pouze svislé dělení.",
             TIP_OVERLAP:        "Množství grafiky duplikované mezi sousedními panely pro zarovnání při instalaci. Hodnota v reálných mm.",
+            TIP_OVERLAP_BOTH:   "Překryv rozdělen rovnoměrně na obě strany švu (polovina vlevo, polovina vpravo). Při vypnutí se překryv rozšiřuje jen jedním směrem (vpravo a dolů).",
             TIP_BLEED_UNIFORM:  "Jedna hodnota spadnávky aplikovaná na všechny vnější okraje. Hodnota v reálných mm.",
             TIP_BLEED_PER_EDGE: "Individuální hodnoty spadnávky pro každý vnější okraj. Hodnoty v reálných mm.",
             TIP_KEEP_ORIGINAL:  "Ponechat původní plochu vedle nových dělených ploch.",

@@ -191,6 +191,12 @@ TP.UI = {
         var rOverlap = self.addRow(pOverlap, l.LBL_OVERLAP, defaults.overlap,
                                    l.TIP_OVERLAP, l.UNIT_MM);
 
+        var grpOvBoth = pOverlap.add("group");
+        grpOvBoth.alignment = ["fill", "top"];
+        var cbOverlapBoth = grpOvBoth.add("checkbox", undefined, l.LBL_OVERLAP_BOTH);
+        cbOverlapBoth.value = defaults.overlapBothSides || false;
+        cbOverlapBoth.helpTip = l.TIP_OVERLAP_BOTH;
+
         // =================================================================
         // Panel: Bleed
         // =================================================================
@@ -463,6 +469,7 @@ TP.UI = {
                 columns:         cols,
                 rows:            rows,
                 overlap:         overlap,
+                overlapBothSides: cbOverlapBoth.value,
                 bleedUniform:    bleedUni,
                 bleed:           bleedVal,
                 bleedTop:        bT,
@@ -539,6 +546,12 @@ TP.UI = {
 
         var rOverlap = self.addRow(pOverlap, l.LBL_OVERLAP, defaults.overlap,
                                    l.TIP_OVERLAP, l.UNIT_MM);
+
+        var grpOvBoth = pOverlap.add("group");
+        grpOvBoth.alignment = ["fill", "top"];
+        var cbOverlapBoth = grpOvBoth.add("checkbox", undefined, l.LBL_OVERLAP_BOTH);
+        cbOverlapBoth.value = defaults.overlapBothSides || false;
+        cbOverlapBoth.helpTip = l.TIP_OVERLAP_BOTH;
 
         // =================================================================
         // Panel: Bleed
@@ -664,6 +677,7 @@ TP.UI = {
             w.result = {
                 scale:          defaults.scale,
                 overlap:        overlap,
+                overlapBothSides: cbOverlapBoth.value,
                 bleedUniform:   bleedUni,
                 bleed:          bleedVal,
                 bleedTop:       bT,
