@@ -47,6 +47,7 @@ GM.L = (function () {
             // Mark panel
             MARK_PANEL: "Mark",
             UNIT_LABEL: "Units:",
+            TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
             SHAPE_LABEL: "Shape:",
             ROUND: "Round",
@@ -157,6 +158,7 @@ GM.L = (function () {
             // Mark panel
             MARK_PANEL: "Značka",
             UNIT_LABEL: "Měrné jednotky:",
+            TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
             SHAPE_LABEL: "Tvar:",
             ROUND: "Kruh",

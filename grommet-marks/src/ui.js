@@ -205,6 +205,7 @@ GM.UI = {
         dlg.alignChildren = ["fill", "top"];
         dlg.margins = 20;
         dlg.spacing = 12;
+        dlg.preferredSize.width = 400;   // baseline floor; content grows if needed
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
 
@@ -273,6 +274,7 @@ GM.UI = {
         markPanel.add("statictext", undefined, GM.L.UNIT_LABEL);
         var unitsDDL = markPanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
         unitsDDL.selection = 0;
+        unitsDDL.helpTip = GM.L.TIP_UNITS;
 
         markPanel.add("statictext", undefined, GM.L.SIZE_LABEL);
         var sizeInput = markPanel.add("edittext", undefined, String(defCfg.markSize));
@@ -309,6 +311,7 @@ GM.UI = {
         fillCB.helpTip = GM.L.TIP_FILL;
         var fillDDL = fillGrp.add("dropdownlist", undefined, swatchInfo.names);
         fillDDL.preferredSize.width = 180;
+        fillDDL.helpTip = GM.L.TIP_FILL;
         GM.UI.selectDDL(fillDDL, GM.L.CREATE_LABEL);
         var fillOPCB = fillGrp.add("checkbox", undefined, GM.L.OVERPRINT);
         fillOPCB.value = defCfg.fillOverprint;
@@ -321,6 +324,7 @@ GM.UI = {
         var strokeDDL = strokeGrp.add("dropdownlist", undefined, swatchInfo.names);
         strokeDDL.preferredSize.width = 180;
         strokeDDL.enabled = defCfg.strokeEnabled;
+        strokeDDL.helpTip = GM.L.TIP_STROKE;
         GM.UI.selectDDL(strokeDDL, GM.L.CREATE_LABEL);
         var strokeOPCB = strokeGrp.add("checkbox", undefined, GM.L.OVERPRINT);
         strokeOPCB.value = defCfg.strokeOverprint;
@@ -448,33 +452,52 @@ GM.UI = {
         };
 
         // =================================================================
-        // Live Validation
+        // Live Validation — each numeric field is checked against its own
+        // GM.Validation rule (min/max/integer), the same rules used on submit.
+        // Disabled fields (inactive edge mode, stroke off, mirrored edge) are
+        // skipped and painted valid. OK is gated on all visible fields valid.
         // =================================================================
-        var numericFields = [offsetXIn, offsetYIn, sizeInput];
-        if (weightInput) numericFields.push(weightInput);
+        var R = GM.Validation.rules;
+        var validationTargets = [
+            { et: offsetXIn,   rule: R.offsetX },
+            { et: offsetYIn,   rule: R.offsetY },
+            { et: sizeInput,   rule: R.markSize },
+            { et: weightInput, rule: R.strokeWeight }
+        ];
+        var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
+        for (var vt = 0; vt < edgeUIs.length; vt++) {
+            validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount });
+            validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing });
+        }
+
+        function paintField(et, valid) {
+            try {
+                var g = et.graphics;
+                if (g && g.newPen) {
+                    g.foregroundColor = valid
+                        ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
+                        : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                }
+            } catch (e) {}
+        }
+
+        function fieldInRange(et, rule) {
+            var n = parseFloat(String(et.text || "").replace(/,/g, "."));
+            if (isNaN(n)) return false;
+            if (rule.integer && n !== Math.floor(n)) return false;
+            return n >= rule.min && n <= rule.max;
+        }
 
         function liveValidateAll() {
             var allValid = true;
-            for (var i = 0; i < numericFields.length; i++) {
-                var et = numericFields[i];
-                if (!et.enabled) continue;
-                var str = String(et.text || "").replace(/,/g, ".");
-                var n = parseFloat(str);
-                var valid = !isNaN(n) && n >= 0;
-                try {
-                    var g = et.graphics;
-                    if (g && g.newPen) {
-                        var color = valid
-                            ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
-                            : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
-                        g.foregroundColor = color;
-                    }
-                } catch (e) {}
-                if (!valid) allValid = false;
+            for (var i = 0; i < validationTargets.length; i++) {
+                var t = validationTargets[i];
+                if (!t.et) continue;
+                if (!t.et.enabled) { paintField(t.et, true); continue; }
+                var ok = fieldInRange(t.et, t.rule);
+                paintField(t.et, ok);
+                if (!ok) allValid = false;
             }
-            // Gate the primary action: can't Generate with an invalid numeric
-            // field. Precise per-rule errors still surface on submit via
-            // GM.Validation; this is the coarse live guard.
             try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;
         }
@@ -617,8 +640,9 @@ GM.UI = {
             allEdits[ei].onChanging = onUserChange;
         }
 
-        // Initial live-validation pass — paints any out-of-range stored value
-        // and sets the OK button's initial enabled state.
+        // Initial pass: modified indicator (Save disabled when UI matches the
+        // active preset) + live validation (paints fields, sets OK initial state).
+        refreshModifiedIndicator();
         liveValidateAll();
 
         return {
