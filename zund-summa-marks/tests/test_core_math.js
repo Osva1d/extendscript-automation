@@ -27,6 +27,13 @@ ZSM.Utils = {
     mm2pt: function (mm) { return mm * 2.83464567; },
     pt2mm: function (pt) { return pt / 2.83464567; },
     getSF: function () { return 1; },
+    // Mirror src/lib/utils.js — composes Large Canvas SF with manual scaleN.
+    // Keep in sync with the production implementation.
+    getEffectiveSF: function (s) {
+        var n = (s && s.scaleN) ? Number(s.scaleN) : 1;
+        if (isNaN(n) || n < 1) n = 1;
+        return this.getSF() * n;
+    },
     log: function () {}
 };
 
@@ -89,7 +96,7 @@ assertClose(mm2pt(25.4), 72.0, 0.01, "25.4mm (1 inch) = 72pt");
 // =====================================================
 // TEST 2: ZUND MODE - 100x100mm graphic, defaults
 // =====================================================
-console.log("\n=== TEST 2: ZUND Mode (100x100mm, default settings) ===");
+console.log("\n=== TEST 2: ZUND 100×100 mm — corner offset = gapInner + rZ; orient at BL+105 mm ===");
 var settingsZ = {
     mode: "ZUND", markSizeZ: 5, markSizeS: 3,
     gapInner: 10, gapOuter: 0, maxDist: 400, orientDist: 100,
@@ -131,7 +138,7 @@ assert(Math.ceil(abWmm) === abWmm || Math.abs(abWmm - Math.round(abWmm)) < 0.02,
 // =====================================================
 // TEST 3: SUMMA MODE - 100x100mm, defaults
 // =====================================================
-console.log("\n=== TEST 3: SUMMA Mode (100x100mm, default settings) ===");
+console.log("\n=== TEST 3: SUMMA 100×100 mm — corner X centers ±10 mm; bar at full graphic width below ===");
 var settingsS = {
     mode: "SUMMA", markSizeZ: 5, markSizeS: 3,
     gapInner: 10, gapOuter: 0, maxDist: 400, orientDist: 100,
@@ -178,7 +185,7 @@ assert(abBelowGraphic >= 62, "S: AB extends >=62mm below graphic (got " + abBelo
 // =====================================================
 // TEST 4: SUMMA MODE - symmetric feed
 // =====================================================
-console.log("\n=== TEST 4: SUMMA Mode (symmetric feed 70/70) ===");
+console.log("\n=== TEST 4: SUMMA symmetric feed (top=bottom=70 mm) — artboard mirrors top/bottom around graphic ===");
 var settingsSymm = merge(settingsS, { feedTop: 70, feedBottom: 70 });
 var geoSymm = ZSM.Core.calculateAll(settingsSymm, boundsStd);
 
@@ -216,7 +223,7 @@ assert(geoLarge.marksZ.length > 12, "Large: Sufficient intermediate marks (got "
 // =====================================================
 // TEST 6: FIXED ARTBOARD MODE (ZUND only)
 // =====================================================
-console.log("\n=== TEST 6: Fixed Artboard Mode ===");
+console.log("\n=== TEST 6: ZUND Fixed Artboard — marks placed relative to artboard, AB rect unchanged ===");
 var boundsAB = [0, mm2pt(200), mm2pt(300), 0]; // 300x200mm artboard
 var settingsFixed = {
     mode: "ZUND", markSizeZ: 5, markSizeS: 3,
@@ -463,6 +470,304 @@ var heightA = pt2mm(geoA.ab[1] - geoA.ab[3]);
 var heightB = pt2mm(geoB.ab[1] - geoB.ab[3]);
 assertClose(heightA, heightB, 0.1, "BUG-2: Height consistent for near-identical graphics (" +
     heightA.toFixed(3) + " vs " + heightB.toFixed(3) + ")");
+
+
+// =====================================================
+// TEST 14: EXOTIC INPUTS — degenerate bounds
+// =====================================================
+console.log("\n=== TEST 14: Exotic bounds (degenerate inputs) ===");
+
+// Helper: check that no coords in a geometry are NaN/Infinity
+function isFiniteCoords(geo) {
+    if (!geo) return false;
+    var arrs = [geo.marksZ, geo.marksS];
+    for (var ai = 0; ai < arrs.length; ai++) {
+        for (var i = 0; i < arrs[ai].length; i++) {
+            if (!isFinite(arrs[ai][i].cx) || !isFinite(arrs[ai][i].cy)) return false;
+        }
+    }
+    if (geo.barS && (!isFinite(geo.barS.x1) || !isFinite(geo.barS.x2) || !isFinite(geo.barS.y))) return false;
+    for (var ri = 0; ri < geo.red.length; ri++) {
+        if (!isFinite(geo.red[ri].x1) || !isFinite(geo.red[ri].y1)
+         || !isFinite(geo.red[ri].x2) || !isFinite(geo.red[ri].y2)) return false;
+    }
+    if (!isFinite(geo.ab[0]) || !isFinite(geo.ab[1])
+     || !isFinite(geo.ab[2]) || !isFinite(geo.ab[3])) return false;
+    return true;
+}
+
+// Zero-area bounds: L === R, T === B (degenerate point)
+var boundsPoint = [0, 0, 0, 0];
+var geoPoint;
+try {
+    geoPoint = ZSM.Core.calculateAll(settingsZ, boundsPoint);
+    assert(isFiniteCoords(geoPoint), "Exotic: zero-area bounds → all coords finite");
+    assert(geoPoint.marksZ.length >= 4, "Exotic: zero-area still produces 4 corner marks");
+} catch (e) {
+    assert(false, "Exotic: zero-area bounds threw — " + e.message);
+}
+
+// Zero-width (vertical line) bounds: L === R but T !== B
+var boundsVLine = [0, mm2pt(100), 0, 0];
+try {
+    var geoVLine = ZSM.Core.calculateAll(settingsZ, boundsVLine);
+    assert(isFiniteCoords(geoVLine), "Exotic: zero-width bounds → finite coords");
+} catch (e) {
+    assert(false, "Exotic: zero-width threw — " + e.message);
+}
+
+// Zero-height bounds
+var boundsHLine = [0, 0, mm2pt(100), 0];
+try {
+    var geoHLine = ZSM.Core.calculateAll(settingsZ, boundsHLine);
+    assert(isFiniteCoords(geoHLine), "Exotic: zero-height bounds → finite coords");
+} catch (e) {
+    assert(false, "Exotic: zero-height threw — " + e.message);
+}
+
+// Inverted bounds: L > R (negative width)
+var boundsInv = [mm2pt(100), mm2pt(100), 0, 0];
+try {
+    var geoInv = ZSM.Core.calculateAll(settingsZ, boundsInv);
+    // Document current behavior — function doesn't error, may produce strange geometry
+    assert(geoInv !== undefined, "Exotic: inverted bounds doesn't crash function");
+    assert(isFiniteCoords(geoInv), "Exotic: inverted bounds → finite coords (no NaN/Inf)");
+} catch (e) {
+    assert(false, "Exotic: inverted bounds threw — " + e.message);
+}
+
+// Negative coordinate bounds (graphic in negative quadrant)
+var boundsNeg = [mm2pt(-100), 0, 0, mm2pt(-100)];
+try {
+    var geoNeg = ZSM.Core.calculateAll(settingsZ, boundsNeg);
+    assert(isFiniteCoords(geoNeg), "Exotic: negative-quadrant bounds → finite coords");
+    assert(geoNeg.marksZ.length >= 4, "Exotic: negative-quadrant still produces marks");
+} catch (e) {
+    assert(false, "Exotic: negative-quadrant threw — " + e.message);
+}
+
+
+// =====================================================
+// TEST 15: EXOTIC INPUTS — extreme settings values
+// =====================================================
+console.log("\n=== TEST 15: Exotic settings (extreme values) ===");
+
+// gapInner = 0 (marks touching the graphic)
+var settingsZeroGap = merge(settingsZ, { gapInner: 0 });
+try {
+    var geoZeroGap = ZSM.Core.calculateAll(settingsZeroGap, boundsStd);
+    assert(isFiniteCoords(geoZeroGap), "Extreme: gapInner=0 → finite coords");
+    // Mark center distance from graphic edge = 0 + rZ = 2.5mm
+    assertClose(Math.abs(pt2mm(geoZeroGap.marksZ[0].cx)), 2.5, 0.01, "Extreme: gapInner=0 mark at edge+radius");
+} catch (e) { assert(false, "Extreme: gapInner=0 threw — " + e.message); }
+
+// gapInner very large (1000mm)
+var settingsHugeGap = merge(settingsZ, { gapInner: 1000 });
+try {
+    var geoHugeGap = ZSM.Core.calculateAll(settingsHugeGap, boundsStd);
+    assert(isFiniteCoords(geoHugeGap), "Extreme: gapInner=1000mm → finite coords");
+} catch (e) { assert(false, "Extreme: gapInner=1000mm threw — " + e.message); }
+
+// markSize at minimum (0.1mm)
+var settingsTinyMark = merge(settingsZ, { markSizeZ: 0.1 });
+try {
+    var geoTinyMark = ZSM.Core.calculateAll(settingsTinyMark, boundsStd);
+    assert(isFiniteCoords(geoTinyMark), "Extreme: markSizeZ=0.1 → finite coords");
+} catch (e) { assert(false, "Extreme: markSizeZ=0.1 threw — " + e.message); }
+
+// markSize at maximum (50mm) on a small graphic
+var settingsHugeMark = merge(settingsZ, { markSizeZ: 50 });
+try {
+    var geoHugeMark = ZSM.Core.calculateAll(settingsHugeMark, [0, mm2pt(50), mm2pt(50), 0]);
+    assert(isFiniteCoords(geoHugeMark), "Extreme: markSizeZ=50 on 50mm graphic → finite coords");
+} catch (e) { assert(false, "Extreme: markSizeZ=50 threw — " + e.message); }
+
+// maxDist = 0 (no intermediate marks regardless of side length)
+var settingsNoStep = merge(settingsZ, { maxDist: 0 });
+try {
+    var geoNoStep = ZSM.Core.calculateAll(settingsNoStep, [0, mm2pt(2000), mm2pt(2000), 0]);
+    // Only corners + orient mark — no intermediates due to maxDist=0
+    assert(geoNoStep.marksZ.length === 5, "Extreme: maxDist=0 → only corners + orient (got " + geoNoStep.marksZ.length + ")");
+} catch (e) { assert(false, "Extreme: maxDist=0 threw — " + e.message); }
+
+// Very small maxDist (1mm) on small graphic — many intermediates
+var settingsTinyStep = merge(settingsZ, { maxDist: 5 });
+try {
+    var geoTinyStep = ZSM.Core.calculateAll(settingsTinyStep, [0, mm2pt(50), mm2pt(50), 0]);
+    assert(isFiniteCoords(geoTinyStep), "Extreme: maxDist=5mm → finite coords");
+    // Should produce many intermediates
+    assert(geoTinyStep.marksZ.length > 30, "Extreme: maxDist=5mm produces many intermediates (got " + geoTinyStep.marksZ.length + ")");
+} catch (e) { assert(false, "Extreme: maxDist=5mm threw — " + e.message); }
+
+// Negative maxDist — should behave like 0 (no intermediates)
+var settingsNegStep = merge(settingsZ, { maxDist: -10 });
+try {
+    var geoNegStep = ZSM.Core.calculateAll(settingsNegStep, boundsStd);
+    assert(geoNegStep.marksZ.length === 5, "Extreme: negative maxDist treated as 0 (got " + geoNegStep.marksZ.length + ")");
+} catch (e) { assert(false, "Extreme: negative maxDist threw — " + e.message); }
+
+
+// =====================================================
+// TEST 16: EXOTIC INPUTS — invalid/unusual mode
+// =====================================================
+console.log("\n=== TEST 16: Exotic mode values ===");
+
+// Unknown mode — should default to ZUND-like behavior (or produce safe geometry)
+var settingsUnknownMode = merge(settingsZ, { mode: "UNKNOWN" });
+try {
+    var geoUnknown = ZSM.Core.calculateAll(settingsUnknownMode, boundsStd);
+    assert(isFiniteCoords(geoUnknown), "Exotic: mode='UNKNOWN' → finite coords");
+    // Document current behavior: unknown mode treats as non-ZUND non-SUMMA → no marks of either type
+    // (this may be a defect; test documents behavior either way)
+    // Actual: code uses (s.mode === "ZUND" ?...) and (s.mode === "SUMMA" ?...) — neither branch fires
+    assert(geoUnknown.marksZ.length === 0, "Exotic: unknown mode → no Zünd marks");
+    assert(geoUnknown.marksS.length === 0, "Exotic: unknown mode → no Summa marks");
+} catch (e) { assert(false, "Exotic: unknown mode threw — " + e.message); }
+
+// Empty string mode
+var settingsEmptyMode = merge(settingsZ, { mode: "" });
+try {
+    var geoEmptyMode = ZSM.Core.calculateAll(settingsEmptyMode, boundsStd);
+    assert(isFiniteCoords(geoEmptyMode), "Exotic: mode='' → finite coords");
+} catch (e) { assert(false, "Exotic: mode='' threw — " + e.message); }
+
+// Lower-case mode (should NOT match — current code is strict equality)
+var settingsLowerMode = merge(settingsZ, { mode: "zund" });
+try {
+    var geoLowerMode = ZSM.Core.calculateAll(settingsLowerMode, boundsStd);
+    assert(geoLowerMode.marksZ.length === 0, "Exotic: mode='zund' (lowercase) is strict-mismatch, no ZUND marks");
+} catch (e) { assert(false, "Exotic: lowercase mode threw — " + e.message); }
+
+
+// =====================================================
+// TEST 17: EXOTIC INPUTS — coordinate overflow (AI 16383pt limit)
+// =====================================================
+console.log("\n=== TEST 17: Coordinate overflow (Illustrator 16383pt limit) ===");
+
+// 5000mm graphic = ~14173pt, marks extend beyond → near limit
+var bounds5000mm = [0, mm2pt(5000), mm2pt(5000), 0];
+try {
+    var geo5000 = ZSM.Core.calculateAll(settingsZ, bounds5000mm);
+    assert(isFiniteCoords(geo5000), "Overflow: 5000mm graphic → finite coords");
+    // Document: artboard may exceed AI's 16383pt max — render() validates and bails
+    // Math layer should produce the values regardless; render layer enforces bounds.
+} catch (e) { assert(false, "Overflow: 5000mm threw — " + e.message); }
+
+// Hugely positive bounds — math should produce numbers, not Infinity
+var boundsBig = [mm2pt(1000), mm2pt(2000), mm2pt(2000), mm2pt(1000)];
+try {
+    var geoBig = ZSM.Core.calculateAll(settingsZ, boundsBig);
+    assert(isFiniteCoords(geoBig), "Overflow: graphic at 1000-2000mm → finite coords");
+} catch (e) { assert(false, "Overflow: huge offset threw — " + e.message); }
+
+
+// =====================================================
+// TEST 18: addSteps — pathological cases
+// =====================================================
+console.log("\n=== TEST 18: addSteps pathological cases ===");
+
+// max = 0 → should produce no intermediates
+var arrMax0 = [];
+ZSM.Core.addSteps(arrMax0, 0, 0, mm2pt(1000), 0, 0);
+assert(arrMax0.length === 0, "addSteps: max=0 produces no intermediates");
+
+// max < 0 → should produce no intermediates (the `max > 0` guard)
+var arrMaxNeg = [];
+ZSM.Core.addSteps(arrMaxNeg, 0, 0, mm2pt(1000), 0, -100);
+assert(arrMaxNeg.length === 0, "addSteps: max<0 produces no intermediates");
+
+// Very small max with very long segment — produces many intermediates but should not hang
+var arrMany = [];
+var t0 = Date.now();
+ZSM.Core.addSteps(arrMany, 0, 0, mm2pt(1000), 0, mm2pt(1));
+var elapsed = Date.now() - t0;
+assert(elapsed < 1000, "addSteps: 1mm step over 1000mm completes in <1s (took " + elapsed + "ms, " + arrMany.length + " intermediates)");
+assert(arrMany.length > 900, "addSteps: 1mm step produces ~999 intermediates (got " + arrMany.length + ")");
+
+// NaN inputs — should not crash
+var arrNaN = [];
+try {
+    ZSM.Core.addSteps(arrNaN, 0, 0, NaN, 0, 100);
+    // Should not throw; may produce NaN intermediates or none
+    assert(true, "addSteps: NaN endpoint doesn't throw");
+} catch (e) {
+    assert(false, "addSteps: NaN endpoint threw — " + e.message);
+}
+
+
+// =====================================================
+// TEST 19: Phase 2 — scaleN math composition (manual 1:N scaling)
+// =====================================================
+console.log("\n=== TEST 19: scaleN math composition (Phase 2) ===");
+
+// Baseline: 100mm graphic with no scaleN (or scaleN=1) → standard math
+var baselineSettings = merge(settingsZ, { gapInner: 10 });
+var baselineGeo = ZSM.Core.calculateAll(baselineSettings, boundsStd);
+
+// scaleN=1 explicit must be identical to no scaleN
+var scaleN1Geo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 1 }), boundsStd);
+assertClose(scaleN1Geo.marksZ[0].cx, baselineGeo.marksZ[0].cx, 0.001,
+    "scaleN=1 identical to baseline (no regression)");
+assertClose(scaleN1Geo.marksZ[0].cy, baselineGeo.marksZ[0].cy, 0.001, "scaleN=1: BL mark Y identical");
+
+// scaleN=2: bounds halved in doc-space (representing 2× larger reality)
+// → mark offsets should be half of baseline
+var scale2Geo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 2 }), boundsStd);
+var baselineOffset = Math.abs(baselineGeo.marksZ[0].cx - boundsStd[0]);   // baseline distance from L edge
+var scale2Offset   = Math.abs(scale2Geo.marksZ[0].cx - boundsStd[0]);
+assertClose(scale2Offset, baselineOffset / 2, 0.01,
+    "scaleN=2: mark offset half of baseline (got " + scale2Offset.toFixed(2) + " vs baseline/2=" +
+    (baselineOffset / 2).toFixed(2) + ")");
+
+// scaleN=10: 10× smaller doc-space offsets
+var scale10Geo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 10 }), boundsStd);
+var scale10Offset = Math.abs(scale10Geo.marksZ[0].cx - boundsStd[0]);
+assertClose(scale10Offset, baselineOffset / 10, 0.01,
+    "scaleN=10: mark offset 1/10 of baseline (got " + scale10Offset.toFixed(2) +
+    " vs baseline/10=" + (baselineOffset / 10).toFixed(2) + ")");
+
+// SUMMA mode: SUMMA_BAR_OFFSET (11.5mm) and SUMMA_BAR_WIDTH (3mm) must also scale
+var summaBaselineGeo = ZSM.Core.calculateAll(settingsS, boundsStd);
+var summaScale10Geo = ZSM.Core.calculateAll(merge(settingsS, { scaleN: 10 }), boundsStd);
+
+// Bar Y offset from graphic bottom should be 1/10 in doc-space at scaleN=10
+var baselineBarOffset = Math.abs(summaBaselineGeo.barS.y - boundsStd[3]);
+var scaledBarOffset   = Math.abs(summaScale10Geo.barS.y - boundsStd[3]);
+assertClose(scaledBarOffset, baselineBarOffset / 10, 0.01,
+    "SUMMA scaleN=10: bar Y offset scales (got " + scaledBarOffset.toFixed(2) +
+    " vs " + (baselineBarOffset / 10).toFixed(2) + ")");
+
+// Bar stroke width should also scale
+assertClose(summaScale10Geo.barS.w, summaBaselineGeo.barS.w / 10, 0.001,
+    "SUMMA scaleN=10: bar width scales (3mm/10 → 0.3mm equivalent)");
+
+// scaleN out of bounds — math accepts any positive number (validation lives elsewhere)
+var scaleN5Geo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 5 }), boundsStd);
+assert(isFiniteCoords(scaleN5Geo), "scaleN=5: all coords finite");
+
+// scaleN=0 or negative — undefined behavior, but math should not crash
+var scaleN0Geo;
+try {
+    scaleN0Geo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 0 }), boundsStd);
+    // With (s.scaleN || 1), 0 is falsy → falls back to 1
+    assertClose(scaleN0Geo.marksZ[0].cx, baselineGeo.marksZ[0].cx, 0.001,
+        "scaleN=0 → falsy fallback to 1 (graceful degradation)");
+} catch (e) {
+    assert(false, "scaleN=0 threw — " + e.message);
+}
+
+// Composition with AI Large Canvas (SF=10): combined effective sf = 100
+var origSFC = ZSM.Utils.getSF;
+ZSM.Utils.getSF = function () { return 10; };
+var combinedGeo = ZSM.Core.calculateAll(merge(baselineSettings, { scaleN: 10 }), boundsStd);
+assert(isFiniteCoords(combinedGeo), "Composition (AI sf=10 × scaleN=10 = 100): finite coords");
+var combinedOffset = Math.abs(combinedGeo.marksZ[0].cx - boundsStd[0]);
+// Compose: should be 1/100 of baseline (1 × 10 × 10)
+// Baseline used getSF=1, so effective sf=1. With combined we get sf=100 → 100× smaller doc-offset
+assertClose(combinedOffset, baselineOffset / 100, 0.01,
+    "Composition: combined offset = baseline/100 (got " + combinedOffset.toFixed(3) +
+    " vs " + (baselineOffset / 100).toFixed(3) + ")");
+ZSM.Utils.getSF = origSFC;
 
 
 // =====================================================

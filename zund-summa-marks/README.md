@@ -1,7 +1,7 @@
 # Zünd & Summa Marks
 
-> Copyright © 2025-2026 Osva1d. All rights reserved.
-> Licensed under a proprietary license — see [LICENSE](LICENSE) for details.
+> Copyright © 2025-2026 Ladislav Osvald (Osva1d).
+> Licensed under **GNU GPL-3.0-or-later** — see [LICENSE](LICENSE) for details.
 
 Skript pro Adobe Illustrator, který automaticky generuje registrační značky pro řezací plotry Zünd a Summa. Určen pro tiskovou přípravu v prepress/DTP prostředí.
 
@@ -224,6 +224,17 @@ Manuální testy: viz `docs/TEST_PLAN_MASTER.md`
 
 ## Changelog
 
+### v26.3.2 (2026-05) — Phase 1 patch: 1:10 workflow unblock
+- **Fix:** Validace `maxDist` (rozteč značek) — minimum sníženo 50 → 5 mm. Workflow uživatele pracujícího se zmenšeným dokumentem (např. 500×500 mm reprezentujícím 5000×5000 mm reality) přestal být blokován validací při zadání rozteče < 50 mm. Plně automatická scale-aware podpora přijde ve v27.x (Phase 2).
+- Regresní testy: `tests/test_validation.js` boundary asserts aktualizovány (5/4 místo 50/49) + 2 nové scenario testy pro 1:10 vstupy 30 mm a 40 mm.
+- Dokumentace: README sekce „Workflow při zmenšeném měřítku (1:10)" v Projects/extendscript-automation, INSTALL_MAC aktualizován s aktuálními názvy skriptů.
+
+#### Test pyramide (post-v26.3.1 milestones zachované)
+- 12 test suites, **1051 tests** + 24 properties (~2400 random cases)
+- ES3 compliance linter (`tests/test_es3_compliance.js`) — chrání proti ExtendScript runtime crashům typu `Array.map is not a function`
+- HIG audit `docs/hig-audit.md` + automatizované `tests/test_ui_layout.js`
+- E2E workflow simulace (`tests/test_e2e_workflow.js`) — zachytává integrace UI ↔ render
+
 ### v26.3.1 (2026-03)
 - Oprava: `endSession()` obnovuje viditelnost dříve skrytých vrstev
 - Oprava: `getBounds()` přeskakuje skryté vrstvy a vodítka (guides)
@@ -257,8 +268,10 @@ Manuální testy: viz `docs/TEST_PLAN_MASTER.md`
 
 ## Licence
 
-Copyright © 2025-2026 Osva1d. All rights reserved.
+Copyright © 2025-2026 Ladislav Osvald (Osva1d).
 
-Tento software je šířen pod proprietární licencí. Podrobnosti viz soubor [LICENSE](LICENSE).
+Tento software je licencován pod **GNU General Public License v3.0** (or later) — viz [LICENSE](LICENSE). Plný text licence: <https://www.gnu.org/licenses/gpl-3.0.txt>.
+
+Pro komerční licencování (mimo GPL podmínky) kontaktujte autora.
 
 Třetí strany: `json2.js` (Douglas Crockford) — public domain.

@@ -1,39 +1,38 @@
 var ZSM = ZSM || {};
 
 ZSM.Draw = {
-    /** @type {Array} AUTO_SPOT_COLOR - CMYK fallback for auto-created spot swatches [C,M,Y,K] */
-    AUTO_SPOT_COLOR: [0, 100, 0, 0],
+    /**
+     * Illustrator hard coordinate limit. Anything beyond this in artboardRect or
+     * pathItem positions crashes at C++ level (no JS try/catch can intercept).
+     * 16383 pt ≈ 227 in ≈ 5765 mm — Large Canvas Mode upper bound.
+     */
+    MAX_ARTBOARD_COORD: 16383,
 
-    /** @private Storage for layers locked at session start {index, name}, restored on end. */
+    /** @private Storage for layers locked at session start {idx, name}, restored on end. */
     _lockedLayers: [],
-    /** @private Storage for layers hidden at session start {index, name}, restored on end. */
-    _hiddenLayers: [],
 
     // -------------------------------------------------------------------------
     // Session management
     // -------------------------------------------------------------------------
 
     /**
-     * Unlocks and makes all layers visible before rendering.
+     * Unlocks all layers before rendering.
      * Stores locked layer names so endSession() can restore them.
+     * Hidden layers are left hidden — their items are excluded from
+     * bounds calculation and movePaths() cannot move from them.
      */
     beginSession: function () {
         var doc = app.activeDocument;
         this._lockedLayers = [];
-        this._hiddenLayers = [];
         for (var i = 0; i < doc.layers.length; i++) {
             try {
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
                 // — modifying their state can crash Illustrator at C++ level.
-                if (this._isArtifactLayer(doc.layers[i])) continue;
+                if (ZSM.Bounds.isArtifactLayer(doc.layers[i])) continue;
 
                 if (doc.layers[i].locked) {
                     this._lockedLayers.push({ idx: i, name: doc.layers[i].name });
                     doc.layers[i].locked = false;
-                }
-                if (!doc.layers[i].visible) {
-                    this._hiddenLayers.push({ idx: i, name: doc.layers[i].name });
-                    doc.layers[i].visible = true;
                 }
             } catch (e) {
                 ZSM.Utils.log("beginSession: failed to unlock layer — " + doc.layers[i].name);
@@ -58,121 +57,23 @@ ZSM.Draw = {
                 lay.locked = true;
             } catch (e) {}
         }
-        for (var i = 0; i < this._hiddenLayers.length; i++) {
-            try {
-                var rec = this._hiddenLayers[i];
-                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
-                    ? doc.layers[rec.idx]
-                    : doc.layers.getByName(rec.name);
-                lay.visible = false;
-            } catch (e) {}
-        }
         this._lockedLayers = [];
-        this._hiddenLayers = [];
     },
 
     // -------------------------------------------------------------------------
-    // Bounds
+    // Bounds (delegates to ZSM.Bounds — see src/lib/bounds.js)
     // -------------------------------------------------------------------------
 
     /**
-     * Returns combined geometric bounds of all artwork items.
-     * In Fixed/Artboard mode returns the active artboard rect directly.
-     * Skips items on system layers (Regmarks, Graphics) and hidden layers.
-     * Handles clipped groups by measuring the clip mask path, not the group.
+     * Backward-compatible delegate to ZSM.Bounds.get(). The bounds-measurement
+     * logic lives in src/lib/bounds.js so it can be tested in isolation from
+     * the render code; this thin wrapper preserves the public ZSM.Draw API.
      *
-     * Iterates doc.pageItems directly instead of using the former
-     * app.executeMenuCommand('selectall') approach. selectall goes through
-     * Illustrator's C++ command pipeline and can crash the application when
-     * the DOM is in an inconsistent state (e.g. after partial undo of a
-     * previous script run). doc.pageItems is a flat recursive collection,
-     * so items nested inside groups are skipped via a parent check —
-     * groups themselves are measured via _getEffectiveBounds() which
-     * respects clipping masks. If .parent is unreliable (known ExtendScript
-     * edge case), the item is skipped conservatively.
-     *
-     * @param {Object} s - Settings (uses s.useArtboardBounds).
+     * @param {Object} s - Settings (uses s.useArtboardBounds, s.mode).
      * @returns {Array|null} [L, T, R, B] in document points, or null.
      */
     getBounds: function (s) {
-        var doc = app.activeDocument;
-
-        if (s && s.useArtboardBounds) {
-            var ab = doc.artboards[doc.artboards.getActiveArtboardIndex()];
-            return ab.artboardRect;
-        }
-
-        var b = [Infinity, -Infinity, -Infinity, Infinity];
-        var found = false;
-        var pageItems = doc.pageItems;
-        // Cache length — ExtendScript re-queries the live DOM on each access
-        var piLen = pageItems.length;
-
-        for (var i = 0; i < piLen; i++) {
-            try {
-                var item = pageItems[i];
-
-                // Skip item types that cannot reliably report bounds
-                // (PluginItems, RasterItems with missing links, graph objects)
-                var tn = item.typename;
-                if (tn === "PluginItem" || tn === "NonNativeItem") continue;
-
-                // Skip items nested inside groups — their bounds are accounted
-                // for when we measure the parent group via _getEffectiveBounds.
-                // .parent can be unreliable in rare ExtendScript edge cases;
-                // failures are caught and the item is skipped conservatively.
-                try {
-                    if (item.parent && item.parent.typename === "GroupItem") continue;
-                } catch (pe) { continue; }
-
-                // Skip system and artifact layers
-                try {
-                    if (item.layer) {
-                        var layName = item.layer.name;
-                        if (layName === ZSM.Config.layerRegmarks) continue;
-
-                        // Skip items on artifact layers (bracket-prefixed names)
-                        var fc = layName.charAt(0);
-                        if (fc === '<' || fc === '(') continue;
-
-                        // Skip trim-line sublayer inside Graphics (from previous run).
-                        // Don't skip the Graphics layer itself — it contains user artwork.
-                        if (layName === "Trim") {
-                            try { if (item.layer.parent.name === ZSM.Config.layerGraphics) continue; } catch (e2) {}
-                        }
-
-                        // Skip items from layers hidden before session started
-                        var wasHidden = false;
-                        for (var h = 0; h < this._hiddenLayers.length; h++) {
-                            if (layName === this._hiddenLayers[h]) { wasHidden = true; break; }
-                        }
-                        if (wasHidden) continue;
-                    }
-                } catch (le) { continue; }
-
-                // Skip guide paths — guides placed far outside the canvas would
-                // inflate bounds to extreme values, causing artboard resize to fail.
-                if ((item.typename === "PathItem" || item.typename === "CompoundPathItem") && item.guides) continue;
-
-                // For clipped groups (including nested), measure the clip mask
-                // path instead of the whole group. Clip mask is always the
-                // first child (top-most) in a clipping group — AI convention.
-                var g = this._getEffectiveBounds(item);
-
-                if (g) {
-                    b[0] = Math.min(b[0], g[0]);
-                    b[1] = Math.max(b[1], g[1]);
-                    b[2] = Math.max(b[2], g[2]);
-                    b[3] = Math.min(b[3], g[3]);
-                    found = true;
-                }
-            } catch (e) {
-                // Skip items that cannot be accessed safely (zombie/corrupted
-                // references after undo or DOM inconsistency).
-            }
-        }
-
-        return found ? b : null;
+        return ZSM.Bounds.get(s);
     },
 
     // -------------------------------------------------------------------------
@@ -191,13 +92,19 @@ ZSM.Draw = {
         var doc = app.activeDocument;
 
         try {
+            // 0. Deselect all — removing or reordering items/layers while
+            //    Illustrator holds references to selected objects can crash
+            //    at C++ level. Clearing selection first prevents this.
+            try { doc.selection = null; } catch (ds) {}
+
             // 1. Resize artboard (Auto-fit mode only)
-            // Validate bounds before setting — coordinates beyond ~16383pt
-            // (227in / 5765mm) crash Illustrator at C++ level.
+            // Validate bounds before setting — see ZSM.Draw.MAX_ARTBOARD_COORD.
             if (!s.useArtboardBounds) {
-                var abMax = 16383;
+                var abMax = this.MAX_ARTBOARD_COORD;
                 if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
                     Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
+                    ZSM.Utils.log("render: artboard rect " + geo.ab.join(",") +
+                        " exceeds MAX_ARTBOARD_COORD=" + abMax + "pt — aborting.");
                     ZSM.Utils.error(ZSM.L.ERR_GENERIC
                         ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
                         : "Artboard exceeds maximum size.");
@@ -207,47 +114,147 @@ ZSM.Draw = {
                 doc.artboards[activeIdx].artboardRect = geo.ab;
             }
 
-            // 2. Prepare Regmarks layer at front — clear old content first
+            // 2. Prepare Regmarks layer — mode-specific sublayers.
+            //    Each mode draws into its own sublayer ("Zünd" / "Summa")
+            //    so running one mode does not destroy the other's marks.
+            //    This supports the intended workflow: run ZUND first,
+            //    then run SUMMA second — both sets of marks coexist.
             var reg = this.getLay(ZSM.Config.layerRegmarks);
-            this._clearLayer(reg);
-            reg.zOrder(ZOrderMethod.BRINGTOFRONT);
+
+            var modeSubName = (s.mode === "SUMMA") ? "Summa" : "Zünd";
+            var zundSub = null, summaSub = null;
+            try { zundSub = reg.layers.getByName("Zünd"); } catch (e) {}
+            try { summaSub = reg.layers.getByName("Summa"); } catch (e) {}
+
+            // Legacy cleanup: if no mode sublayers exist, there may be
+            // marks placed directly on Regmarks from a pre-sublayer version.
+            // Clear them once so they don't coexist with the new sublayers.
+            if (!zundSub && !summaSub) {
+                this._clearLayer(reg);
+            }
+
+            // Remove current mode's sublayer (preserves the other mode).
+            // Unlock & unhide first — `.remove()` on a locked or hidden
+            // sublayer can crash AI at C++ level in some versions.
+            var didRemoveSub = false;
+            if (s.mode === "ZUND" && zundSub) {
+                try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
+                try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+            } else if (s.mode === "SUMMA" && summaSub) {
+                try { summaSub.locked = false; summaSub.visible = true; } catch (e) {}
+                try { summaSub.remove(); didRemoveSub = true; } catch (e) {}
+            }
+
+            // Force AI to commit the sublayer removal before further mutations.
+            // Without this, subsequent operations operate on transient DOM state
+            // which AI's C++ pipeline may flag as inconsistent — sporadic crash.
+            if (didRemoveSub) {
+                try { app.redraw(); } catch (rd1) {}
+            }
+
+            // Create fresh sublayer for current mode
+            var modeSub = reg.layers.add();
+            modeSub.name = modeSubName;
+
+            // Z-order Regmarks to front, but only if not already there.
+            // Skipping the no-op call reduces C++ pipeline pressure on
+            // every render and is a documented sporadic crash vector.
+            if (doc.layers.length > 0 && doc.layers[0] !== reg) {
+                try { app.redraw(); } catch (rd2) {}  // commit pending state
+                try { reg.zOrder(ZOrderMethod.BRINGTOFRONT); } catch (zo) {
+                    ZSM.Utils.log("render: zOrder BRINGTOFRONT failed — " + zo.message);
+                }
+            }
             var refLayer = reg;
 
             // 3. Dynamic layer mapping — move spot-colored paths to named layers
             // Row existence = active (no checkbox in new UI design)
             if (s.layers && s.layers.length > 0) {
+                // Track which target layer names were already processed so a
+                // duplicate row in s.layers (e.g. two "Cut" entries) doesn't
+                // attempt a self-move (`targetLay.move(targetLay)` would
+                // self-reference and can crash AI at C++ level).
+                var seenTargets = {};
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
+                        if (seenTargets[layDef.name]) continue; // dedupe
+                        seenTargets[layDef.name] = true;
+
                         var targetLay = this.getLay(layDef.name);
                         var hit = this.movePaths(targetLay, [layDef.color]);
                         if (!hit) {
                             geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
                         }
-                        targetLay.move(refLayer, ElementPlacement.PLACEAFTER);
+                        // Guard against self-move (would happen if getLay
+                        // resolved to the same Layer instance as refLayer,
+                        // e.g. on the first iteration when targetLay is
+                        // somehow Regmarks, or with hand-edited presets).
+                        if (targetLay !== refLayer) {
+                            try { targetLay.move(refLayer, ElementPlacement.PLACEAFTER); }
+                            catch (mvErr) { ZSM.Utils.log("layer move failed: " + mvErr.message); }
+                        }
                         refLayer = targetLay;
                     }
                 }
             }
 
+            // 3b. Remove empty layers left behind by movePaths.
+            //     Only truly empty (no items, no sublayers), visible,
+            //     non-system layers are removed. Skip Regmarks, target
+            //     layers just created above, artifact layers, and hidden layers.
+            var sysNames = {};
+            sysNames[ZSM.Config.layerRegmarks] = true;
+            for (var si = 0; si < s.layers.length; si++) {
+                if (s.layers[si].name) sysNames[s.layers[si].name] = true;
+            }
+            for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
+                if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
+                try {
+                    var elay = doc.layers[ei];
+                    if (sysNames[elay.name]) continue;
+                    if (ZSM.Bounds.isArtifactLayer(elay)) continue;
+                    if (!elay.visible) continue;
+                    if (elay.pageItems.length === 0 && elay.layers.length === 0) {
+                        elay.remove();
+                    }
+                } catch (e) {}
+            }
+
             // 4. Draw Zünd marks (circles)
             var col = this.getCol(s.markColor);
-            doc.activeLayer = reg;
+            // Non-blocking warning if the chosen mark colour isn't in the
+            // document — getCol fell back to [Registration]. We draw a valid
+            // mark rather than aborting, but never swap the colour silently.
+            var regName = this.getRegistrationName();
+            if (s.markColor && s.markColor !== "[Registration]" && s.markColor !== regName
+                && !this.swatchExists(s.markColor)) {
+                geo.warnings.push(ZSM.L.format(ZSM.L.WARN_COLOR_FALLBACK, s.markColor));
+            }
+            // Setting activeLayer can crash at C++ level if the layer is
+            // in transient state (just created/added). Wrap defensively;
+            // failure here is non-fatal — pathItems.* calls below target
+            // modeSub directly via the explicit reference.
+            try { doc.activeLayer = modeSub; } catch (al) {
+                ZSM.Utils.log("render: setting activeLayer failed — " + al.message);
+            }
 
-            var sf   = ZSM.Utils.getSF();
+            // Same effective SF as core.js — must include s.scaleN, else
+            // marks ignore manual 1:N scaling (regression caught in v26.4.0
+            // manual test). Single source of truth: ZSM.Utils.getEffectiveSF.
+            var sf   = ZSM.Utils.getEffectiveSF(s);
             var zSize = (Number(s.markSizeZ) || 5.0) / sf;
             var rZ   = ZSM.Utils.mm2pt(zSize / 2);
 
-            // Illustrator max coordinate ~16383pt (227in). Creating items
-            // beyond this crashes at C++ level — validate before drawing.
-            var MAX_COORD = 16383;
+            // Validate mark coords against Illustrator's hard limit before drawing.
+            var MAX_COORD = this.MAX_ARTBOARD_COORD;
 
             var marksZ = geo.marksZ;
             for (var z = 0; z < marksZ.length; z++) {
                 var m = marksZ[z];
                 if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
-                    var circle = reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
+                    var circle = modeSub.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
                     circle.fillColor     = col;
                     circle.fillOverprint = true;
                     circle.stroked       = false;
@@ -265,7 +272,7 @@ ZSM.Draw = {
                 var m = marksS[sm];
                 if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
-                    var sq = reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
+                    var sq = modeSub.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
                     sq.fillColor     = col;
                     sq.fillOverprint = true;
                     sq.stroked       = false;
@@ -277,7 +284,7 @@ ZSM.Draw = {
             // 6. Draw Summa registration bar
             if (geo.barS) {
                 try {
-                    var bar = reg.pathItems.add();
+                    var bar = modeSub.pathItems.add();
                     bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
                     bar.strokeColor     = col;
                     bar.strokeOverprint = true;
@@ -292,32 +299,45 @@ ZSM.Draw = {
             //    Assumption: the bottom-most layer is the user's artwork layer.
             //    In multi-layer documents, only the absolute bottom layer is renamed.
             var gfxLayer = doc.layers[doc.layers.length - 1];
-            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !this._isArtifactLayer(gfxLayer)) {
-                // Track rename so endSession() can restore locks/visibility (W3)
+            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                // Track rename so endSession() can restore lock state (W3)
                 var oldGfxName = gfxLayer.name;
                 gfxLayer.name    = ZSM.Config.layerGraphics;
                 for (var li = 0; li < this._lockedLayers.length; li++) {
-                    if (this._lockedLayers[li] === oldGfxName) {
-                        this._lockedLayers[li] = ZSM.Config.layerGraphics; break;
-                    }
-                }
-                for (var li = 0; li < this._hiddenLayers.length; li++) {
-                    if (this._hiddenLayers[li] === oldGfxName) {
-                        this._hiddenLayers[li] = ZSM.Config.layerGraphics; break;
+                    if (this._lockedLayers[li].name === oldGfxName) {
+                        this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
                     }
                 }
                 gfxLayer.locked  = false;
                 gfxLayer.visible = true;
-                gfxLayer.zOrder(ZOrderMethod.SENDTOBACK);
+                // Send Graphics layer to back, but only if not already there.
+                // Avoids redundant C++ pipeline calls that are documented as
+                // sporadic crash vectors in ExtendScript.
+                if (doc.layers.length > 0
+                    && doc.layers[doc.layers.length - 1] !== gfxLayer) {
+                    try { app.redraw(); } catch (rd3) {}  // commit pending state
+                    try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
+                        ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
+                    }
+                }
 
                 if (geo.red.length > 0) {
                     // Draw trim lines into a sublayer to keep them
                     // separate from artwork but inside the print layer.
                     // Remove previous Trim sublayer to prevent accumulation.
+                    // Deselect first — removing a layer with selected items
+                    // can crash Illustrator at C++ level. Also unlock/unhide
+                    // before remove for the same C++ crash protection.
+                    var trimRemoved = false;
                     try {
                         var oldTrim = gfxLayer.layers.getByName("Trim");
+                        try { doc.selection = null; } catch (ds2) {}
+                        try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
                         oldTrim.remove();
+                        trimRemoved = true;
                     } catch (e) { /* no previous Trim — first run */ }
+                    // Force AI to commit Trim removal before adding new sublayer.
+                    if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }
                     var trimLayer = gfxLayer.layers.add();
                     trimLayer.name = "Trim";
 
@@ -341,7 +361,9 @@ ZSM.Draw = {
                 }
             }
 
-            if (geo.warnings.length > 0) ZSM.Utils.error(geo.warnings.join("\n"));
+            // Non-fatal notices (missing colour → fallback, unmatched layer
+            // colour) — surface as a WARNING, not an error: the marks rendered.
+            if (geo.warnings.length > 0) ZSM.Utils.warn(geo.warnings.join("\n"));
             app.redraw();
 
         } catch (e) {
@@ -361,9 +383,14 @@ ZSM.Draw = {
      */
     _clearLayer: function (layer) {
         try {
-            // Remove sublayers first
+            // Remove sublayers first. Unlock & unhide each before remove —
+            // .remove() on a locked or hidden sublayer can crash AI at C++.
             while (layer.layers.length > 0) {
-                try { layer.layers[0].remove(); } catch (e) { break; }
+                try {
+                    var sub = layer.layers[0];
+                    try { sub.locked = false; sub.visible = true; } catch (eu) {}
+                    sub.remove();
+                } catch (e) { break; }
             }
             // Remove page items (iterate backwards to avoid index shifts)
             var items = layer.pageItems;
@@ -375,106 +402,10 @@ ZSM.Draw = {
         }
     },
 
-    /**
-     * Detects Illustrator artifact layers with bracket-prefixed names.
-     * These are auto-created by operations like Release Clipping Mask
-     * (<Clip Group>), Release Compound Path (<Compound Path>), or
-     * Isolation Mode artifacts. Modifying their lock/visibility state
-     * can cause C++ level crashes that try/catch cannot intercept.
-     *
-     * @param {Layer} layer - Layer to test.
-     * @returns {boolean} True if layer has a bracket-prefixed name.
-     * @private
-     */
-    _isArtifactLayer: function (layer) {
-        try {
-            var c = layer.name.charAt(0);
-            return c === '<' || c === '(';
-        } catch (e) { return true; }
-    },
-
-    /**
-     * Returns effective geometric bounds of an item, respecting clipping
-     * masks at any nesting depth. For a clipped group, returns the clip
-     * mask bounds. For a non-clipped group, recursively merges children's
-     * effective bounds (so a clipped subgroup inside a plain group is
-     * handled correctly). For leaf items, returns geometricBounds directly.
-     *
-     * @param {PageItem} item - Item to measure.
-     * @returns {Array|null} [L, T, R, B] in document points, or null on failure.
-     * @private
-     */
-    _getEffectiveBounds: function (item) {
-        // Iterative traversal using an explicit stack to avoid stack overflow.
-        // ExtendScript has a call stack limit of ~100-200 frames; deeply nested
-        // groups (common in programmatically generated or imported SVG files)
-        // would crash with a recursive approach.
-        try {
-            var stack = [item];
-            var b = [Infinity, -Infinity, -Infinity, Infinity];
-            var found = false;
-
-            while (stack.length > 0) {
-                var cur = stack.pop();
-                try {
-                    if (cur.typename === "GroupItem") {
-                        if (cur.clipped) {
-                            // Clip mask is always pageItems[0] (topmost child)
-                            var cb = cur.pageItems[0].geometricBounds;
-                            b[0] = Math.min(b[0], cb[0]);
-                            b[1] = Math.max(b[1], cb[1]);
-                            b[2] = Math.max(b[2], cb[2]);
-                            b[3] = Math.min(b[3], cb[3]);
-                            found = true;
-                        } else {
-                            // Non-clipped group: push children for processing
-                            for (var i = 0; i < cur.pageItems.length; i++) {
-                                stack.push(cur.pageItems[i]);
-                            }
-                        }
-                    } else {
-                        var lb = cur.geometricBounds;
-                        b[0] = Math.min(b[0], lb[0]);
-                        b[1] = Math.max(b[1], lb[1]);
-                        b[2] = Math.max(b[2], lb[2]);
-                        b[3] = Math.min(b[3], lb[3]);
-                        found = true;
-                    }
-                } catch (ie) {
-                    // Skip items whose bounds can't be read (corrupt, PluginItem, etc.)
-                }
-            }
-            return found ? b : null;
-        } catch (e) {
-            return null;
-        }
-    },
-
-    /**
-     * Checks whether an item is nested inside a clipped group.
-     * Walks up the parent chain from the item to the layer root.
-     * Returns true if any ancestor is a GroupItem with clipping enabled.
-     * Used by getBounds() to skip children whose unclipped geometric bounds
-     * would inflate the measured area beyond the visible clip boundary,
-     * and by movePaths() to avoid extracting items from clipped groups
-     * (which would break the group structure and trigger MRAP errors).
-     *
-     * @param {PageItem} item - Item to check.
-     * @returns {boolean} True if item is inside a clipped group.
-     * @private
-     */
-    _isInsideClippedGroup: function (item) {
-        try {
-            var p = item.parent;
-            while (p) {
-                if (p.typename === "GroupItem" && p.clipped) return true;
-                // Stop at layer level — no need to check further
-                if (p.typename === "Layer") return false;
-                p = p.parent;
-            }
-        } catch (e) {}
-        return false;
-    },
+    // _isArtifactLayer / _getEffectiveBounds / _isInsideClippedGroup —
+    // moved to ZSM.Bounds (src/lib/bounds.js). Render code in this file
+    // now references them as ZSM.Bounds.isArtifactLayer / .isInsideClippedGroup
+    // directly (see callers in beginSession, render, movePaths).
 
     /**
      * Gets an existing layer by name or creates it if it doesn't exist.
@@ -515,9 +446,12 @@ ZSM.Draw = {
 
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
-                // Skip items on artifact layers — moving them could crash AI
-                try { var fc = cp.layer.name.charAt(0); if (fc === '<' || fc === '(') continue; } catch (e) {}
-                if (this._isInsideClippedGroup(cp)) continue;
+                // Skip items on artifact layers — moving them could crash AI.
+                // isArtifactLayer treats an unreadable layer name as artifact
+                // (returns true) so a transient/broken layer item is skipped
+                // rather than risked — the safe default for a mutating op.
+                if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
+                if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
                 if (cp.pathItems.length === 0) continue;
 
                 // Match by first sub-path color (all sub-paths share the same color)
@@ -544,11 +478,12 @@ ZSM.Draw = {
                 var item = snapshot[i];
 
                 // Skip items on artifact layers — moving them could crash AI
-                try { var fc2 = item.layer.name.charAt(0); if (fc2 === '<' || fc2 === '(') continue; } catch (e) {}
+                // (see compound-path loop above for the unreadable-name rationale).
+                if (ZSM.Bounds.isArtifactLayer(item.layer)) continue;
 
                 // Skip items nested inside clipped groups — moving them out
                 // would break the group structure and trigger MRAP errors.
-                if (this._isInsideClippedGroup(item)) continue;
+                if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
 
                 // Skip items already moved as part of a CompoundPathItem
                 var alreadyMoved = false;
@@ -595,48 +530,58 @@ ZSM.Draw = {
 
     /**
      * Resolves a color name to an Illustrator Color object.
-     * Resolution order: existing swatch → [Registration] fallback → auto-create spot.
-     * When auto-creating, sanitizes the name and returns a SpotColor wrapper.
+     * Resolution order: existing swatch → [Registration] fallback.
+     *
+     * IMPORTANT — does NOT auto-create a swatch for an unknown name. Silently
+     * minting a magenta spot for a missing reference is unsafe in prepress: it
+     * mutates the document, produces an arbitrary colour that can mis-separate
+     * on a cutter, and pollutes every file in a batch. Instead a missing colour
+     * falls back to [Registration] (always a valid, cutter-readable mark colour)
+     * and the caller (render) surfaces a non-blocking warning naming the colour
+     * so the operator can fix it. See ZSM.Draw.swatchExists for the detection.
      *
      * @param {string} name - Swatch or spot color name.
-     * @returns {Color} Illustrator Color object.
+     * @returns {Color} Illustrator Color object (never null).
      */
     getCol: function (name) {
         var doc = app.activeDocument;
-        var regName = this.getRegistrationName();
-        if (!name) name = regName;
-
+        if (!name) name = this.getRegistrationName();
         try {
             return doc.swatches.getByName(name).color;
         } catch (e) {
-            // Accept both localized and English Registration name
-            if (name === regName || name === "[Registration]") {
-                var reg = new CMYKColor();
-                reg.black = 100;
-                return reg;
-            }
-            // Auto-create a spot swatch as fallback
-            try {
-                var spot      = doc.spots.add();
-                var cleanName = name.replace(/[\[\]\(\)\,\.]/g, "_");
-                spot.name     = cleanName;
-                var c         = new CMYKColor();
-                c.cyan        = this.AUTO_SPOT_COLOR[0];
-                c.magenta     = this.AUTO_SPOT_COLOR[1];
-                c.yellow      = this.AUTO_SPOT_COLOR[2];
-                c.black       = this.AUTO_SPOT_COLOR[3];
-                spot.color     = c;
-                spot.colorType = ColorModel.SPOT;
-                var sc  = new SpotColor();
-                sc.spot = spot;
-                sc.tint = 100;
-                return sc;
-            } catch (e2) {
-                var fallback = new CMYKColor();
-                fallback.black = 100;
-                return fallback;
-            }
+            // Missing swatch → safe [Registration] fallback, never auto-create.
+            return this.registrationColor();
         }
+    },
+
+    /**
+     * Returns the document's [Registration] swatch colour, or 100% K CMYK as a
+     * last-resort fallback if it cannot be read. Used wherever a missing or
+     * empty colour must degrade to a safe, universally valid mark colour.
+     *
+     * @returns {Color} Registration (or black) Color object.
+     */
+    registrationColor: function () {
+        try {
+            return app.activeDocument.swatches.getByName(this.getRegistrationName()).color;
+        } catch (e) {
+            var k = new CMYKColor();
+            k.black = 100;
+            return k;
+        }
+    },
+
+    /**
+     * True if a swatch with the given name exists in the active document.
+     * Used by render() to decide whether a missing-colour warning is needed
+     * without a second resolution pass through getCol().
+     *
+     * @param {string} name - Swatch name.
+     * @returns {boolean}
+     */
+    swatchExists: function (name) {
+        try { app.activeDocument.swatches.getByName(name); return true; }
+        catch (e) { return false; }
     },
 
     /**
@@ -754,8 +699,7 @@ ZSM.Draw = {
                 var n = layers[i].name;
                 if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics) continue;
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
-                var fc = n.charAt(0);
-                if (fc === '<' || fc === '(') continue;
+                if (ZSM.Bounds.isArtifactLayer(layers[i])) continue;
                 docNames.push(n);
             }
         } catch (e) {}

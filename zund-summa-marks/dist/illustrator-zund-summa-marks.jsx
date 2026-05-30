@@ -1,12 +1,13 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Zund & Summa Marks
- * Version:     26.3.1
+ * Version:     26.4.0
  * Author:      Osva1d
- * Updated:     2026-04-09
+ * Updated:     2026-05-30
  *
- * Copyright (c) 2025-2026 Osva1d. All rights reserved.
- * Licensed under a proprietary license. See LICENSE file for details.
+ * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
+ * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
+ * <https://www.gnu.org/licenses/gpl-3.0.txt> for full terms.
  *
  * Description:
  *   Registration marks generator for Zund/Summa cutting tables.
@@ -188,7 +189,9 @@ ZSM.L = (function () {
         en: {
             // --- Errors ---
             ERROR_PREFIX:        "ERROR: ",
+            WARN_PREFIX:         "WARNING: ",
             ERR_MUST_BE_NUMBER:  "%s must be a number!",
+            ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE:    "%s must be between %s and %s!",
             ERR_NO_DOC:          "No document open.",
             ERR_NO_SEL:          "Nothing is selected.",
@@ -196,6 +199,7 @@ ZSM.L = (function () {
             ERR_RENDER_CRITICAL: "Critical error during rendering: ",
             ERR_WRITE_SETTINGS:  "Cannot write settings file.",
             ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
+            WARN_COLOR_FALLBACK: "Mark colour '%s' is not in the document — marks drawn in [Registration].",
             ERR_LAY_COLOR:       "No color selected for layer '%s'.",
             ERR_SWATCH:          "Swatch '%s' not found.",
             ERR_GENERIC:         "ERROR: %s",
@@ -208,6 +212,7 @@ ZSM.L = (function () {
             PANEL_LAYERS: "Layer to Color Mapping",
 
             // --- UI: Technology ---
+            LBL_MODE:      "Mode:",
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Select cutting technology (Zünd / Summa).",
@@ -215,17 +220,28 @@ ZSM.L = (function () {
             SRC_FIXED:     "Fixed to Artboard",
             TIP_SRC_AUTO:  "Marks adapt to selected graphics; Artboard resized automatically.",
             TIP_SRC_FIXED: "Marks placed relative to current Artboard; size unchanged.",
+            SCALE_CHECKBOX:     "Work at scale",
+            TIP_SCALE_CHECKBOX: "Enable when your document is a scaled-down representation (e.g. a 5 m banner prepared at 1:10 in a 500 mm artboard). Then enter all dimensions in real-world mm.",
+            SCALE_FIELD_LABEL:  "1:",
+            TIP_SCALE_FIELD:    "Document scale ratio. Enter N where 1 unit in your document equals N units in reality. Range 1–10.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
+            TIP_PRESET:         "Select a saved preset to load its settings, or pick [Last Settings] to restore the values from your last Generate run.",
             BTN_SAVE:           "Save",
-            TIP_SAVE:           "Save current settings as new preset.",
+            TIP_SAVE:           "Save changes to the current preset (disabled when no changes).",
             BTN_DEL:            "Delete",
             TIP_DEL:            "Delete currently selected preset.",
-            PROMPT_NEW_PRESET:  "Enter name for new preset:",
+            PROMPT_SAVE_AS:     "Save current settings as new preset:",
             PRESET_DEFAULT:     "[Default]",
             ERR_PRESET_DEL_DEF: "You cannot delete the default preset.",
+            CONFIRM_DEL_PRESET: "Delete preset '%s'? This cannot be undone.",
             ERR_PRESET_EXISTS:  "Preset already exists. Overwrite?",
+            ERR_RESERVED_NAME:  "This name is reserved. Choose a different name.",
+            BTN_SAVE_AS:        "Save As…",
+            TIP_SAVE_AS:        "Save current settings as a new preset.",
+            BTN_RESET:          "Reset",
+            TIP_RESET:          "Reset all settings to factory defaults (active preset is preserved; click Save to commit).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
@@ -254,6 +270,7 @@ ZSM.L = (function () {
             // --- UI: Layer mapping ---
             COL_COLOR:      "Color",
             COL_LAYER:      "Layer",
+            DDL_MISSING_SUFFIX: "(missing)",
             TIP_LAY_COLOR:  "Spot color used to match paths to this layer.",
             TIP_LAY_NAME:   "Layer name. Select from list or type custom.",
             TIP_BTN_REMOVE: "Remove this mapping row.",
@@ -274,7 +291,9 @@ ZSM.L = (function () {
         cs: {
             // --- Errors ---
             ERROR_PREFIX:        "CHYBA: ",
+            WARN_PREFIX:         "UPOZORNĚNÍ: ",
             ERR_MUST_BE_NUMBER:  "%s musí být číslo!",
+            ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE:    "%s musí být mezi %s a %s!",
             ERR_NO_DOC:          "Není otevřený dokument.",
             ERR_NO_SEL:          "Nic není vybráno.",
@@ -282,6 +301,7 @@ ZSM.L = (function () {
             ERR_RENDER_CRITICAL: "Kritická chyba při vykreslování: ",
             ERR_WRITE_SETTINGS:  "Nelze zapsat soubor s nastavením.",
             ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
+            WARN_COLOR_FALLBACK: "Barva značek ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
             ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
             ERR_GENERIC:         "CHYBA: %s",
@@ -294,6 +314,7 @@ ZSM.L = (function () {
             PANEL_LAYERS: "Přiřazení vrstev k barvám",
 
             // --- UI: Technology ---
+            LBL_MODE:      "Režim:",
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Výběr cílové technologie řezu (Zünd / Summa).",
@@ -301,17 +322,28 @@ ZSM.L = (function () {
             SRC_FIXED:     "Dle Artboardu (Fixed)",
             TIP_SRC_AUTO:  "Pozice značek se určí podle vybrané grafiky a Artboard se automaticky přizpůsobí.",
             TIP_SRC_FIXED: "Pozice značek se určí podle stávajícího Artboardu; jeho velikost se nemění.",
+            SCALE_CHECKBOX:     "Pracovat v měřítku",
+            TIP_SCALE_CHECKBOX: "Zapněte, pokud je dokument zmenšenou předlohou (např. 5m banner připravený v měřítku 1:10 na 500 mm artboardu). Pak zadávejte všechny rozměry v reálných mm.",
+            SCALE_FIELD_LABEL:  "1:",
+            TIP_SCALE_FIELD:    "Měřítko dokumentu. Zadejte N, kde 1 jednotka v dokumentu = N jednotek v realitě. Rozsah 1–10.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Předvolba:",
+            TIP_PRESET:         "Vyberte uloženou předvolbu pro načtení jejích nastavení, nebo zvolte [Last Settings] pro obnovení hodnot z posledního spuštění.",
             BTN_SAVE:           "Uložit",
-            TIP_SAVE:           "Uložit aktuální nastavení jako novou předvolbu.",
+            TIP_SAVE:           "Uloží změny do aktuální předvolby (neaktivní, pokud nejsou žádné změny).",
             BTN_DEL:            "Smazat",
             TIP_DEL:            "Smazat aktuálně vybranou předvolbu.",
-            PROMPT_NEW_PRESET:  "Zadejte název nové předvolby:",
+            PROMPT_SAVE_AS:     "Uložit aktuální nastavení jako novou předvolbu:",
             PRESET_DEFAULT:     "[Výchozí]",
             ERR_PRESET_DEL_DEF: "Výchozí předvolbu nelze smazat.",
+            CONFIRM_DEL_PRESET: "Smazat předvolbu ‘%s’? Tuto akci nelze vrátit zpět.",
             ERR_PRESET_EXISTS:  "Předvolba již existuje. Přepsat?",
+            ERR_RESERVED_NAME:  "Tento název je rezervovaný. Vyberte jiný.",
+            BTN_SAVE_AS:        "Uložit jako…",
+            TIP_SAVE_AS:        "Uložit aktuální nastavení jako novou předvolbu.",
+            BTN_RESET:          "Reset",
+            TIP_RESET:          "Obnoví všechna nastavení na výchozí hodnoty (aktivní předvolba zůstává; klikněte Uložit pro potvrzení).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",
@@ -340,6 +372,7 @@ ZSM.L = (function () {
             // --- UI: Layer mapping ---
             COL_COLOR:      "Barva",
             COL_LAYER:      "Vrstva",
+            DDL_MISSING_SUFFIX: "(chybí)",
             TIP_LAY_COLOR:  "Přímá barva pro rozpoznání cest na této vrstvě.",
             TIP_LAY_NAME:   "Název vrstvy. Vyberte ze seznamu nebo napište vlastní.",
             TIP_BTN_REMOVE: "Odebrat toto mapování.",
@@ -350,7 +383,7 @@ ZSM.L = (function () {
             DEF_KISS:       "Kiss-cut",
 
             // --- UI: Footer ---
-            BTN_CANCEL: "Zrušit",
+            BTN_CANCEL: "Storno",
             TIP_CANCEL: "Zavřít bez změn.",
             BTN_OK:     "Generovat",
             TIP_OK:     "Spustit výpočet a vygenerovat značky.",
@@ -405,6 +438,26 @@ ZSM.Utils = {
     },
 
     /**
+     * Effective scale factor — composes Illustrator Large Canvas factor
+     * (auto-detected) with the user's manual 1:N scale (s.scaleN).
+     *
+     * SINGLE SOURCE OF TRUTH. Every place that converts between
+     * "user-entered real-world mm" and "doc-space pt" MUST use this,
+     * not raw getSF(). Past bug (v26.4.0 manual test): draw.js used
+     * getSF() alone for mark size, so marks were not shrunk in 1:10
+     * workflow even though positions were. Fixed by routing both
+     * core.js math and draw.js render through this helper.
+     *
+     * @param {Object} s - Settings object (must carry scaleN; defaults to 1).
+     * @returns {number} Composed factor: Large Canvas SF * manual scaleN.
+     */
+    getEffectiveSF: function (s) {
+        var manualN = (s && s.scaleN) ? Number(s.scaleN) : 1;
+        if (isNaN(manualN) || manualN < 1) manualN = 1;
+        return this.getSF() * manualN;
+    },
+
+    /**
      * Validates a numerical input within a range.
      * Normalizes Czech decimal separator (comma → dot) before parsing.
      * Returns null and shows alert if invalid; keeps dialog open.
@@ -415,8 +468,12 @@ ZSM.Utils = {
      * @returns {number|null} Validated number or null if invalid.
      */
     validateNumber: function (val, min, max, name) {
-        var str = String(val).replace(/,/g, ".");
-        var n = Number(str);
+        // Normalize: comma → dot (CZ locale), trim whitespace
+        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
+        // JS quirk: Number("") === 0 and Number("  ") === 0, NOT NaN.
+        // Treat empty/whitespace-only strings as invalid to prevent
+        // silent 0-substitution when user clears a UI field.
+        var n = (str === "") ? NaN : Number(str);
         if (isNaN(n)) {
             alert(ZSM.L.format(ZSM.L.ERR_MUST_BE_NUMBER, name));
             return null;
@@ -445,6 +502,352 @@ ZSM.Utils = {
      */
     error: function (msg) {
         alert(ZSM.L.ERROR_PREFIX + msg);
+    },
+
+    /**
+     * Displays a non-fatal warning alert with a localized "warning" prefix.
+     * Distinct from error() so post-completion notices (missing colour →
+     * [Registration] fallback, colour assigned to a layer that matched no
+     * paths) aren't mislabelled as errors — the operation still succeeded.
+     * @param {string} msg - Warning message body.
+     */
+    warn: function (msg) {
+        alert(ZSM.L.WARN_PREFIX + msg);
+    },
+
+    /**
+     * Deep-equality test for two settings objects.
+     * Used by the UI to detect "modified" state (UI values diverged
+     * from the stored preset). Numeric coercion via String() so 5
+     * and "5" compare equal — UI inputs are strings, stored values
+     * may be numbers.
+     *
+     * Compares fixed schema fields (mode, gaps, sizes, color, etc.)
+     * plus layers[] array (name+color per row). Extra fields outside
+     * the schema are ignored.
+     *
+     * @param {Object} a - First settings object.
+     * @param {Object} b - Second settings object.
+     * @returns {boolean} True if all schema fields are equal.
+     */
+    presetEquals: function (a, b) {
+        if (!a || !b) return false;
+        var keys = ["mode", "gapInner", "gapOuter", "maxDist",
+                    "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
+                    "markSizeZ", "markSizeS", "orientDist", "markColor",
+                    "scaleN"];
+        for (var i = 0; i < keys.length; i++) {
+            if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
+        }
+        var aL = a.layers || [], bL = b.layers || [];
+        if (aL.length !== bL.length) return false;
+        for (var li = 0; li < aL.length; li++) {
+            if ((aL[li].name || "")  !== (bL[li].name || ""))  return false;
+            if ((aL[li].color || "") !== (bL[li].color || "")) return false;
+        }
+        return true;
+    }
+};
+
+var ZSM = ZSM || {};
+
+/**
+ * ZSM.Validation — Pure validation logic for UI-collected settings.
+ *
+ * Decoupled from ScriptUI so it can be unit-tested in Node without
+ * an Illustrator runtime. Numeric checks delegate to ZSM.Utils.validateNumber
+ * (which still calls alert() — caller suppresses or mocks as needed).
+ *
+ * Schema: each numeric field has {min, max, label, mode?}.
+ *   - "label" is the key in ZSM.L locale table for user-facing field name.
+ *   - "mode" (optional) restricts validation to ZUND or SUMMA. Mode-irrelevant
+ *     fields are pulled from `prev` (previously saved settings) instead of
+ *     being validated, mirroring the dialog's mode-specific UI.
+ */
+ZSM.Validation = {
+    /**
+     * Numeric field validation rules. Single source of truth — used by both
+     * the UI dialog (via ZSM.Validation.validate()) and the test suite.
+     */
+    rules: {
+        // Always validated:
+        gapOuter:   { min: 0,   max: 1000, label: "GAP_ZO" },
+        // maxDist.min lowered from 50 to 5 to unblock 1:10 manual-scale workflows
+        // (user enters 40 mm doc-coords representing 400 mm real intent on a
+        // 1:10 working file). At true 1:1, a 5 mm spacing produces extremely
+        // dense mark grids — acceptable as an explicit user choice. The proper
+        // outputScale UI lives in Phase 2.
+        maxDist:    { min: 5,   max: 5000, label: "MAX_DIST" },
+        // ZUND-only:
+        gapInner:   { min: 0,   max: 1000, label: "GAP_GZ",      mode: "ZUND" },
+        markSizeZ:  { min: 0.1, max: 50,   label: "MARK_SIZE_Z", mode: "ZUND" },
+        orientDist: { min: 10,  max: 2000, label: "ORIENT_DIST", mode: "ZUND" },
+        // SUMMA-only:
+        markSizeS:  { min: 0.1, max: 50,   label: "MARK_SIZE_S", mode: "SUMMA" },
+        feedTop:    { min: 0,   max: 1000, label: "FEED_TOP",    mode: "SUMMA" },
+        feedBottom: { min: 0,   max: 1000, label: "FEED_BOT",    mode: "SUMMA" },
+        // Phase 2 — manual scale (1:N). Integer 1..10.
+        // scaleN=1 = no scaling (UI checkbox unchecked, field disabled).
+        // scaleN=2..10 = doc is 1:N (UI checkbox checked, field shows N).
+        scaleN:     { min: 1,   max: 10,   label: "SCALE_FIELD_LABEL", integer: true }
+    },
+
+    /**
+     * Validates raw UI values against the schema and builds a clean settings
+     * object. For mode-irrelevant fields, falls back to `prev` (matches the
+     * dialog's "preserve other-mode values across mode switch" behavior).
+     *
+     * @param {Object} raw - Raw UI values (strings or numbers OK, comma-decimal OK).
+     *                       Required: mode. Plus all field names in rules + booleans.
+     * @param {Object} prev - Previous settings (for mode-irrelevant field preservation).
+     *                       Pass {} if no previous state.
+     * @param {Object} L    - Locale object (ZSM.L). Used to resolve rule.label
+     *                       to the user-facing field name shown in alerts.
+     * @returns {Object} { valid: bool, settings: {...}|null, errors: [{field,label}, ...] }
+     */
+    validate: function (raw, prev, L) {
+        if (!raw) return { valid: false, settings: null, errors: [{ field: "_root", label: "missing input" }] };
+        // `mode` is the only strictly required field — everything else can
+        // fall back to prev or defaults. Without mode we cannot decide which
+        // mode-specific rules apply.
+        if (!raw.mode)  return { valid: false, settings: null, errors: [{ field: "mode",  label: "mode missing" }] };
+        L = L || {};
+        prev = prev || {};
+
+        var errors = [];
+        var settings = { mode: raw.mode };
+        var mode = raw.mode;
+
+        // Numeric fields per rules
+        for (var field in this.rules) {
+            if (!this.rules.hasOwnProperty(field)) continue;
+            var rule = this.rules[field];
+
+            if (rule.mode && rule.mode !== mode) {
+                // Mode-irrelevant: preserve from prev (or fall to undefined,
+                // caller can fill from defaults if needed)
+                settings[field] = prev[field];
+                continue;
+            }
+
+            // Field not provided in raw input — fall back to prev value.
+            // This keeps old presets / partial UIs working without forcing
+            // every caller to enumerate every schema field explicitly.
+            if (raw[field] === undefined) {
+                settings[field] = prev[field];
+                continue;
+            }
+
+            var label = L[rule.label] || rule.label || field;
+            var val = ZSM.Utils.validateNumber(raw[field], rule.min, rule.max, label);
+            if (val === null) {
+                errors.push({ field: field, label: label });
+            } else if (rule.integer && val !== Math.floor(val)) {
+                // Integer-only rule (e.g. scaleN): reject decimals.
+                // validateNumber already showed range alert; we add a precise
+                // "must be integer" alert via the same locale mechanism.
+                try {
+                    if (typeof alert === "function" && L.ERR_MUST_BE_INTEGER) {
+                        alert(L.format ? L.format(L.ERR_MUST_BE_INTEGER, label) : L.ERR_MUST_BE_INTEGER);
+                    }
+                } catch (e) {}
+                errors.push({ field: field, label: label });
+            } else {
+                settings[field] = val;
+            }
+        }
+
+        // Pass-through fields (no numeric validation needed)
+        // Boolean fields: explicit cast
+        settings.drawRed           = (raw.drawRed === true);
+        settings.useArtboardBounds = (raw.useArtboardBounds === true);
+
+        // String / dropdown fields: empty → fallback
+        settings.markColor = (raw.markColor && raw.markColor !== "")
+            ? raw.markColor
+            : "[Registration]";
+
+        // Layers: array passthrough (UI is responsible for shape)
+        settings.layers = (raw.layers && raw.layers.length > 0)
+            ? raw.layers
+            : [{ name: "Cut", color: "[Registration]" }];
+
+        return errors.length === 0
+            ? { valid: true,  settings: settings, errors: [] }
+            : { valid: false, settings: null,     errors: errors };
+    }
+};
+
+var ZSM = ZSM || {};
+
+/**
+ * ZSM.UIState — Pure state-transition logic for the preset dialog.
+ *
+ * Extracted from ScriptUI event handlers so it can be unit-tested without
+ * a real dialog. Functions take a `pData` (preset wrapper) plus inputs and
+ * return a NEW pData (or the same with mutations) representing the post-
+ * action state.
+ *
+ * The dialog (ui.js) wires these to button onClick handlers; everything
+ * UI-specific (alerts, prompts, control updates) stays in ui.js.
+ *
+ * Conventions:
+ *   - pData = { activePreset: string, presets: { [name]: settings, ... } }
+ *   - "[Default]" and "[Last Settings]" are reserved names
+ *   - validatePresetName returns null on invalid (instead of throwing)
+ */
+ZSM.UIState = {
+    // These two are intentionally duplicated from ZSM.Config (kept local so
+    // ui_state can be unit-tested without loading Config). MUST stay in sync
+    // with ZSM.Config.PRESET_KEY_DEFAULT — if you rename a reserved preset
+    // key, change it in BOTH places.
+    PRESET_KEY_DEFAULT: "[Default]",
+    PRESET_KEY_LAST:    "[Last Settings]",
+
+    /**
+     * Validates a preset name.
+     * @param {string} rawName - User-entered name.
+     * @returns {string|null} Trimmed name, or null if invalid.
+     */
+    validatePresetName: function (rawName) {
+        var name = String(rawName == null ? "" : rawName).replace(/^\s+|\s+$/g, "");
+        if (!name) return null;
+        if (name === this.PRESET_KEY_DEFAULT || name === this.PRESET_KEY_LAST) return null;
+        return name;
+    },
+
+    /**
+     * Returns true if the active preset has unsaved changes (UI values
+     * differ from the stored preset). Uses ZSM.Utils.presetEquals.
+     */
+    isModified: function (pData, currentValues) {
+        if (!pData || !currentValues) return false;
+        var preset = pData.presets[pData.activePreset];
+        if (!preset) return false;
+        return !ZSM.Utils.presetEquals(currentValues, preset);
+    },
+
+    /**
+     * Builds the dropdown list data: ordered keys with display text +
+     * modified-indicator (asterisk).
+     *
+     * @param {Object} pData         - Preset wrapper.
+     * @param {Object} currentValues - Current UI values (for modified check).
+     * @param {Object} L             - Locale (for [Default] display).
+     * @returns {Array} [{ key, displayText, isActive, isModified }, ...]
+     */
+    formatPresetList: function (pData, currentValues, L) {
+        L = L || {};
+        var defaultDisplay = L.PRESET_DEFAULT || this.PRESET_KEY_DEFAULT;
+        var DEF = this.PRESET_KEY_DEFAULT;
+        var keys = [];
+        for (var k in pData.presets) {
+            if (pData.presets.hasOwnProperty(k) && k !== this.PRESET_KEY_LAST) keys.push(k);
+        }
+        // [Default] always pinned first; rest alphabetical
+        keys.sort(function (a, b) {
+            if (a === DEF) return -1;
+            if (b === DEF) return 1;
+            return a < b ? -1 : (a > b ? 1 : 0);
+        });
+
+        var modified = this.isModified(pData, currentValues);
+
+        // ES3-safe loop (ExtendScript has no Array.prototype.map)
+        var result = [];
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            var displayText = (key === DEF) ? defaultDisplay : key;
+            var isActive = (key === pData.activePreset);
+            if (isActive && modified) displayText += " *";
+            result.push({
+                key: key,
+                displayText: displayText,
+                isActive: isActive,
+                isModified: isActive && modified
+            });
+        }
+        return result;
+    },
+
+    /**
+     * Save current UI values to the active named preset.
+     *
+     * Behavior:
+     *   - If active preset is [Default] or [Last Settings] → returns
+     *     {ok: false, reason: "needs-name"} (caller should prompt for name
+     *     via saveAs).
+     *   - Otherwise → mutates pData.presets[activePreset] = currentValues,
+     *     returns {ok: true}.
+     *
+     * @param {Object} pData         - Preset wrapper (mutated).
+     * @param {Object} currentValues - UI values to save.
+     * @returns {Object} {ok, reason?}
+     */
+    save: function (pData, currentValues) {
+        if (!pData || !currentValues) return { ok: false, reason: "missing-input" };
+        var active = pData.activePreset;
+        if (active === this.PRESET_KEY_DEFAULT || active === this.PRESET_KEY_LAST || !active) {
+            return { ok: false, reason: "needs-name" };
+        }
+        pData.presets[active] = currentValues;
+        return { ok: true };
+    },
+
+    /**
+     * Save current UI values as a new (or replacing existing) named preset.
+     *
+     * @param {Object}  pData          - Preset wrapper (mutated).
+     * @param {string}  name           - New preset name (raw user input).
+     * @param {Object}  currentValues  - UI values.
+     * @param {Function} confirmOverwrite - Optional callback (returns bool).
+     *                                     Called when name already exists.
+     *                                     If undefined, overwrite is allowed.
+     * @returns {Object} {ok, reason?, name?}
+     */
+    saveAs: function (pData, name, currentValues, confirmOverwrite) {
+        if (!pData || !currentValues) return { ok: false, reason: "missing-input" };
+        var clean = this.validatePresetName(name);
+        if (!clean) return { ok: false, reason: "invalid-name" };
+        if (pData.presets[clean]) {
+            if (typeof confirmOverwrite === "function" && !confirmOverwrite(clean)) {
+                return { ok: false, reason: "user-cancelled" };
+            }
+        }
+        pData.presets[clean] = currentValues;
+        pData.activePreset = clean;
+        return { ok: true, name: clean };
+    },
+
+    /**
+     * Delete the active preset (cannot delete [Default] or [Last Settings]).
+     * On success, activePreset reverts to [Default].
+     *
+     * @returns {Object} {ok, reason?}
+     */
+    deleteActive: function (pData) {
+        if (!pData) return { ok: false, reason: "missing-input" };
+        var active = pData.activePreset;
+        if (active === this.PRESET_KEY_DEFAULT || active === this.PRESET_KEY_LAST) {
+            return { ok: false, reason: "reserved" };
+        }
+        if (!pData.presets[active]) return { ok: false, reason: "not-found" };
+        delete pData.presets[active];
+        pData.activePreset = this.PRESET_KEY_DEFAULT;
+        return { ok: true };
+    },
+
+    /**
+     * Switch to a different preset (load its values into UI later).
+     * Validates the target exists.
+     *
+     * @returns {Object} {ok, settings?, reason?}
+     */
+    selectPreset: function (pData, name) {
+        if (!pData) return { ok: false, reason: "missing-input" };
+        if (!pData.presets[name]) return { ok: false, reason: "not-found" };
+        pData.activePreset = name;
+        return { ok: true, settings: pData.presets[name] };
     }
 };
 
@@ -452,6 +855,10 @@ var ZSM = ZSM || {};
 
 ZSM.Config = {
     scriptName: "Zund & Summa Marks",
+    // KEEP IN SYNC with package.json "version" — build.sh reads package.json
+    // for the dist header; this constant is the runtime source of truth
+    // for the dialog title, footer copyright, and any in-script "About" UI.
+    version:    "26.4.0",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 
@@ -467,7 +874,9 @@ ZSM.Config = {
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {
-        title: "Zünd & Summa Marks v26.3.1"
+        // Title is composed at runtime so version bump only touches `version` above.
+        // Czech-friendly Zünd umlaut is intentional (matches user's print-shop branding).
+        title: null   // set below to "Zünd & Summa Marks v" + version
     },
 
     /**
@@ -490,149 +899,199 @@ ZSM.Config = {
             markSizeS:        3,
             orientDist:       100,
             markColor:        "[Registration]",
+            // Phase 2 (v26.4.0): manual scale support for shrunken docs.
+            // scaleN = 1  → no scaling (user input == real mm == doc mm)
+            // scaleN > 1  → doc is 1:N (user input in real mm; math divides by N
+            //               on top of AI's scaleFactor). UI enabled via checkbox.
+            scaleN:           1,
             layers: [
                 { name: "Cut", color: "[Registration]" }
             ]
         };
+    }
+};
+
+// Compose the runtime title (must run AFTER ZSM.Config object literal closes
+// so `version` is already on the object).
+ZSM.Config.ui.title = "Zünd & Summa Marks v" + ZSM.Config.version;
+
+// Persistence (load/save + migrations) lives in src/lib/storage.js as
+// ZSM.Storage. Use ZSM.Storage.{load,save} directly — there is no
+// ZSM.Config.Storage anymore.
+
+// ------------------------------------------------------------------------
+// Module: ZSM.Storage — settings persistence + migrations
+// Part of: Illustrator Zund & Summa Marks
+//
+// Responsible for reading/writing the JSON settings file at
+// `Folder.userData/ZSM/settings.json` and migrating older layouts forward.
+// Pure I/O + data transformation; no DOM access, no UI.
+//
+// Depends on: ZSM.Utils (logging), ZSM.Config (getDefaults, PRESET_KEY_DEFAULT)
+// ------------------------------------------------------------------------
+var ZSM = ZSM || {};
+
+ZSM.Storage = {
+    /**
+     * Returns the settings File object, creating the folder if needed.
+     * @returns {File} JSON settings file at the canonical path.
+     */
+    getFile: function () {
+        var folder = new Folder(Folder.userData + "/ZSM");
+        if (!folder.exists) folder.create();
+        return new File(folder.fsName + "/settings.json");
     },
 
-    Storage: {
-        /**
-         * Returns the settings File object, creating the folder if needed.
-         * @returns {File} JSON settings file.
-         */
-        getFile: function () {
-            var folder = new Folder(Folder.userData + "/ZSM");
-            if (!folder.exists) folder.create();
-            return new File(folder.fsName + "/settings_v26_3.json");
-        },
+    /**
+     * Returns the legacy v26.3 settings file (used by load() for one-time
+     * migration to the new canonical filename).
+     * @returns {File} Legacy file path.
+     */
+    getLegacyFile: function () {
+        var folder = new Folder(Folder.userData + "/ZSM");
+        return new File(folder.fsName + "/settings_v26_3.json");
+    },
 
-        /**
-         * Serializes and saves the full preset wrapper to disk.
-         * @param {Object} data - Full preset wrapper {presets, activePreset}.
-         */
-        save: function (data) {
-            try {
-                var f = this.getFile();
-                f.encoding = "UTF-8";
-                if (!f.open("w")) {
-                    ZSM.Utils.error(ZSM.L.ERR_WRITE_SETTINGS);
-                    return;
-                }
-                f.write(JSON.stringify(data));
-                f.close();
-            } catch (e) {
-                ZSM.Utils.log("Storage.save failed: " + e.message);
-            }
-        },
-
-        /**
-         * Loads settings from disk and runs format migrations.
-         * Migration chain: v26.0 flat → v26.3 layers[] → v26.3 presets wrapper → v27 layers without active
-         * Returns null on failure; caller falls back to getDefaults().
-         * @returns {Object|null} Full preset wrapper or null.
-         */
-        load: function () {
+    /**
+     * Serializes and saves the full preset wrapper to disk.
+     * @param {Object} data - Full preset wrapper {presets, activePreset}.
+     */
+    save: function (data) {
+        try {
             var f = this.getFile();
-            if (!f.exists) return null;
-            try {
-                f.encoding = "UTF-8";
-                f.open("r");
-                var content = f.read();
-                f.close();
-                if (!content) return null;
-
-                var data = JSON.parse(content);
-
-                // MIGRATION 1: v26.0 flat thru/kiss → v26.3 layers[]
-                if (data.thruActive !== undefined && data.layers === undefined) {
-                    data.layers = [
-                        { active: data.thruActive,        name: data.thruName || "Cut",      color: "[Registration]" },
-                        { active: data.kissActive || false, name: data.kissName || "Kiss-cut", color: "[Registration]" }
-                    ];
-                    delete data.thruActive; delete data.thruName;
-                    delete data.kissActive; delete data.kissName;
-                }
-
-                // MIGRATION 2: flat settings object → preset wrapper
-                if (!data.presets) {
-                    var flatData = data;
-                    var defPreset = ZSM.Config.getDefaults();
-
-                    // Merge flat data onto defaults to fill any missing keys
-                    var migratedPreset = {};
-                    for (var key in defPreset) {
-                        if (defPreset.hasOwnProperty(key)) {
-                            migratedPreset[key] = flatData.hasOwnProperty(key) ? flatData[key] : defPreset[key];
-                        }
-                    }
-
-                    data = {
-                        activePreset: "[Last Settings]",
-                        presets: {}
-                    };
-                    data.presets[ZSM.Config.PRESET_KEY_DEFAULT] = defPreset;
-                    data.presets["[Last Settings]"]     = migratedPreset;
-                }
-
-                // MIGRATION 3: v26.3 layers {active, name, color} → v27 {name, color}
-                // Remove inactive rows (active:false = user had them disabled)
-                // and strip the `active` property from remaining rows.
-                if (data.presets) {
-                    for (var pKey in data.presets) {
-                        if (!data.presets.hasOwnProperty(pKey)) continue;
-                        var preset = data.presets[pKey];
-                        if (preset.layers && preset.layers.length > 0) {
-                            var migrated = [];
-                            for (var li = 0; li < preset.layers.length; li++) {
-                                var row = preset.layers[li];
-                                // Keep only rows that were active (or have no active property = new format)
-                                if (row.active === false) continue;
-                                migrated.push({ name: row.name || "", color: row.color || "" });
-                            }
-                            // Ensure at least one row after migration
-                            if (migrated.length === 0) {
-                                migrated.push({ name: "Cut", color: "[Registration]" });
-                            }
-                            preset.layers = migrated;
-                        }
-                    }
-                }
-
-                // MIGRATION 4: locale-independent default preset key (W4)
-                // Older versions stored the default preset under a localized key
-                // (e.g. "[Výchozí]" in Czech). Rename to the fixed key "[Default]".
-                if (data.presets) {
-                    var knownLocalized = ["[Výchozí]"];
-                    for (var ld = 0; ld < knownLocalized.length; ld++) {
-                        var localKey = knownLocalized[ld];
-                        if (data.presets[localKey] && !data.presets[ZSM.Config.PRESET_KEY_DEFAULT]) {
-                            data.presets[ZSM.Config.PRESET_KEY_DEFAULT] = data.presets[localKey];
-                            delete data.presets[localKey];
-                            if (data.activePreset === localKey) {
-                                data.activePreset = ZSM.Config.PRESET_KEY_DEFAULT;
-                            }
-                        }
-                    }
-                }
-
-                // Forward-fill: add any new default keys missing from all presets
-                var defKeys = ZSM.Config.getDefaults();
-                for (var pKey2 in data.presets) {
-                    if (!data.presets.hasOwnProperty(pKey2)) continue;
-                    var preset2 = data.presets[pKey2];
-                    for (var k in defKeys) {
-                        if (defKeys.hasOwnProperty(k) && typeof preset2[k] === "undefined") {
-                            preset2[k] = defKeys[k];
-                        }
-                    }
-                }
-
-                return data;
-            } catch (e) {
-                ZSM.Utils.log("Storage.load failed: " + e.message);
-                return null;
+            f.encoding = "UTF-8";
+            if (!f.open("w")) {
+                ZSM.Utils.error(ZSM.L.ERR_WRITE_SETTINGS);
+                return;
             }
+            f.write(JSON.stringify(data));
+            f.close();
+        } catch (e) {
+            ZSM.Utils.log("Storage.save failed: " + e.message);
+        }
+    },
+
+    /**
+     * Loads settings from disk and runs format migrations.
+     * Migration chain: v26.0 flat → v26.3 layers[] → v26.3 presets wrapper → v27 layers without active
+     * Returns null on failure; caller falls back to getDefaults().
+     * @returns {Object|null} Full preset wrapper or null.
+     */
+    load: function () {
+        var f = this.getFile();
+        // FILENAME MIGRATION: v26.x used settings_v26_3.json. If the new
+        // canonical file doesn't exist but the legacy one does, read from
+        // legacy (will be re-saved to new path on next save()).
+        if (!f.exists) {
+            var legacy = this.getLegacyFile();
+            if (legacy.exists) f = legacy;
+            else return null;
+        }
+        try {
+            f.encoding = "UTF-8";
+            f.open("r");
+            var content = f.read();
+            f.close();
+            if (!content) return null;
+
+            var data = JSON.parse(content);
+
+            // MIGRATION 1: v26.0 flat thru/kiss → v26.3 layers[]
+            if (data.thruActive !== undefined && data.layers === undefined) {
+                data.layers = [
+                    { active: data.thruActive,        name: data.thruName || "Cut",      color: "[Registration]" },
+                    { active: data.kissActive || false, name: data.kissName || "Kiss-cut", color: "[Registration]" }
+                ];
+                delete data.thruActive; delete data.thruName;
+                delete data.kissActive; delete data.kissName;
+            }
+
+            // MIGRATION 2: flat settings object → preset wrapper
+            if (!data.presets) {
+                var flatData = data;
+                var defPreset = ZSM.Config.getDefaults();
+
+                // Merge flat data onto defaults to fill any missing keys
+                var migratedPreset = {};
+                for (var key in defPreset) {
+                    if (defPreset.hasOwnProperty(key)) {
+                        migratedPreset[key] = flatData.hasOwnProperty(key) ? flatData[key] : defPreset[key];
+                    }
+                }
+
+                data = {
+                    activePreset: "[Last Settings]",
+                    presets: {}
+                };
+                data.presets[ZSM.Config.PRESET_KEY_DEFAULT] = defPreset;
+                data.presets["[Last Settings]"]     = migratedPreset;
+            }
+
+            // MIGRATION 3: v26.3 layers {active, name, color} → v27 {name, color}
+            // Remove inactive rows (active:false = user had them disabled)
+            // and strip the `active` property from remaining rows.
+            if (data.presets) {
+                for (var pKey in data.presets) {
+                    if (!data.presets.hasOwnProperty(pKey)) continue;
+                    var preset = data.presets[pKey];
+                    if (preset.layers && preset.layers.length > 0) {
+                        var migrated = [];
+                        for (var li = 0; li < preset.layers.length; li++) {
+                            var row = preset.layers[li];
+                            // Keep only rows that were active (or have no active property = new format)
+                            if (row.active === false) continue;
+                            migrated.push({ name: row.name || "", color: row.color || "" });
+                        }
+                        // Ensure at least one row after migration
+                        if (migrated.length === 0) {
+                            migrated.push({ name: "Cut", color: "[Registration]" });
+                        }
+                        preset.layers = migrated;
+                    }
+                }
+            }
+
+            // MIGRATION 4: locale-independent default preset key (W4)
+            // Older versions stored the default preset under a localized key
+            // (e.g. "[Výchozí]" in Czech, possibly other locales). Detect any
+            // bracketed key that looks like a sentinel ("[<text>]") and is NOT
+            // the canonical "[Default]" / "[Last Settings]", and rename it to
+            // "[Default]" if no canonical default exists.
+            // Pattern-based (instead of a hardcoded whitelist) so future
+            // localizations migrate automatically without a code change.
+            if (data.presets && !data.presets[ZSM.Config.PRESET_KEY_DEFAULT]) {
+                var SENTINEL_RE = /^\[.+\]$/;
+                var KNOWN_RESERVED = { "[Last Settings]": true };
+                for (var sKey in data.presets) {
+                    if (!data.presets.hasOwnProperty(sKey)) continue;
+                    if (KNOWN_RESERVED[sKey]) continue;
+                    if (!SENTINEL_RE.test(sKey)) continue;
+                    // First bracketed non-reserved key wins as the localized default
+                    data.presets[ZSM.Config.PRESET_KEY_DEFAULT] = data.presets[sKey];
+                    delete data.presets[sKey];
+                    if (data.activePreset === sKey) {
+                        data.activePreset = ZSM.Config.PRESET_KEY_DEFAULT;
+                    }
+                    break;
+                }
+            }
+
+            // Forward-fill: add any new default keys missing from all presets
+            var defKeys = ZSM.Config.getDefaults();
+            for (var pKey2 in data.presets) {
+                if (!data.presets.hasOwnProperty(pKey2)) continue;
+                var preset2 = data.presets[pKey2];
+                for (var k in defKeys) {
+                    if (defKeys.hasOwnProperty(k) && typeof preset2[k] === "undefined") {
+                        preset2[k] = defKeys[k];
+                    }
+                }
+            }
+
+            return data;
+        } catch (e) {
+            ZSM.Utils.log("Storage.load failed: " + e.message);
+            return null;
         }
     }
 };
@@ -656,7 +1115,12 @@ ZSM.Core = {
      */
     calculateAll: function (s, b) {
         var cfg = ZSM.Config;
-        var sf  = ZSM.Utils.getSF(); // 1 for standard, 10 for Large Canvas
+        // Effective scale factor — see ZSM.Utils.getEffectiveSF() for the
+        // single source of truth. Routes through that helper so core.js and
+        // draw.js cannot drift apart again (the bug class fixed in v26.4.0
+        // manual test: draw.js used raw getSF(), missed scaleN, marks
+        // didn't shrink).
+        var sf  = ZSM.Utils.getEffectiveSF(s);
 
         // Convert physical constants to document-space values
         var rZ    = (s.markSizeZ / 2) / sf;
@@ -834,103 +1298,47 @@ ZSM.Core = {
     }
 };
 
+// ------------------------------------------------------------------------
+// Module: ZSM.Bounds — bounds measurement of Illustrator content
+// Part of: Illustrator Zund & Summa Marks
+//
+// Pure measurement responsibility — reads the document, never mutates it.
+// Encapsulates clipping-aware bounds calculation including layer-level
+// clipping heuristic for bracket-named layers (Illustrator's auto-named
+// <Clip Group> / <Group>) and stack-based traversal of clipped groups.
+//
+// Public:
+//   ZSM.Bounds.get(s)                — main entry; returns [L,T,R,B] or null
+//   ZSM.Bounds.isArtifactLayer(l)    — bracket-named layer detection (also
+//                                       used by ZSM.Draw render code)
+//   ZSM.Bounds.isInsideClippedGroup  — ancestor check (also used by movePaths)
+//
+// Internal helpers (kept on the namespace for testability):
+//   _measureLayer, _getEffectiveBounds
+//
+// Depends on: ZSM.Config (layerRegmarks, layerGraphics)
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
-ZSM.Draw = {
-    /** @type {Array} AUTO_SPOT_COLOR - CMYK fallback for auto-created spot swatches [C,M,Y,K] */
-    AUTO_SPOT_COLOR: [0, 100, 0, 0],
-
-    /** @private Storage for layers locked at session start {index, name}, restored on end. */
-    _lockedLayers: [],
-    /** @private Storage for layers hidden at session start {index, name}, restored on end. */
-    _hiddenLayers: [],
-
-    // -------------------------------------------------------------------------
-    // Session management
-    // -------------------------------------------------------------------------
-
+ZSM.Bounds = {
     /**
-     * Unlocks and makes all layers visible before rendering.
-     * Stores locked layer names so endSession() can restore them.
-     */
-    beginSession: function () {
-        var doc = app.activeDocument;
-        this._lockedLayers = [];
-        this._hiddenLayers = [];
-        for (var i = 0; i < doc.layers.length; i++) {
-            try {
-                // Skip artifact layers (bracket-prefixed names like <Clip Group>)
-                // — modifying their state can crash Illustrator at C++ level.
-                if (this._isArtifactLayer(doc.layers[i])) continue;
-
-                if (doc.layers[i].locked) {
-                    this._lockedLayers.push({ idx: i, name: doc.layers[i].name });
-                    doc.layers[i].locked = false;
-                }
-                if (!doc.layers[i].visible) {
-                    this._hiddenLayers.push({ idx: i, name: doc.layers[i].name });
-                    doc.layers[i].visible = true;
-                }
-            } catch (e) {
-                ZSM.Utils.log("beginSession: failed to unlock layer — " + doc.layers[i].name);
-            }
-        }
-    },
-
-    /**
-     * Restores layer locks that were cleared by beginSession().
-     */
-    endSession: function () {
-        var doc = app.activeDocument;
-        // Restore by index first (stable after script adds/removes layers at
-        // the top of the stack). Fall back to getByName if the index no longer
-        // points to the same layer (e.g. user layers were reordered by render).
-        for (var i = 0; i < this._lockedLayers.length; i++) {
-            try {
-                var rec = this._lockedLayers[i];
-                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
-                    ? doc.layers[rec.idx]
-                    : doc.layers.getByName(rec.name);
-                lay.locked = true;
-            } catch (e) {}
-        }
-        for (var i = 0; i < this._hiddenLayers.length; i++) {
-            try {
-                var rec = this._hiddenLayers[i];
-                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
-                    ? doc.layers[rec.idx]
-                    : doc.layers.getByName(rec.name);
-                lay.visible = false;
-            } catch (e) {}
-        }
-        this._lockedLayers = [];
-        this._hiddenLayers = [];
-    },
-
-    // -------------------------------------------------------------------------
-    // Bounds
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns combined geometric bounds of all artwork items.
-     * In Fixed/Artboard mode returns the active artboard rect directly.
-     * Skips items on system layers (Regmarks, Graphics) and hidden layers.
-     * Handles clipped groups by measuring the clip mask path, not the group.
+     * Computes a single bounding rectangle that contains every layer's
+     * top-level content (after applying skip rules for our own output
+     * layer, the other-mode marks, the trim sublayer, etc.).
      *
-     * Iterates doc.pageItems directly instead of using the former
-     * app.executeMenuCommand('selectall') approach. selectall goes through
-     * Illustrator's C++ command pipeline and can crash the application when
-     * the DOM is in an inconsistent state (e.g. after partial undo of a
-     * previous script run). doc.pageItems is a flat recursive collection,
-     * so items nested inside groups are skipped via a parent check —
-     * groups themselves are measured via _getEffectiveBounds() which
-     * respects clipping masks. If .parent is unreliable (known ExtendScript
-     * edge case), the item is skipped conservatively.
+     * Skip rules:
+     *   - Regmarks (our output layer) → only OTHER mode's sublayer is
+     *     measured (so a second run places marks outside the first run)
+     *   - Graphics → the "Trim" sublayer (our own trim lines) is skipped
+     *   - guide paths and PluginItem/NonNativeItem are skipped
      *
-     * @param {Object} s - Settings (uses s.useArtboardBounds).
+     * Hidden layers ARE measured — script intent is to encompass the full
+     * graphic extent regardless of visibility.
+     *
+     * @param {Object} s - Settings (uses s.useArtboardBounds, s.mode).
      * @returns {Array|null} [L, T, R, B] in document points, or null.
      */
-    getBounds: function (s) {
+    get: function (s) {
         var doc = app.activeDocument;
 
         if (s && s.useArtboardBounds) {
@@ -938,293 +1346,167 @@ ZSM.Draw = {
             return ab.artboardRect;
         }
 
+        // Clear any prior selection — held refs can crash later DOM access
+        // at C++ level if items they reference get moved/removed.
+        try { doc.selection = null; } catch (ds1) {}
+
         var b = [Infinity, -Infinity, -Infinity, Infinity];
-        var found = false;
-        var pageItems = doc.pageItems;
-        // Cache length — ExtendScript re-queries the live DOM on each access
-        var piLen = pageItems.length;
+        var bRef = { found: false };
+        var currentMode = (s && s.mode === "SUMMA") ? "Summa" : "Zünd";
 
-        for (var i = 0; i < piLen; i++) {
+        // Per-layer skip rules for sublayer recursion
+        var regmarksSkip = {};
+        regmarksSkip[currentMode] = true;
+        var graphicsSkip = { "Trim": true };
+
+        for (var li = 0; li < doc.layers.length; li++) {
             try {
-                var item = pageItems[i];
+                var layer = doc.layers[li];
+                // Bracket-named layers ARE measured (read-only) — only state
+                // mutation on them is dangerous and is guarded in
+                // beginSession()/render bottom-layer rename/movePaths.
+                // Reading geometricBounds is safe and lets the layer-clip
+                // heuristic in _measureLayer detect <Clip Group> wrappers.
 
-                // Skip item types that cannot reliably report bounds
-                // (PluginItems, RasterItems with missing links, graph objects)
-                var tn = item.typename;
-                if (tn === "PluginItem" || tn === "NonNativeItem") continue;
+                var layName = layer.name;
 
-                // Skip items nested inside groups — their bounds are accounted
-                // for when we measure the parent group via _getEffectiveBounds.
-                // .parent can be unreliable in rare ExtendScript edge cases;
-                // failures are caught and the item is skipped conservatively.
-                try {
-                    if (item.parent && item.parent.typename === "GroupItem") continue;
-                } catch (pe) { continue; }
-
-                // Skip system and artifact layers
-                try {
-                    if (item.layer) {
-                        var layName = item.layer.name;
-                        if (layName === ZSM.Config.layerRegmarks) continue;
-
-                        // Skip items on artifact layers (bracket-prefixed names)
-                        var fc = layName.charAt(0);
-                        if (fc === '<' || fc === '(') continue;
-
-                        // Skip trim-line sublayer inside Graphics (from previous run).
-                        // Don't skip the Graphics layer itself — it contains user artwork.
-                        if (layName === "Trim") {
-                            try { if (item.layer.parent.name === ZSM.Config.layerGraphics) continue; } catch (e2) {}
-                        }
-
-                        // Skip items from layers hidden before session started
-                        var wasHidden = false;
-                        for (var h = 0; h < this._hiddenLayers.length; h++) {
-                            if (layName === this._hiddenLayers[h]) { wasHidden = true; break; }
-                        }
-                        if (wasHidden) continue;
-                    }
-                } catch (le) { continue; }
-
-                // Skip guide paths — guides placed far outside the canvas would
-                // inflate bounds to extreme values, causing artboard resize to fail.
-                if ((item.typename === "PathItem" || item.typename === "CompoundPathItem") && item.guides) continue;
-
-                // For clipped groups (including nested), measure the clip mask
-                // path instead of the whole group. Clip mask is always the
-                // first child (top-most) in a clipping group — AI convention.
-                var g = this._getEffectiveBounds(item);
-
-                if (g) {
-                    b[0] = Math.min(b[0], g[0]);
-                    b[1] = Math.max(b[1], g[1]);
-                    b[2] = Math.max(b[2], g[2]);
-                    b[3] = Math.min(b[3], g[3]);
-                    found = true;
-                }
-            } catch (e) {
-                // Skip items that cannot be accessed safely (zombie/corrupted
-                // references after undo or DOM inconsistency).
-            }
-        }
-
-        return found ? b : null;
-    },
-
-    // -------------------------------------------------------------------------
-    // Rendering
-    // -------------------------------------------------------------------------
-
-    /**
-     * Renders all geometry into the Illustrator document.
-     * Draw order: resize artboard → layers → Zünd marks → Summa marks →
-     *             Summa bar → trim lines → redraw.
-     *
-     * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
-     * @param {Object} s   - Settings from UI.
-     */
-    render: function (geo, s) {
-        var doc = app.activeDocument;
-
-        try {
-            // 1. Resize artboard (Auto-fit mode only)
-            // Validate bounds before setting — coordinates beyond ~16383pt
-            // (227in / 5765mm) crash Illustrator at C++ level.
-            if (!s.useArtboardBounds) {
-                var abMax = 16383;
-                if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
-                    Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
-                    ZSM.Utils.error(ZSM.L.ERR_GENERIC
-                        ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
-                        : "Artboard exceeds maximum size.");
-                    return;
-                }
-                var activeIdx = doc.artboards.getActiveArtboardIndex();
-                doc.artboards[activeIdx].artboardRect = geo.ab;
-            }
-
-            // 2. Prepare Regmarks layer at front — clear old content first
-            var reg = this.getLay(ZSM.Config.layerRegmarks);
-            this._clearLayer(reg);
-            reg.zOrder(ZOrderMethod.BRINGTOFRONT);
-            var refLayer = reg;
-
-            // 3. Dynamic layer mapping — move spot-colored paths to named layers
-            // Row existence = active (no checkbox in new UI design)
-            if (s.layers && s.layers.length > 0) {
-                for (var i = 0; i < s.layers.length; i++) {
-                    var layDef = s.layers[i];
-                    if (layDef.name && layDef.color && layDef.color !== "") {
-                        var targetLay = this.getLay(layDef.name);
-                        var hit = this.movePaths(targetLay, [layDef.color]);
-                        if (!hit) {
-                            geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
-                        }
-                        targetLay.move(refLayer, ElementPlacement.PLACEAFTER);
-                        refLayer = targetLay;
-                    }
-                }
-            }
-
-            // 4. Draw Zünd marks (circles)
-            var col = this.getCol(s.markColor);
-            doc.activeLayer = reg;
-
-            var sf   = ZSM.Utils.getSF();
-            var zSize = (Number(s.markSizeZ) || 5.0) / sf;
-            var rZ   = ZSM.Utils.mm2pt(zSize / 2);
-
-            // Illustrator max coordinate ~16383pt (227in). Creating items
-            // beyond this crashes at C++ level — validate before drawing.
-            var MAX_COORD = 16383;
-
-            var marksZ = geo.marksZ;
-            for (var z = 0; z < marksZ.length; z++) {
-                var m = marksZ[z];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
-                try {
-                    var circle = reg.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
-                    circle.fillColor     = col;
-                    circle.fillOverprint = true;
-                    circle.stroked       = false;
-                } catch (e) {
-                    ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
-                }
-            }
-
-            // 5. Draw Summa marks (squares)
-            var sSize = (Number(s.markSizeS) || 3.0) / sf;
-            var rS   = ZSM.Utils.mm2pt(sSize / 2);
-
-            var marksS = geo.marksS;
-            for (var sm = 0; sm < marksS.length; sm++) {
-                var m = marksS[sm];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
-                try {
-                    var sq = reg.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
-                    sq.fillColor     = col;
-                    sq.fillOverprint = true;
-                    sq.stroked       = false;
-                } catch (e) {
-                    ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
-                }
-            }
-
-            // 6. Draw Summa registration bar
-            if (geo.barS) {
-                try {
-                    var bar = reg.pathItems.add();
-                    bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
-                    bar.strokeColor     = col;
-                    bar.strokeOverprint = true;
-                    bar.strokeWidth     = geo.barS.w;
-                    bar.filled          = false;
-                } catch (e) {
-                    ZSM.Utils.log("render: failed to draw OPOS bar");
-                }
-            }
-
-            // 7. Name bottom layer as Graphics and draw trim lines into it.
-            //    Assumption: the bottom-most layer is the user's artwork layer.
-            //    In multi-layer documents, only the absolute bottom layer is renamed.
-            var gfxLayer = doc.layers[doc.layers.length - 1];
-            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !this._isArtifactLayer(gfxLayer)) {
-                // Track rename so endSession() can restore locks/visibility (W3)
-                var oldGfxName = gfxLayer.name;
-                gfxLayer.name    = ZSM.Config.layerGraphics;
-                for (var li = 0; li < this._lockedLayers.length; li++) {
-                    if (this._lockedLayers[li] === oldGfxName) {
-                        this._lockedLayers[li] = ZSM.Config.layerGraphics; break;
-                    }
-                }
-                for (var li = 0; li < this._hiddenLayers.length; li++) {
-                    if (this._hiddenLayers[li] === oldGfxName) {
-                        this._hiddenLayers[li] = ZSM.Config.layerGraphics; break;
-                    }
-                }
-                gfxLayer.locked  = false;
-                gfxLayer.visible = true;
-                gfxLayer.zOrder(ZOrderMethod.SENDTOBACK);
-
-                if (geo.red.length > 0) {
-                    // Draw trim lines into a sublayer to keep them
-                    // separate from artwork but inside the print layer.
-                    // Remove previous Trim sublayer to prevent accumulation.
-                    try {
-                        var oldTrim = gfxLayer.layers.getByName("Trim");
-                        oldTrim.remove();
-                    } catch (e) { /* no previous Trim — first run */ }
-                    var trimLayer = gfxLayer.layers.add();
-                    trimLayer.name = "Trim";
-
-                    var redColor = new CMYKColor();
-                    redColor.magenta = 100;
-                    redColor.yellow  = 100;
-                    for (var r = 0; r < geo.red.length; r++) {
+                if (layName === ZSM.Config.layerRegmarks) {
+                    // Regmarks is OUR output layer. Skip its direct items
+                    // (legacy/migrated marks would inflate bounds onto themselves).
+                    // Recurse only into the OTHER mode's sublayer — those marks
+                    // act as a boundary so a second-mode run places its marks
+                    // outside the first run's marks.
+                    var regSubs = layer.layers;
+                    for (var rsi = 0; rsi < regSubs.length; rsi++) {
                         try {
-                            var line = trimLayer.pathItems.add();
-                            line.setEntirePath([
-                                [geo.red[r].x1, geo.red[r].y1],
-                                [geo.red[r].x2, geo.red[r].y2]
-                            ]);
-                            line.strokeColor = redColor;
-                            line.strokeWidth = geo.red[r].w;
-                            line.filled      = false;
-                        } catch (e) {
-                            ZSM.Utils.log("render: failed to draw trim line at index " + r);
-                        }
+                            var rsub = regSubs[rsi];
+                            if (regmarksSkip[rsub.name]) continue;  // skip current mode
+                            this._measureLayer(rsub, b, bRef, null);
+                        } catch (rse) {}
                     }
+                    continue;
                 }
+
+                var skipNames = null;
+                if (layName === ZSM.Config.layerGraphics) skipNames = graphicsSkip;
+
+                this._measureLayer(layer, b, bRef, skipNames);
+            } catch (le) {
+                // Skip unreadable top-level layer
             }
-
-            if (geo.warnings.length > 0) ZSM.Utils.error(geo.warnings.join("\n"));
-            app.redraw();
-
-        } catch (e) {
-            ZSM.Utils.error(ZSM.L.ERR_RENDER_CRITICAL + e.message);
         }
+
+        return bRef.found ? b : null;
     },
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
     /**
-     * Removes all page items and sublayers from a layer, leaving it empty.
-     * Used to clear old Regmarks before re-rendering.
-     * @param {Layer} layer - Layer to clear.
+     * Recursively measures top-level items of a layer (and its sublayers),
+     * updating the bounds accumulator `b` and setting `bRef.found = true`
+     * when at least one item contributes.
+     *
+     * Top-level filter (`item.parent === layer`) excludes items nested
+     * inside groups/compound paths, which are accounted for by their
+     * parent group via `_getEffectiveBounds()`.
+     *
+     * Layer-level clipping handling: a Layer/sublayer with a bracket-
+     * prefixed name (auto-generated by Illustrator: <Clip Group>, <Group>,
+     * <Compound Path>) is by convention layer-clipped — its top-most
+     * pageItem is the clip mask and the rest is the clipped content. The
+     * DOM does not expose Layer-level `clipped` (only GroupItem has that),
+     * so we infer it from the bracket name and measure ONLY the top-most
+     * direct child. Otherwise the unclipped content would inflate bounds
+     * far beyond the visible clipped area.
+     *
+     * @param {Layer}  layer     - Layer to measure.
+     * @param {Array}  b         - Bounds accumulator [L, T, R, B].
+     * @param {Object} bRef      - {found: bool} flag updated on first hit.
+     * @param {Object} skipNames - Map of sublayer names to skip (or null).
      * @private
      */
-    _clearLayer: function (layer) {
+    _measureLayer: function (layer, b, bRef, skipNames) {
         try {
-            // Remove sublayers first
-            while (layer.layers.length > 0) {
-                try { layer.layers[0].remove(); } catch (e) { break; }
-            }
-            // Remove page items (iterate backwards to avoid index shifts)
+            var addBounds = function (g) {
+                if (!g) return;
+                b[0] = Math.min(b[0], g[0]);
+                b[1] = Math.max(b[1], g[1]);
+                b[2] = Math.max(b[2], g[2]);
+                b[3] = Math.min(b[3], g[3]);
+                bRef.found = true;
+            };
+
             var items = layer.pageItems;
-            for (var i = items.length - 1; i >= 0; i--) {
-                try { items[i].remove(); } catch (e) {}
+
+            // Layer-level clipping heuristic: bracket-named layer = clipped.
+            // Measure ONLY the top-most direct child (the assumed clip mask).
+            // This matches what's visually inside the clipped area and
+            // prevents the inner artwork's full unclipped bounds from
+            // inflating the measurement.
+            if (this.isArtifactLayer(layer)) {
+                for (var li = 0; li < items.length; li++) {
+                    try {
+                        var top = items[li];
+                        var direct = false;
+                        try { direct = (top.parent === layer); } catch (pe) { continue; }
+                        if (!direct) continue;
+
+                        var tnT = top.typename;
+                        if (tnT === "PluginItem" || tnT === "NonNativeItem") continue;
+                        if ((tnT === "PathItem" || tnT === "CompoundPathItem") && top.guides) continue;
+
+                        addBounds(this._getEffectiveBounds(top));
+                        break; // measured the clip mask — done
+                    } catch (ie1) {}
+                }
+                return;
             }
-        } catch (e) {
-            ZSM.Utils.log("_clearLayer: " + e.message);
-        }
+
+            // Normal layer: measure all top-level direct children.
+            for (var i = 0; i < items.length; i++) {
+                try {
+                    var item = items[i];
+
+                    var isDirect = false;
+                    try { isDirect = (item.parent === layer); } catch (pe2) { continue; }
+                    if (!isDirect) continue;
+
+                    var tn = item.typename;
+                    if (tn === "PluginItem" || tn === "NonNativeItem") continue;
+                    if ((tn === "PathItem" || tn === "CompoundPathItem") && item.guides) continue;
+
+                    addBounds(this._getEffectiveBounds(item));
+                } catch (ie) {}
+            }
+
+            // Recurse into sublayers (incl. bracket-named ones — they get
+            // their own layer-clip heuristic in the recursive call above).
+            var subs = layer.layers;
+            for (var sli = 0; sli < subs.length; sli++) {
+                try {
+                    var sub = subs[sli];
+                    if (skipNames && skipNames[sub.name]) continue;
+                    this._measureLayer(sub, b, bRef, skipNames);
+                } catch (se) {}
+            }
+        } catch (le) {}
     },
 
     /**
-     * Detects Illustrator artifact layers with bracket-prefixed names.
-     * These are auto-created by operations like Release Clipping Mask
-     * (<Clip Group>), Release Compound Path (<Compound Path>), or
-     * Isolation Mode artifacts. Modifying their lock/visibility state
-     * can cause C++ level crashes that try/catch cannot intercept.
+     * Detects "artifact" layers — those auto-generated by Illustrator with
+     * bracket-prefixed names (<Clip Group>, <Group>, <Compound Path>) or
+     * paren-prefixed names. Used by:
+     *   - bounds: layer-clip heuristic (measure only top child)
+     *   - draw render: skip during state mutation (rename/move) to avoid
+     *     breaking Illustrator's auto-management of these wrappers
      *
      * @param {Layer} layer - Layer to test.
-     * @returns {boolean} True if layer has a bracket-prefixed name.
-     * @private
+     * @returns {boolean}
      */
-    _isArtifactLayer: function (layer) {
+    isArtifactLayer: function (layer) {
         try {
             var c = layer.name.charAt(0);
+            // Defensive: empty layer name → c === "" → falsy on both
+            // comparisons → returns false. The catch handles missing/
+            // unreadable name (returns true, treating it as artifact).
             return c === '<' || c === '(';
         } catch (e) { return true; }
     },
@@ -1236,15 +1518,16 @@ ZSM.Draw = {
      * effective bounds (so a clipped subgroup inside a plain group is
      * handled correctly). For leaf items, returns geometricBounds directly.
      *
+     * Iterative traversal using an explicit stack to avoid stack overflow:
+     * ExtendScript has a call stack limit of ~100-200 frames; deeply nested
+     * groups (common in programmatically generated or imported SVG files)
+     * would crash with a recursive approach.
+     *
      * @param {PageItem} item - Item to measure.
      * @returns {Array|null} [L, T, R, B] in document points, or null on failure.
      * @private
      */
     _getEffectiveBounds: function (item) {
-        // Iterative traversal using an explicit stack to avoid stack overflow.
-        // ExtendScript has a call stack limit of ~100-200 frames; deeply nested
-        // groups (common in programmatically generated or imported SVG files)
-        // would crash with a recursive approach.
         try {
             var stack = [item];
             var b = [Infinity, -Infinity, -Infinity, Infinity];
@@ -1297,9 +1580,8 @@ ZSM.Draw = {
      *
      * @param {PageItem} item - Item to check.
      * @returns {boolean} True if item is inside a clipped group.
-     * @private
      */
-    _isInsideClippedGroup: function (item) {
+    isInsideClippedGroup: function (item) {
         try {
             var p = item.parent;
             while (p) {
@@ -1310,7 +1592,417 @@ ZSM.Draw = {
             }
         } catch (e) {}
         return false;
+    }
+};
+
+var ZSM = ZSM || {};
+
+ZSM.Draw = {
+    /**
+     * Illustrator hard coordinate limit. Anything beyond this in artboardRect or
+     * pathItem positions crashes at C++ level (no JS try/catch can intercept).
+     * 16383 pt ≈ 227 in ≈ 5765 mm — Large Canvas Mode upper bound.
+     */
+    MAX_ARTBOARD_COORD: 16383,
+
+    /** @private Storage for layers locked at session start {idx, name}, restored on end. */
+    _lockedLayers: [],
+
+    // -------------------------------------------------------------------------
+    // Session management
+    // -------------------------------------------------------------------------
+
+    /**
+     * Unlocks all layers before rendering.
+     * Stores locked layer names so endSession() can restore them.
+     * Hidden layers are left hidden — their items are excluded from
+     * bounds calculation and movePaths() cannot move from them.
+     */
+    beginSession: function () {
+        var doc = app.activeDocument;
+        this._lockedLayers = [];
+        for (var i = 0; i < doc.layers.length; i++) {
+            try {
+                // Skip artifact layers (bracket-prefixed names like <Clip Group>)
+                // — modifying their state can crash Illustrator at C++ level.
+                if (ZSM.Bounds.isArtifactLayer(doc.layers[i])) continue;
+
+                if (doc.layers[i].locked) {
+                    this._lockedLayers.push({ idx: i, name: doc.layers[i].name });
+                    doc.layers[i].locked = false;
+                }
+            } catch (e) {
+                ZSM.Utils.log("beginSession: failed to unlock layer — " + doc.layers[i].name);
+            }
+        }
     },
+
+    /**
+     * Restores layer locks that were cleared by beginSession().
+     */
+    endSession: function () {
+        var doc = app.activeDocument;
+        // Restore by index first (stable after script adds/removes layers at
+        // the top of the stack). Fall back to getByName if the index no longer
+        // points to the same layer (e.g. user layers were reordered by render).
+        for (var i = 0; i < this._lockedLayers.length; i++) {
+            try {
+                var rec = this._lockedLayers[i];
+                var lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
+                    ? doc.layers[rec.idx]
+                    : doc.layers.getByName(rec.name);
+                lay.locked = true;
+            } catch (e) {}
+        }
+        this._lockedLayers = [];
+    },
+
+    // -------------------------------------------------------------------------
+    // Bounds (delegates to ZSM.Bounds — see src/lib/bounds.js)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Backward-compatible delegate to ZSM.Bounds.get(). The bounds-measurement
+     * logic lives in src/lib/bounds.js so it can be tested in isolation from
+     * the render code; this thin wrapper preserves the public ZSM.Draw API.
+     *
+     * @param {Object} s - Settings (uses s.useArtboardBounds, s.mode).
+     * @returns {Array|null} [L, T, R, B] in document points, or null.
+     */
+    getBounds: function (s) {
+        return ZSM.Bounds.get(s);
+    },
+
+    // -------------------------------------------------------------------------
+    // Rendering
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders all geometry into the Illustrator document.
+     * Draw order: resize artboard → layers → Zünd marks → Summa marks →
+     *             Summa bar → trim lines → redraw.
+     *
+     * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
+     * @param {Object} s   - Settings from UI.
+     */
+    render: function (geo, s) {
+        var doc = app.activeDocument;
+
+        try {
+            // 0. Deselect all — removing or reordering items/layers while
+            //    Illustrator holds references to selected objects can crash
+            //    at C++ level. Clearing selection first prevents this.
+            try { doc.selection = null; } catch (ds) {}
+
+            // 1. Resize artboard (Auto-fit mode only)
+            // Validate bounds before setting — see ZSM.Draw.MAX_ARTBOARD_COORD.
+            if (!s.useArtboardBounds) {
+                var abMax = this.MAX_ARTBOARD_COORD;
+                if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
+                    Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
+                    ZSM.Utils.log("render: artboard rect " + geo.ab.join(",") +
+                        " exceeds MAX_ARTBOARD_COORD=" + abMax + "pt — aborting.");
+                    ZSM.Utils.error(ZSM.L.ERR_GENERIC
+                        ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
+                        : "Artboard exceeds maximum size.");
+                    return;
+                }
+                var activeIdx = doc.artboards.getActiveArtboardIndex();
+                doc.artboards[activeIdx].artboardRect = geo.ab;
+            }
+
+            // 2. Prepare Regmarks layer — mode-specific sublayers.
+            //    Each mode draws into its own sublayer ("Zünd" / "Summa")
+            //    so running one mode does not destroy the other's marks.
+            //    This supports the intended workflow: run ZUND first,
+            //    then run SUMMA second — both sets of marks coexist.
+            var reg = this.getLay(ZSM.Config.layerRegmarks);
+
+            var modeSubName = (s.mode === "SUMMA") ? "Summa" : "Zünd";
+            var zundSub = null, summaSub = null;
+            try { zundSub = reg.layers.getByName("Zünd"); } catch (e) {}
+            try { summaSub = reg.layers.getByName("Summa"); } catch (e) {}
+
+            // Legacy cleanup: if no mode sublayers exist, there may be
+            // marks placed directly on Regmarks from a pre-sublayer version.
+            // Clear them once so they don't coexist with the new sublayers.
+            if (!zundSub && !summaSub) {
+                this._clearLayer(reg);
+            }
+
+            // Remove current mode's sublayer (preserves the other mode).
+            // Unlock & unhide first — `.remove()` on a locked or hidden
+            // sublayer can crash AI at C++ level in some versions.
+            var didRemoveSub = false;
+            if (s.mode === "ZUND" && zundSub) {
+                try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
+                try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+            } else if (s.mode === "SUMMA" && summaSub) {
+                try { summaSub.locked = false; summaSub.visible = true; } catch (e) {}
+                try { summaSub.remove(); didRemoveSub = true; } catch (e) {}
+            }
+
+            // Force AI to commit the sublayer removal before further mutations.
+            // Without this, subsequent operations operate on transient DOM state
+            // which AI's C++ pipeline may flag as inconsistent — sporadic crash.
+            if (didRemoveSub) {
+                try { app.redraw(); } catch (rd1) {}
+            }
+
+            // Create fresh sublayer for current mode
+            var modeSub = reg.layers.add();
+            modeSub.name = modeSubName;
+
+            // Z-order Regmarks to front, but only if not already there.
+            // Skipping the no-op call reduces C++ pipeline pressure on
+            // every render and is a documented sporadic crash vector.
+            if (doc.layers.length > 0 && doc.layers[0] !== reg) {
+                try { app.redraw(); } catch (rd2) {}  // commit pending state
+                try { reg.zOrder(ZOrderMethod.BRINGTOFRONT); } catch (zo) {
+                    ZSM.Utils.log("render: zOrder BRINGTOFRONT failed — " + zo.message);
+                }
+            }
+            var refLayer = reg;
+
+            // 3. Dynamic layer mapping — move spot-colored paths to named layers
+            // Row existence = active (no checkbox in new UI design)
+            if (s.layers && s.layers.length > 0) {
+                // Track which target layer names were already processed so a
+                // duplicate row in s.layers (e.g. two "Cut" entries) doesn't
+                // attempt a self-move (`targetLay.move(targetLay)` would
+                // self-reference and can crash AI at C++ level).
+                var seenTargets = {};
+                for (var i = 0; i < s.layers.length; i++) {
+                    var layDef = s.layers[i];
+                    if (layDef.name && layDef.color && layDef.color !== "") {
+                        if (seenTargets[layDef.name]) continue; // dedupe
+                        seenTargets[layDef.name] = true;
+
+                        var targetLay = this.getLay(layDef.name);
+                        var hit = this.movePaths(targetLay, [layDef.color]);
+                        if (!hit) {
+                            geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
+                        }
+                        // Guard against self-move (would happen if getLay
+                        // resolved to the same Layer instance as refLayer,
+                        // e.g. on the first iteration when targetLay is
+                        // somehow Regmarks, or with hand-edited presets).
+                        if (targetLay !== refLayer) {
+                            try { targetLay.move(refLayer, ElementPlacement.PLACEAFTER); }
+                            catch (mvErr) { ZSM.Utils.log("layer move failed: " + mvErr.message); }
+                        }
+                        refLayer = targetLay;
+                    }
+                }
+            }
+
+            // 3b. Remove empty layers left behind by movePaths.
+            //     Only truly empty (no items, no sublayers), visible,
+            //     non-system layers are removed. Skip Regmarks, target
+            //     layers just created above, artifact layers, and hidden layers.
+            var sysNames = {};
+            sysNames[ZSM.Config.layerRegmarks] = true;
+            for (var si = 0; si < s.layers.length; si++) {
+                if (s.layers[si].name) sysNames[s.layers[si].name] = true;
+            }
+            for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
+                if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
+                try {
+                    var elay = doc.layers[ei];
+                    if (sysNames[elay.name]) continue;
+                    if (ZSM.Bounds.isArtifactLayer(elay)) continue;
+                    if (!elay.visible) continue;
+                    if (elay.pageItems.length === 0 && elay.layers.length === 0) {
+                        elay.remove();
+                    }
+                } catch (e) {}
+            }
+
+            // 4. Draw Zünd marks (circles)
+            var col = this.getCol(s.markColor);
+            // Non-blocking warning if the chosen mark colour isn't in the
+            // document — getCol fell back to [Registration]. We draw a valid
+            // mark rather than aborting, but never swap the colour silently.
+            var regName = this.getRegistrationName();
+            if (s.markColor && s.markColor !== "[Registration]" && s.markColor !== regName
+                && !this.swatchExists(s.markColor)) {
+                geo.warnings.push(ZSM.L.format(ZSM.L.WARN_COLOR_FALLBACK, s.markColor));
+            }
+            // Setting activeLayer can crash at C++ level if the layer is
+            // in transient state (just created/added). Wrap defensively;
+            // failure here is non-fatal — pathItems.* calls below target
+            // modeSub directly via the explicit reference.
+            try { doc.activeLayer = modeSub; } catch (al) {
+                ZSM.Utils.log("render: setting activeLayer failed — " + al.message);
+            }
+
+            // Same effective SF as core.js — must include s.scaleN, else
+            // marks ignore manual 1:N scaling (regression caught in v26.4.0
+            // manual test). Single source of truth: ZSM.Utils.getEffectiveSF.
+            var sf   = ZSM.Utils.getEffectiveSF(s);
+            var zSize = (Number(s.markSizeZ) || 5.0) / sf;
+            var rZ   = ZSM.Utils.mm2pt(zSize / 2);
+
+            // Validate mark coords against Illustrator's hard limit before drawing.
+            var MAX_COORD = this.MAX_ARTBOARD_COORD;
+
+            var marksZ = geo.marksZ;
+            for (var z = 0; z < marksZ.length; z++) {
+                var m = marksZ[z];
+                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
+                try {
+                    var circle = modeSub.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
+                    circle.fillColor     = col;
+                    circle.fillOverprint = true;
+                    circle.stroked       = false;
+                } catch (e) {
+                    ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
+                }
+            }
+
+            // 5. Draw Summa marks (squares)
+            var sSize = (Number(s.markSizeS) || 3.0) / sf;
+            var rS   = ZSM.Utils.mm2pt(sSize / 2);
+
+            var marksS = geo.marksS;
+            for (var sm = 0; sm < marksS.length; sm++) {
+                var m = marksS[sm];
+                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
+                try {
+                    var sq = modeSub.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
+                    sq.fillColor     = col;
+                    sq.fillOverprint = true;
+                    sq.stroked       = false;
+                } catch (e) {
+                    ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
+                }
+            }
+
+            // 6. Draw Summa registration bar
+            if (geo.barS) {
+                try {
+                    var bar = modeSub.pathItems.add();
+                    bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
+                    bar.strokeColor     = col;
+                    bar.strokeOverprint = true;
+                    bar.strokeWidth     = geo.barS.w;
+                    bar.filled          = false;
+                } catch (e) {
+                    ZSM.Utils.log("render: failed to draw OPOS bar");
+                }
+            }
+
+            // 7. Name bottom layer as Graphics and draw trim lines into it.
+            //    Assumption: the bottom-most layer is the user's artwork layer.
+            //    In multi-layer documents, only the absolute bottom layer is renamed.
+            var gfxLayer = doc.layers[doc.layers.length - 1];
+            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                // Track rename so endSession() can restore lock state (W3)
+                var oldGfxName = gfxLayer.name;
+                gfxLayer.name    = ZSM.Config.layerGraphics;
+                for (var li = 0; li < this._lockedLayers.length; li++) {
+                    if (this._lockedLayers[li].name === oldGfxName) {
+                        this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                    }
+                }
+                gfxLayer.locked  = false;
+                gfxLayer.visible = true;
+                // Send Graphics layer to back, but only if not already there.
+                // Avoids redundant C++ pipeline calls that are documented as
+                // sporadic crash vectors in ExtendScript.
+                if (doc.layers.length > 0
+                    && doc.layers[doc.layers.length - 1] !== gfxLayer) {
+                    try { app.redraw(); } catch (rd3) {}  // commit pending state
+                    try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
+                        ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
+                    }
+                }
+
+                if (geo.red.length > 0) {
+                    // Draw trim lines into a sublayer to keep them
+                    // separate from artwork but inside the print layer.
+                    // Remove previous Trim sublayer to prevent accumulation.
+                    // Deselect first — removing a layer with selected items
+                    // can crash Illustrator at C++ level. Also unlock/unhide
+                    // before remove for the same C++ crash protection.
+                    var trimRemoved = false;
+                    try {
+                        var oldTrim = gfxLayer.layers.getByName("Trim");
+                        try { doc.selection = null; } catch (ds2) {}
+                        try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
+                        oldTrim.remove();
+                        trimRemoved = true;
+                    } catch (e) { /* no previous Trim — first run */ }
+                    // Force AI to commit Trim removal before adding new sublayer.
+                    if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }
+                    var trimLayer = gfxLayer.layers.add();
+                    trimLayer.name = "Trim";
+
+                    var redColor = new CMYKColor();
+                    redColor.magenta = 100;
+                    redColor.yellow  = 100;
+                    for (var r = 0; r < geo.red.length; r++) {
+                        try {
+                            var line = trimLayer.pathItems.add();
+                            line.setEntirePath([
+                                [geo.red[r].x1, geo.red[r].y1],
+                                [geo.red[r].x2, geo.red[r].y2]
+                            ]);
+                            line.strokeColor = redColor;
+                            line.strokeWidth = geo.red[r].w;
+                            line.filled      = false;
+                        } catch (e) {
+                            ZSM.Utils.log("render: failed to draw trim line at index " + r);
+                        }
+                    }
+                }
+            }
+
+            // Non-fatal notices (missing colour → fallback, unmatched layer
+            // colour) — surface as a WARNING, not an error: the marks rendered.
+            if (geo.warnings.length > 0) ZSM.Utils.warn(geo.warnings.join("\n"));
+            app.redraw();
+
+        } catch (e) {
+            ZSM.Utils.error(ZSM.L.ERR_RENDER_CRITICAL + e.message);
+        }
+    },
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Removes all page items and sublayers from a layer, leaving it empty.
+     * Used to clear old Regmarks before re-rendering.
+     * @param {Layer} layer - Layer to clear.
+     * @private
+     */
+    _clearLayer: function (layer) {
+        try {
+            // Remove sublayers first. Unlock & unhide each before remove —
+            // .remove() on a locked or hidden sublayer can crash AI at C++.
+            while (layer.layers.length > 0) {
+                try {
+                    var sub = layer.layers[0];
+                    try { sub.locked = false; sub.visible = true; } catch (eu) {}
+                    sub.remove();
+                } catch (e) { break; }
+            }
+            // Remove page items (iterate backwards to avoid index shifts)
+            var items = layer.pageItems;
+            for (var i = items.length - 1; i >= 0; i--) {
+                try { items[i].remove(); } catch (e) {}
+            }
+        } catch (e) {
+            ZSM.Utils.log("_clearLayer: " + e.message);
+        }
+    },
+
+    // _isArtifactLayer / _getEffectiveBounds / _isInsideClippedGroup —
+    // moved to ZSM.Bounds (src/lib/bounds.js). Render code in this file
+    // now references them as ZSM.Bounds.isArtifactLayer / .isInsideClippedGroup
+    // directly (see callers in beginSession, render, movePaths).
 
     /**
      * Gets an existing layer by name or creates it if it doesn't exist.
@@ -1351,9 +2043,12 @@ ZSM.Draw = {
 
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
-                // Skip items on artifact layers — moving them could crash AI
-                try { var fc = cp.layer.name.charAt(0); if (fc === '<' || fc === '(') continue; } catch (e) {}
-                if (this._isInsideClippedGroup(cp)) continue;
+                // Skip items on artifact layers — moving them could crash AI.
+                // isArtifactLayer treats an unreadable layer name as artifact
+                // (returns true) so a transient/broken layer item is skipped
+                // rather than risked — the safe default for a mutating op.
+                if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
+                if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
                 if (cp.pathItems.length === 0) continue;
 
                 // Match by first sub-path color (all sub-paths share the same color)
@@ -1380,11 +2075,12 @@ ZSM.Draw = {
                 var item = snapshot[i];
 
                 // Skip items on artifact layers — moving them could crash AI
-                try { var fc2 = item.layer.name.charAt(0); if (fc2 === '<' || fc2 === '(') continue; } catch (e) {}
+                // (see compound-path loop above for the unreadable-name rationale).
+                if (ZSM.Bounds.isArtifactLayer(item.layer)) continue;
 
                 // Skip items nested inside clipped groups — moving them out
                 // would break the group structure and trigger MRAP errors.
-                if (this._isInsideClippedGroup(item)) continue;
+                if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
 
                 // Skip items already moved as part of a CompoundPathItem
                 var alreadyMoved = false;
@@ -1431,48 +2127,58 @@ ZSM.Draw = {
 
     /**
      * Resolves a color name to an Illustrator Color object.
-     * Resolution order: existing swatch → [Registration] fallback → auto-create spot.
-     * When auto-creating, sanitizes the name and returns a SpotColor wrapper.
+     * Resolution order: existing swatch → [Registration] fallback.
+     *
+     * IMPORTANT — does NOT auto-create a swatch for an unknown name. Silently
+     * minting a magenta spot for a missing reference is unsafe in prepress: it
+     * mutates the document, produces an arbitrary colour that can mis-separate
+     * on a cutter, and pollutes every file in a batch. Instead a missing colour
+     * falls back to [Registration] (always a valid, cutter-readable mark colour)
+     * and the caller (render) surfaces a non-blocking warning naming the colour
+     * so the operator can fix it. See ZSM.Draw.swatchExists for the detection.
      *
      * @param {string} name - Swatch or spot color name.
-     * @returns {Color} Illustrator Color object.
+     * @returns {Color} Illustrator Color object (never null).
      */
     getCol: function (name) {
         var doc = app.activeDocument;
-        var regName = this.getRegistrationName();
-        if (!name) name = regName;
-
+        if (!name) name = this.getRegistrationName();
         try {
             return doc.swatches.getByName(name).color;
         } catch (e) {
-            // Accept both localized and English Registration name
-            if (name === regName || name === "[Registration]") {
-                var reg = new CMYKColor();
-                reg.black = 100;
-                return reg;
-            }
-            // Auto-create a spot swatch as fallback
-            try {
-                var spot      = doc.spots.add();
-                var cleanName = name.replace(/[\[\]\(\)\,\.]/g, "_");
-                spot.name     = cleanName;
-                var c         = new CMYKColor();
-                c.cyan        = this.AUTO_SPOT_COLOR[0];
-                c.magenta     = this.AUTO_SPOT_COLOR[1];
-                c.yellow      = this.AUTO_SPOT_COLOR[2];
-                c.black       = this.AUTO_SPOT_COLOR[3];
-                spot.color     = c;
-                spot.colorType = ColorModel.SPOT;
-                var sc  = new SpotColor();
-                sc.spot = spot;
-                sc.tint = 100;
-                return sc;
-            } catch (e2) {
-                var fallback = new CMYKColor();
-                fallback.black = 100;
-                return fallback;
-            }
+            // Missing swatch → safe [Registration] fallback, never auto-create.
+            return this.registrationColor();
         }
+    },
+
+    /**
+     * Returns the document's [Registration] swatch colour, or 100% K CMYK as a
+     * last-resort fallback if it cannot be read. Used wherever a missing or
+     * empty colour must degrade to a safe, universally valid mark colour.
+     *
+     * @returns {Color} Registration (or black) Color object.
+     */
+    registrationColor: function () {
+        try {
+            return app.activeDocument.swatches.getByName(this.getRegistrationName()).color;
+        } catch (e) {
+            var k = new CMYKColor();
+            k.black = 100;
+            return k;
+        }
+    },
+
+    /**
+     * True if a swatch with the given name exists in the active document.
+     * Used by render() to decide whether a missing-colour warning is needed
+     * without a second resolution pass through getCol().
+     *
+     * @param {string} name - Swatch name.
+     * @returns {boolean}
+     */
+    swatchExists: function (name) {
+        try { app.activeDocument.swatches.getByName(name); return true; }
+        catch (e) { return false; }
     },
 
     /**
@@ -1590,8 +2296,7 @@ ZSM.Draw = {
                 var n = layers[i].name;
                 if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics) continue;
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
-                var fc = n.charAt(0);
-                if (fc === '<' || fc === '(') continue;
+                if (ZSM.Bounds.isArtifactLayer(layers[i])) continue;
                 docNames.push(n);
             }
         } catch (e) {}
@@ -1638,7 +2343,11 @@ ZSM.UI = {
             pData.activePreset = c.PRESET_KEY_DEFAULT;
         }
 
-        // Fetch live document data once (expensive DOM queries)
+        // Fetch live document data once (expensive DOM queries — getSwatchNames
+        // iterates doc.spots, getLayerNames iterates doc.layers, detectCutColor
+        // does both). Computed here at show() entry so the mode-switch loop
+        // below reuses the same docData on every iteration without re-querying
+        // the DOM. Runs in front of any UI construction.
         var docData = {
             swatches:      ZSM.Draw.getSwatchNames(),
             layers:        ZSM.Draw.getLayerNames(),
@@ -1702,19 +2411,30 @@ ZSM.UI = {
         var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
         pPreset.margins = 15;
+        pPreset.spacing = 8;
 
-        var grpPresetRow = pPreset.add("group");
-        grpPresetRow.alignment = ["fill", "top"];
-        grpPresetRow.spacing   = 8;
-        grpPresetRow.add("statictext", undefined, l.PRESET_LABEL);
+        // Row 1: label + dropdown (full width)
+        var grpPresetTop = pPreset.add("group");
+        grpPresetTop.alignment = ["fill", "top"];
+        grpPresetTop.spacing   = 8;
+        grpPresetTop.add("statictext", undefined, l.PRESET_LABEL);
 
-        var ddPreset = grpPresetRow.add("dropdownlist", undefined, []);
-        ddPreset.preferredSize.width = 170;
+        var ddPreset = grpPresetTop.add("dropdownlist", undefined, []);
+        ddPreset.alignment = ["fill", "center"];
+        ddPreset.helpTip = l.TIP_PRESET;
 
-        var btnSave = grpPresetRow.add("button", undefined, l.BTN_SAVE);
+        // Row 2: action buttons (right-aligned)
+        var grpPresetBtns = pPreset.add("group");
+        grpPresetBtns.alignment = ["right", "top"];
+        grpPresetBtns.spacing = 6;
+
+        var btnSave = grpPresetBtns.add("button", undefined, l.BTN_SAVE);
         btnSave.helpTip = l.TIP_SAVE;
 
-        var btnDel = grpPresetRow.add("button", undefined, l.BTN_DEL);
+        var btnSaveAs = grpPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        btnSaveAs.helpTip = l.TIP_SAVE_AS;
+
+        var btnDel = grpPresetBtns.add("button", undefined, l.BTN_DEL);
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
@@ -1724,7 +2444,17 @@ ZSM.UI = {
         pSystem.alignChildren = ["fill", "top"];
         pSystem.margins = 15;
 
-        var dMode = pSystem.add("dropdownlist", undefined, [l.MODE_ZUND, l.MODE_SUMMA]);
+        // Mode row: label + dropdown (matches addRow pattern used elsewhere
+        // for visual consistency per building-adobe-ui §4.4)
+        var grpMode = pSystem.add("group");
+        grpMode.orientation   = "row";
+        grpMode.alignChildren = ["left", "center"];
+        grpMode.spacing       = 8;
+        var stMode = grpMode.add("statictext", undefined, l.LBL_MODE);
+        stMode.preferredSize.width = 60;
+        stMode.helpTip = l.TIP_MODE;
+        var dMode = grpMode.add("dropdownlist", undefined, [l.MODE_ZUND, l.MODE_SUMMA]);
+        dMode.preferredSize.width = 130;
         dMode.selection = isS ? 1 : 0;
         dMode.helpTip   = l.TIP_MODE;
 
@@ -1741,6 +2471,86 @@ ZSM.UI = {
             rbAuto.helpTip  = l.TIP_SRC_AUTO;
             rbFixed.helpTip = l.TIP_SRC_FIXED;
         }
+
+        // --- Scale row (Phase 2): checkbox + 1:N field ---
+        // Derived state: scaleN > 1 → checkbox checked, field enabled.
+        // scaleN === 1 → checkbox unchecked, field disabled at "1".
+        // Single source of truth: scaleN value (no extra checkbox state stored).
+        var grpScale = pSystem.add("group");
+        grpScale.orientation   = "row";
+        grpScale.alignChildren = ["left", "center"];
+        grpScale.spacing       = 6;
+
+        var cbScale = grpScale.add("checkbox", undefined, l.SCALE_CHECKBOX);
+        cbScale.helpTip = l.TIP_SCALE_CHECKBOX;
+
+        var stScaleLabel = grpScale.add("statictext", undefined, l.SCALE_FIELD_LABEL);
+        stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
+
+        var etScale = grpScale.add("edittext", undefined, "1");
+        etScale.preferredSize.width = 40;
+        etScale.helpTip = l.TIP_SCALE_FIELD;
+
+        // Sync UI to initial scaleN value
+        var initScaleN = parseInt(sData.scaleN, 10);
+        if (isNaN(initScaleN) || initScaleN < 1) initScaleN = 1;
+        if (initScaleN > 1) {
+            cbScale.value   = true;
+            etScale.text    = String(initScaleN);
+            etScale.enabled = true;
+        } else {
+            cbScale.value   = false;
+            etScale.text    = "1";
+            etScale.enabled = false;
+        }
+
+        /** Read current scaleN from the UI controls (clean integer 1..10). */
+        function readScaleN() {
+            if (!cbScale.value) return 1;
+            var n = parseInt(etScale.text, 10);
+            if (isNaN(n) || n < 1) return 1;
+            if (n > 10) return 10;
+            return n;
+        }
+
+        /** Apply title suffix when scaling is active. */
+        function applyTitleSuffix() {
+            var n = readScaleN();
+            var baseTitle = c.ui.title || "";
+            // Strip any previous suffix " — 1:N"
+            var base = baseTitle.replace(/\s*—\s*1:\d+\s*$/, "");
+            try {
+                w.text = (n > 1) ? (base + " — 1:" + n) : base;
+            } catch (e) {}
+        }
+        applyTitleSuffix();   // initial
+
+        cbScale.onClick = function () {
+            if (cbScale.value) {
+                etScale.enabled = true;
+                // Auto-suggest "10" when activating from "1"
+                var cur = parseInt(etScale.text, 10);
+                if (isNaN(cur) || cur <= 1) etScale.text = "10";
+            } else {
+                etScale.enabled = false;
+                etScale.text = "1";
+            }
+            applyTitleSuffix();
+            refreshModifiedIndicator();
+        };
+
+        etScale.onChange = function () {
+            var n = parseInt(etScale.text, 10);
+            // Auto-uncheck when user explicitly types 1
+            if (n === 1) {
+                cbScale.value   = false;
+                etScale.enabled = false;
+            }
+            // Clamp out-of-range silently here; validation will alert on Generate
+            applyTitleSuffix();
+            refreshModifiedIndicator();
+        };
+        etScale.onChanging = etScale.onChange;
 
         // =================================================================
         // Panel: Gap / Geometry (mode-specific rows)
@@ -1854,7 +2664,9 @@ ZSM.UI = {
             etLayer.helpTip = l.TIP_LAY_NAME;
 
             ddLayer.onChange = function () {
-                if (ddLayer.selection) etLayer.text = ddLayer.selection.text;
+                // Use ddlValue so picking a synthetic "(missing)" item copies the
+                // raw layer name into the edittext, not the display marker.
+                if (ddLayer.selection) etLayer.text = ZSM.UI.ddlValue(ddLayer);
             };
             ZSM.UI.selectDDL(ddLayer, def.name || "");
 
@@ -1911,11 +2723,30 @@ ZSM.UI = {
         };
 
         // =================================================================
-        // Footer — action buttons
+        // Footer — copyright (greyed) + action buttons
         // =================================================================
+        // Copyright footer per extendscript-ui-standards §5: dynamic string
+        // composed from constants (never hardcoded), enabled=false greys it
+        // intentionally to visually distinguish from active controls.
+        var grpFooterCopy = w.add("group");
+        grpFooterCopy.alignment = ["fill", "top"];
+        var stCopy = grpFooterCopy.add("statictext", undefined,
+            "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
+        stCopy.enabled = false;
+
         var grpButtons = w.add("group");
-        grpButtons.alignment = ["right", "center"];
+        grpButtons.alignment = ["fill", "center"];
         grpButtons.spacing   = 8;
+
+        // Reset is left-aligned (secondary, less commonly used)
+        var btnReset = grpButtons.add("button", undefined, l.BTN_RESET);
+        btnReset.helpTip = l.TIP_RESET;
+        btnReset.alignment = ["left", "center"];
+
+        // Spacer pushes Cancel/Generate to the right edge
+        var grpFooterSpacer = grpButtons.add("group");
+        grpFooterSpacer.alignment = ["fill", "fill"];
+
         var btnCan = grpButtons.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         btnCan.helpTip = l.TIP_CANCEL;
         var btnOk  = grpButtons.add("button", undefined, l.BTN_OK,     { name: "ok" });
@@ -1939,13 +2770,10 @@ ZSM.UI = {
             var prev = pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var cSel = layRows[i].ddColor.selection
-                    ? layRows[i].ddColor.selection.text
-                    : (layRows[i].ddColor.items.length > 0 ? layRows[i].ddColor.items[0].text : "[Registration]");
+                var cSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
             }
-            var markColorSel = rColor.ddl.selection
-                ? rColor.ddl.selection.text : "[Registration]";
+            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
 
             return {
                 mode:              mode,
@@ -1960,6 +2788,7 @@ ZSM.UI = {
                 markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
                 orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
+                scaleN:            readScaleN(),
                 layers:            layers
             };
         }
@@ -1997,6 +2826,21 @@ ZSM.UI = {
                 rMarkSize.inp.text = String(obj.markSizeS !== undefined ? obj.markSizeS : 3);
             }
 
+            // Scale (Phase 2) — sync checkbox + field from scaleN value.
+            var newScaleN = parseInt(obj.scaleN, 10);
+            if (isNaN(newScaleN) || newScaleN < 1) newScaleN = 1;
+            if (newScaleN > 10) newScaleN = 10;
+            if (newScaleN > 1) {
+                cbScale.value   = true;
+                etScale.text    = String(newScaleN);
+                etScale.enabled = true;
+            } else {
+                cbScale.value   = false;
+                etScale.text    = "1";
+                etScale.enabled = false;
+            }
+            applyTitleSuffix();
+
             // Rebuild layer rows
             while (layContainer.children.length > 0) {
                 layContainer.remove(layContainer.children[0]);
@@ -2014,59 +2858,157 @@ ZSM.UI = {
         }
 
         // =================================================================
-        // Preset logic
+        // Preset logic — all state transitions delegated to ZSM.UIState.
+        // ScriptUI-specific code (alerts, prompts, dropdown updates) lives here;
+        // pure pData mutations and validation live in ZSM.UIState (testable).
         // =================================================================
         var sortedKeys = [];
 
+        /** True if current UI values differ from the active preset. */
+        function isModified() {
+            try { return ZSM.UIState.isModified(pData, getUIValues()); } catch (e) { return false; }
+        }
+
+        /** Rebuild the preset dropdown from pData (using formatPresetList for ordering + asterisk). */
         function updatePresetList() {
             ddPreset.removeAll();
+            var entries = ZSM.UIState.formatPresetList(pData, getUIValues(), l);
             sortedKeys = [];
-            var keys = [];
-            for (var k in pData.presets) {
-                if (pData.presets.hasOwnProperty(k) && k !== "[Last Settings]") keys.push(k);
-            }
-            keys.sort();
             var selIdx = 0;
-            for (var i = 0; i < keys.length; i++) {
-                var displayText = (keys[i] === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : keys[i];
-                ddPreset.add("item", displayText);
-                sortedKeys.push(keys[i]);
-                if (keys[i] === pData.activePreset) selIdx = i;
+            for (var i = 0; i < entries.length; i++) {
+                ddPreset.add("item", entries[i].displayText);
+                sortedKeys.push(entries[i].key);
+                if (entries[i].isActive) selIdx = i;
             }
             if (ddPreset.items.length > 0) ddPreset.selection = selIdx;
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
         }
 
+        /**
+         * Refresh the active dropdown item's text + Save button state.
+         * Lighter than updatePresetList(); call from input onChange handlers.
+         */
+        function refreshModifiedIndicator() {
+            var modified = isModified();
+            try { btnSave.enabled = modified; } catch (e) {}
+
+            if (!ddPreset.selection) return;
+            var idx = ddPreset.selection.index;
+            var key = sortedKeys[idx];
+            if (key !== pData.activePreset) return;
+            var displayText = (key === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : key;
+            if (modified) displayText += " *";
+            try { ddPreset.items[idx].text = displayText; } catch (e) {
+                // Some ScriptUI versions don't allow direct mutation
+                updatePresetList();
+            }
+        }
+
+        /**
+         * Persist the preset wrapper to disk with consistent error reporting.
+         * Single source of truth for all save call-sites (Save / Save As /
+         * Delete) so a failed write is never silently swallowed — a stale
+         * on-disk state that "resurrects" a deleted preset after restart is a
+         * data-integrity bug, not a cosmetic one.
+         */
+        function persistSettings() {
+            try {
+                ZSM.Storage.save(pData);
+            } catch (e) {
+                ZSM.Utils.log("Storage.save failed: " + e.message);
+                alert(l.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+            }
+        }
+
         ddPreset.onChange = function () {
             if (!ddPreset.selection) return;
-            var sel = sortedKeys[ddPreset.selection.index];
-            if (!sel || sel === pData.activePreset) return;
-            pData.activePreset = sel;
-            btnDel.enabled = (sel !== c.PRESET_KEY_DEFAULT);
-            if (pData.presets[sel]) setUIValues(pData.presets[sel]);
+            var key = sortedKeys[ddPreset.selection.index];
+            if (!key || key === pData.activePreset) return;
+            var r = ZSM.UIState.selectPreset(pData, key);
+            if (!r.ok) return;
+            btnDel.enabled = (key !== c.PRESET_KEY_DEFAULT);
+            setUIValues(r.settings);
+            refreshModifiedIndicator();
         };
 
+        /**
+         * Save = update current named preset (silent overwrite, no prompt).
+         * On [Default] / [Last Settings] degrades to Save As (needs a name).
+         * Disabled by refreshModifiedIndicator when no unsaved changes.
+         */
         btnSave.onClick = function () {
-            var name = prompt(l.PROMPT_NEW_PRESET,
-                (pData.activePreset !== c.PRESET_KEY_DEFAULT ? pData.activePreset : l.PRESET_PLACEHOLDER));
-            if (!name) return;
-            if (pData.presets[name] && name !== pData.activePreset) {
-                if (!confirm(l.ERR_PRESET_EXISTS)) return;
+            var r = ZSM.UIState.save(pData, getUIValues());
+            if (r.ok) {
+                updatePresetList();
+                persistSettings();
+                return;
             }
-            pData.presets[name] = getUIValues();
-            pData.activePreset  = name;
+            if (r.reason === "needs-name") btnSaveAs.onClick();
+        };
+
+        /**
+         * Save As = create a new preset (always prompts for name).
+         * Existing-name conflicts go through confirm(); cancellation preserves state.
+         */
+        btnSaveAs.onClick = function () {
+            var raw = prompt(l.PROMPT_SAVE_AS, "");
+            if (raw === null || raw === "") return;
+
+            // Pre-validate to give a localized alert for reserved names
+            // (UIState.saveAs returns "invalid-name" but no alert).
+            var clean = ZSM.UIState.validatePresetName(raw);
+            if (!clean) {
+                alert(l.ERR_RESERVED_NAME);
+                return;
+            }
+
+            var r = ZSM.UIState.saveAs(pData, raw, getUIValues(), function (existingName) {
+                return confirm(l.ERR_PRESET_EXISTS);
+            });
+            if (!r.ok) return;
             updatePresetList();
+            refreshModifiedIndicator();
+            persistSettings();
         };
 
         btnDel.onClick = function () {
-            if (pData.activePreset === c.PRESET_KEY_DEFAULT || pData.activePreset === "[Last Settings]") {
+            // Guard reserved preset before prompting (no point confirming a
+            // delete that will be rejected anyway).
+            if (pData.activePreset === c.PRESET_KEY_DEFAULT) {
                 alert(l.ERR_PRESET_DEL_DEF);
                 return;
             }
-            delete pData.presets[pData.activePreset];
-            pData.activePreset = c.PRESET_KEY_DEFAULT;
+            // Destructive + persisted to disk immediately → require explicit
+            // confirmation (extendscript-ui-standards §10, ui-ux-principles §5).
+            if (!confirm(ZSM.L.format(l.CONFIRM_DEL_PRESET, pData.activePreset))) {
+                return;
+            }
+            var r = ZSM.UIState.deleteActive(pData);
+            if (!r.ok) {
+                if (r.reason === "reserved") alert(l.ERR_PRESET_DEL_DEF);
+                return;
+            }
             updatePresetList();
             setUIValues(pData.presets[c.PRESET_KEY_DEFAULT]);
+            refreshModifiedIndicator();
+            persistSettings();
+        };
+
+        /**
+         * Reset = load factory defaults into UI, but keep activePreset pointer.
+         * Modified indicator will show * (unless on [Default]).
+         * User can then click Save to commit defaults to current preset, or
+         * Save As to create a new preset, or Cancel to discard.
+         * Does NOT persist — same as any other UI change.
+         */
+        btnReset.onClick = function () {
+            var defaults = c.getDefaults();
+            // Preserve current mode in defaults (so Reset doesn't switch dialog)
+            defaults.mode = mode;
+            setUIValues(defaults);
+            // Re-wire layer rows that setUIValues just rebuilt
+            wireLayerRows();
+            refreshModifiedIndicator();
         };
 
         // =================================================================
@@ -2102,73 +3044,50 @@ ZSM.UI = {
         var result = null;
 
         btnOk.onClick = function () {
-            // Validation — each call shows a localized alert and returns null on failure
-            var gapO = ZSM.Utils.validateNumber(rGapZO.inp.text, 0, 1000, l.GAP_ZO);
-            if (gapO === null) return;
-            var maxD = ZSM.Utils.validateNumber(rMaxD.inp.text, 50, 5000, l.MAX_DIST);
-            if (maxD === null) return;
-
-            var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
-            var gapI, markSZ, markSS, oDist, fTop, fBot;
-
-            if (isZ) {
-                gapI = ZSM.Utils.validateNumber(rGapGZ.inp.text, 0, 1000, l.GAP_GZ);
-                if (gapI === null) return;
-                markSZ = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_Z);
-                if (markSZ === null) return;
-                oDist = ZSM.Utils.validateNumber(rOrientDist.inp.text, 10, 2000, l.ORIENT_DIST);
-                if (oDist === null) return;
-                markSS = prevOk.markSizeS;
-                fTop = prevOk.feedTop || 0;
-                fBot = prevOk.feedBottom || 0;
-            } else {
-                gapI = prevOk.gapInner;
-                oDist = prevOk.orientDist;
-                markSS = ZSM.Utils.validateNumber(rMarkSize.inp.text, 0.1, 50, l.MARK_SIZE_S);
-                if (markSS === null) return;
-                markSZ = prevOk.markSizeZ;
-                fTop = ZSM.Utils.validateNumber(rFT.inp.text, 0, 1000, l.FEED_TOP);
-                if (fTop === null) return;
-                fBot = ZSM.Utils.validateNumber(rFB.inp.text, 0, 1000, l.FEED_BOT);
-                if (fBot === null) return;
-            }
-
+            // Collect raw UI values (everything as written by user, no validation yet)
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var colorSel = layRows[i].ddColor.selection
-                    ? layRows[i].ddColor.selection.text
-                    : (layRows[i].ddColor.items.length > 0 ? layRows[i].ddColor.items[0].text : "[Registration]");
+                var colorSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
+            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
 
-            var markColorSel = rColor.ddl.selection
-                ? rColor.ddl.selection.text : "[Registration]";
-
-            var finalSettings = {
+            var raw = {
                 mode:              mode,
-                gapInner:          gapI,
-                gapOuter:          gapO,
-                maxDist:           maxD,
-                feedTop:           fTop,
-                feedBottom:        fBot,
-                drawRed:           isS ? chRed.value : prevOk.drawRed,
-                useArtboardBounds: isZ ? rbFixed.value : false,
-                markSizeZ:         markSZ,
-                markSizeS:         markSS,
-                orientDist:        oDist,
+                gapOuter:          rGapZO.inp.text,
+                maxDist:           rMaxD.inp.text,
+                gapInner:          isZ ? rGapGZ.inp.text     : undefined,
+                markSizeZ:         isZ ? rMarkSize.inp.text  : undefined,
+                orientDist:        isZ ? rOrientDist.inp.text: undefined,
+                markSizeS:         isS ? rMarkSize.inp.text  : undefined,
+                feedTop:           isS ? rFT.inp.text        : undefined,
+                feedBottom:        isS ? rFB.inp.text        : undefined,
+                drawRed:           isS ? !!chRed.value       : undefined,
+                useArtboardBounds: isZ ? !!rbFixed.value     : false,
                 markColor:         markColorSel,
+                // scaleN: derived from checkbox + field state (1 when unchecked)
+                scaleN:            readScaleN(),
                 layers:            layers
             };
 
-            // Always persist last run
-            pData.presets["[Last Settings]"] = finalSettings;
+            // Run validation (alerts shown by validateNumber on failure).
+            // Mode-irrelevant fields are pulled from prevOk (active preset).
+            var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
+            var result_v = ZSM.Validation.validate(raw, prevOk, l);
+            if (!result_v.valid) return;  // Errors already shown via alerts
 
-            // Auto-save to active named preset
-            if (pData.activePreset !== c.PRESET_KEY_DEFAULT && pData.activePreset !== "[Last Settings]") {
-                pData.presets[pData.activePreset] = finalSettings;
-            } else {
-                pData.activePreset = "[Last Settings]";
-            }
+            var finalSettings = result_v.settings;
+
+            // Pass-through fields that ZSM.Validation doesn't currently handle
+            // (mode-conditional booleans). Match prior behavior: keep prev value
+            // when in opposite mode, otherwise read from UI.
+            finalSettings.drawRed = isS ? !!chRed.value : (prevOk.drawRed === true);
+
+            // Persist last run state — but DO NOT modify named presets.
+            // Presets are immutable until explicitly saved via btnSave.
+            // [Last Settings] is the runtime memory; activePreset stays
+            // pointing at whatever named preset (or [Default]) was active.
+            pData.presets["[Last Settings]"] = finalSettings;
 
             result = pData;
             w.close(1);
@@ -2192,6 +3111,146 @@ ZSM.UI = {
                 break;
             }
         }
+
+        // -----------------------------------------------------------------
+        // Live validation — visual feedback + OK-button gating
+        // -----------------------------------------------------------------
+        //
+        // Every numeric edittext is paired with its ZSM.Validation rule.
+        // On each keystroke we check value ∈ [min, max] and:
+        //   - paint the edittext text red on invalid, default colour on valid
+        //   - disable the Generate button if ANY visible numeric field is
+        //     invalid (so the user can't submit an unprocessable value).
+        //
+        // graphics.foregroundColor is wrapped in try/catch — Adobe's API
+        // can throw on certain Illustrator versions and graphics objects
+        // not yet "realised". Failure to colour is non-fatal: the
+        // OK-disable still works and protects from bad input.
+        //
+        // Mode-specific fields (rGapGZ etc.) are conditionally added so
+        // the numericRows array only contains rows that exist for the
+        // current mode.
+        var numericRows = [];
+        if (isZ) {
+            numericRows.push({ row: rGapGZ,      rule: ZSM.Validation.rules.gapInner   });
+            numericRows.push({ row: rOrientDist, rule: ZSM.Validation.rules.orientDist });
+            numericRows.push({ row: rMarkSize,   rule: ZSM.Validation.rules.markSizeZ  });
+        } else {
+            numericRows.push({ row: rMarkSize, rule: ZSM.Validation.rules.markSizeS });
+            numericRows.push({ row: rFT,       rule: ZSM.Validation.rules.feedTop   });
+            numericRows.push({ row: rFB,       rule: ZSM.Validation.rules.feedBottom });
+        }
+        numericRows.push({ row: rGapZO, rule: ZSM.Validation.rules.gapOuter });
+        numericRows.push({ row: rMaxD,  rule: ZSM.Validation.rules.maxDist  });
+
+        function isValueInRange(et, rule) {
+            var raw = String(et.text || "").replace(/,/g, ".");
+            var n   = parseFloat(raw);
+            if (isNaN(n)) return false;
+            return (n >= rule.min && n <= rule.max);
+        }
+
+        function markFieldValidity(et, valid) {
+            // Try to repaint the edittext. Wrapped because Adobe's graphics
+            // API can throw "no graphics yet" until the window is realised
+            // and on some legacy versions doesn't support newPen at all.
+            try {
+                var g = et.graphics;
+                if (!g || !g.newPen) return;
+                var color = valid
+                    ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
+                    : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                g.foregroundColor = color;
+            } catch (e) { /* graphics not ready or unsupported — ignored */ }
+        }
+
+        function liveValidateAll() {
+            var allValid = true;
+            for (var i = 0; i < numericRows.length; i++) {
+                var nr = numericRows[i];
+                if (!nr.row || !nr.row.inp) continue;
+                // Skip disabled rows (e.g. gapInner is disabled in Fixed mode)
+                if (!nr.row.inp.enabled) {
+                    markFieldValidity(nr.row.inp, true);
+                    continue;
+                }
+                var ok = isValueInRange(nr.row.inp, nr.rule);
+                markFieldValidity(nr.row.inp, ok);
+                if (!ok) allValid = false;
+            }
+            try { btnOk.enabled = allValid; } catch (e) {}
+            return allValid;
+        }
+
+        // 4. Wire input change handlers — refresh modified indicator (asterisk)
+        //    in dropdown whenever any field changes. Layer rows are dynamic;
+        //    they're wired in buildLayerRow() and the Add/Remove handlers below.
+        var wireInputs = function () {
+            var addOnChange = function (et) {
+                if (!et) return;
+                et.onChange  = function () { refreshModifiedIndicator(); liveValidateAll(); };
+                et.onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
+            };
+            addOnChange(rGapZO.inp);
+            addOnChange(rMaxD.inp);
+            if (isZ) {
+                addOnChange(rGapGZ.inp);
+                addOnChange(rMarkSize.inp);
+                addOnChange(rOrientDist.inp);
+                // Source toggle changes rGapGZ.enabled → re-run validation so
+                // a previously-invalid disabled gapInner stops blocking OK.
+                if (rbAuto)  rbAuto.onClick  = (function (orig) { return function () { if (orig) orig(); refreshModifiedIndicator(); liveValidateAll(); }; })(rbAuto.onClick);
+                if (rbFixed) rbFixed.onClick = (function (orig) { return function () { if (orig) orig(); refreshModifiedIndicator(); liveValidateAll(); }; })(rbFixed.onClick);
+            }
+            if (isS) {
+                addOnChange(rFT.inp);
+                addOnChange(rFB.inp);
+                if (chRed) chRed.onClick = refreshModifiedIndicator;
+                addOnChange(rMarkSize.inp);
+            }
+            if (rColor && rColor.ddl) {
+                rColor.ddl.onChange = (function (orig) {
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                })(rColor.ddl.onChange);
+            }
+            // Layer rows: hook into existing handlers via wrapper.
+            // Add/Remove buttons modify layRows length → also need refresh.
+            var origAdd = btnAddLayer.onClick;
+            btnAddLayer.onClick = function () {
+                if (origAdd) origAdd();
+                wireLayerRows();
+                refreshModifiedIndicator();
+            };
+        };
+
+        var wireLayerRows = function () {
+            for (var ri = 0; ri < layRows.length; ri++) {
+                var row = layRows[ri];
+                row.etLayer.onChange   = refreshModifiedIndicator;
+                row.etLayer.onChanging = refreshModifiedIndicator;
+                // ddLayer's onChange already updates etLayer; chain refresh after
+                var origDD = row.ddLayer.onChange;
+                row.ddLayer.onChange = (function (orig) {
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                })(origDD);
+                row.ddColor.onChange = refreshModifiedIndicator;
+                var origRm = row.btnRemove.onClick;
+                row.btnRemove.onClick = (function (orig) {
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                })(origRm);
+            }
+        };
+
+        wireInputs();
+        wireLayerRows();
+
+        // Initialize Save button state (disabled when UI matches active preset)
+        refreshModifiedIndicator();
+
+        // Initialize live validation state — paints any out-of-range stored
+        // values red on first paint and disables OK if needed. Runs after
+        // wireInputs so onChanging handlers are already attached.
+        liveValidateAll();
 
         // Restore window position from previous mode-switch (if any)
         if (docData._lastBounds) {
@@ -2255,16 +3314,52 @@ ZSM.UI = {
 
     /**
      * Selects a dropdownlist item by text value.
-     * Falls back to first item if not found.
+     *
+     * When the requested value is NOT present in the current document (e.g. a
+     * preset references swatch "MyOrange" but this document has no such spot),
+     * we do NOT silently fall back to item 0 — that would swap the user's saved
+     * choice for an unrelated swatch/layer with no signal. Instead we insert a
+     * synthetic item that preserves the saved name with a "(missing)" marker and
+     * select it. The marker is display-only; ZSM.UI.ddlValue() reads back the
+     * raw name, so downstream resolution and isModified() both see the original
+     * value — no false "modified" asterisk, no silent colour swap. A missing
+     * mark colour degrades to [Registration] with a warning (see ZSM.Draw.getCol);
+     * a missing layer is auto-created by getLay (layers are low-risk containers).
+     *
      * @param {DropDownList} ddl  - Target control.
      * @param {string}       text - Item text to select.
      */
     selectDDL: function (ddl, text) {
+        // Purge any stale synthetic "missing" item from a previous selection so
+        // they don't accumulate across preset switches on a persistent dropdown.
+        for (var k = ddl.items.length - 1; k >= 0; k--) {
+            if (ddl.items[k]._zsmMissing) ddl.remove(k);
+        }
         if (!text) { if (ddl.items.length > 0) ddl.selection = 0; return; }
         for (var i = 0; i < ddl.items.length; i++) {
             if (ddl.items[i].text === text) { ddl.selection = i; return; }
         }
-        if (ddl.items.length > 0) ddl.selection = 0;
+        // Not in the document — preserve the saved name as a flagged item.
+        var suffix = (ZSM.L && ZSM.L.DDL_MISSING_SUFFIX) ? ZSM.L.DDL_MISSING_SUFFIX : "(missing)";
+        var missing = ddl.add("item", text + "  " + suffix);
+        missing._zsmRawValue = text;
+        missing._zsmMissing  = true;
+        ddl.selection = missing;
+    },
+
+    /**
+     * Reads the resolved value of a dropdown selection. For a synthetic
+     * "missing" item (added by selectDDL when a saved value wasn't in the
+     * document), returns the raw saved name without the display marker;
+     * otherwise returns the selection text. Empty string when nothing selected.
+     *
+     * @param {DropDownList} ddl - Target control.
+     * @returns {string} Resolved value.
+     */
+    ddlValue: function (ddl) {
+        var sel = ddl.selection;
+        if (!sel) return "";
+        return (sel._zsmRawValue != null) ? sel._zsmRawValue : sel.text;
     }
 };
 
@@ -2276,8 +3371,24 @@ ZSM.UI = {
             return;
         }
 
+        // Pin coordinate system to Y-up Cartesian (origin bottom-left, Y grows
+        // upward) — the convention assumed throughout core.js (see addSteps
+        // comment) and bounds.js (Math.max for top, Math.min for bottom).
+        // CC's API default is already Y-up, but a per-document
+        // "Y origin from Artboard top-left" preference (Edit > Preferences >
+        // Units, since Illustrator 2017+) or a previous script in the session
+        // can flip it. Setting it explicitly makes the script bulletproof.
+        // Wrapped in try/catch because CS6 throws on this assignment
+        // (CoordinateSystem enum doesn't exist) — CS6 is always Y-up by
+        // definition, so the swallow is safe.
+        try {
+            app.coordinateSystem = CoordinateSystem.DOCUMENTCOORDINATESYSTEM;
+        } catch (csErr) {
+            ZSM.Utils.log("coordinateSystem pin skipped: " + csErr.message);
+        }
+
         // Load saved settings (returns full preset wrapper or null)
-        var pData = ZSM.Config.Storage.load();
+        var pData = ZSM.Storage.load();
         if (!pData) {
             // First run: build minimal wrapper from defaults
             pData = { activePreset: ZSM.Config.PRESET_KEY_DEFAULT, presets: {} };
@@ -2288,11 +3399,26 @@ ZSM.UI = {
         var resultWrapper = ZSM.UI.show(pData);
         if (!resultWrapper) return;
 
-        // Persist settings before rendering (so a crash doesn't lose the config)
-        ZSM.Config.Storage.save(resultWrapper);
+        // Persist settings before rendering (so a crash doesn't lose the config).
+        // Log + alert on failure but continue with the render — the user already
+        // submitted the dialog, blocking the render because we cannot persist
+        // would surprise them. The next run can re-save.
+        try {
+            ZSM.Storage.save(resultWrapper);
+        } catch (e) {
+            ZSM.Utils.log("Storage.save failed: " + e.message);
+            alert(ZSM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+        }
 
-        // Extract the flat settings object for the active preset
-        var res = resultWrapper.presets[resultWrapper.activePreset];
+        // Extract runtime settings. Source: `[Last Settings]` always reflects
+        // what the user just submitted via Generate (btnOk.onClick stores
+        // current UI values there). The active named preset is intentionally
+        // NOT used here — Tier 2 made named presets immutable except via
+        // explicit Save, so they may be stale relative to current UI.
+        // Fallback to activePreset only if [Last Settings] is somehow missing
+        // (shouldn't happen on a normal Generate run, but defensive).
+        var res = resultWrapper.presets["[Last Settings]"]
+               || resultWrapper.presets[resultWrapper.activePreset];
 
         // Unlock layers, set ruler origin
         draw.beginSession();

@@ -30,6 +30,26 @@ ZSM.Utils = {
     },
 
     /**
+     * Effective scale factor — composes Illustrator Large Canvas factor
+     * (auto-detected) with the user's manual 1:N scale (s.scaleN).
+     *
+     * SINGLE SOURCE OF TRUTH. Every place that converts between
+     * "user-entered real-world mm" and "doc-space pt" MUST use this,
+     * not raw getSF(). Past bug (v26.4.0 manual test): draw.js used
+     * getSF() alone for mark size, so marks were not shrunk in 1:10
+     * workflow even though positions were. Fixed by routing both
+     * core.js math and draw.js render through this helper.
+     *
+     * @param {Object} s - Settings object (must carry scaleN; defaults to 1).
+     * @returns {number} Composed factor: Large Canvas SF * manual scaleN.
+     */
+    getEffectiveSF: function (s) {
+        var manualN = (s && s.scaleN) ? Number(s.scaleN) : 1;
+        if (isNaN(manualN) || manualN < 1) manualN = 1;
+        return this.getSF() * manualN;
+    },
+
+    /**
      * Validates a numerical input within a range.
      * Normalizes Czech decimal separator (comma → dot) before parsing.
      * Returns null and shows alert if invalid; keeps dialog open.
@@ -40,8 +60,12 @@ ZSM.Utils = {
      * @returns {number|null} Validated number or null if invalid.
      */
     validateNumber: function (val, min, max, name) {
-        var str = String(val).replace(/,/g, ".");
-        var n = Number(str);
+        // Normalize: comma → dot (CZ locale), trim whitespace
+        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
+        // JS quirk: Number("") === 0 and Number("  ") === 0, NOT NaN.
+        // Treat empty/whitespace-only strings as invalid to prevent
+        // silent 0-substitution when user clears a UI field.
+        var n = (str === "") ? NaN : Number(str);
         if (isNaN(n)) {
             alert(ZSM.L.format(ZSM.L.ERR_MUST_BE_NUMBER, name));
             return null;
@@ -70,5 +94,49 @@ ZSM.Utils = {
      */
     error: function (msg) {
         alert(ZSM.L.ERROR_PREFIX + msg);
+    },
+
+    /**
+     * Displays a non-fatal warning alert with a localized "warning" prefix.
+     * Distinct from error() so post-completion notices (missing colour →
+     * [Registration] fallback, colour assigned to a layer that matched no
+     * paths) aren't mislabelled as errors — the operation still succeeded.
+     * @param {string} msg - Warning message body.
+     */
+    warn: function (msg) {
+        alert(ZSM.L.WARN_PREFIX + msg);
+    },
+
+    /**
+     * Deep-equality test for two settings objects.
+     * Used by the UI to detect "modified" state (UI values diverged
+     * from the stored preset). Numeric coercion via String() so 5
+     * and "5" compare equal — UI inputs are strings, stored values
+     * may be numbers.
+     *
+     * Compares fixed schema fields (mode, gaps, sizes, color, etc.)
+     * plus layers[] array (name+color per row). Extra fields outside
+     * the schema are ignored.
+     *
+     * @param {Object} a - First settings object.
+     * @param {Object} b - Second settings object.
+     * @returns {boolean} True if all schema fields are equal.
+     */
+    presetEquals: function (a, b) {
+        if (!a || !b) return false;
+        var keys = ["mode", "gapInner", "gapOuter", "maxDist",
+                    "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
+                    "markSizeZ", "markSizeS", "orientDist", "markColor",
+                    "scaleN"];
+        for (var i = 0; i < keys.length; i++) {
+            if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
+        }
+        var aL = a.layers || [], bL = b.layers || [];
+        if (aL.length !== bL.length) return false;
+        for (var li = 0; li < aL.length; li++) {
+            if ((aL[li].name || "")  !== (bL[li].name || ""))  return false;
+            if ((aL[li].color || "") !== (bL[li].color || "")) return false;
+        }
+        return true;
     }
 };

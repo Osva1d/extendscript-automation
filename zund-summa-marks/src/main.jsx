@@ -6,8 +6,24 @@
             return;
         }
 
+        // Pin coordinate system to Y-up Cartesian (origin bottom-left, Y grows
+        // upward) — the convention assumed throughout core.js (see addSteps
+        // comment) and bounds.js (Math.max for top, Math.min for bottom).
+        // CC's API default is already Y-up, but a per-document
+        // "Y origin from Artboard top-left" preference (Edit > Preferences >
+        // Units, since Illustrator 2017+) or a previous script in the session
+        // can flip it. Setting it explicitly makes the script bulletproof.
+        // Wrapped in try/catch because CS6 throws on this assignment
+        // (CoordinateSystem enum doesn't exist) — CS6 is always Y-up by
+        // definition, so the swallow is safe.
+        try {
+            app.coordinateSystem = CoordinateSystem.DOCUMENTCOORDINATESYSTEM;
+        } catch (csErr) {
+            ZSM.Utils.log("coordinateSystem pin skipped: " + csErr.message);
+        }
+
         // Load saved settings (returns full preset wrapper or null)
-        var pData = ZSM.Config.Storage.load();
+        var pData = ZSM.Storage.load();
         if (!pData) {
             // First run: build minimal wrapper from defaults
             pData = { activePreset: ZSM.Config.PRESET_KEY_DEFAULT, presets: {} };
@@ -18,11 +34,26 @@
         var resultWrapper = ZSM.UI.show(pData);
         if (!resultWrapper) return;
 
-        // Persist settings before rendering (so a crash doesn't lose the config)
-        ZSM.Config.Storage.save(resultWrapper);
+        // Persist settings before rendering (so a crash doesn't lose the config).
+        // Log + alert on failure but continue with the render — the user already
+        // submitted the dialog, blocking the render because we cannot persist
+        // would surprise them. The next run can re-save.
+        try {
+            ZSM.Storage.save(resultWrapper);
+        } catch (e) {
+            ZSM.Utils.log("Storage.save failed: " + e.message);
+            alert(ZSM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+        }
 
-        // Extract the flat settings object for the active preset
-        var res = resultWrapper.presets[resultWrapper.activePreset];
+        // Extract runtime settings. Source: `[Last Settings]` always reflects
+        // what the user just submitted via Generate (btnOk.onClick stores
+        // current UI values there). The active named preset is intentionally
+        // NOT used here — Tier 2 made named presets immutable except via
+        // explicit Save, so they may be stale relative to current UI.
+        // Fallback to activePreset only if [Last Settings] is somehow missing
+        // (shouldn't happen on a normal Generate run, but defensive).
+        var res = resultWrapper.presets["[Last Settings]"]
+               || resultWrapper.presets[resultWrapper.activePreset];
 
         // Unlock layers, set ruler origin
         draw.beginSession();

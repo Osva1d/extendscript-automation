@@ -1,0 +1,296 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Bounds — bounds measurement of Illustrator content
+// Part of: Illustrator Zund & Summa Marks
+//
+// Pure measurement responsibility — reads the document, never mutates it.
+// Encapsulates clipping-aware bounds calculation including layer-level
+// clipping heuristic for bracket-named layers (Illustrator's auto-named
+// <Clip Group> / <Group>) and stack-based traversal of clipped groups.
+//
+// Public:
+//   ZSM.Bounds.get(s)                — main entry; returns [L,T,R,B] or null
+//   ZSM.Bounds.isArtifactLayer(l)    — bracket-named layer detection (also
+//                                       used by ZSM.Draw render code)
+//   ZSM.Bounds.isInsideClippedGroup  — ancestor check (also used by movePaths)
+//
+// Internal helpers (kept on the namespace for testability):
+//   _measureLayer, _getEffectiveBounds
+//
+// Depends on: ZSM.Config (layerRegmarks, layerGraphics)
+// ------------------------------------------------------------------------
+var ZSM = ZSM || {};
+
+ZSM.Bounds = {
+    /**
+     * Computes a single bounding rectangle that contains every layer's
+     * top-level content (after applying skip rules for our own output
+     * layer, the other-mode marks, the trim sublayer, etc.).
+     *
+     * Skip rules:
+     *   - Regmarks (our output layer) → only OTHER mode's sublayer is
+     *     measured (so a second run places marks outside the first run)
+     *   - Graphics → the "Trim" sublayer (our own trim lines) is skipped
+     *   - guide paths and PluginItem/NonNativeItem are skipped
+     *
+     * Hidden layers ARE measured — script intent is to encompass the full
+     * graphic extent regardless of visibility.
+     *
+     * @param {Object} s - Settings (uses s.useArtboardBounds, s.mode).
+     * @returns {Array|null} [L, T, R, B] in document points, or null.
+     */
+    get: function (s) {
+        var doc = app.activeDocument;
+
+        if (s && s.useArtboardBounds) {
+            var ab = doc.artboards[doc.artboards.getActiveArtboardIndex()];
+            return ab.artboardRect;
+        }
+
+        // Clear any prior selection — held refs can crash later DOM access
+        // at C++ level if items they reference get moved/removed.
+        try { doc.selection = null; } catch (ds1) {}
+
+        var b = [Infinity, -Infinity, -Infinity, Infinity];
+        var bRef = { found: false };
+        var currentMode = (s && s.mode === "SUMMA") ? "Summa" : "Zünd";
+
+        // Per-layer skip rules for sublayer recursion
+        var regmarksSkip = {};
+        regmarksSkip[currentMode] = true;
+        var graphicsSkip = { "Trim": true };
+
+        for (var li = 0; li < doc.layers.length; li++) {
+            try {
+                var layer = doc.layers[li];
+                // Bracket-named layers ARE measured (read-only) — only state
+                // mutation on them is dangerous and is guarded in
+                // beginSession()/render bottom-layer rename/movePaths.
+                // Reading geometricBounds is safe and lets the layer-clip
+                // heuristic in _measureLayer detect <Clip Group> wrappers.
+
+                var layName = layer.name;
+
+                if (layName === ZSM.Config.layerRegmarks) {
+                    // Regmarks is OUR output layer. Skip its direct items
+                    // (legacy/migrated marks would inflate bounds onto themselves).
+                    // Recurse only into the OTHER mode's sublayer — those marks
+                    // act as a boundary so a second-mode run places its marks
+                    // outside the first run's marks.
+                    var regSubs = layer.layers;
+                    for (var rsi = 0; rsi < regSubs.length; rsi++) {
+                        try {
+                            var rsub = regSubs[rsi];
+                            if (regmarksSkip[rsub.name]) continue;  // skip current mode
+                            this._measureLayer(rsub, b, bRef, null);
+                        } catch (rse) {}
+                    }
+                    continue;
+                }
+
+                var skipNames = null;
+                if (layName === ZSM.Config.layerGraphics) skipNames = graphicsSkip;
+
+                this._measureLayer(layer, b, bRef, skipNames);
+            } catch (le) {
+                // Skip unreadable top-level layer
+            }
+        }
+
+        return bRef.found ? b : null;
+    },
+
+    /**
+     * Recursively measures top-level items of a layer (and its sublayers),
+     * updating the bounds accumulator `b` and setting `bRef.found = true`
+     * when at least one item contributes.
+     *
+     * Top-level filter (`item.parent === layer`) excludes items nested
+     * inside groups/compound paths, which are accounted for by their
+     * parent group via `_getEffectiveBounds()`.
+     *
+     * Layer-level clipping handling: a Layer/sublayer with a bracket-
+     * prefixed name (auto-generated by Illustrator: <Clip Group>, <Group>,
+     * <Compound Path>) is by convention layer-clipped — its top-most
+     * pageItem is the clip mask and the rest is the clipped content. The
+     * DOM does not expose Layer-level `clipped` (only GroupItem has that),
+     * so we infer it from the bracket name and measure ONLY the top-most
+     * direct child. Otherwise the unclipped content would inflate bounds
+     * far beyond the visible clipped area.
+     *
+     * @param {Layer}  layer     - Layer to measure.
+     * @param {Array}  b         - Bounds accumulator [L, T, R, B].
+     * @param {Object} bRef      - {found: bool} flag updated on first hit.
+     * @param {Object} skipNames - Map of sublayer names to skip (or null).
+     * @private
+     */
+    _measureLayer: function (layer, b, bRef, skipNames) {
+        try {
+            var addBounds = function (g) {
+                if (!g) return;
+                b[0] = Math.min(b[0], g[0]);
+                b[1] = Math.max(b[1], g[1]);
+                b[2] = Math.max(b[2], g[2]);
+                b[3] = Math.min(b[3], g[3]);
+                bRef.found = true;
+            };
+
+            var items = layer.pageItems;
+
+            // Layer-level clipping heuristic: bracket-named layer = clipped.
+            // Measure ONLY the top-most direct child (the assumed clip mask).
+            // This matches what's visually inside the clipped area and
+            // prevents the inner artwork's full unclipped bounds from
+            // inflating the measurement.
+            if (this.isArtifactLayer(layer)) {
+                for (var li = 0; li < items.length; li++) {
+                    try {
+                        var top = items[li];
+                        var direct = false;
+                        try { direct = (top.parent === layer); } catch (pe) { continue; }
+                        if (!direct) continue;
+
+                        var tnT = top.typename;
+                        if (tnT === "PluginItem" || tnT === "NonNativeItem") continue;
+                        if ((tnT === "PathItem" || tnT === "CompoundPathItem") && top.guides) continue;
+
+                        addBounds(this._getEffectiveBounds(top));
+                        break; // measured the clip mask — done
+                    } catch (ie1) {}
+                }
+                return;
+            }
+
+            // Normal layer: measure all top-level direct children.
+            for (var i = 0; i < items.length; i++) {
+                try {
+                    var item = items[i];
+
+                    var isDirect = false;
+                    try { isDirect = (item.parent === layer); } catch (pe2) { continue; }
+                    if (!isDirect) continue;
+
+                    var tn = item.typename;
+                    if (tn === "PluginItem" || tn === "NonNativeItem") continue;
+                    if ((tn === "PathItem" || tn === "CompoundPathItem") && item.guides) continue;
+
+                    addBounds(this._getEffectiveBounds(item));
+                } catch (ie) {}
+            }
+
+            // Recurse into sublayers (incl. bracket-named ones — they get
+            // their own layer-clip heuristic in the recursive call above).
+            var subs = layer.layers;
+            for (var sli = 0; sli < subs.length; sli++) {
+                try {
+                    var sub = subs[sli];
+                    if (skipNames && skipNames[sub.name]) continue;
+                    this._measureLayer(sub, b, bRef, skipNames);
+                } catch (se) {}
+            }
+        } catch (le) {}
+    },
+
+    /**
+     * Detects "artifact" layers — those auto-generated by Illustrator with
+     * bracket-prefixed names (<Clip Group>, <Group>, <Compound Path>) or
+     * paren-prefixed names. Used by:
+     *   - bounds: layer-clip heuristic (measure only top child)
+     *   - draw render: skip during state mutation (rename/move) to avoid
+     *     breaking Illustrator's auto-management of these wrappers
+     *
+     * @param {Layer} layer - Layer to test.
+     * @returns {boolean}
+     */
+    isArtifactLayer: function (layer) {
+        try {
+            var c = layer.name.charAt(0);
+            // Defensive: empty layer name → c === "" → falsy on both
+            // comparisons → returns false. The catch handles missing/
+            // unreadable name (returns true, treating it as artifact).
+            return c === '<' || c === '(';
+        } catch (e) { return true; }
+    },
+
+    /**
+     * Returns effective geometric bounds of an item, respecting clipping
+     * masks at any nesting depth. For a clipped group, returns the clip
+     * mask bounds. For a non-clipped group, recursively merges children's
+     * effective bounds (so a clipped subgroup inside a plain group is
+     * handled correctly). For leaf items, returns geometricBounds directly.
+     *
+     * Iterative traversal using an explicit stack to avoid stack overflow:
+     * ExtendScript has a call stack limit of ~100-200 frames; deeply nested
+     * groups (common in programmatically generated or imported SVG files)
+     * would crash with a recursive approach.
+     *
+     * @param {PageItem} item - Item to measure.
+     * @returns {Array|null} [L, T, R, B] in document points, or null on failure.
+     * @private
+     */
+    _getEffectiveBounds: function (item) {
+        try {
+            var stack = [item];
+            var b = [Infinity, -Infinity, -Infinity, Infinity];
+            var found = false;
+
+            while (stack.length > 0) {
+                var cur = stack.pop();
+                try {
+                    if (cur.typename === "GroupItem") {
+                        if (cur.clipped) {
+                            // Clip mask is always pageItems[0] (topmost child)
+                            var cb = cur.pageItems[0].geometricBounds;
+                            b[0] = Math.min(b[0], cb[0]);
+                            b[1] = Math.max(b[1], cb[1]);
+                            b[2] = Math.max(b[2], cb[2]);
+                            b[3] = Math.min(b[3], cb[3]);
+                            found = true;
+                        } else {
+                            // Non-clipped group: push children for processing
+                            for (var i = 0; i < cur.pageItems.length; i++) {
+                                stack.push(cur.pageItems[i]);
+                            }
+                        }
+                    } else {
+                        var lb = cur.geometricBounds;
+                        b[0] = Math.min(b[0], lb[0]);
+                        b[1] = Math.max(b[1], lb[1]);
+                        b[2] = Math.max(b[2], lb[2]);
+                        b[3] = Math.min(b[3], lb[3]);
+                        found = true;
+                    }
+                } catch (ie) {
+                    // Skip items whose bounds can't be read (corrupt, PluginItem, etc.)
+                }
+            }
+            return found ? b : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Checks whether an item is nested inside a clipped group.
+     * Walks up the parent chain from the item to the layer root.
+     * Returns true if any ancestor is a GroupItem with clipping enabled.
+     * Used by getBounds() to skip children whose unclipped geometric bounds
+     * would inflate the measured area beyond the visible clip boundary,
+     * and by movePaths() to avoid extracting items from clipped groups
+     * (which would break the group structure and trigger MRAP errors).
+     *
+     * @param {PageItem} item - Item to check.
+     * @returns {boolean} True if item is inside a clipped group.
+     */
+    isInsideClippedGroup: function (item) {
+        try {
+            var p = item.parent;
+            while (p) {
+                if (p.typename === "GroupItem" && p.clipped) return true;
+                // Stop at layer level — no need to check further
+                if (p.typename === "Layer") return false;
+                p = p.parent;
+            }
+        } catch (e) {}
+        return false;
+    }
+};

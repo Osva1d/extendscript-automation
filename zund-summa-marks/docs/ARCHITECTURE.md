@@ -1,8 +1,11 @@
-# Architecture: Zünd & Summa Marks v26.3.1
+# Architecture: Zünd & Summa Marks v26.3.2
 
-> Copyright © 2025-2026 Osva1d. All rights reserved.
+> Copyright © 2025-2026 Ladislav Osvald (Osva1d) — licensed under GPL-3.0-or-later.
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
+>
+> **Aktuální verze:** v26.3.2 (Phase 1 patch — uvolnění `maxDist.min` na 5 mm pro 1:10 workflow).
+> Plně automatická scale-aware podpora je naplánována jako Phase 2 (v27.x).
 
 ---
 
@@ -24,23 +27,33 @@ Projekt používá namespace `ZSM.*`. Staré reference na `PMA.*` jsou chyba.
 
 ```
 src/
-├── lib/
-│   ├── json2.js        ZSM-independent — JSON polyfill pro ES3
-│   └── utils.js        ZSM.Utils — mm↔pt konverze, validateNumber(), log(), error() [src/lib/utils.js]
-├── locale.js           ZSM.L — EN/CS stringtable, app.locale detekce, format() helper
-├── config.js           ZSM.Config — konstanty, getDefaults(), Storage (save/load/migrate)
-├── core.js             ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
-├── draw.js             ZSM.Draw — Illustrator DOM, render(), getBounds(), getLay(), movePaths()
-├── ui.js               ZSM.UI — ScriptUI dialog, preset logika, validace, event handling
-└── main.jsx            Entry point — IIFE, orchestrace
+├── lib/                  ← pure utility modules — žádný DOM, plně testovatelné offline
+│   ├── json2.js          ZSM-independent — JSON polyfill pro ES3
+│   ├── utils.js          ZSM.Utils — mm↔pt konverze, log(), error()
+│   ├── validation.js     ZSM.Validation — schema-based validace numerických polí
+│   ├── ui_state.js       ZSM.UIState — preset save/saveAs/delete, modified detekce
+│   ├── storage.js        ZSM.Storage — load/save JSON settings + migrace v26.0→v27
+│   └── bounds.js         ZSM.Bounds — měření bounds Illustrator obsahu (clip-aware)
+├── locale.js             ZSM.L — EN/CS stringtable, app.locale detekce, format()
+├── config.js             ZSM.Config — konstanty, getDefaults() (Storage moved to lib/)
+├── core.js               ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
+├── draw.js               ZSM.Draw — DOM mutace: render(), beginSession(), movePaths()
+│                          getBounds() je tenký wrapper přes ZSM.Bounds.get()
+├── ui.js                 ZSM.UI — ScriptUI dialog, preset logika, event handling
+└── main.jsx              Entry point — IIFE, orchestrace
 ```
+
+**`src/lib/` vs `src/` boundary:**
+- `lib/` = pure utility moduly bez DOM přístupu. Testovatelné s `eval()` + Node.js mocks (žádný Illustrator).
+- `src/` root = doménové moduly. `core.js` je čistá matematika (taky offline-testable). `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.jsx` orchestrace.
+- `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`) protože jsou sdílené mezi bounds výpočtem a render-side `movePaths()`/`beginSession()`. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
 
 **Load order (NELZE měnit):**
 ```
-json2.js → locale.js → utils.js → config.js → core.js → draw.js → ui.js → main.jsx
+json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.jsx
 ```
 
-`locale.js` musí být první modul — `ZSM.L` volají všechny ostatní moduly.
+`locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`).
 
 **Build:**
 ```bash
@@ -48,6 +61,18 @@ bash tools/build.sh   # → dist/illustrator-zund-summa-marks.jsx
 ```
 
 `src/` je master. `dist/` je build output — **nikdy editovat ručně**.
+
+---
+
+## Error policy
+
+Sjednocené pravidlo pro error handling napříč moduly:
+
+- **File I/O failures** (`ZSM.Storage.save`, `ZSM.Storage.load`, settings file write): **vždy log + user-facing alert**. Uživatel musí vědět, že se nastavení neuložilo. Příklad: `ZSM.Utils.log("Storage.save failed: " + e.message); alert(ZSM.L.ERR_WRITE_SETTINGS + ...)` v ui.js click handlerech a v main.jsx.
+- **DOM hazards** (`doc.layers[i].locked = false`, `layer.remove()`, `app.redraw()`, mutace na artifact layers, čtení geometricBounds z corrupt items): **log + graceful fallback, žádný alert**. Uživatel netuší, co je locked layer; alert by ho jen zmátl. Použití: `try { ... } catch (e) { ZSM.Utils.log("context: " + e.message); }` nebo prázdný catch tam, kde je fallback (continue/return) zřejmý ze struktury (např. cleanup smyčky, defensive `try { redraw } catch {}`).
+- **Catastrophic failure** (uncaught error v `main.jsx` outer try/catch): user dostane `ERR_CRITICAL` alert s chybovou zprávou + řádkem.
+
+`ZSM.Utils.log()` je gated přes `ZSM.Config.debug` — produkční dist tedy nezaplaví uživatele console output, ale developer při ladění vidí celý trace.
 
 ---
 

@@ -17,7 +17,12 @@ ZSM.Core = {
      */
     calculateAll: function (s, b) {
         var cfg = ZSM.Config;
-        var sf  = ZSM.Utils.getSF(); // 1 for standard, 10 for Large Canvas
+        // Effective scale factor — see ZSM.Utils.getEffectiveSF() for the
+        // single source of truth. Routes through that helper so core.js and
+        // draw.js cannot drift apart again (the bug class fixed in v26.4.0
+        // manual test: draw.js used raw getSF(), missed scaleN, marks
+        // didn't shrink).
+        var sf  = ZSM.Utils.getEffectiveSF(s);
 
         // Convert physical constants to document-space values
         var rZ    = (s.markSizeZ / 2) / sf;

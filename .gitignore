@@ -1,1 +1,4 @@
 .DS_Store
+
+# Node dependencies — installed from package.json/package-lock.json, never committed
+node_modules/

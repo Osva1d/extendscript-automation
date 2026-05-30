@@ -1,6 +1,6 @@
 # Test Plan: Zünd & Summa Marks v26.3
 
-**Skript:** `dist/illustrator-zund-summa-marks.jsx` | **Verze:** 26.3.1 | **Datum:** 2026-04-02
+**Skript:** `dist/illustrator-zund-summa-marks.jsx` | **Verze:** 26.3.2 | **Datum:** 2026-05-23
 
 ---
 

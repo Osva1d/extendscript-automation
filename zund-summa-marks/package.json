@@ -1,0 +1,31 @@
+{
+  "name": "zund-summa-marks",
+  "version": "26.4.0",
+  "description": "Registration marks generator for Zünd/Summa cutting tables (Adobe Illustrator ExtendScript).",
+  "private": true,
+  "scripts": {
+    "test": "bash tests/run_all.sh",
+    "test:math": "node tests/test_core_math.js",
+    "test:utils": "node tests/test_utils.js",
+    "test:locale": "node tests/test_locale.js",
+    "test:validation": "node tests/test_validation.js",
+    "test:storage": "node tests/test_storage_migrations.js",
+    "test:bounds": "node tests/test_draw_get_bounds.js",
+    "test:render": "node tests/test_draw_render.js",
+    "test:uistate": "node tests/test_ui_state.js",
+    "test:props": "node tests/test_properties.js",
+    "test:e2e": "node tests/test_e2e_workflow.js",
+    "test:es3": "node tests/test_es3_compliance.js",
+    "test:layout": "node tests/test_ui_layout.js",
+    "build": "bash tools/build.sh",
+    "verify": "npm run build && npm test"
+  },
+  "author": "Osva1d",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=14"
+  },
+  "devDependencies": {
+    "fast-check": "^4.7.0"
+  }
+}
