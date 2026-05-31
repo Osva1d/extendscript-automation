@@ -15,6 +15,7 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 - **Preset systém** — ukládání a přepínání konfigurací; automatický `[Last Settings]`
 - **Multilanguage** — čeština (cs) a angličtina (en) dle locale Illustratoru
 - **Large Canvas podpora** — správná práce s `scaleFactor = 10.0`
+- **Manuální měřítko 1:N** — práce se zmenšeným dokumentem (např. 1:10); zadáváš reálné rozměry, skript je přepočítá (checkbox „Pracovat v měřítku")
 - **Migrace nastavení** — automatický převod formátů z předchozích verzí
 
 ---
@@ -190,9 +191,11 @@ layers: [
 
 ## Uložená nastavení
 
-Soubor: `~/Library/Application Support/ZSM/settings_v26_3.json`
+Soubor: `~/Library/Application Support/ZSM/settings.json`
+(starší `settings_v26_3.json` se při prvním spuštění automaticky načte a přepíše na nový název)
 
 Skript automaticky migruje starší formáty:
+- `settings_v26_3.json` → `settings.json` (přejmenování souboru)
 - v26.0 flat (`thruActive/kissActive`) → v26.3 `layers[]`
 - flat objekt → preset wrapper
 - `layers[].active` property → row existence (aktivní = přítomen v poli)
@@ -224,8 +227,17 @@ Manuální testy: viz `docs/TEST_PLAN_MASTER.md`
 
 ## Changelog
 
+### v26.4.0 (2026-05) — Phase 2: manuální měřítko + review-round hardening
+- **Feat:** Manuální měřítko 1:N (`scaleN`, rozsah 1–10) — checkbox „Pracovat v měřítku" + pole v panelu technologie. `ZSM.Utils.getEffectiveSF()` skládá Large Canvas `scaleFactor` × `scaleN` a používá ho **core.js i draw.js** (oprava: dříve draw.js škáloval pozice, ale ne velikost značek → značky se v 1:10 nezmenšily). Titulek dialogu ukazuje „— 1:N".
+- **Fix (barva, prepress-safe):** `getCol` už NEvytváří tiše náhradní spot pro neznámou barvu (tichá mutace dokumentu, arbitrární magenta, batch pollution). Chybějící barva → fallback `[Registration]` + neblokující upozornění. Nové `registrationColor()` / `swatchExists()`.
+- **Fix (preset robustnost):** swatch/vrstva uložená v presetu, ale chybějící v dokumentu, se zachová jako položka „(chybí)" s raw názvem (`selectDDL`/`ddlValue`) — žádný tichý swap na výchozí, žádná falešná `*`. Chybějící cílová vrstva se vytvoří.
+- **Fix:** Mazání předvolby vyžaduje potvrzovací dialog; `Storno` (dříve „Zrušit").
+- **Fix:** Tři silent `catch {}` kolem `Storage.save` sjednoceny do `persistSettings()` s logem + alertem (selhání zápisu už „nevzkřísí" smazaný preset).
+- **Chore:** `build.sh` selže při rozjetí verze `package.json` ↔ `config.js`. Tři inline artifact-layer kontroly → `ZSM.Bounds.isArtifactLayer`. Varování se zobrazují jako „UPOZORNĚNÍ:" (ne „CHYBA:"). Test suite + lib moduly pod verzování.
+- Testy: 13 suites (přidán `test_ui_select_ddl`, regresní testy pro scaleN velikost značek a „getCol nevytváří swatch").
+
 ### v26.3.2 (2026-05) — Phase 1 patch: 1:10 workflow unblock
-- **Fix:** Validace `maxDist` (rozteč značek) — minimum sníženo 50 → 5 mm. Workflow uživatele pracujícího se zmenšeným dokumentem (např. 500×500 mm reprezentujícím 5000×5000 mm reality) přestal být blokován validací při zadání rozteče < 50 mm. Plně automatická scale-aware podpora přijde ve v27.x (Phase 2).
+- **Fix:** Validace `maxDist` (rozteč značek) — minimum sníženo 50 → 5 mm. Workflow uživatele pracujícího se zmenšeným dokumentem (např. 500×500 mm reprezentujícím 5000×5000 mm reality) přestal být blokován validací při zadání rozteče < 50 mm. Plná scale-aware podpora (manuální `scaleN`) přišla ve v26.4.0 (Phase 2).
 - Regresní testy: `tests/test_validation.js` boundary asserts aktualizovány (5/4 místo 50/49) + 2 nové scenario testy pro 1:10 vstupy 30 mm a 40 mm.
 - Dokumentace: README sekce „Workflow při zmenšeném měřítku (1:10)" v Projects/extendscript-automation, INSTALL_MAC aktualizován s aktuálními názvy skriptů.
 

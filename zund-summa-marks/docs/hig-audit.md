@@ -1,7 +1,7 @@
-# HIG Audit — ZSM Dialog (v26.3.2)
+# HIG Audit — ZSM Dialog (v26.4.0)
 
-**Stav:** Baseline pro v26.3.2 (květen 2026)
-**Změna oproti v26.3.1:** Žádné UI změny — patch verze upravila pouze validační minimum `maxDist`. HIG layout zůstává shodný.
+**Stav:** Aktuální pro v26.4.0 (květen 2026)
+**Změny v UI od v26.3.2:** přidán checkbox „Pracovat v měřítku" + pole 1:N v panelu technologie (Phase 2); tlačítko Cancel přejmenováno na „Storno"; mazání předvolby vyžaduje potvrzovací dialog; barva/vrstva chybějící v dokumentu se v dropdownu zobrazí jako „… (chybí)". Základní layout (šířky, marginy, pořadí panelů, Cancel-left / OK-right) beze změny.
 **Auditor:** Automated assertions in `tests/test_ui_layout.js` + manual review
 
 Tento dokument definuje **závazné konvence vizuálního layoutu** pro ScriptUI dialog skriptu Zünd & Summa Marks. Každá položka je buď automaticky vynucena testem (📋 viz `tests/test_ui_layout.js`), nebo platí jako review-checklist.

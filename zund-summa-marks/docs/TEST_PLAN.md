@@ -1,6 +1,11 @@
-# Test Plan: Zünd & Summa Marks v26.3
+# Test Plan: Zünd & Summa Marks v26.4
 
-**Skript:** `dist/illustrator-zund-summa-marks.jsx` | **Verze:** 26.3.2 | **Datum:** 2026-05-23
+**Skript:** `dist/illustrator-zund-summa-marks.jsx` | **Verze:** 26.4.0 | **Datum:** 2026-05-23
+
+> **Master regresní protokol** (37 TC případů napříč všemi funkcemi). Pro fokusovaný
+> per-release checklist změn ve v26.4.0 viz [`MANUAL_TEST_v26.4.md`](MANUAL_TEST_v26.4.md).
+> Pozn.: nastavení se nově ukládají do `settings.json`; reference na `settings_v26_3.json`
+> v migračních testech (sekce Persistence) jsou **záměrné** — testují načtení staršího souboru.
 
 ---
 
@@ -257,7 +262,7 @@ Očekáváno: Alert "Nic není vybráno." Graceful exit.
 
 Generovat SUMMA, Feed Top: 90 → zavřít AI → spustit znovu.
 
-Očekáváno: Dialog s SUMMA, 90 mm. Soubor `~/Library/Application Support/ZSM/settings_v26_3.json`.
+Očekáváno: Dialog s SUMMA, 90 mm. Soubor `~/Library/Application Support/ZSM/settings.json`.
 
 **Výsledek:**
 
@@ -265,7 +270,7 @@ Očekáváno: Dialog s SUMMA, 90 mm. Soubor `~/Library/Application Support/ZSM/s
 
 ### TC-020 Výchozí hodnoty — první spuštění (P1)
 
-`rm ~/Library/Application\ Support/ZSM/settings_v26_3.json` → spustit.
+`rm -f ~/Library/Application\ Support/ZSM/settings.json ~/Library/Application\ Support/ZSM/settings_v26_3.json` → spustit.
 
 Očekáváno: ZUND, gapInner: 5, gapOuter: 0, maxDist: 500, markSizeZ: 5, orientDist: 100, [Registration], preset [Výchozí], 1 vrstva Cut.
 

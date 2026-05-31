@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Node dependencies — installed from package.json / package-lock.json (test tooling).
+# package.json + package-lock.json ARE committed; node_modules never is.
+node_modules/
+
+# Editor / IDE
+*.swp
+*~
+.idea/
+.vscode/
+
+# Note: dist/illustrator-zund-summa-marks.jsx IS committed (release artifact) — do not ignore.
