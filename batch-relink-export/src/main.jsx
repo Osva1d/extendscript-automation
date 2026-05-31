@@ -12,13 +12,21 @@
             } catch (e) {}
         }
 
-        // Open template once to count PlacedItems for preview
+        // Count PlacedItems for the preview. If the user already has the
+        // template open, read from THAT instance without closing it — closing
+        // here would discard their unsaved work even if they then cancel at the
+        // preview. (Processing later closes it on the first iteration, which is
+        // what the warning above is about.)
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
         try {
-            var tplDoc = app.open(config.templateFile);
-            slotCount = tplDoc.placedItems.length;
-            tplDoc.close(SaveOptions.DONOTSAVECHANGES);
+            if (openTpl) {
+                slotCount = openTpl.placedItems.length;
+            } else {
+                var tplDoc = app.open(config.templateFile);
+                slotCount = tplDoc.placedItems.length;
+                tplDoc.close(SaveOptions.DONOTSAVECHANGES);
+            }
         } catch (e) {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
             alert(BRE.L.ERR_TEMPLATE + "\n" + e.message);

@@ -134,12 +134,17 @@ BRE.Core = {
         }
 
         if (totalPages > 0) {
-            // Remove positions whose page is beyond the source PDF (reverse
-            // iteration is required when removing from a live collection).
+            // Remove ONLY managed positions (linked + visible) whose page is
+            // beyond the source PDF. Deliberately-skipped items — fileless or
+            // on a hidden layer — are never removed: their pageNumber refers to
+            // a DIFFERENT document and must not be compared to this PDF.
+            // Reverse iteration is required when removing from a live collection.
             for (i = items.length - 1; i >= 0; i--) {
                 try {
-                    if (items[i].pageNumber && items[i].pageNumber > totalPages) {
-                        items[i].remove();
+                    item = items[i];
+                    if (!item.file || this._isOnHiddenLayer(item)) continue;
+                    if (item.pageNumber && item.pageNumber > totalPages) {
+                        item.remove();
                         results.removed++;
                     }
                 } catch (e) {
@@ -147,14 +152,16 @@ BRE.Core = {
                 }
             }
 
-            // Post-condition: after removal NO surviving item may reference a
-            // page beyond the source. If one does, a remove() silently failed —
+            // Post-condition: no surviving MANAGED item may reference a page
+            // beyond the source. If one does, a remove() silently failed —
             // flag it so the caller refuses to export a lossy sheet.
             for (i = 0; i < items.length; i++) {
                 try {
-                    if (items[i].pageNumber && items[i].pageNumber > totalPages) {
+                    item = items[i];
+                    if (!item.file || this._isOnHiddenLayer(item)) continue;
+                    if (item.pageNumber && item.pageNumber > totalPages) {
                         results.errors.push(
-                            BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(items[i].pageNumber))
+                            BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(item.pageNumber))
                         );
                     }
                 } catch (e) {}
@@ -212,11 +219,28 @@ BRE.Core = {
         try {
             pdfFile.encoding = "binary";
             if (!pdfFile.open("r")) return null;
-            var content = pdfFile.read();
+
+            // Cap memory for very large print PDFs: the /Count and /Type/Page
+            // tokens live in the object section and trailer, so we scan the
+            // head and tail rather than loading the whole file. A token missed
+            // by this window yields a low/zero count → safe "unreadable"
+            // fallback (relink all, remove none), never a wrong removal.
+            var CAP = 8 * 1024 * 1024;
+            var len = pdfFile.length;
+            var content;
+            if (len <= 0 || len <= CAP) {
+                content = pdfFile.read();
+            } else {
+                var half = Math.floor(CAP / 2);
+                var head = pdfFile.read(half);
+                pdfFile.seek(len - half, 0);
+                content = head + pdfFile.read(half);
+            }
             pdfFile.close();
             return content;
         } catch (e) {
             this._log("_readPdfBinary failed: " + e.message);
+            try { pdfFile.close(); } catch (ce) {}
             return null;
         }
     },
@@ -319,13 +343,17 @@ BRE.Core = {
      *   "partial"    pages < slotCount AND last file (expected short last sheet)
      *   "under"      pages < slotCount AND not last file (likely split error)
      *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
-     *   "uncertain"  two independent counts disagree — not trusted — BLOCKED
+     *   "uncertain"  page-object count exceeds /Count — BLOCKED
      *   "unreadable" pages === 0 (count could not be detected)
      *
      * Each PDF is read once; both /Count and /Type/Page counts are derived
-     * from the same bytes. When both are non-zero and disagree, the count
-     * cannot be trusted (a wrong count gates a destructive remove), so the
-     * file is marked "uncertain" and hard-blocked for manual review.
+     * from the same bytes. Only the dangerous direction is blocked: when there
+     * are MORE page objects than /Count claims (pageObjs > pages), /Count is
+     * undercounting and the remove-excess step would drop real pages, so the
+     * file is marked "uncertain" and hard-blocked for manual review. The other
+     * direction (pageObjs < pages, e.g. page objects hidden in compressed
+     * object streams of a modern PDF) is NOT a contradiction — /Count is
+     * authoritative there, so it is trusted.
      *
      * @param {File[]} pdfFiles - Source PDF files (already sorted).
      * @param {number} slotCount - Number of PlacedItems in the template.
@@ -346,7 +374,7 @@ BRE.Core = {
 
             if (pages === 0) {
                 status = "unreadable";
-            } else if (pageObjs > 0 && pageObjs !== pages) {
+            } else if (pageObjs > pages) {
                 status = "uncertain";
             } else if (pages > slotCount) {
                 status = "over";
