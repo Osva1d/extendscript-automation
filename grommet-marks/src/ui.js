@@ -498,6 +498,19 @@ GM.UI = {
                 paintField(t.et, ok);
                 if (!ok) allValid = false;
             }
+
+            // Structural checks (mirror GM.Validation.validate) so OK greys out
+            // for these too, not just numeric ranges. These have no single field
+            // to paint, so they only gate the button.
+            // 1) At least one effective edge enabled (mirror copies the opposite).
+            var topOn = topUI.cb.value;
+            var leftOn = leftUI.cb.value;
+            var bottomOn = bottomUI.getMirror() ? topOn : bottomUI.cb.value;
+            var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
+            if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+            // 2) Marks must have a fill and/or a stroke.
+            if (!fillCB.value && !strokeCB.value) allValid = false;
+
             try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;
         }
@@ -517,6 +530,7 @@ GM.UI = {
             fillDDL.enabled = fillCB.value;
             fillOPCB.enabled = fillCB.value;
             refreshModifiedIndicator();
+            liveValidateAll();
         };
         strokeCB.onClick = function () {
             strokeDDL.enabled = strokeCB.value;
