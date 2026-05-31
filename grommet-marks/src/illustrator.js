@@ -61,6 +61,32 @@ GM.Illustrator = {
     },
 
     /**
+     * Resolves a layer config value to the actual layer name.
+     * The SENTINEL_CREATE sentinel maps to the default "Grommet Marks" name;
+     * any other value is an explicit layer name.
+     * @param {string} layerName - Layer name or SENTINEL_CREATE.
+     * @returns {string} Resolved layer name.
+     */
+    resolveLayerName: function (layerName) {
+        return (layerName === GM.CONSTANTS.SENTINEL_CREATE)
+            ? GM.CONSTANTS.LAYER_NAME : layerName;
+    },
+
+    /**
+     * Returns true if a layer with the given name exists in the document.
+     * @param {string} name - Resolved layer name.
+     * @returns {boolean}
+     */
+    layerExists: function (name) {
+        try {
+            GM.Illustrator.doc.layers.getByName(name);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+
+    /**
      * Resolves the target layer by name, creating it if absent.
      *
      * A layer is a low-risk container (unlike a colour, it cannot mis-separate
@@ -74,8 +100,7 @@ GM.Illustrator = {
      */
     getOrCreateLayer: function (layerName) {
         var doc = GM.Illustrator.doc;
-        var name = (layerName === GM.CONSTANTS.SENTINEL_CREATE)
-            ? GM.CONSTANTS.LAYER_NAME : layerName;
+        var name = GM.Illustrator.resolveLayerName(layerName);
         try {
             return doc.layers.getByName(name);
         } catch (e) {

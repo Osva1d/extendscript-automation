@@ -74,25 +74,44 @@ GM.Main = {
             var rightOn = cfg.rightMirror ? leftOn : rightCfg.enabled;
 
             var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
+
+            // Non-blocking warnings — collected, de-duplicated, shown once at
+            // the end. (e.g. fill and stroke referencing the same missing
+            // swatch must not produce two identical lines.)
+            var warnings = [];
+            function addWarning(msg) {
+                for (var w = 0; w < warnings.length; w++) {
+                    if (warnings[w] === msg) return;
+                }
+                warnings.push(msg);
+            }
+
+            // A named (non-sentinel) target layer that doesn't exist will be
+            // created by getOrCreateLayer — warn so the user knows a new layer
+            // appeared. The SENTINEL_CREATE default means "create it", so that
+            // case is intentional and silent (symmetric with swatch handling).
+            var resolvedLayerName = GM.Illustrator.resolveLayerName(cfg.markLayerName);
+            if (cfg.markLayerName !== GM.CONSTANTS.SENTINEL_CREATE &&
+                !GM.Illustrator.layerExists(resolvedLayerName)) {
+                addWarning(GM.L.format(GM.L.WARN_LAYER_CREATED, resolvedLayerName));
+            }
             // getOrCreateLayer always returns a layer (creates it if missing),
             // so no not-found guard is needed; a genuine create failure throws
             // up to the outer try/catch as an unexpected error.
             var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
 
             // Missing named fill/stroke swatch → degrade to [Registration] +
-            // a non-blocking warning (collected, shown once at the end). Never
-            // hard-abort and never silently auto-create a surprise spot.
-            var warnings = [];
-
+            // a non-blocking warning. Never hard-abort and never silently
+            // auto-create a surprise spot.
             var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
             if (cfg.fillEnabled && !fillColor) {
-                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
+                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
                 fillColor = GM.Illustrator.registrationColor();
             }
 
             var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
             if (cfg.strokeEnabled && !strokeColor) {
-                warnings.push(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
+                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
                 strokeColor = GM.Illustrator.registrationColor();
             }
 
