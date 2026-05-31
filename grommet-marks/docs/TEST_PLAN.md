@@ -1,417 +1,155 @@
-# Grommet Marks — Test Plan v4.1.0
+# Grommet Marks — Manuální testovací protokol v4.1.0
 
-> **Version:** 4.1.0
-> **Test Coverage:** 7 manual test cases + automated suites (`npm test`)
-> **Last Updated:** 2026-05-28
+> **Verze:** 4.1.0
+> **Aktualizováno:** 2026-05-31
 >
-> Automated suites (`npm test`) cover the pure modules: core math, storage
-> migrations, UI state, validation. The cases below are the manual P0 checks
-> that require a running Illustrator.
+> Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
+> migrace, ui_state, validace). Tento protokol jsou **manuální P0 kontroly**,
+> které vyžadují běžící Illustrator — zaměřené na to, co cyklus 2 a review
+> kolo reálně změnily.
+>
+> **Priorita, když není čas na všechno:** A4, A5, B1, B3 (reálně měněné, dosud
+> neozkoušené) → pak C1, C2 (regrese jádra).
 
 ---
 
-## Test Case 1: System Swatch Localization
+## Příprava
 
-**Objective:** Verify that system swatches are filtered correctly in all Illustrator localizations.
-
-### Setup
-- Adobe Illustrator with Czech locale (CZ)
-- Adobe Illustrator with English locale (EN) — or switch locale in preferences
-
-### Test Steps
-
-1. **Czech Illustrator:**
-   - Open Illustrator in Czech locale
-   - Open any document
-   - Run `dist/illustrator-grommet-marks.jsx`
-   - Open Fill or Stroke dropdown
-
-2. **Expected Result (CZ):**
-   - System swatches NOT visible: `[Registrační]`, `[Žádná]`
-   - User swatches visible (no brackets)
-   - No error: "vzorník nenalezen"
-
-3. **English Illustrator:**
-   - Switch locale to English (or use EN version)
-   - Open any document
-   - Run `dist/illustrator-grommet-marks.jsx`
-   - Open Fill or Stroke dropdown
-
-4. **Expected Result (EN):**
-   - System swatches NOT visible: `[Registration]`, `[None]`
-   - User swatches visible
-   - No error: "swatch not found"
-
-### Pass Criteria
-✅ No system swatches in dropdowns (any locale)  
-✅ No "swatch not found" errors
+1. Otevři **Adobe Illustrator**, vytvoř nový dokument s artboardem cca **200×200 mm**.
+2. Spusť `dist/illustrator-grommet-marks.jsx` (`Soubor ▸ Skripty ▸ Jiný skript…`).
+3. Po každém testu klikni **Storno** a spusť znovu (čistý stav), pokud není uvedeno jinak.
 
 ---
 
-## Test Case 2: Global X/Y Offset Alignment
+## A) NOVÉ z cyklu 2 — UI
 
-**Objective:** Verify that marks align correctly using global X/Y offsets, especially at corners.
+### A1 — Layout (kanonický sloupec)
+- [ ] Dialog je **jeden svislý sloupec**: Předvolby → Hrany → Značka → Vzhled → patička → tlačítka.
+- [ ] Žádný schématický náhled tam **není** (byl zahozen).
+- [ ] Šířka dialogu rozumná, nic se neořezává; české texty mají **správnou diakritiku** (Odsazení, Měrné jednotky, Generovat…).
+- [ ] Tlačítka: **Storno vlevo, Generovat vpravo**, Reset úplně vlevo.
 
-### Setup
-- Create new document: 200×200mm artboard
-- Run script with following settings:
-  - **Offset X:** 10mm
-  - **Offset Y:** 15mm
-  - **Top edge:** Enabled, 4 marks (fixed count)
-  - **Left edge:** Enabled, 4 marks (fixed count)
-  - All other edges disabled
+### A2 — Mirror uvnitř panelu (TD-001)
+- [ ] „Zrcadlit horní" je **uvnitř** řádku Dolní hrany; „Zrcadlit levou" uvnitř Pravé.
+- [ ] Zapni „Zrcadlit horní" → ovládání Dolní hrany **zešedne**.
 
-### Test Steps
+### A3 — Obnova stavu mirroru (TD-003)
+1. Zapni Dolní hranu, nastav počet (např. 5).
+2. Zaškrtni „Zrcadlit horní" → Dolní se zakáže.
+3. **Odškrtni** „Zrcadlit horní".
+- [ ] Dolní se vrátí do **předchozího zapnutého stavu** (ne natvrdo vypnutá).
 
-1. Run script with above settings
-2. Measure top-left corner mark center:
-   - Use Illustrator's Info panel (Window > Info)
-   - Select mark, read X/Y coordinates
-3. Measure all top edge marks:
-   - Vertical position should be constant
-4. Measure all left edge marks:
-   - Horizontal position should be constant
+### A4 — Inicializace tlačítka Uložit *(opravený bug)*
+- [ ] **Hned po otevření** dialogu je „Uložit" **zašedlé**.
+- [ ] Změň cokoli (např. velikost) → „Uložit" **zaktivní** a u aktivní předvolby se objeví **hvězdička `*`**.
 
-### Expected Results
+### A5 — Live validace + zámek Generovat *(klíčový nový mechanismus)*
+- [ ] Do **Odsazení X** napiš `abc` → pole **zčervená** a **Generovat zešedne**.
+- [ ] Oprav zpět na číslo → Generovat **zaktivní**.
+- [ ] **Nové:** u **Horní hrany** v poli **Počet** napiš `0` nebo `abc` → zčervená a **Generovat zešedne** (dřív se to chytlo až po kliknutí).
+- [ ] **Velikost = 0** → zčervená, Generovat zakázán (pravidlo min 0.01).
 
-| Mark Position | X Coordinate | Y Coordinate |
-|---------------|--------------|--------------|
-| Top-left corner | 10mm from left edge | 15mm from top edge |
-| All top marks | Variable | **15mm from top** (constant) |
-| All left marks | **10mm from left** (constant) | Variable |
-
-### Pass Criteria
-✅ Corner mark at exact [10mm, 15mm] intersection  
-✅ All top marks share Y = 15mm  
-✅ All left marks share X = 10mm
+### A6 — Tooltipy *(opravené chybějící)*
+- [ ] Najeď myší ~2 s nad **Měrné jednotky**, **Výplň** a **Obrys** (dropdowny) → objeví se český tooltip. (Tyhle tři dřív chyběly.)
 
 ---
 
-## Test Case 3: v2→v3 Preset Migration
+## B) NOVÉ z review — robustnost (prepress!)
 
-**Objective:** Verify that legacy v2 presets are automatically migrated to v3 schema.
+### B1 — Chybějící swatch → [Registration] místo pádu *(změna chování)*
+1. Vytvoř vlastní swatch, vyber ho ve Výplni, **Uložit jako…** novou předvolbu.
+2. **Smaž ten swatch** z dokumentu (panel Vzorník).
+3. Spusť skript znovu, načti tu předvolbu.
+- [ ] V rozbalovátku Výplň je název swatche s označením **„(chybí)"**.
+- [ ] Generovat → značky **v barvě [Registration]** + **jedno upozornění** „Vzorník … není v dokumentu".
+- [ ] **Nesmí** spadnout ani tiše vytvořit překvapivý spot.
 
-### Setup
+### B2 — Chybějící hodnota nedělá falešnou „změnu" *(jemný fix)*
+- [ ] Po načtení předvolby s chybějícím swatchem (B1) u aktivní předvolby **nesvítí** hvězdička `*` (zobrazí se „(chybí)", ale interně je to původní název → není to změna).
 
-1. **Create Legacy v2 Preset:**
-   - Manually create file: `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json`
-   - Content:
-     ```json
-     {
-       "[Výchozí]": {
-         "top": {
-           "enabled": true,
-           "useNumber": true,
-           "number": 8,
-           "spacing": 100,
-           "x": 5,
-           "y": 10
-         },
-         "left": {
-           "enabled": true,
-           "useNumber": false,
-           "number": 8,
-           "spacing": 120,
-           "x": 5,
-           "y": 10
-         },
-         "bottom": {
-           "enabled": false,
-           "useNumber": true,
-           "number": 8,
-           "spacing": 100,
-           "x": 5,
-           "y": 10
-         },
-         "right": {
-           "enabled": false,
-           "useNumber": true,
-           "number": 8,
-           "spacing": 100,
-           "x": 5,
-           "y": 10
-         },
-         "units": "Milimetry",
-         "markSize": 3,
-         "isRound": true,
-         "markLayerName": "[Vytvořit 'Grommet Marks']",
-         "fillEnabled": true,
-         "fillSwatchName": "[Vytvořit 'Grommet Marks']",
-         "fillOverprint": true,
-         "strokeEnabled": false,
-         "strokeSwatchName": "[Vytvořit 'Grommet Marks']",
-         "strokeOverprint": true,
-         "strokeWeight": 1
-       }
-     }
-     ```
+### B3 — Generování na ZAMČENOU vrstvu *(nový layer-session)*
+1. Vytvoř vrstvu „Grommet Marks", **zamkni ji** (zámek v panelu Vrstvy).
+2. Vyber ji ve Vzhled ▸ Vrstva, Generovat.
+- [ ] Značky se **vytvoří** (dřív by se tiše ztratily).
+- [ ] Po dokončení je vrstva **zase zamčená** (stav obnoven).
 
-2. **Run Script:**
-   - Open Illustrator
-   - Run `dist/illustrator-grommet-marks.jsx`
+### B4 — Chybějící vrstva se vytvoří
+- [ ] Načti předvolbu odkazující na neexistující vrstvu → dropdown ukáže „(chybí)"; po Generovat se vrstva **vytvoří** a značky jsou v ní.
 
-### Expected Results
+### B5 — Tichý fail při uložení *(volitelné, těžké vyvolat)*
+- [ ] Přeskoč, pokud nevíš jak. (Šlo by odebráním práv k zápisu do `~/Library/Application Support/GrommetMarks/`.) Cíl: selhání zápisu ukáže **alert**, ne tichý fail.
 
-**UI State After Migration:**
-- **Offset X field:** 5mm (extracted from `top.x`)
-- **Offset Y field:** 10mm (extracted from `top.y`)
-- **Top edge:** Enabled, 8 marks (fixed count)
-- **Left edge:** Enabled, spacing mode, 120mm
-- **No x/y fields in edge panels** (removed in v3)
+---
 
-**Settings File After Save:**
-```json
-{
-  "__default__": {
-    "offsetX": 5,
-    "offsetY": 10,
-    "top": {
-      "enabled": true,
-      "useNumber": true,
-      "number": 8,
-      "spacing": 100
-    },
-    "left": {
-      "enabled": true,
-      "useNumber": false,
-      "number": 8,
-      "spacing": 120
-    },
-    ...
-  }
-}
+## C) Regrese — že staré pořád funguje
+
+### C1 — Správné umístění značek (geometrie)
+Nastav: Odsazení X **10**, Y **15**, Horní **4 ks**, Levá **4 ks**, ostatní vyp. Generovat, změř v Info panelu (`Okno ▸ Informace`).
+
+| Pozice značky | X | Y |
+|---|---|---|
+| Roh vlevo nahoře | **10 mm** zleva | **15 mm** shora |
+| Všechny horní | proměnné | **15 mm** shora (konstantní) |
+| Všechny levé | **10 mm** zleva (konstantní) | proměnné |
+
+- [ ] Rohová značka přesně na průsečíku [10 mm, 15 mm]; horní sdílí Y, levé sdílí X.
+
+### C2 — Přesná rozteč (matematika jádra)
+Dokument **300×200 mm**, jen Horní hrana: **Počet 5**, Odsazení Y **8 mm**.
+
 ```
-
-### Pass Criteria
-✅ Global offsets populated from legacy `top.x` and `top.y`  
-✅ Edge panels show no X/Y inputs  
-✅ All other settings preserved  
-✅ Saved file uses v3.1 schema (no per-edge `x`/`y`, `__default__` key, `"mm"` unit key)
-
----
-
-## Test Case 4: Tooltip Display
-
-**Objective:** Verify that all 15 tooltips appear correctly when hovering over UI fields.
-
-### Test Steps
-
-1. Run `dist/illustrator-grommet-marks.jsx`
-2. Hover over each field listed below for 1-2 seconds
-3. Verify Czech tooltip text appears in ScriptUI's tooltip box (near cursor)
-
-### Tooltip Verification Checklist
-
-| # | UI Field | Expected Tooltip (Czech) |
-|---|----------|--------------------------|
-| 1 | Odsazení X | "Vzdálenost středu značek od levého a pravého okraje artboardu" |
-| 2 | Odsazení Y | "Vzdálenost středu značek od horního a dolního okraje artboardu" |
-| 3 | Počet ok (Top) | "Pevný počet značek na hraně (rozestup se dopočítá)" |
-| 4 | Rozestup (Top) | "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)" |
-| 5 | Počet ok (Left) | "Pevný počet značek na hraně (rozestup se dopočítá)" |
-| 6 | Rozestup (Left) | "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)" |
-| 7 | Zrcadlit horní | "Použije stejné nastavení jako horní strana" |
-| 8 | Zrcadlit levou | "Použije stejné nastavení jako levá strana" |
-| 9 | Velikost | "Průměr kruhu nebo délka strany čtverce v měrných jednotkách" |
-| 10 | Výplň checkbox | "Barevná výplň značky" |
-| 11 | Obrys checkbox | "Obrysová linka značky" |
-| 12 | Vrstva dropdown | "Cílová vrstva pro umístění značek" |
-| 13 | Přetisk (Výplň) | "Značka bude tištěna přes ostatní barvy (overprint)" |
-| 14 | Přetisk (Obrys) | "Značka bude tištěna přes ostatní barvy (overprint)" |
-| 15 | Tloušťka | "Tloušťka obrysové linky v bodech (points)" |
-
-### Pass Criteria
-✅ All 15 tooltips display correct Czech text  
-✅ Tooltips appear within 1-2 seconds of hover  
-✅ No JavaScript errors in ExtendScript console
-
----
-
-## Test Case 5: Build System Integrity
-
-**Objective:** Verify that the build system correctly concatenates modules and produces valid output.
-
-### Test Steps
-
-1. **Clean Build:**
-   ```bash
-   cd /Users/ladislavosvald/Dev/Sandbox/_incubator/grommet-marks
-   rm -f dist/illustrator-grommet-marks.jsx
-   bash tools/build.sh
-   ```
-
-2. **Verify Output:**
-   ```bash
-   test -f dist/illustrator-grommet-marks.jsx && echo "✅ File exists" || echo "❌ Build failed"
-   wc -l dist/illustrator-grommet-marks.jsx  # Should be ~1537 lines
-   ls -lh dist/illustrator-grommet-marks.jsx  # Should be ~59KB
-   ```
-
-3. **Verify Version Header:**
-   ```bash
-   head -15 dist/illustrator-grommet-marks.jsx
-   ```
-
-4. **Verify IIFE Wrapper:**
-   ```bash
-   head -20 dist/illustrator-grommet-marks.jsx | grep "(function ()"
-   tail -5 dist/illustrator-grommet-marks.jsx | grep "})();"
-   ```
-
-5. **Verify Module Order:**
-   ```bash
-   grep -n "// JSON Polyfill" dist/illustrator-grommet-marks.jsx    # Should be ~line 17
-   grep -n "GM.CONSTANTS =" dist/illustrator-grommet-marks.jsx      # Should be ~line 151
-   grep -n "GM.Config =" dist/illustrator-grommet-marks.jsx         # Should be ~line 400
-   grep -n "GM.Core =" dist/illustrator-grommet-marks.jsx           # Should be ~line 583
-   grep -n "GM.Illustrator =" dist/illustrator-grommet-marks.jsx    # Should be ~line 667
-   grep -n "GM.UI =" dist/illustrator-grommet-marks.jsx             # Should be ~line 814
-   grep -n "GM.Main =" dist/illustrator-grommet-marks.jsx           # Should be ~line 1365
-   ```
-
-6. **Verify Entry Point:**
-   ```bash
-   tail -3 dist/illustrator-grommet-marks.jsx
-   # Should contain: GM.Main.run();
-   ```
-
-### Expected Results
-
-**Console Output:**
+Šířka 300 mm = ~850.39 pt
+Odsazení od kraje: 8 mm × 2.8346 = ~22.68 pt
+Dostupný prostor: 850.39 − 2×22.68 = 805.03 pt
+Rozteč 5 značek: 805.03 / (5−1) = 201.26 pt ≈ 71 mm
 ```
-Build complete: dist/illustrator-grommet-marks.jsx (~1537 lines)
-```
+- [ ] Značky rovnoměrně po **~71 mm**; první ~8 mm zleva, poslední ~8 mm zprava; všechny Y = horní hrana − 8 mm. **Geometrie se nesmí lišit od dřívějška.**
 
-**File Properties:**
-- Size: ~59KB
-- Lines: ~1537
-- Line 2: `/*`
-- Line 5: `* Version:     3.1.0`
-- Line 14: `(function () {`
-- Last line: `})();`
+### C3 — Presety (celý cyklus)
+- [ ] **Uložit jako…** → název → vznikne nová předvolba, přepne se na ni.
+- [ ] **Uložit** do existující (po změně) → hvězdička zmizí.
+- [ ] **Smazat** → potvrzovací dotaz → smaže, vrátí na [Výchozí].
+- [ ] Uložit pod názvem `[Výchozí]` → **odmítne** (rezervovaný název).
 
-### Pass Criteria
-✅ `dist/illustrator-grommet-marks.jsx` created successfully
-✅ Version header shows `3.1.0`
-✅ IIFE wrapper present
-✅ All 7 modules concatenated in correct order
-✅ Entry point `GM.Main.run();` present
-✅ No syntax errors (run in Illustrator without errors)
+### C4 — `[Last Settings]` (paměť posledního běhu)
+- [ ] Nastav hodnoty, **Generovat**. Spusť skript **znovu** → otevře se s **týmiž** hodnotami.
 
----
+### C5 — Převod jednotek
+- [ ] Přepni Měrné jednotky mm → cm → čísla se **přepočítají** (odsazení 10 → 1).
 
-## Test Case 6: Regression — Core Geometry Unchanged
+### C6 — Více artboardů
+- [ ] Dokument se 2 artboardy → značky **na obou**, na rozích se nepřekrývají (žádné dvojité).
 
-**Objective:** Verify that `GM.Core.calcPositions()` produces the same results as v2.x (no geometry regressions).
+### C7 — Tvar a vzhled
+- [ ] Kruh/Čtverec → značky odpovídají.
+- [ ] Zapni Obrys → zaktivní dropdown obrysu + Tloušťka; vypni → zašedne.
 
-### Setup
-- Create new document: 300×200mm artboard
-- Use marks with **fixed count** mode
+### C8 — Migrace starého nastavení (volitelné)
+Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json` z v2/v3:
+- [ ] Po spuštění se hodnoty načtou bez chyby; per-edge x/y se převede na globální Odsazení; jednotky/sentinel se nezobrazí jako cizí stringy.
 
-### Test Steps
-
-1. **Run Script:**
-   - **Top edge:**
-     - Enabled: Yes
-     - Mode: Počet ok (fixed count)
-     - Count: 5 marks
-     - Offset Y: 8mm
-   - All other edges disabled
-
-2. **Calculate Expected Spacing:**
-   ```
-   Artboard width: 300mm = ~850.39 points
-   Offset from each end: 8mm × 2.8346 = ~22.68 points
-   Available space: 850.39 - (2 × 22.68) = 805.03 points
-   Spacing between 5 marks: 805.03 / (5 - 1) = 201.26 points
-                            = ~71mm
-   ```
-
-3. **Measure Actual Marks:**
-   - Select all top marks
-   - Use Info panel to read X coordinates
-   - Calculate spacing: `X[n+1] - X[n]`
-
-### Expected Results
-
-| Mark # | Expected X (approx) | Expected Y |
-|--------|---------------------|------------|
-| 1 | 22.68 pt (~8mm from left) | Top edge - 8mm |
-| 2 | 223.94 pt | Top edge - 8mm |
-| 3 | 425.20 pt (center) | Top edge - 8mm |
-| 4 | 626.46 pt | Top edge - 8mm |
-| 5 | 827.71 pt (~8mm from right) | Top edge - 8mm |
-
-**Spacing Between Marks:** ~201.26 points (~71mm)
-
-### Pass Criteria
-✅ Marks evenly spaced at ~71mm intervals  
-✅ First mark ~8mm from left edge  
-✅ Last mark ~8mm from right edge  
-✅ All marks at Y = top edge - 8mm  
-✅ Geometry identical to v2.x (no regression)
+### C9 — Lokalizace swatchů (volitelné, dle locale)
+- [ ] V CZ i EN Illustratoru: systémové swatche (`[Registration]`/`[Registrační]`, `[None]`/`[Žádná]`) **nejsou** v dropdownech Výplň/Obrys; uživatelské ano.
 
 ---
 
-## Test Case 7: Mirror Inline + State Restore (TD-001 / TD-003)
-
-**Objective:** Verify the mirror checkbox lives inside its edge group and restores state.
-
-### Test Steps
-
-1. Run the script. In the **Hrany** panel, confirm "Zrcadlit horní" sits inside the Dolní edge row (and "Zrcadlit levou" inside the Pravá row).
-2. On the Dolní edge: enable it, set a count → then tick **Zrcadlit horní**. The Dolní controls disable.
-3. Untick **Zrcadlit horní** → the Dolní edge returns to its previous enabled state and values (not forced off).
-4. Generate marks → bottom edge while mirrored uses the top edge's configuration.
-
-### Pass Criteria
-✅ Mirror checkbox is visually inside the edge group it controls (TD-001)
-✅ Enabling mirror disables that edge's controls
-✅ Disabling mirror restores the previous enabled state (TD-003)
-✅ Mirrored generation matches the source edge
+## D) Klávesnice
+- [ ] **Esc** zavře dialog (= Storno).
+- [ ] **Enter** spustí (= Generovat), pokud jsou hodnoty platné.
 
 ---
 
-## Test Environment
+## Hlášení problému
 
-**Required:**
-- macOS (11.0+)
-- Adobe Illustrator (2020+)
-- Bash shell (macOS default)
-- Node.js (for `npm test`)
-
-**Optional:**
-- ExtendScript Toolkit (for debugging)
-- Illustrator in multiple locales (CZ, EN)
+U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **locale (CZ/EN)**, **co jsi čekal vs. co se stalo**, případně text z ExtendScript konzole.
 
 ---
 
-## Regression Test Summary
+## Testovací prostředí
 
-| Test Case | v2.x Behavior | v3.0 Expected | Status |
-|-----------|---------------|---------------|--------|
-| System swatches | Failed in CZ locale | Works in all locales | ✅ Fixed |
-| Corner alignment | Misaligned (per-edge offsets) | Aligned (global offsets) | ✅ Improved |
-| Preset migration | N/A | Auto-converts v2→v3 | ✅ New |
-| Tooltips | None | 15 tooltips | ✅ New |
-| Build process | Single file | Modular build | ✅ New |
-| Core geometry | Correct | **Must remain identical** | ⚠️ Test |
+- macOS (11.0+), Adobe Illustrator (2020+), bash (výchozí), Node.js (pro `npm test`)
+- Volitelně: Illustrator ve více jazycích (CZ, EN) pro C9
 
 ---
 
-## Bug Reporting
-
-If any test fails, report with:
-1. **Test Case Number**
-2. **Illustrator Version** (e.g., 28.0)
-3. **Locale** (CZ / EN / other)
-4. **Expected vs Actual Result**
-5. **ExtendScript Console Output** (if errors)
-
-**Report To:** [Project Issue Tracker or Maintainer Email]
-
----
-
-**Test Plan Version:** 1.1
-**Prepared By:** Osva1d
-**Date:** 2026-03-22
+*Připravil: Osva1d — Test Plan v4.1.0, 2026-05-31*
