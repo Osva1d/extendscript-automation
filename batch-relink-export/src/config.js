@@ -12,7 +12,7 @@ BRE.Config = {
 
     ui: {
         title: null,
-        labelWidth: 160,
+        labelWidth: 190,
         fieldWidth: 300,
         dropdownWidth: 200,
         namingWidth: 160,

@@ -34,11 +34,11 @@ BRE.UI = {
         inputPanel.margins = c.ui.panelMargins;
         inputPanel.spacing = c.ui.panelSpacing;
 
-        var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE, l.PH_TEMPLATE,
+        var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
             false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN);
-        var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE, l.PH_SOURCE,
+        var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE,
             true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
-        var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT, l.PH_OUTPUT,
+        var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
             true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
 
         // --- Config panel ---
@@ -218,6 +218,7 @@ BRE.UI = {
         if (c.under > 0)      summary += "\n  " + l.format(l.SCAN_UNDER, String(c.under));
         if (c.unreadable > 0) summary += "\n  " + l.format(l.SCAN_UNREADABLE, String(c.unreadable));
         if (c.over > 0)       summary += "\n  " + l.format(l.SCAN_OVER, String(c.over));
+        if (c.uncertain > 0)  summary += "\n  " + l.format(l.SCAN_UNCERTAIN, String(c.uncertain));
 
         var sumST = dlg.add("statictext", undefined, summary, { multiline: true });
         sumST.preferredSize.width = 500;
@@ -234,6 +235,8 @@ BRE.UI = {
                 details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
+            } else if (it.status === "uncertain") {
+                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name, String(it.pages), String(it.pageObjs)));
             }
         }
         if (details.length > 0) {
@@ -286,7 +289,15 @@ BRE.UI = {
         var cancelled = false;
         var cancelBtn = dlg.add("button", undefined, l.BTN_STOP);
         cancelBtn.alignment = ["center", "center"];
-        cancelBtn.onClick = function () { cancelled = true; };
+        cancelBtn.onClick = function () {
+            // Cancellation takes effect after the current file finishes (the
+            // loop polls between files). Give immediate visual feedback so the
+            // button doesn't look dead during the in-progress file.
+            cancelled = true;
+            cancelBtn.text = l.BTN_STOPPING;
+            cancelBtn.enabled = false;
+            dlg.update();
+        };
 
         dlg.show();
 
@@ -368,9 +379,12 @@ BRE.UI = {
 
     /**
      * Adds a labeled file/folder row to a panel.
+     * The field starts empty — ScriptUI has no greyed placeholder, so a
+     * descriptive default value would be mistaken for a real path by the
+     * validation. The label plus helpTip convey the field's purpose.
      * @returns {EditText} The text input element.
      */
-    _addFileRow: function (parent, label, placeholder, isFolder, ext, tipField, tipBtn) {
+    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn) {
         var l = BRE.L;
         var c = BRE.Config;
 
@@ -378,7 +392,7 @@ BRE.UI = {
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
-        var et = grp.add("edittext", undefined, placeholder);
+        var et = grp.add("edittext", undefined, "");
         et.preferredSize.width = c.ui.fieldWidth;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);

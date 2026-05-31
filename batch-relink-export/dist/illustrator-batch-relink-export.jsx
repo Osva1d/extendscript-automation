@@ -42,6 +42,10 @@ BRE.L = (function () {
             ERR_HIDDEN_LAYER:   "PlacedItem on hidden layer skipped: %s",
             ERR_RELINK_ITEM:    "Failed to relink item %s: %s",
             ERR_NAMING_PATTERN: "Naming pattern must contain {n} placeholder.",
+            ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
+            ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
+            ERR_UNCERTAIN:      "Skipped: page count could not be reliably verified (/Count %s vs %s page objects).",
+            WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
             TITLE:              "Batch Relink Export",
@@ -55,17 +59,13 @@ BRE.L = (function () {
             LBL_NAMING:         "Naming pattern",
             LBL_PRESET:         "PDF Preset",
 
-            // --- UI: Placeholders ---
-            PH_TEMPLATE:        "Path to template file…",
-            PH_SOURCE:          "Path to PDF source folder…",
-            PH_OUTPUT:          "Path for exported files…",
-
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
             BTN_RUN:            "Run",
             BTN_CANCEL:         "Cancel",
             BTN_CLOSE:          "Close",
             BTN_STOP:           "Stop",
+            BTN_STOPPING:       "Stopping…",
             BTN_CONTINUE:       "Continue",
 
             // --- UI: Checkboxes ---
@@ -101,10 +101,12 @@ BRE.L = (function () {
             SCAN_UNDER:         "Fewer pages mid-batch: %s",
             SCAN_UNREADABLE:    "Page count unreadable: %s",
             SCAN_OVER:          "Blocked (more pages than positions): %s",
+            SCAN_UNCERTAIN:     "Uncertain page count (blocked): %s",
             SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
             SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
+            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count (/Count %s vs %s page objects) — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
             ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
@@ -142,6 +144,10 @@ BRE.L = (function () {
             ERR_HIDDEN_LAYER:   "PlacedItem na skryté vrstvě přeskočen: %s",
             ERR_RELINK_ITEM:    "Nepodařilo se relinkovat položku %s: %s",
             ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat placeholder {n}.",
+            ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
+            ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
+            ERR_UNCERTAIN:      "Přeskočeno: počet stran nelze spolehlivě ověřit (/Count %s vs %s objektů stran).",
+            WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---
             TITLE:              "Dávkové zpracování PDF",
@@ -155,17 +161,13 @@ BRE.L = (function () {
             LBL_NAMING:         "Vzor pojmenování",
             LBL_PRESET:         "PDF Preset",
 
-            // --- UI: Placeholdery ---
-            PH_TEMPLATE:        "Cesta k souboru šablony…",
-            PH_SOURCE:          "Cesta ke složce s PDF…",
-            PH_OUTPUT:          "Cesta pro uložení exportů…",
-
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
             BTN_RUN:            "Spustit",
             BTN_CANCEL:         "Zrušit",
             BTN_CLOSE:          "Zavřít",
             BTN_STOP:           "Storno",
+            BTN_STOPPING:       "Zastavuji…",
             BTN_CONTINUE:       "Pokračovat",
 
             // --- UI: Checkboxy ---
@@ -201,10 +203,12 @@ BRE.L = (function () {
             SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
             SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
             SCAN_OVER:          "Blokováno (více stran než pozic): %s",
+            SCAN_UNCERTAIN:     "Nejistý počet stran (blokováno): %s",
             SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
             SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
+            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran (/Count %s vs %s objektů stran) — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
             ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 
@@ -255,7 +259,7 @@ BRE.Config = {
 
     ui: {
         title: null,
-        labelWidth: 160,
+        labelWidth: 190,
         fieldWidth: 300,
         dropdownWidth: 200,
         namingWidth: 160,
@@ -322,7 +326,10 @@ BRE.Core = {
             item = doc.placedItems[i];
             try {
                 if (item.locked) {
-                    this._lockedItems.push({ idx: i, name: item.name || ("item_" + i) });
+                    // Store a direct reference, not an index — relinkDocument may
+                    // remove items, which shifts indices and would make an
+                    // index-based restore lock the wrong surviving item.
+                    this._lockedItems.push(item);
                     item.locked = false;
                 }
             } catch (e) {
@@ -338,12 +345,11 @@ BRE.Core = {
     endSession: function (doc) {
         var i, rec, lay;
 
+        // Restore item locks by reference. Items removed during processing
+        // throw here (reference invalid) and are harmlessly swallowed.
         for (i = 0; i < this._lockedItems.length; i++) {
             try {
-                rec = this._lockedItems[i];
-                if (rec.idx < doc.placedItems.length) {
-                    doc.placedItems[rec.idx].locked = true;
-                }
+                this._lockedItems[i].locked = true;
             } catch (e) {}
         }
 
@@ -375,12 +381,16 @@ BRE.Core = {
      * @returns {Object} { relinked, skipped, removed, warnings, errors }
      */
     relinkDocument: function (doc, targetPdf, totalPages) {
-        var results = { relinked: 0, skipped: 0, removed: 0, warnings: [], errors: [] };
+        var results = {
+            relinked: 0, skipped: 0, removed: 0,
+            relinkedItems: [], warnings: [], errors: [], ok: false
+        };
         var items = doc.placedItems;
-        var i, item;
+        var i, item, label;
 
         for (i = 0; i < items.length; i++) {
             item = items[i];
+            label = item.name || ("item_" + i);
 
             if (!item.file) {
                 results.skipped++;
@@ -388,9 +398,7 @@ BRE.Core = {
             }
 
             if (this._isOnHiddenLayer(item)) {
-                results.warnings.push(
-                    BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, item.name || ("item_" + i))
-                );
+                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, label));
                 results.skipped++;
                 continue;
             }
@@ -402,14 +410,18 @@ BRE.Core = {
             try {
                 item.relink(targetPdf);
                 results.relinked++;
+                // Keep a reference so verifyRelink checks ONLY the items we
+                // actually relinked — never the deliberately-skipped ones
+                // (hidden-layer / fileless), which still point to the old PDF.
+                results.relinkedItems.push({ item: item, label: label });
             } catch (e) {
-                results.errors.push(
-                    BRE.L.format(BRE.L.ERR_RELINK_ITEM, item.name || ("item_" + i), e.message)
-                );
+                results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
             }
         }
 
         if (totalPages > 0) {
+            // Remove positions whose page is beyond the source PDF (reverse
+            // iteration is required when removing from a live collection).
             for (i = items.length - 1; i >= 0; i--) {
                 try {
                     if (items[i].pageNumber && items[i].pageNumber > totalPages) {
@@ -417,13 +429,25 @@ BRE.Core = {
                         results.removed++;
                     }
                 } catch (e) {
-                    results.errors.push(
-                        BRE.L.format(BRE.L.ERR_RELINK_ITEM, "remove_" + i, e.message)
-                    );
+                    results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, "remove_" + i, e.message));
                 }
+            }
+
+            // Post-condition: after removal NO surviving item may reference a
+            // page beyond the source. If one does, a remove() silently failed —
+            // flag it so the caller refuses to export a lossy sheet.
+            for (i = 0; i < items.length; i++) {
+                try {
+                    if (items[i].pageNumber && items[i].pageNumber > totalPages) {
+                        results.errors.push(
+                            BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(items[i].pageNumber))
+                        );
+                    }
+                } catch (e) {}
             }
         }
 
+        results.ok = (results.errors.length === 0);
         return results;
     },
 
@@ -432,30 +456,29 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Verifies that all PlacedItems point to the expected PDF.
-     * @param {Document} doc - The document to verify.
+     * Verifies that every relinked item now points to the expected PDF.
+     * Takes the relinked-items list from relinkDocument() — NOT the whole
+     * document — so deliberately-skipped items (hidden-layer / fileless),
+     * which still reference the old PDF, are never wrongly flagged.
+     * @param {Array} relinkedItems - [{ item, label }] from relinkDocument.
      * @param {File} expectedPdf - The expected linked file.
      * @returns {Object} { ok: boolean, errors: string[] }
      */
-    verifyRelink: function (doc, expectedPdf) {
-        var items = doc.placedItems;
+    verifyRelink: function (relinkedItems, expectedPdf) {
         var errors = [];
         var expectedPath = expectedPdf.fsName;
 
-        for (var i = 0; i < items.length; i++) {
-            if (!items[i].file) continue;
+        for (var i = 0; i < relinkedItems.length; i++) {
+            var rec = relinkedItems[i];
             try {
-                var actualPath = items[i].file.fsName;
+                var actualPath = rec.item.file.fsName;
                 if (actualPath !== expectedPath) {
                     errors.push(
-                        BRE.L.format(BRE.L.ERR_RELINK_VERIFY,
-                            items[i].name || ("item_" + i), expectedPath, actualPath)
+                        BRE.L.format(BRE.L.ERR_RELINK_VERIFY, rec.label, expectedPath, actualPath)
                     );
                 }
             } catch (e) {
-                errors.push(
-                    BRE.L.format(BRE.L.ERR_RELINK_ITEM, items[i].name || ("item_" + i), e.message)
-                );
+                errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, rec.label, e.message));
             }
         }
 
@@ -467,43 +490,104 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Reads page count from PDF binary data.
-     * Finds the highest /Count value in the page tree.
+     * Reads a PDF's raw bytes as a binary string.
+     * @param {File} pdfFile - The PDF file to read.
+     * @returns {string|null} File content, or null on failure.
+     */
+    _readPdfBinary: function (pdfFile) {
+        try {
+            pdfFile.encoding = "binary";
+            if (!pdfFile.open("r")) return null;
+            var content = pdfFile.read();
+            pdfFile.close();
+            return content;
+        } catch (e) {
+            this._log("_readPdfBinary failed: " + e.message);
+            return null;
+        }
+    },
+
+    /**
+     * Skips a run of PDF whitespace starting at idx.
+     * @param {string} content - PDF content.
+     * @param {number} idx - Start index.
+     * @returns {number} Index of the first non-whitespace character.
+     */
+    _skipPdfWhitespace: function (content, idx) {
+        while (idx < content.length) {
+            var w = content.charAt(idx);
+            if (w === " " || w === "\n" || w === "\r" || w === "\t" || w === "\f" || w === "\0") {
+                idx++;
+            } else {
+                break;
+            }
+        }
+        return idx;
+    },
+
+    /**
+     * Highest /Count value in the content. /Count is followed by arbitrary
+     * PDF whitespace (space, newline, CR, tab…), not only a single space —
+     * matching just "/Count " misses "/Count\n8" and silently undercounts,
+     * which (with the remove-excess logic) risks dropping real pages.
+     * @param {string} content - PDF content.
+     * @returns {number} Highest /Count, or 0 if none found.
+     */
+    _maxCount: function (content) {
+        var token = "/Count";
+        var maxCount = 0;
+        var startIdx = 0;
+        while (true) {
+            var pos = content.indexOf(token, startIdx);
+            if (pos === -1) break;
+            var ci = this._skipPdfWhitespace(content, pos + token.length);
+            var numStr = "";
+            while (ci < content.length) {
+                var ch = content.charAt(ci);
+                if (ch >= "0" && ch <= "9") { numStr += ch; ci++; } else { break; }
+            }
+            if (numStr.length > 0) {
+                var n = parseInt(numStr, 10);
+                if (n > maxCount) maxCount = n;
+            }
+            startIdx = pos + token.length;
+        }
+        return maxCount;
+    },
+
+    /**
+     * Counts page objects: "/Type" + whitespace + "/Page" (excluding "/Pages").
+     * An independent cross-check against _maxCount. Returns 0 when page
+     * objects live in compressed object streams (PDF 1.5+) — callers treat
+     * 0 as "no cross-check available" rather than a contradiction.
+     * @param {string} content - PDF content.
+     * @returns {number} Number of /Type /Page objects found.
+     */
+    _countPageObjects: function (content) {
+        var token = "/Type";
+        var count = 0;
+        var startIdx = 0;
+        while (true) {
+            var pos = content.indexOf(token, startIdx);
+            if (pos === -1) break;
+            var ci = this._skipPdfWhitespace(content, pos + token.length);
+            if (content.substr(ci, 5) === "/Page" && content.charAt(ci + 5) !== "s") {
+                count++;
+            }
+            startIdx = pos + token.length;
+        }
+        return count;
+    },
+
+    /**
+     * Reads page count from PDF binary data (highest /Count in the page tree).
      * @param {File} pdfFile - The PDF file to inspect.
      * @returns {number} Page count, or 0 on failure.
      */
     countPdfPages: function (pdfFile) {
-        try {
-            pdfFile.encoding = "binary";
-            if (!pdfFile.open("r")) return 0;
-            var content = pdfFile.read();
-            pdfFile.close();
-
-            var maxCount = 0;
-            var startIdx = 0;
-            while (true) {
-                var pos = content.indexOf("/Count ", startIdx);
-                if (pos === -1) break;
-                var numStr = "";
-                for (var ci = pos + 7; ci < content.length && ci < pos + 17; ci++) {
-                    var ch = content.charAt(ci);
-                    if (ch >= "0" && ch <= "9") {
-                        numStr += ch;
-                    } else if (numStr.length > 0) {
-                        break;
-                    }
-                }
-                if (numStr.length > 0) {
-                    var n = parseInt(numStr, 10);
-                    if (n > maxCount) maxCount = n;
-                }
-                startIdx = pos + 1;
-            }
-            return maxCount;
-        } catch (e) {
-            this._log("countPdfPages failed: " + e.message);
-            return 0;
-        }
+        var content = this._readPdfBinary(pdfFile);
+        if (content === null) return 0;
+        return this._maxCount(content);
     },
 
     // ---------------------------------------------------------------------
@@ -521,25 +605,35 @@ BRE.Core = {
      *   "partial"    pages < slotCount AND last file (expected short last sheet)
      *   "under"      pages < slotCount AND not last file (likely split error)
      *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
+     *   "uncertain"  two independent counts disagree — not trusted — BLOCKED
      *   "unreadable" pages === 0 (count could not be detected)
+     *
+     * Each PDF is read once; both /Count and /Type/Page counts are derived
+     * from the same bytes. When both are non-zero and disagree, the count
+     * cannot be trusted (a wrong count gates a destructive remove), so the
+     * file is marked "uncertain" and hard-blocked for manual review.
      *
      * @param {File[]} pdfFiles - Source PDF files (already sorted).
      * @param {number} slotCount - Number of PlacedItems in the template.
-     * @returns {Object} { items: [{name, pages, status}], counts, processable }
+     * @returns {Object} { items: [{name, pages, pageObjs, status}], counts, processable }
      */
     scanSources: function (pdfFiles, slotCount) {
         var items = [];
-        var counts = { ok: 0, partial: 0, under: 0, over: 0, unreadable: 0 };
+        var counts = { ok: 0, partial: 0, under: 0, over: 0, uncertain: 0, unreadable: 0 };
         var lastIdx = pdfFiles.length - 1;
 
         for (var i = 0; i < pdfFiles.length; i++) {
             var f = pdfFiles[i];
             var name = f.displayName || decodeURI(f.name);
-            var pages = this.countPdfPages(f);
+            var content = this._readPdfBinary(f);
+            var pages = (content === null) ? 0 : this._maxCount(content);
+            var pageObjs = (content === null) ? 0 : this._countPageObjects(content);
             var status;
 
             if (pages === 0) {
                 status = "unreadable";
+            } else if (pageObjs > 0 && pageObjs !== pages) {
+                status = "uncertain";
             } else if (pages > slotCount) {
                 status = "over";
             } else if (pages === slotCount) {
@@ -549,11 +643,15 @@ BRE.Core = {
             }
 
             counts[status]++;
-            items.push({ name: name, pages: pages, status: status });
+            items.push({ name: name, pages: pages, pageObjs: pageObjs, status: status });
         }
 
-        // Over-page files are hard-blocked; everything else is processable.
-        return { items: items, counts: counts, processable: pdfFiles.length - counts.over };
+        // "over" and "uncertain" files are hard-blocked; the rest are processable.
+        return {
+            items: items,
+            counts: counts,
+            processable: pdfFiles.length - counts.over - counts.uncertain
+        };
     },
 
     // ---------------------------------------------------------------------
@@ -589,6 +687,24 @@ BRE.Core = {
      */
     stripExtension: function (filename) {
         return filename.replace(/\.[^.]+$/, "");
+    },
+
+    /**
+     * Finds an already-open document matching the given file, if any.
+     * Used to warn before closing a template the user has open.
+     * @param {File} file - The file to look for among open documents.
+     * @returns {Document|null} The open document, or null.
+     */
+    findOpenDocument: function (file) {
+        try {
+            for (var i = 0; i < app.documents.length; i++) {
+                var d = app.documents[i];
+                try {
+                    if (d.fullName && d.fullName.fsName === file.fsName) return d;
+                } catch (e) {}
+            }
+        } catch (e) {}
+        return null;
     },
 
     // ---------------------------------------------------------------------
@@ -659,11 +775,11 @@ BRE.UI = {
         inputPanel.margins = c.ui.panelMargins;
         inputPanel.spacing = c.ui.panelSpacing;
 
-        var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE, l.PH_TEMPLATE,
+        var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
             false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN);
-        var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE, l.PH_SOURCE,
+        var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE,
             true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
-        var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT, l.PH_OUTPUT,
+        var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
             true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
 
         // --- Config panel ---
@@ -843,6 +959,7 @@ BRE.UI = {
         if (c.under > 0)      summary += "\n  " + l.format(l.SCAN_UNDER, String(c.under));
         if (c.unreadable > 0) summary += "\n  " + l.format(l.SCAN_UNREADABLE, String(c.unreadable));
         if (c.over > 0)       summary += "\n  " + l.format(l.SCAN_OVER, String(c.over));
+        if (c.uncertain > 0)  summary += "\n  " + l.format(l.SCAN_UNCERTAIN, String(c.uncertain));
 
         var sumST = dlg.add("statictext", undefined, summary, { multiline: true });
         sumST.preferredSize.width = 500;
@@ -859,6 +976,8 @@ BRE.UI = {
                 details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
+            } else if (it.status === "uncertain") {
+                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name, String(it.pages), String(it.pageObjs)));
             }
         }
         if (details.length > 0) {
@@ -911,7 +1030,15 @@ BRE.UI = {
         var cancelled = false;
         var cancelBtn = dlg.add("button", undefined, l.BTN_STOP);
         cancelBtn.alignment = ["center", "center"];
-        cancelBtn.onClick = function () { cancelled = true; };
+        cancelBtn.onClick = function () {
+            // Cancellation takes effect after the current file finishes (the
+            // loop polls between files). Give immediate visual feedback so the
+            // button doesn't look dead during the in-progress file.
+            cancelled = true;
+            cancelBtn.text = l.BTN_STOPPING;
+            cancelBtn.enabled = false;
+            dlg.update();
+        };
 
         dlg.show();
 
@@ -993,9 +1120,12 @@ BRE.UI = {
 
     /**
      * Adds a labeled file/folder row to a panel.
+     * The field starts empty — ScriptUI has no greyed placeholder, so a
+     * descriptive default value would be mistaken for a real path by the
+     * validation. The label plus helpTip convey the field's purpose.
      * @returns {EditText} The text input element.
      */
-    _addFileRow: function (parent, label, placeholder, isFolder, ext, tipField, tipBtn) {
+    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn) {
         var l = BRE.L;
         var c = BRE.Config;
 
@@ -1003,7 +1133,7 @@ BRE.UI = {
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
-        var et = grp.add("edittext", undefined, placeholder);
+        var et = grp.add("edittext", undefined, "");
         et.preferredSize.width = c.ui.fieldWidth;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
@@ -1025,6 +1155,15 @@ BRE.UI = {
     try {
         var config = BRE.UI.show();
         if (!config) return;
+
+        // If the template is already open with unsaved changes, processing
+        // would close it without saving and discard the user's work. Warn first.
+        var openTpl = BRE.Core.findOpenDocument(config.templateFile);
+        if (openTpl) {
+            try {
+                if (openTpl.saved === false && !confirm(BRE.L.WARN_TEMPLATE_OPEN)) return;
+            } catch (e) {}
+        }
 
         // Open template once to count PlacedItems for preview
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
@@ -1091,6 +1230,12 @@ BRE.UI = {
                         BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
                     continue;
                 }
+                if (fileInfo.status === "uncertain") {
+                    results.blocked++;
+                    results.log.push(outputName + ": " + BRE.L.format(
+                        BRE.L.ERR_UNCERTAIN, String(fileInfo.pages), String(fileInfo.pageObjs)));
+                    continue;
+                }
 
                 // Skip existing
                 if (config.skipExisting && outputFile.exists) {
@@ -1124,8 +1269,17 @@ BRE.UI = {
                             continue;
                         }
 
-                        // Verify relink
-                        var verification = BRE.Core.verifyRelink(doc, currentFile);
+                        // A relink or remove error means a position is wrong or
+                        // an excess page survived — never export a lossy sheet.
+                        if (!relinkResult.ok) {
+                            results.errors++;
+                            results.log.push(outputName + ": " + BRE.L.format(
+                                BRE.L.ERR_RELINK_FAILED, String(relinkResult.errors.length)));
+                            continue;
+                        }
+
+                        // Verify only the items we actually relinked
+                        var verification = BRE.Core.verifyRelink(relinkResult.relinkedItems, currentFile);
                         if (!verification.ok) {
                             results.errors++;
                             for (wi = 0; wi < verification.errors.length; wi++) {

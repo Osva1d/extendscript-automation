@@ -3,6 +3,15 @@
         var config = BRE.UI.show();
         if (!config) return;
 
+        // If the template is already open with unsaved changes, processing
+        // would close it without saving and discard the user's work. Warn first.
+        var openTpl = BRE.Core.findOpenDocument(config.templateFile);
+        if (openTpl) {
+            try {
+                if (openTpl.saved === false && !confirm(BRE.L.WARN_TEMPLATE_OPEN)) return;
+            } catch (e) {}
+        }
+
         // Open template once to count PlacedItems for preview
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
@@ -68,6 +77,12 @@
                         BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
                     continue;
                 }
+                if (fileInfo.status === "uncertain") {
+                    results.blocked++;
+                    results.log.push(outputName + ": " + BRE.L.format(
+                        BRE.L.ERR_UNCERTAIN, String(fileInfo.pages), String(fileInfo.pageObjs)));
+                    continue;
+                }
 
                 // Skip existing
                 if (config.skipExisting && outputFile.exists) {
@@ -101,8 +116,17 @@
                             continue;
                         }
 
-                        // Verify relink
-                        var verification = BRE.Core.verifyRelink(doc, currentFile);
+                        // A relink or remove error means a position is wrong or
+                        // an excess page survived — never export a lossy sheet.
+                        if (!relinkResult.ok) {
+                            results.errors++;
+                            results.log.push(outputName + ": " + BRE.L.format(
+                                BRE.L.ERR_RELINK_FAILED, String(relinkResult.errors.length)));
+                            continue;
+                        }
+
+                        // Verify only the items we actually relinked
+                        var verification = BRE.Core.verifyRelink(relinkResult.relinkedItems, currentFile);
                         if (!verification.ok) {
                             results.errors++;
                             for (wi = 0; wi < verification.errors.length; wi++) {
