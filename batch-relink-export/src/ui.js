@@ -181,11 +181,14 @@ BRE.UI = {
 
     /**
      * Shows a preview of what the script will do before processing begins.
+     * Renders the pre-flight scan report (per-file page count vs. positions)
+     * and disables Continue when no file can be processed safely.
      * @param {Object} config - Validated config from show().
      * @param {number} slotCount - Number of PlacedItems in the template.
+     * @param {Object} scan - Result of BRE.Core.scanSources().
      * @returns {boolean} True if user confirms, false if cancelled.
      */
-    showPreview: function (config, slotCount) {
+    showPreview: function (config, slotCount, scan) {
         var l = BRE.L;
 
         var sampleName = BRE.Core.buildOutputName(
@@ -204,23 +207,55 @@ BRE.UI = {
             + "\n" + l.format(l.PREVIEW_SOURCE, String(config.pdfFiles.length))
             + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
 
-        // Check last file for partial sheet
-        var lastPdf = config.pdfFiles[config.pdfFiles.length - 1];
-        var lastPages = BRE.Core.countPdfPages(lastPdf);
-        if (lastPages > 0 && lastPages < slotCount) {
-            var lastName = lastPdf.displayName || decodeURI(lastPdf.name);
-            infoText += "\n\n" + l.format(l.PREVIEW_PARTIAL,
-                lastName, String(lastPages), String(slotCount - lastPages));
-        }
-
         var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
         infoST.preferredSize.width = 500;
+
+        // --- Pre-flight scan summary (counts) ---
+        var c = scan.counts;
+        var summary = l.format(l.SCAN_HEADER, String(slotCount))
+            + "\n  " + l.format(l.SCAN_OK, String(c.ok));
+        if (c.partial > 0)    summary += "\n  " + l.format(l.SCAN_PARTIAL, String(c.partial));
+        if (c.under > 0)      summary += "\n  " + l.format(l.SCAN_UNDER, String(c.under));
+        if (c.unreadable > 0) summary += "\n  " + l.format(l.SCAN_UNREADABLE, String(c.unreadable));
+        if (c.over > 0)       summary += "\n  " + l.format(l.SCAN_OVER, String(c.over));
+
+        var sumST = dlg.add("statictext", undefined, summary, { multiline: true });
+        sumST.preferredSize.width = 500;
+
+        // --- Per-file anomaly details (everything except "ok") ---
+        var details = [];
+        for (var i = 0; i < scan.items.length; i++) {
+            var it = scan.items[i];
+            if (it.status === "over") {
+                details.push(l.format(l.SCAN_FILE_OVER, it.name, String(it.pages), String(slotCount)));
+            } else if (it.status === "under") {
+                details.push(l.format(l.SCAN_FILE_UNDER, it.name, String(it.pages), String(slotCount)));
+            } else if (it.status === "partial") {
+                details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
+            } else if (it.status === "unreadable") {
+                details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
+            }
+        }
+        if (details.length > 0) {
+            var detPanel = dlg.add("panel", undefined, l.LOG_DETAILS);
+            detPanel.alignChildren = ["fill", "fill"];
+            detPanel.margins = 15;
+            var detBox = detPanel.add("edittext", undefined, details.join("\n"),
+                { multiline: true, scrolling: true, "readonly": true });
+            detBox.preferredSize = [480, 160];
+        }
+
+        if (scan.processable === 0) {
+            var noneST = dlg.add("statictext", undefined, l.SCAN_NONE);
+            noneST.preferredSize.width = 500;
+        }
 
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
         footerGrp.spacing = 8;
         footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
+        var okBtn = footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
+        if (scan.processable === 0) okBtn.enabled = false;
 
         return dlg.show() === 1;
     },
@@ -293,11 +328,14 @@ BRE.UI = {
         var summaryLine = l.LOG_SUCCESS + ": " + results.success
             + "   |   " + l.LOG_ERRORS + ": " + results.errors
             + "   |   " + l.LOG_SKIPPED + ": " + results.skipped;
+        if (results.blocked > 0) {
+            summaryLine += "   |   " + l.LOG_BLOCKED + ": " + results.blocked;
+        }
         if (results.removed > 0) {
             summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
         }
         if (results.cancelled) {
-            var completed = results.success + results.errors + results.skipped;
+            var completed = results.success + results.errors + results.skipped + results.blocked;
             summaryLine += "\n" + l.format(l.LOG_CANCELLED,
                 String(completed), String(results.total));
         }

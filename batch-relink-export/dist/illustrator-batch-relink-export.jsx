@@ -93,7 +93,20 @@ BRE.L = (function () {
             PREVIEW_TEMPLATE:   "Template: %s (%s positions)",
             PREVIEW_SOURCE:     "Source PDFs: %s files",
             PREVIEW_SAMPLE:     "Sample output: %s",
-            PREVIEW_PARTIAL:    "Last file (%s) has %s pages — %s positions will be removed from the last sheet.",
+
+            // --- Pre-flight scan ---
+            SCAN_HEADER:        "Source file check (pages vs. %s positions):",
+            SCAN_OK:            "OK (full sheet): %s",
+            SCAN_PARTIAL:       "Partial last sheet: %s",
+            SCAN_UNDER:         "Fewer pages mid-batch: %s",
+            SCAN_UNREADABLE:    "Page count unreadable: %s",
+            SCAN_OVER:          "Blocked (more pages than positions): %s",
+            SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
+            SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
+            SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
+            SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
+            SCAN_NONE:          "No file can be processed safely.",
+            ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
             // --- Progress ---
             PROGRESS_TITLE:     "Processing files…",
@@ -105,6 +118,7 @@ BRE.L = (function () {
             LOG_SUCCESS:        "Successful",
             LOG_ERRORS:         "Errors",
             LOG_SKIPPED:        "Skipped",
+            LOG_BLOCKED:        "Blocked",
             LOG_REMOVED:        "Removed positions",
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
@@ -179,7 +193,20 @@ BRE.L = (function () {
             PREVIEW_TEMPLATE:   "Šablona: %s (%s pozic)",
             PREVIEW_SOURCE:     "Zdrojové PDF: %s souborů",
             PREVIEW_SAMPLE:     "Vzor výstupu: %s",
-            PREVIEW_PARTIAL:    "Poslední soubor (%s) má %s stran — %s pozic bude odebráno z posledního archu.",
+
+            // --- Pre-flight sken ---
+            SCAN_HEADER:        "Kontrola zdrojových souborů (počet stran vs. %s pozic):",
+            SCAN_OK:            "V pořádku (plný arch): %s",
+            SCAN_PARTIAL:       "Neúplný poslední arch: %s",
+            SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
+            SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
+            SCAN_OVER:          "Blokováno (více stran než pozic): %s",
+            SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
+            SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
+            SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
+            SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
+            SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
+            ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 
             // --- Průběh ---
             PROGRESS_TITLE:     "Zpracování souborů…",
@@ -191,6 +218,7 @@ BRE.L = (function () {
             LOG_SUCCESS:        "Úspěšně",
             LOG_ERRORS:         "Chyby",
             LOG_SKIPPED:        "Přeskočeno",
+            LOG_BLOCKED:        "Blokováno",
             LOG_REMOVED:        "Odebrané pozice",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
@@ -479,6 +507,56 @@ BRE.Core = {
     },
 
     // ---------------------------------------------------------------------
+    // Pre-flight scan
+    // ---------------------------------------------------------------------
+
+    /**
+     * Scans every source PDF and classifies its page count against the
+     * template's position count. This is the safety net: it surfaces every
+     * file whose page count does not match the number of positions BEFORE
+     * any destructive processing, and flags over-page files for hard block.
+     *
+     * Status values:
+     *   "ok"         pages === slotCount (full sheet)
+     *   "partial"    pages < slotCount AND last file (expected short last sheet)
+     *   "under"      pages < slotCount AND not last file (likely split error)
+     *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
+     *   "unreadable" pages === 0 (count could not be detected)
+     *
+     * @param {File[]} pdfFiles - Source PDF files (already sorted).
+     * @param {number} slotCount - Number of PlacedItems in the template.
+     * @returns {Object} { items: [{name, pages, status}], counts, processable }
+     */
+    scanSources: function (pdfFiles, slotCount) {
+        var items = [];
+        var counts = { ok: 0, partial: 0, under: 0, over: 0, unreadable: 0 };
+        var lastIdx = pdfFiles.length - 1;
+
+        for (var i = 0; i < pdfFiles.length; i++) {
+            var f = pdfFiles[i];
+            var name = f.displayName || decodeURI(f.name);
+            var pages = this.countPdfPages(f);
+            var status;
+
+            if (pages === 0) {
+                status = "unreadable";
+            } else if (pages > slotCount) {
+                status = "over";
+            } else if (pages === slotCount) {
+                status = "ok";
+            } else {
+                status = (i === lastIdx) ? "partial" : "under";
+            }
+
+            counts[status]++;
+            items.push({ name: name, pages: pages, status: status });
+        }
+
+        // Over-page files are hard-blocked; everything else is processable.
+        return { items: items, counts: counts, processable: pdfFiles.length - counts.over };
+    },
+
+    // ---------------------------------------------------------------------
     // Output naming
     // ---------------------------------------------------------------------
 
@@ -728,11 +806,14 @@ BRE.UI = {
 
     /**
      * Shows a preview of what the script will do before processing begins.
+     * Renders the pre-flight scan report (per-file page count vs. positions)
+     * and disables Continue when no file can be processed safely.
      * @param {Object} config - Validated config from show().
      * @param {number} slotCount - Number of PlacedItems in the template.
+     * @param {Object} scan - Result of BRE.Core.scanSources().
      * @returns {boolean} True if user confirms, false if cancelled.
      */
-    showPreview: function (config, slotCount) {
+    showPreview: function (config, slotCount, scan) {
         var l = BRE.L;
 
         var sampleName = BRE.Core.buildOutputName(
@@ -751,23 +832,55 @@ BRE.UI = {
             + "\n" + l.format(l.PREVIEW_SOURCE, String(config.pdfFiles.length))
             + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
 
-        // Check last file for partial sheet
-        var lastPdf = config.pdfFiles[config.pdfFiles.length - 1];
-        var lastPages = BRE.Core.countPdfPages(lastPdf);
-        if (lastPages > 0 && lastPages < slotCount) {
-            var lastName = lastPdf.displayName || decodeURI(lastPdf.name);
-            infoText += "\n\n" + l.format(l.PREVIEW_PARTIAL,
-                lastName, String(lastPages), String(slotCount - lastPages));
-        }
-
         var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
         infoST.preferredSize.width = 500;
+
+        // --- Pre-flight scan summary (counts) ---
+        var c = scan.counts;
+        var summary = l.format(l.SCAN_HEADER, String(slotCount))
+            + "\n  " + l.format(l.SCAN_OK, String(c.ok));
+        if (c.partial > 0)    summary += "\n  " + l.format(l.SCAN_PARTIAL, String(c.partial));
+        if (c.under > 0)      summary += "\n  " + l.format(l.SCAN_UNDER, String(c.under));
+        if (c.unreadable > 0) summary += "\n  " + l.format(l.SCAN_UNREADABLE, String(c.unreadable));
+        if (c.over > 0)       summary += "\n  " + l.format(l.SCAN_OVER, String(c.over));
+
+        var sumST = dlg.add("statictext", undefined, summary, { multiline: true });
+        sumST.preferredSize.width = 500;
+
+        // --- Per-file anomaly details (everything except "ok") ---
+        var details = [];
+        for (var i = 0; i < scan.items.length; i++) {
+            var it = scan.items[i];
+            if (it.status === "over") {
+                details.push(l.format(l.SCAN_FILE_OVER, it.name, String(it.pages), String(slotCount)));
+            } else if (it.status === "under") {
+                details.push(l.format(l.SCAN_FILE_UNDER, it.name, String(it.pages), String(slotCount)));
+            } else if (it.status === "partial") {
+                details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
+            } else if (it.status === "unreadable") {
+                details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
+            }
+        }
+        if (details.length > 0) {
+            var detPanel = dlg.add("panel", undefined, l.LOG_DETAILS);
+            detPanel.alignChildren = ["fill", "fill"];
+            detPanel.margins = 15;
+            var detBox = detPanel.add("edittext", undefined, details.join("\n"),
+                { multiline: true, scrolling: true, "readonly": true });
+            detBox.preferredSize = [480, 160];
+        }
+
+        if (scan.processable === 0) {
+            var noneST = dlg.add("statictext", undefined, l.SCAN_NONE);
+            noneST.preferredSize.width = 500;
+        }
 
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
         footerGrp.spacing = 8;
         footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
+        var okBtn = footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
+        if (scan.processable === 0) okBtn.enabled = false;
 
         return dlg.show() === 1;
     },
@@ -840,11 +953,14 @@ BRE.UI = {
         var summaryLine = l.LOG_SUCCESS + ": " + results.success
             + "   |   " + l.LOG_ERRORS + ": " + results.errors
             + "   |   " + l.LOG_SKIPPED + ": " + results.skipped;
+        if (results.blocked > 0) {
+            summaryLine += "   |   " + l.LOG_BLOCKED + ": " + results.blocked;
+        }
         if (results.removed > 0) {
             summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
         }
         if (results.cancelled) {
-            var completed = results.success + results.errors + results.skipped;
+            var completed = results.success + results.errors + results.skipped + results.blocked;
             summaryLine += "\n" + l.format(l.LOG_CANCELLED,
                 String(completed), String(results.total));
         }
@@ -929,11 +1045,16 @@ BRE.UI = {
             return;
         }
 
-        if (!BRE.UI.showPreview(config, slotCount)) return;
+        // Pre-flight scan — count pages of every source PDF and classify
+        // against the template position count. Surfaces every anomaly before
+        // any destructive work; over-page files are hard-blocked in the loop.
+        var scan = BRE.Core.scanSources(config.pdfFiles, slotCount);
+
+        if (!BRE.UI.showPreview(config, slotCount, scan)) return;
 
         // Processing loop
         var results = {
-            success: 0, errors: 0, skipped: 0, removed: 0,
+            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0,
             cancelled: false, total: config.pdfFiles.length, log: []
         };
 
@@ -960,6 +1081,17 @@ BRE.UI = {
 
                 progress.update(i, outputName);
 
+                // Hard block: a file with more pages than positions would
+                // silently drop pages. Refuse to process — never emit a lossy
+                // sheet (the user cannot manually verify a large batch).
+                var fileInfo = scan.items[i];
+                if (fileInfo.status === "over") {
+                    results.blocked++;
+                    results.log.push(outputName + ": " + BRE.L.format(
+                        BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
+                    continue;
+                }
+
                 // Skip existing
                 if (config.skipExisting && outputFile.exists) {
                     results.skipped++;
@@ -972,9 +1104,9 @@ BRE.UI = {
                     BRE.Core.beginSession(doc);
 
                     try {
-                        var pageCount = BRE.Core.countPdfPages(currentFile);
-
-                        var relinkResult = BRE.Core.relinkDocument(doc, currentFile, pageCount);
+                        // Reuse the page count from the pre-flight scan
+                        // (already counted once — no need to re-read the PDF).
+                        var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
 
                         // Accumulate warnings and errors
                         var wi;

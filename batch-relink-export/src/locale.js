@@ -79,7 +79,20 @@ BRE.L = (function () {
             PREVIEW_TEMPLATE:   "Template: %s (%s positions)",
             PREVIEW_SOURCE:     "Source PDFs: %s files",
             PREVIEW_SAMPLE:     "Sample output: %s",
-            PREVIEW_PARTIAL:    "Last file (%s) has %s pages — %s positions will be removed from the last sheet.",
+
+            // --- Pre-flight scan ---
+            SCAN_HEADER:        "Source file check (pages vs. %s positions):",
+            SCAN_OK:            "OK (full sheet): %s",
+            SCAN_PARTIAL:       "Partial last sheet: %s",
+            SCAN_UNDER:         "Fewer pages mid-batch: %s",
+            SCAN_UNREADABLE:    "Page count unreadable: %s",
+            SCAN_OVER:          "Blocked (more pages than positions): %s",
+            SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
+            SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
+            SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
+            SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
+            SCAN_NONE:          "No file can be processed safely.",
+            ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
             // --- Progress ---
             PROGRESS_TITLE:     "Processing files…",
@@ -91,6 +104,7 @@ BRE.L = (function () {
             LOG_SUCCESS:        "Successful",
             LOG_ERRORS:         "Errors",
             LOG_SKIPPED:        "Skipped",
+            LOG_BLOCKED:        "Blocked",
             LOG_REMOVED:        "Removed positions",
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
@@ -165,7 +179,20 @@ BRE.L = (function () {
             PREVIEW_TEMPLATE:   "Šablona: %s (%s pozic)",
             PREVIEW_SOURCE:     "Zdrojové PDF: %s souborů",
             PREVIEW_SAMPLE:     "Vzor výstupu: %s",
-            PREVIEW_PARTIAL:    "Poslední soubor (%s) má %s stran — %s pozic bude odebráno z posledního archu.",
+
+            // --- Pre-flight sken ---
+            SCAN_HEADER:        "Kontrola zdrojových souborů (počet stran vs. %s pozic):",
+            SCAN_OK:            "V pořádku (plný arch): %s",
+            SCAN_PARTIAL:       "Neúplný poslední arch: %s",
+            SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
+            SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
+            SCAN_OVER:          "Blokováno (více stran než pozic): %s",
+            SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
+            SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
+            SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
+            SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
+            SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
+            ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 
             // --- Průběh ---
             PROGRESS_TITLE:     "Zpracování souborů…",
@@ -177,6 +204,7 @@ BRE.L = (function () {
             LOG_SUCCESS:        "Úspěšně",
             LOG_ERRORS:         "Chyby",
             LOG_SKIPPED:        "Přeskočeno",
+            LOG_BLOCKED:        "Blokováno",
             LOG_REMOVED:        "Odebrané pozice",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",

@@ -225,6 +225,56 @@ BRE.Core = {
     },
 
     // ---------------------------------------------------------------------
+    // Pre-flight scan
+    // ---------------------------------------------------------------------
+
+    /**
+     * Scans every source PDF and classifies its page count against the
+     * template's position count. This is the safety net: it surfaces every
+     * file whose page count does not match the number of positions BEFORE
+     * any destructive processing, and flags over-page files for hard block.
+     *
+     * Status values:
+     *   "ok"         pages === slotCount (full sheet)
+     *   "partial"    pages < slotCount AND last file (expected short last sheet)
+     *   "under"      pages < slotCount AND not last file (likely split error)
+     *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
+     *   "unreadable" pages === 0 (count could not be detected)
+     *
+     * @param {File[]} pdfFiles - Source PDF files (already sorted).
+     * @param {number} slotCount - Number of PlacedItems in the template.
+     * @returns {Object} { items: [{name, pages, status}], counts, processable }
+     */
+    scanSources: function (pdfFiles, slotCount) {
+        var items = [];
+        var counts = { ok: 0, partial: 0, under: 0, over: 0, unreadable: 0 };
+        var lastIdx = pdfFiles.length - 1;
+
+        for (var i = 0; i < pdfFiles.length; i++) {
+            var f = pdfFiles[i];
+            var name = f.displayName || decodeURI(f.name);
+            var pages = this.countPdfPages(f);
+            var status;
+
+            if (pages === 0) {
+                status = "unreadable";
+            } else if (pages > slotCount) {
+                status = "over";
+            } else if (pages === slotCount) {
+                status = "ok";
+            } else {
+                status = (i === lastIdx) ? "partial" : "under";
+            }
+
+            counts[status]++;
+            items.push({ name: name, pages: pages, status: status });
+        }
+
+        // Over-page files are hard-blocked; everything else is processable.
+        return { items: items, counts: counts, processable: pdfFiles.length - counts.over };
+    },
+
+    // ---------------------------------------------------------------------
     // Output naming
     // ---------------------------------------------------------------------
 

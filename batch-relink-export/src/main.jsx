@@ -22,11 +22,16 @@
             return;
         }
 
-        if (!BRE.UI.showPreview(config, slotCount)) return;
+        // Pre-flight scan — count pages of every source PDF and classify
+        // against the template position count. Surfaces every anomaly before
+        // any destructive work; over-page files are hard-blocked in the loop.
+        var scan = BRE.Core.scanSources(config.pdfFiles, slotCount);
+
+        if (!BRE.UI.showPreview(config, slotCount, scan)) return;
 
         // Processing loop
         var results = {
-            success: 0, errors: 0, skipped: 0, removed: 0,
+            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0,
             cancelled: false, total: config.pdfFiles.length, log: []
         };
 
@@ -53,6 +58,17 @@
 
                 progress.update(i, outputName);
 
+                // Hard block: a file with more pages than positions would
+                // silently drop pages. Refuse to process — never emit a lossy
+                // sheet (the user cannot manually verify a large batch).
+                var fileInfo = scan.items[i];
+                if (fileInfo.status === "over") {
+                    results.blocked++;
+                    results.log.push(outputName + ": " + BRE.L.format(
+                        BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
+                    continue;
+                }
+
                 // Skip existing
                 if (config.skipExisting && outputFile.exists) {
                     results.skipped++;
@@ -65,9 +81,9 @@
                     BRE.Core.beginSession(doc);
 
                     try {
-                        var pageCount = BRE.Core.countPdfPages(currentFile);
-
-                        var relinkResult = BRE.Core.relinkDocument(doc, currentFile, pageCount);
+                        // Reuse the page count from the pre-flight scan
+                        // (already counted once — no need to re-read the PDF).
+                        var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
 
                         // Accumulate warnings and errors
                         var wi;

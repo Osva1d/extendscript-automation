@@ -22,6 +22,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - Hromadné relinkování všech PlacedItems v šabloně
 - Ověření relinku po každém souboru (verifikace cesty)
 - Automatické odemknutí/obnovení zamčených vrstev a objektů
+- **Pre-flight sken** — před zpracováním proskenuje všechny zdrojové PDF a porovná počet stran s počtem pozic; soubor s více stranami než pozic se odmítne (tvrdý blok proti tiché ztrátě stran), ostatní odchylky se vypíší v náhledu
 - Odstranění přebytečných pozic u neúplného posledního archu
 - Detekce počtu stran PDF (binary read)
 - Pojmenování výstupů ze šablony s {n} číslováním
@@ -49,6 +50,7 @@ Build: `npm run build` → `dist/illustrator-batch-relink-export.jsx`
 - **BREAKING:** Výstupní pojmenování změněno na pattern `{n}_{template}`
 - **FEATURE:** Session management — automatické odemknutí/obnovení zamčených vrstev a objektů
 - **FEATURE:** Relink verifikace po každém souboru
+- **FEATURE:** Pre-flight sken všech zdrojů + tvrdý blok souborů s více stranami než pozic
 - **FEATURE:** Odstranění přebytečných pozic u neúplného archu
 - **FEATURE:** Dry-run náhled před zpracováním
 - **FEATURE:** Lokalizace cs/en
