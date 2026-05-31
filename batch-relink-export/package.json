@@ -1,0 +1,9 @@
+{
+  "name": "batch-relink-export",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Batch PDF relinking and export for Illustrator templates",
+  "scripts": {
+    "build": "bash tools/build.sh"
+  }
+}
