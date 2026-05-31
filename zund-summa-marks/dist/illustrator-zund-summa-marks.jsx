@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.4.0
  * Author:      Osva1d
- * Updated:     2026-05-30
+ * Updated:     2026-05-31
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -2928,6 +2928,10 @@ ZSM.UI = {
             if (!r.ok) return;
             btnDel.enabled = (key !== c.PRESET_KEY_DEFAULT);
             setUIValues(r.settings);
+            // setUIValues rebuilds the dynamic layer rows with only their base
+            // handlers — re-attach the modified-indicator wrappers, else editing
+            // a layer row after a preset switch wouldn't flag changes / enable Save.
+            wireLayerRows();
             refreshModifiedIndicator();
         };
 
@@ -2990,6 +2994,10 @@ ZSM.UI = {
             }
             updatePresetList();
             setUIValues(pData.presets[c.PRESET_KEY_DEFAULT]);
+            // Re-attach layer-row modified-indicator wrappers after the rebuild
+            // (see ddPreset.onChange) — otherwise post-delete layer edits silently
+            // wouldn't flag as modified.
+            wireLayerRows();
             refreshModifiedIndicator();
             persistSettings();
         };
