@@ -1,52 +1,59 @@
-# Batch Relink & Export / Imposice PDF
+# Batch Relink & Export
 
-Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování PDF a N-up imposice.
-
-## Proč existuje
-
-Při výrobě vstupenek, vizitek nebo jiných opakujících se tiskovin je potřeba hromadně zpracovat desítky až stovky PDF souborů — buď je relinkovat do šablon s clipping maskami, nebo z vícestránkového PDF vytvořit tiskové archy (imposice). Ruční práce v Illustratoru by trvala hodiny. Tyto dva skripty celý proces automatizují.
+Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování PDF souborů do šablony a export.
 
 ## Stav
 
-- **Typ:** Monolity (single-file ExtendScript, ES3)
-- **Namespace:** žádný (IIFE wrapper)
-- **src/dist:** N/A — single file je zároveň zdrojem i distribucí
+- **Typ:** Modulární ExtendScript (ES3)
+- **Namespace:** `BRE`
+- **Build:** `npm run build` (`tools/build.sh`)
 - **Min. verze AI:** CC 2018 (v22) — vyžadováno pro `PlacedItem.pageNumber`
-
-## Skripty
-
-### illustrator-batch-relink-export.jsx (v2.0.0)
-
-Hromadné relinkování PDF souborů do AI šablony a export.
-
-1. Otevře AI šablonu s propojenými PDF
-2. Pro každý PDF ve zdrojové složce přelinkuje všechny PlacedItems
-3. Exportuje výsledek jako PDF (dle zvoleného presetu)
-4. Zavře dokument bez uložení
-
-### illustrator-impose-pdf.jsx (v1.0.0)
-
-Automatická N-up imposice z vícestránkového PDF.
-
-1. Načte geometrii slotů z AI šablony (každý PlacedItem = 1 pozice na archu)
-2. Stránkuje zdrojové PDF a umísťuje správnou stránku do každého slotu
-3. Exportuje jednotlivé archy jako PDF
 
 ## Workflow
 
-Typický postup pro tisk vstupenek, vizitek apod.:
+1. Vytvořte AI šablonu s propojenými PDF (stránky z vícestránkového PDF)
+2. Oříznout maskou pokud je třeba, přidat řezací značky
+3. Uložit šablonu
+4. Rozdělit zdrojové PDF podle počtu pozic v šabloně (např. v Adobe Acrobat)
+5. Spustit skript, vyplnit dialog, potvrdit náhled, hotovo
 
-1. **Imposice:** `illustrator-impose-pdf.jsx` — vícestránkové PDF → tiskové archy
-2. **Batch relink:** `illustrator-batch-relink-export.jsx` — pro šablony s clipping maskami, kde imposice skript nestačí (vyžaduje předem rozdělené PDF, např. z Adobe Acrobat)
+## Funkce
 
-## Technické poznámky
+- Hromadné relinkování všech PlacedItems v šabloně
+- Ověření relinku po každém souboru (verifikace cesty)
+- Automatické odemknutí/obnovení zamčených vrstev a objektů
+- Odstranění přebytečných pozic u neúplného posledního archu
+- Detekce počtu stran PDF (binary read)
+- Pojmenování výstupů ze šablony s {n} číslováním
+- Dry-run náhled před zpracováním
+- Skip existing pro crash recovery
+- Lokalizace cs/en (auto-detekce)
 
-- `userInteractionLevel` se vždy resetuje na `DISPLAYALERTS` — v normálním i chybovém průběhu (try/finally)
-- Nested try-catch kolem každé kritické operace (open, relink, export, close)
-- ES3 compliant, žádné violations
-- UI v češtině
+## Vývoj
+
+```
+src/
+├── locale.js      # BRE.L — lokalizace cs/en
+├── config.js      # BRE.Config — verze, konstanty
+├── core.js        # BRE.Core — session mgmt, relink, verifikace
+├── ui.js          # BRE.UI — dialog, progress, souhrn
+└── main.jsx       # Entry point
+```
+
+Build: `npm run build` → `dist/illustrator-batch-relink-export.jsx`
 
 ## Changelog
 
-### v2.0.0 / v1.0.0
-- Aktuální verze
+### v3.0.0 (2026-05)
+- **BREAKING:** Modulární redesign (5 modulů, namespace BRE, build systém)
+- **BREAKING:** Výstupní pojmenování změněno na pattern `{n}_{template}`
+- **FEATURE:** Session management — automatické odemknutí/obnovení zamčených vrstev a objektů
+- **FEATURE:** Relink verifikace po každém souboru
+- **FEATURE:** Odstranění přebytečných pozic u neúplného archu
+- **FEATURE:** Dry-run náhled před zpracováním
+- **FEATURE:** Lokalizace cs/en
+- **FEATURE:** Detekce počtu stran PDF
+- **REFACTOR:** Smazán impose skript (slepý vývoj)
+
+### v2.0.0 (2026-03)
+- Původní monolit — hromadné relinkování s exportem
