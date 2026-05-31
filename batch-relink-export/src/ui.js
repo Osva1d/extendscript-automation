@@ -1,0 +1,359 @@
+// ------------------------------------------------------------------------
+// Module: BRE.UI — Dialog, Progress, Summary
+// Part of: Illustrator Batch Relink Export v3.0.0
+// ------------------------------------------------------------------------
+
+var BRE = BRE || {};
+
+BRE.UI = {
+
+    // ---------------------------------------------------------------------
+    // Main dialog
+    // ---------------------------------------------------------------------
+
+    /**
+     * Shows the main configuration dialog.
+     * Returns validated config object or null on cancel.
+     * @returns {Object|null} Config with templateFile, sourceFolder, outputFolder,
+     *          namingPattern, preset, skipExisting, openAfter, pdfFiles, templateName.
+     */
+    show: function () {
+        var c = BRE.Config;
+        var l = BRE.L;
+
+        var dialog = new Window("dialog", c.ui.title);
+        dialog.orientation = "column";
+        dialog.alignChildren = ["fill", "top"];
+        dialog.margins = c.ui.dialogMargins;
+        dialog.spacing = c.ui.dialogSpacing;
+
+        // --- Input panel ---
+        var inputPanel = dialog.add("panel", undefined, l.PANEL_INPUT);
+        inputPanel.orientation = "column";
+        inputPanel.alignChildren = ["fill", "top"];
+        inputPanel.margins = c.ui.panelMargins;
+        inputPanel.spacing = c.ui.panelSpacing;
+
+        var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE, l.PH_TEMPLATE,
+            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN);
+        var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE, l.PH_SOURCE,
+            true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
+        var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT, l.PH_OUTPUT,
+            true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
+
+        // --- Config panel ---
+        var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
+        configPanel.orientation = "column";
+        configPanel.alignChildren = ["fill", "top"];
+        configPanel.margins = c.ui.panelMargins;
+        configPanel.spacing = c.ui.panelSpacing;
+
+        // Naming pattern
+        var namingGrp = configPanel.add("group");
+        namingGrp.alignChildren = ["left", "center"];
+        var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
+        namingST.preferredSize.width = c.ui.labelWidth;
+        var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
+        namingInput.preferredSize.width = c.ui.namingWidth;
+        namingInput.helpTip = l.TIP_NAMING;
+
+        // PDF Preset
+        var presetGrp = configPanel.add("group");
+        presetGrp.alignChildren = ["left", "center"];
+        var presetST = presetGrp.add("statictext", undefined, l.LBL_PRESET);
+        presetST.preferredSize.width = c.ui.labelWidth;
+        var presetDDL = presetGrp.add("dropdownlist", undefined, []);
+        presetDDL.preferredSize.width = c.ui.dropdownWidth;
+        presetDDL.helpTip = l.TIP_PRESET;
+
+        var pdfPresets = [];
+        try { pdfPresets = app.PDFPresetsList; } catch (e) {
+            pdfPresets = ["[High Quality Print]"];
+        }
+        for (var pi = 0; pi < pdfPresets.length; pi++) {
+            presetDDL.add("item", pdfPresets[pi]);
+        }
+        if (pdfPresets.length > 0) {
+            var defaultIdx = 0;
+            for (var di = 0; di < pdfPresets.length; di++) {
+                for (var sp = 0; sp < c.presetSearchPatterns.length; sp++) {
+                    if (pdfPresets[di].indexOf(c.presetSearchPatterns[sp]) !== -1) {
+                        defaultIdx = di;
+                        break;
+                    }
+                }
+                if (defaultIdx > 0) break;
+            }
+            presetDDL.selection = defaultIdx;
+        }
+
+        // Checkboxes
+        var skipCB = configPanel.add("checkbox", undefined, l.CB_SKIP);
+        skipCB.helpTip = l.TIP_SKIP;
+
+        var openCB = configPanel.add("checkbox", undefined, l.CB_OPEN_FOLDER);
+        openCB.value = true;
+        openCB.helpTip = l.TIP_OPEN;
+
+        // --- Footer ---
+        var footerGrp = dialog.add("group");
+        footerGrp.alignment = ["right", "center"];
+        footerGrp.spacing = 8;
+        footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
+        footerGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
+
+        // --- Show dialog ---
+        if (dialog.show() !== 1) return null;
+
+        // --- Validation ---
+        var templateFile = new File(templatePath.text);
+        var sourceFolder = new Folder(sourcePath.text);
+        var outputFolder = new Folder(outputPath.text);
+        var preset = presetDDL.selection ? presetDDL.selection.text : "";
+        var namingPattern = namingInput.text;
+        var skipExisting = skipCB.value;
+        var openAfter = openCB.value;
+
+        if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
+            alert(l.ERR_TEMPLATE);
+            return null;
+        }
+        if (!sourceFolder.exists) {
+            alert(l.ERR_SOURCE);
+            return null;
+        }
+        if (!outputFolder.exists) {
+            if (confirm(l.ERR_OUTPUT_ASK)) {
+                if (!outputFolder.create()) {
+                    alert(l.ERR_OUTPUT_FAIL);
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        }
+        if (!preset) {
+            alert(l.ERR_PRESET);
+            return null;
+        }
+        if (namingPattern.indexOf("{n}") === -1) {
+            alert(l.ERR_NAMING_PATTERN);
+            return null;
+        }
+
+        var pdfFiles = sourceFolder.getFiles(function (f) {
+            return f instanceof File && /\.pdf$/i.test(f.name);
+        });
+        if (pdfFiles.length === 0) {
+            alert(l.ERR_NO_PDF);
+            return null;
+        }
+
+        // Sort PDF files alphabetically for deterministic numbering
+        pdfFiles.sort(function (a, b) {
+            var na = (a.displayName || decodeURI(a.name)).toLowerCase();
+            var nb = (b.displayName || decodeURI(b.name)).toLowerCase();
+            if (na < nb) return -1;
+            if (na > nb) return 1;
+            return 0;
+        });
+
+        var templateName = BRE.Core.stripExtension(
+            templateFile.displayName || decodeURI(templateFile.name)
+        );
+
+        return {
+            templateFile: templateFile,
+            sourceFolder: sourceFolder,
+            outputFolder: outputFolder,
+            namingPattern: namingPattern,
+            preset: preset,
+            skipExisting: skipExisting,
+            openAfter: openAfter,
+            pdfFiles: pdfFiles,
+            templateName: templateName
+        };
+    },
+
+    // ---------------------------------------------------------------------
+    // Dry-run preview
+    // ---------------------------------------------------------------------
+
+    /**
+     * Shows a preview of what the script will do before processing begins.
+     * @param {Object} config - Validated config from show().
+     * @param {number} slotCount - Number of PlacedItems in the template.
+     * @returns {boolean} True if user confirms, false if cancelled.
+     */
+    showPreview: function (config, slotCount) {
+        var l = BRE.L;
+
+        var sampleName = BRE.Core.buildOutputName(
+            config.namingPattern, 0, config.pdfFiles.length,
+            config.templateName,
+            BRE.Core.stripExtension(config.pdfFiles[0].displayName || decodeURI(config.pdfFiles[0].name))
+        );
+
+        var dlg = new Window("dialog", l.PREVIEW_TITLE);
+        dlg.orientation = "column";
+        dlg.alignChildren = ["fill", "top"];
+        dlg.margins = 20;
+        dlg.spacing = 10;
+
+        var infoText = l.format(l.PREVIEW_TEMPLATE, config.templateName, String(slotCount))
+            + "\n" + l.format(l.PREVIEW_SOURCE, String(config.pdfFiles.length))
+            + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
+
+        // Check last file for partial sheet
+        var lastPdf = config.pdfFiles[config.pdfFiles.length - 1];
+        var lastPages = BRE.Core.countPdfPages(lastPdf);
+        if (lastPages > 0 && lastPages < slotCount) {
+            var lastName = lastPdf.displayName || decodeURI(lastPdf.name);
+            infoText += "\n\n" + l.format(l.PREVIEW_PARTIAL,
+                lastName, String(lastPages), String(slotCount - lastPages));
+        }
+
+        var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
+        infoST.preferredSize.width = 500;
+
+        var footerGrp = dlg.add("group");
+        footerGrp.alignment = ["right", "center"];
+        footerGrp.spacing = 8;
+        footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
+        footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
+
+        return dlg.show() === 1;
+    },
+
+    // ---------------------------------------------------------------------
+    // Progress palette
+    // ---------------------------------------------------------------------
+
+    /**
+     * Creates and shows a progress palette.
+     * @param {number} total - Total number of files.
+     * @returns {Object} { win, statusText, bar, cancelled, update(i, name), close() }
+     */
+    createProgress: function (total) {
+        var l = BRE.L;
+
+        var dlg = new Window("palette", l.PROGRESS_TITLE, undefined, { closeButton: false });
+        dlg.orientation = "column";
+        dlg.alignChildren = ["fill", "top"];
+        dlg.margins = 15;
+        dlg.spacing = 10;
+
+        var statusText = dlg.add("statictext", undefined, l.PROGRESS_INIT);
+        statusText.preferredSize.width = 450;
+        var bar = dlg.add("progressbar", undefined, 0, total);
+        bar.preferredSize.width = 450;
+
+        var cancelled = false;
+        var cancelBtn = dlg.add("button", undefined, l.BTN_STOP);
+        cancelBtn.alignment = ["center", "center"];
+        cancelBtn.onClick = function () { cancelled = true; };
+
+        dlg.show();
+
+        return {
+            isCancelled: function () { return cancelled; },
+            update: function (index, fileName) {
+                statusText.text = l.format(l.PROGRESS_FILE,
+                    fileName, String(index + 1), String(total));
+                bar.value = index;
+                dlg.update();
+            },
+            finish: function () {
+                bar.value = total;
+                dlg.update();
+            },
+            close: function () {
+                try { dlg.close(); } catch (e) {}
+            }
+        };
+    },
+
+    // ---------------------------------------------------------------------
+    // Summary log
+    // ---------------------------------------------------------------------
+
+    /**
+     * Shows a summary dialog after processing completes.
+     * @param {Object} results - { success, errors, skipped, removed, cancelled, total, log }
+     */
+    showSummary: function (results) {
+        var l = BRE.L;
+
+        var logWin = new Window("dialog", l.LOG_TITLE);
+        logWin.orientation = "column";
+        logWin.alignChildren = ["fill", "top"];
+        logWin.margins = 20;
+        logWin.spacing = 15;
+
+        var summaryLine = l.LOG_SUCCESS + ": " + results.success
+            + "   |   " + l.LOG_ERRORS + ": " + results.errors
+            + "   |   " + l.LOG_SKIPPED + ": " + results.skipped;
+        if (results.removed > 0) {
+            summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
+        }
+        if (results.cancelled) {
+            var completed = results.success + results.errors + results.skipped;
+            summaryLine += "\n" + l.format(l.LOG_CANCELLED,
+                String(completed), String(results.total));
+        }
+
+        var summST = logWin.add("statictext", undefined, summaryLine, { multiline: true });
+        summST.preferredSize.width = 500;
+
+        if (results.log.length > 0) {
+            var detailPanel = logWin.add("panel", undefined, l.LOG_DETAILS);
+            detailPanel.alignChildren = ["fill", "fill"];
+            detailPanel.margins = 15;
+            var logBox = detailPanel.add("edittext", undefined, results.log.join("\n"),
+                { multiline: true, scrolling: true, "readonly": true });
+            logBox.preferredSize = [480, 200];
+        } else {
+            logWin.add("statictext", undefined, l.LOG_ALL_OK);
+        }
+
+        var closeGrp = logWin.add("group");
+        closeGrp.alignment = ["right", "center"];
+        closeGrp.spacing = 8;
+        closeGrp.add("button", undefined, l.BTN_CLOSE, { name: "ok" });
+
+        logWin.show();
+    },
+
+    // ---------------------------------------------------------------------
+    // Internal helpers
+    // ---------------------------------------------------------------------
+
+    /**
+     * Adds a labeled file/folder row to a panel.
+     * @returns {EditText} The text input element.
+     */
+    _addFileRow: function (parent, label, placeholder, isFolder, ext, tipField, tipBtn) {
+        var l = BRE.L;
+        var c = BRE.Config;
+
+        var grp = parent.add("group");
+        grp.alignChildren = ["left", "center"];
+        var st = grp.add("statictext", undefined, label);
+        st.preferredSize.width = c.ui.labelWidth;
+        var et = grp.add("edittext", undefined, placeholder);
+        et.preferredSize.width = c.ui.fieldWidth;
+        if (tipField) et.helpTip = tipField;
+        var btn = grp.add("button", undefined, l.BTN_BROWSE);
+        if (tipBtn) btn.helpTip = tipBtn;
+        btn.onClick = function () {
+            var sel;
+            if (isFolder) {
+                sel = Folder.selectDialog(l.BROWSE_FOLDER);
+            } else {
+                sel = File.openDialog(l.BROWSE_FILE, ext);
+            }
+            if (sel) et.text = sel.fsName;
+        };
+        return et;
+    }
+};
