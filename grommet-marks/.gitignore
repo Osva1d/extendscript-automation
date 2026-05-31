@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Node dependencies — restored from package.json, never committed
+node_modules/
+
+# Editor / OS cruft
+*~
+*.log
+*.tmp
