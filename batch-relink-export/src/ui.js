@@ -149,13 +149,13 @@ BRE.UI = {
             return null;
         }
 
-        // Sort PDF files alphabetically for deterministic numbering
+        // Sort PDF files in natural (numeric-aware) order so sheet numbering
+        // is predictable: part_2 before part_10, not lexical 1,10,11,2…
         pdfFiles.sort(function (a, b) {
-            var na = (a.displayName || decodeURI(a.name)).toLowerCase();
-            var nb = (b.displayName || decodeURI(b.name)).toLowerCase();
-            if (na < nb) return -1;
-            if (na > nb) return 1;
-            return 0;
+            return BRE.Core.naturalCompare(
+                a.displayName || decodeURI(a.name),
+                b.displayName || decodeURI(b.name)
+            );
         });
 
         var templateName = BRE.Core.stripExtension(

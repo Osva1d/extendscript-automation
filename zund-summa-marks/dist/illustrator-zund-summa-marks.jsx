@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.4.0
  * Author:      Osva1d
- * Updated:     2026-05-31
+ * Updated:     2026-06-01
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -2855,6 +2855,19 @@ ZSM.UI = {
             }
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
+
+            // Refresh the window layout so the rebuilt rows actually render
+            // (the Add/Remove handlers do this inline; setUIValues didn't).
+            // Without it, Reset / preset-switch / delete leave the new rows
+            // un-laid-out — they appear "cleared" until the next interaction,
+            // which also reads as "Add added two rows". Guarded by w.visible so
+            // the initial (pre-show) load leaves sizing to w.show().
+            if (w.visible) {
+                try {
+                    w.layout.layout(true);
+                    w.size.height = w.preferredSize.height + 10;
+                } catch (e) {}
+            }
         }
 
         // =================================================================
@@ -3346,6 +3359,20 @@ ZSM.UI = {
         if (!text) { if (ddl.items.length > 0) ddl.selection = 0; return; }
         for (var i = 0; i < ddl.items.length; i++) {
             if (ddl.items[i].text === text) { ddl.selection = i; return; }
+        }
+        // [Registration] alias — the canonical English token and the document's
+        // localized registration swatch name (e.g. CS "[Registrace]") are the
+        // SAME colour. getSwatchNames lists the localized name, but presets/
+        // defaults store canonical "[Registration]"; match them interchangeably
+        // so the default doesn't render as a bogus "(missing)" item in a
+        // non-English Illustrator. (ZSM.Draw guard keeps selectDDL unit-testable.)
+        var regName = (typeof ZSM !== "undefined" && ZSM.Draw && ZSM.Draw.getRegistrationName)
+            ? ZSM.Draw.getRegistrationName() : "[Registration]";
+        if (text === "[Registration]" || text === regName) {
+            for (var r = 0; r < ddl.items.length; r++) {
+                var rt = ddl.items[r].text;
+                if (rt === "[Registration]" || rt === regName) { ddl.selection = r; return; }
+            }
         }
         // Not in the document — preserve the saved name as a flagged item.
         var suffix = (ZSM.L && ZSM.L.DDL_MISSING_SUFFIX) ? ZSM.L.DDL_MISSING_SUFFIX : "(missing)";

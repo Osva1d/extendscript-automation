@@ -432,6 +432,43 @@ BRE.Core = {
     },
 
     /**
+     * Natural (numeric-aware) comparison of two filenames.
+     * Sorts embedded numbers by value so "part_2" precedes "part_10"
+     * (a plain lexical sort would order 1, 10, 11, 2…, which looks random
+     * to the operator and produces unpredictable sheet numbering).
+     * Case-insensitive. Returns -1 / 0 / 1.
+     * @param {string} a - First name.
+     * @param {string} b - Second name.
+     * @returns {number} Comparison result.
+     */
+    naturalCompare: function (a, b) {
+        a = String(a).toLowerCase();
+        b = String(b).toLowerCase();
+        var ia = 0, ib = 0;
+        while (ia < a.length && ib < b.length) {
+            var ca = a.charAt(ia), cb = b.charAt(ib);
+            var da = (ca >= "0" && ca <= "9");
+            var db = (cb >= "0" && cb <= "9");
+            if (da && db) {
+                var na = "";
+                while (ia < a.length && a.charAt(ia) >= "0" && a.charAt(ia) <= "9") { na += a.charAt(ia++); }
+                var nb = "";
+                while (ib < b.length && b.charAt(ib) >= "0" && b.charAt(ib) <= "9") { nb += b.charAt(ib++); }
+                var diff = parseInt(na, 10) - parseInt(nb, 10);
+                if (diff !== 0) return diff < 0 ? -1 : 1;
+                // Equal value but different digit count → fewer leading zeros first.
+                if (na.length !== nb.length) return na.length < nb.length ? -1 : 1;
+            } else {
+                if (ca !== cb) return ca < cb ? -1 : 1;
+                ia++; ib++;
+            }
+        }
+        var ra = a.length - ia, rb = b.length - ib;
+        if (ra !== rb) return ra < rb ? -1 : 1;
+        return 0;
+    },
+
+    /**
      * Finds an already-open document matching the given file, if any.
      * Used to warn before closing a template the user has open.
      * @param {File} file - The file to look for among open documents.
