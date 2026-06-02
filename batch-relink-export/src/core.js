@@ -205,28 +205,45 @@ BRE.Core = {
     },
 
     /**
-     * True if every placed item inside the group is in removeRefs
+     * True if every placed item anywhere inside the group is in removeRefs
      * (i.e. removing the group deletes only positions we already intend to
-     * remove). The clipping path itself is a PathItem and does not count.
-     * Returns false on any access error — caller then declines to climb.
+     * remove). Walks pageItems recursively so the result does not depend on
+     * whether Illustrator's typed collections are recursive, and so nested
+     * groups / nested clip masks are handled correctly. Non-placed items
+     * (the clipping path, frames) do not count. Returns false on any access
+     * error — the caller then declines to climb (fails safe).
      * @param {GroupItem} group - Candidate clip group.
      * @param {Array} removeRefs - Placed items scheduled for removal.
      * @returns {boolean}
      */
     _groupContainsOnly: function (group, removeRefs) {
         try {
-            var pis = group.placedItems;
-            for (var k = 0; k < pis.length; k++) {
-                var found = false;
-                for (var m = 0; m < removeRefs.length; m++) {
-                    if (removeRefs[m] === pis[k]) { found = true; break; }
+            var kids = group.pageItems;
+            for (var k = 0; k < kids.length; k++) {
+                var it = kids[k];
+                if (it.typename === "PlacedItem") {
+                    if (!this._inSet(it, removeRefs)) return false;
+                } else if (it.typename === "GroupItem") {
+                    if (!this._groupContainsOnly(it, removeRefs)) return false;
                 }
-                if (!found) return false;
             }
             return true;
         } catch (e) {
             return false;
         }
+    },
+
+    /**
+     * Reference-equality membership test.
+     * @param {Object} item - Item to find.
+     * @param {Array} refs - Array of references.
+     * @returns {boolean}
+     */
+    _inSet: function (item, refs) {
+        for (var m = 0; m < refs.length; m++) {
+            if (refs[m] === item) return true;
+        }
+        return false;
     },
 
     // ---------------------------------------------------------------------
