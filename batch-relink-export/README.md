@@ -23,10 +23,11 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - Ověření relinku po každém souboru (verifikace cesty)
 - Automatické odemknutí/obnovení zamčených vrstev a objektů
 - **Pre-flight sken** — před zpracováním proskenuje všechny zdrojové PDF a porovná počet stran s počtem pozic; soubor s více stranami než pozic se odmítne (tvrdý blok proti tiché ztrátě stran), ostatní odchylky se vypíší v náhledu
-- Odstranění přebytečných pozic u neúplného posledního archu
-- Detekce počtu stran PDF (binary read)
+- Odstranění přebytečných pozic u neúplného posledního archu — **včetně pozic oříznutých clipping maskou** (odstraní celou clip-group)
+- Detekce počtu stran PDF (binary read) s nezávislou křížovou kontrolou
 - Pojmenování výstupů ze šablony s {n} číslováním
-- Dry-run náhled před zpracováním
+- **Předvídatelné číslování** — zdroje řazeny přirozeně (part_2 před part_10)
+- Náhled před zpracováním (přeskočí se, když je dávka bez anomálií)
 - Skip existing pro crash recovery
 - Lokalizace cs/en (auto-detekce)
 
@@ -51,8 +52,9 @@ Build: `npm run build` → `dist/illustrator-batch-relink-export.jsx`
 - **FEATURE:** Session management — automatické odemknutí/obnovení zamčených vrstev a objektů
 - **FEATURE:** Relink verifikace po každém souboru
 - **FEATURE:** Pre-flight sken všech zdrojů + tvrdý blok souborů s více stranami než pozic
-- **FEATURE:** Odstranění přebytečných pozic u neúplného archu
-- **FEATURE:** Dry-run náhled před zpracováním
+- **FEATURE:** Odstranění přebytečných pozic u neúplného archu (clip-mask aware — odstraní celou clip-group)
+- **FEATURE:** Přirozené (numerické) řazení zdrojů → předvídatelné číslování archů
+- **FEATURE:** Dry-run náhled před zpracováním (přeskočí se u bezchybné dávky)
 - **FEATURE:** Lokalizace cs/en
 - **FEATURE:** Detekce počtu stran PDF
 - **REFACTOR:** Smazán impose skript (slepý vývoj)

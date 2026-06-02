@@ -30,7 +30,7 @@ BRE.L = (function () {
             ERR_NAMING_PATTERN: "Naming pattern must contain {n} placeholder.",
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
-            ERR_UNCERTAIN:      "Skipped: page count could not be reliably verified (/Count %s vs %s page objects).",
+            ERR_UNCERTAIN:      "Skipped: ambiguous page count — please check this file manually.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
@@ -92,7 +92,7 @@ BRE.L = (function () {
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
             SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
-            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count (/Count %s vs %s page objects) — WILL BE SKIPPED, check manually",
+            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
             ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
@@ -132,7 +132,7 @@ BRE.L = (function () {
             ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat placeholder {n}.",
             ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
-            ERR_UNCERTAIN:      "Přeskočeno: počet stran nelze spolehlivě ověřit (/Count %s vs %s objektů stran).",
+            ERR_UNCERTAIN:      "Přeskočeno: nejednoznačný počet stran — zkontrolujte tento soubor ručně.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---
@@ -194,7 +194,7 @@ BRE.L = (function () {
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
             SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
-            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran (/Count %s vs %s objektů stran) — BUDE PŘESKOČENO, zkontrolujte ručně",
+            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
             ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 

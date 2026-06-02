@@ -44,7 +44,12 @@
         // any destructive work; over-page files are hard-blocked in the loop.
         var scan = BRE.Core.scanSources(config.pdfFiles, slotCount);
 
-        if (!BRE.UI.showPreview(config, slotCount, scan)) return;
+        // Fewer dialogs: only show the preview when there is something to
+        // review (anomalies or blocked files). A fully clean batch — every
+        // file has exactly the right page count — proceeds straight to
+        // processing after the user clicked Run.
+        var clean = (scan.counts.ok === config.pdfFiles.length);
+        if (!clean && !BRE.UI.showPreview(config, slotCount, scan)) return;
 
         // Processing loop
         var results = {
@@ -87,8 +92,7 @@
                 }
                 if (fileInfo.status === "uncertain") {
                     results.blocked++;
-                    results.log.push(outputName + ": " + BRE.L.format(
-                        BRE.L.ERR_UNCERTAIN, String(fileInfo.pages), String(fileInfo.pageObjs)));
+                    results.log.push(outputName + ": " + BRE.L.ERR_UNCERTAIN);
                     continue;
                 }
 

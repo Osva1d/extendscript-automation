@@ -236,7 +236,7 @@ BRE.UI = {
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
             } else if (it.status === "uncertain") {
-                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name, String(it.pages), String(it.pageObjs)));
+                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name));
             }
         }
         if (details.length > 0) {

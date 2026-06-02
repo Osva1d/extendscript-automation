@@ -3,7 +3,7 @@
  * Script:      Illustrator Batch Relink Export
  * Version:     3.0.0
  * Author:      Osva1d
- * Updated:     2026-06-01
+ * Updated:     2026-06-02
  *
  * Description:
  *   Batch PDF relinking and export for Illustrator templates.
@@ -44,7 +44,7 @@ BRE.L = (function () {
             ERR_NAMING_PATTERN: "Naming pattern must contain {n} placeholder.",
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
-            ERR_UNCERTAIN:      "Skipped: page count could not be reliably verified (/Count %s vs %s page objects).",
+            ERR_UNCERTAIN:      "Skipped: ambiguous page count — please check this file manually.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
@@ -106,7 +106,7 @@ BRE.L = (function () {
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
             SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
-            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count (/Count %s vs %s page objects) — WILL BE SKIPPED, check manually",
+            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
             ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
@@ -146,7 +146,7 @@ BRE.L = (function () {
             ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat placeholder {n}.",
             ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
-            ERR_UNCERTAIN:      "Přeskočeno: počet stran nelze spolehlivě ověřit (/Count %s vs %s objektů stran).",
+            ERR_UNCERTAIN:      "Přeskočeno: nejednoznačný počet stran — zkontrolujte tento soubor ručně.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---
@@ -208,7 +208,7 @@ BRE.L = (function () {
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
             SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
-            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran (/Count %s vs %s objektů stran) — BUDE PŘESKOČENO, zkontrolujte ručně",
+            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
             ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 
@@ -387,6 +387,7 @@ BRE.Core = {
         };
         var items = doc.placedItems;
         var i, item, label;
+        var toRemove = [];
 
         for (i = 0; i < items.length; i++) {
             item = items[i];
@@ -404,6 +405,10 @@ BRE.Core = {
             }
 
             if (totalPages > 0 && item.pageNumber && item.pageNumber > totalPages) {
+                // Excess position (its page is beyond this PDF). Capture the
+                // reference now; remove after the loop. Only managed items
+                // (linked + visible) reach here — hidden/fileless were skipped.
+                toRemove.push({ item: item, page: item.pageNumber });
                 continue;
             }
 
@@ -419,28 +424,26 @@ BRE.Core = {
             }
         }
 
-        if (totalPages > 0) {
-            // Remove ONLY managed positions (linked + visible) whose page is
-            // beyond the source PDF. Deliberately-skipped items — fileless or
-            // on a hidden layer — are never removed: their pageNumber refers to
-            // a DIFFERENT document and must not be compared to this PDF.
-            // Reverse iteration is required when removing from a live collection.
-            for (i = items.length - 1; i >= 0; i--) {
-                try {
-                    item = items[i];
-                    if (!item.file || this._isOnHiddenLayer(item)) continue;
-                    if (item.pageNumber && item.pageNumber > totalPages) {
-                        item.remove();
-                        results.removed++;
-                    }
-                } catch (e) {
-                    results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, "remove_" + i, e.message));
-                }
+        // Remove captured excess positions by reference (safe against live
+        // collection mutation). Each position may be the clipped content of a
+        // clipping mask — _removePosition removes the whole clip group so no
+        // clip path / frame is left behind. The remove-set lets it refuse to
+        // delete a clip group that also encloses a position we are keeping.
+        var removeRefs = [];
+        for (i = 0; i < toRemove.length; i++) removeRefs.push(toRemove[i].item);
+        for (i = 0; i < toRemove.length; i++) {
+            try {
+                this._removePosition(toRemove[i].item, removeRefs);
+                results.removed++;
+            } catch (e) {
+                results.errors.push(BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(toRemove[i].page)));
             }
+        }
 
-            // Post-condition: no surviving MANAGED item may reference a page
-            // beyond the source. If one does, a remove() silently failed —
-            // flag it so the caller refuses to export a lossy sheet.
+        // Post-condition: no surviving MANAGED item may still reference a page
+        // beyond the source. If one does, removal was ineffective (the original
+        // clip-mask bug) — flag it so the caller refuses to export a lossy sheet.
+        if (totalPages > 0) {
             for (i = 0; i < items.length; i++) {
                 try {
                     item = items[i];
@@ -456,6 +459,60 @@ BRE.Core = {
 
         results.ok = (results.errors.length === 0);
         return results;
+    },
+
+    /**
+     * Removes one position from the sheet. If the placed item is the clipped
+     * content of a clipping mask, the whole clip group is removed instead —
+     * calling remove() on the clipped item alone is an ineffective no-op in
+     * Illustrator and would leave the clipped PDF (and frame) on the sheet.
+     *
+     * Safety: the climb only ascends into a clip group whose every placed item
+     * is itself being removed (removeRefs). A clip group that also encloses a
+     * position we are KEEPING is never removed — otherwise good artwork would
+     * be silently deleted. In that case removal falls back to the bare item
+     * (an ineffective no-op for clipped content), which the post-condition
+     * re-scan then catches and turns into a loud ERR_REMOVE_FAIL.
+     *
+     * @param {PlacedItem} item - The placed item to remove.
+     * @param {Array} removeRefs - All placed items scheduled for removal.
+     */
+    _removePosition: function (item, removeRefs) {
+        var target = item;
+        var p = item.parent;
+        while (p && p.typename === "GroupItem" && p.clipped === true) {
+            if (!this._groupContainsOnly(p, removeRefs)) break;
+            target = p;
+            p = p.parent;
+        }
+        try { target.locked = false; } catch (e) {}
+        try { if (target.parent && target.parent.locked) target.parent.locked = false; } catch (e) {}
+        target.remove();
+    },
+
+    /**
+     * True if every placed item inside the group is in removeRefs
+     * (i.e. removing the group deletes only positions we already intend to
+     * remove). The clipping path itself is a PathItem and does not count.
+     * Returns false on any access error — caller then declines to climb.
+     * @param {GroupItem} group - Candidate clip group.
+     * @param {Array} removeRefs - Placed items scheduled for removal.
+     * @returns {boolean}
+     */
+    _groupContainsOnly: function (group, removeRefs) {
+        try {
+            var pis = group.placedItems;
+            for (var k = 0; k < pis.length; k++) {
+                var found = false;
+                for (var m = 0; m < removeRefs.length; m++) {
+                    if (removeRefs[m] === pis[k]) { found = true; break; }
+                }
+                if (!found) return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
     },
 
     // ---------------------------------------------------------------------
@@ -1042,7 +1099,7 @@ BRE.UI = {
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
             } else if (it.status === "uncertain") {
-                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name, String(it.pages), String(it.pageObjs)));
+                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name));
             }
         }
         if (details.length > 0) {
@@ -1262,7 +1319,12 @@ BRE.UI = {
         // any destructive work; over-page files are hard-blocked in the loop.
         var scan = BRE.Core.scanSources(config.pdfFiles, slotCount);
 
-        if (!BRE.UI.showPreview(config, slotCount, scan)) return;
+        // Fewer dialogs: only show the preview when there is something to
+        // review (anomalies or blocked files). A fully clean batch — every
+        // file has exactly the right page count — proceeds straight to
+        // processing after the user clicked Run.
+        var clean = (scan.counts.ok === config.pdfFiles.length);
+        if (!clean && !BRE.UI.showPreview(config, slotCount, scan)) return;
 
         // Processing loop
         var results = {
@@ -1305,8 +1367,7 @@ BRE.UI = {
                 }
                 if (fileInfo.status === "uncertain") {
                     results.blocked++;
-                    results.log.push(outputName + ": " + BRE.L.format(
-                        BRE.L.ERR_UNCERTAIN, String(fileInfo.pages), String(fileInfo.pageObjs)));
+                    results.log.push(outputName + ": " + BRE.L.ERR_UNCERTAIN);
                     continue;
                 }
 
