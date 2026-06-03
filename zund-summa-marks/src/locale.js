@@ -25,6 +25,7 @@ ZSM.L = (function () {
             ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
             WARN_COLOR_FALLBACK: "Mark colour '%s' is not in the document — marks drawn in [Registration].",
             ERR_LAY_COLOR:       "No color selected for layer '%s'.",
+            ERR_LAY_NAME:        "A layer row has a color ('%s') but no name. Enter a layer name or remove the row.",
             ERR_SWATCH:          "Swatch '%s' not found.",
             ERR_GENERIC:         "ERROR: %s",
 
@@ -127,6 +128,7 @@ ZSM.L = (function () {
             ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
             WARN_COLOR_FALLBACK: "Barva značek ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
             ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
+            ERR_LAY_NAME:        "Řádek vrstvy má barvu (‘%s’), ale nemá název. Zadejte název vrstvy nebo řádek odeberte.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
             ERR_GENERIC:         "CHYBA: %s",
 

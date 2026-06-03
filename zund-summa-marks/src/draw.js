@@ -300,12 +300,22 @@ ZSM.Draw = {
             //    In multi-layer documents, only the absolute bottom layer is renamed.
             var gfxLayer = doc.layers[doc.layers.length - 1];
             if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
-                // Track rename so endSession() can restore lock state (W3)
-                var oldGfxName = gfxLayer.name;
-                gfxLayer.name    = ZSM.Config.layerGraphics;
-                for (var li = 0; li < this._lockedLayers.length; li++) {
-                    if (this._lockedLayers[li].name === oldGfxName) {
-                        this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                // Don't auto-rename a layer the user explicitly mapped in the
+                // layer table. The move/remove passes above (movePaths z-order +
+                // empty-layer cleanup) can leave a real, user-named target layer
+                // at the bottom — renaming THAT to "Graphics" surprised the user
+                // (it wasn't the artwork). sysNames holds Regmarks + every mapped
+                // layer name, so skip the rename for any of them; only a genuine
+                // leftover artwork layer gets named Graphics. (Lock/visibility/
+                // z-order and trim drawing below still run regardless.)
+                if (!sysNames[gfxLayer.name]) {
+                    // Track rename so endSession() can restore lock state (W3)
+                    var oldGfxName = gfxLayer.name;
+                    gfxLayer.name    = ZSM.Config.layerGraphics;
+                    for (var li = 0; li < this._lockedLayers.length; li++) {
+                        if (this._lockedLayers[li].name === oldGfxName) {
+                            this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                        }
                     }
                 }
                 gfxLayer.locked  = false;

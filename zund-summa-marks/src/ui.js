@@ -539,18 +539,19 @@ ZSM.UI = {
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
 
-            // Refresh the window layout so the rebuilt rows actually render
-            // (the Add/Remove handlers do this inline; setUIValues didn't).
-            // Without it, Reset / preset-switch / delete leave the new rows
-            // un-laid-out — they appear "cleared" until the next interaction,
-            // which also reads as "Add added two rows". Guarded by w.visible so
-            // the initial (pre-show) load leaves sizing to w.show().
-            if (w.visible) {
-                try {
-                    w.layout.layout(true);
-                    w.size.height = w.preferredSize.height + 10;
-                } catch (e) {}
-            }
+            // Refresh the window layout so the rebuilt rows actually render.
+            // The Add/Remove handlers do this inline and work; setUIValues must
+            // do the SAME unconditionally. (An earlier `if (w.visible)` guard was
+            // the bug: Window.visible is unreliable for "dialog" windows in
+            // ExtendScript, so the relayout was skipped during Reset/preset-switch
+            // — the rebuilt rows stayed un-laid-out, looking "cleared", and the
+            // next Add was what finally revealed them, reading as "added two".)
+            // Pre-show (initial load) this is a harmless no-op that w.show()
+            // re-layouts anyway. Wrapped in try/catch defensively.
+            try {
+                w.layout.layout(true);
+                w.size.height = w.preferredSize.height + 10;
+            } catch (e) {}
         }
 
         // =================================================================
@@ -754,6 +755,18 @@ ZSM.UI = {
                 var colorSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
+
+            // Every row carries a colour (defaults to [Registration]); a row with
+            // a colour but a blank/whitespace name is an incomplete mapping that
+            // render would silently drop. Block with a clear message so the user
+            // names it or removes the row (symmetric to ERR_LAY_COLOR).
+            for (var lc = 0; lc < layers.length; lc++) {
+                if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
+                    alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                    return;
+                }
+            }
+
             var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
 
             var raw = {
@@ -930,6 +943,14 @@ ZSM.UI = {
         var wireLayerRows = function () {
             for (var ri = 0; ri < layRows.length; ri++) {
                 var row = layRows[ri];
+                // Wire each row exactly once. wireLayerRows() runs after every
+                // Add and after each setUIValues rebuild; without this guard the
+                // already-wired rows get their onChange/onClick re-wrapped on
+                // every Add, nesting handlers unboundedly. Fresh rows (from
+                // buildLayerRow) have no _zsmWired flag, so they get wired;
+                // existing ones are skipped.
+                if (row._zsmWired) continue;
+                row._zsmWired = true;
                 row.etLayer.onChange   = refreshModifiedIndicator;
                 row.etLayer.onChanging = refreshModifiedIndicator;
                 // ddLayer's onChange already updates etLayer; chain refresh after

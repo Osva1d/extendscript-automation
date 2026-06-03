@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     4.1.0
  * Author:      Osva1d
- * Updated:     2026-05-31
+ * Updated:     2026-06-04
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -1447,8 +1447,21 @@ GM.UI = {
             setModeEnabled(!mirrored && cb.value);
         }
 
-        numRB.onClick = function () { numIn.enabled = true; spcIn.enabled = false; api.onChange(); };
-        spcRB.onClick = function () { numIn.enabled = false; spcIn.enabled = true; api.onChange(); };
+        // Explicit radio exclusivity. ScriptUI only auto-groups radio buttons
+        // that are CONSECUTIVE within the same container; here numIn sits
+        // between numRB and spcRB, which breaks the implicit group — without
+        // this, clicking "Spacing" leaves numRB.value === true and gather()
+        // always reports count mode (regression from the cycle-2 compact row).
+        numRB.onClick = function () {
+            numRB.value = true; spcRB.value = false;
+            numIn.enabled = true; spcIn.enabled = false;
+            api.onChange();
+        };
+        spcRB.onClick = function () {
+            spcRB.value = true; numRB.value = false;
+            numIn.enabled = false; spcIn.enabled = true;
+            api.onChange();
+        };
         cb.onClick = function () { setModeEnabled(cb.value); api.onChange(); };
         numIn.onChanging = function () { api.onChange(); };
         numIn.onChange   = function () { api.onChange(); };

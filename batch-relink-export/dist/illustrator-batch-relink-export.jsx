@@ -3,7 +3,7 @@
  * Script:      Illustrator Batch Relink Export
  * Version:     3.0.0
  * Author:      Osva1d
- * Updated:     2026-06-02
+ * Updated:     2026-06-04
  *
  * Description:
  *   Batch PDF relinking and export for Illustrator templates.
@@ -71,6 +71,7 @@ BRE.L = (function () {
             // --- UI: Checkboxes ---
             CB_SKIP:            "Skip existing files",
             CB_OPEN_FOLDER:     "Open output folder when done",
+            CB_DEBUG:           "Diagnostic mode (write log)",
 
             // --- UI: Help Tips ---
             TIP_TEMPLATE:       "Illustrator template file (.ai) with linked PDF",
@@ -83,6 +84,7 @@ BRE.L = (function () {
             TIP_PRESET:         "PDF quality profile for export",
             TIP_SKIP:           "Skip processing if output file already exists",
             TIP_OPEN:           "Open output folder in system file manager after completion",
+            TIP_DEBUG:          "Writes a _bre-diagnostika.txt log describing every template position (pageNumber, layer, clip group) — for troubleshooting.",
 
             // --- UI: File Dialogs ---
             BROWSE_FOLDER:      "Select folder:",
@@ -173,6 +175,7 @@ BRE.L = (function () {
             // --- UI: Checkboxy ---
             CB_SKIP:            "Přeskočit existující soubory",
             CB_OPEN_FOLDER:     "Po dokončení otevřít výstupní složku",
+            CB_DEBUG:           "Diagnostický režim (zapíše log)",
 
             // --- UI: Nápovědy ---
             TIP_TEMPLATE:       "Soubor šablony Illustrator (.ai) s propojeným PDF",
@@ -185,6 +188,7 @@ BRE.L = (function () {
             TIP_PRESET:         "Profil kvality PDF pro export",
             TIP_SKIP:           "Pokud výstupní soubor již existuje, přeskočí se",
             TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
+            TIP_DEBUG:          "Zapíše log _bre-diagnostika.txt s popisem každé pozice v šabloně (pageNumber, vrstva, clip-group) — pro hledání chyby.",
 
             // --- UI: Dialogy souborů ---
             BROWSE_FOLDER:      "Vyberte složku:",
@@ -846,6 +850,58 @@ BRE.Core = {
         return null;
     },
 
+    /**
+     * Builds a human-readable snapshot of every placed item in the document —
+     * pageNumber, "over" verdict, layer + visibility, parent group / clip
+     * state, hidden-layer result, linked file name. Used by diagnostic mode to
+     * reveal the real document structure when removal behaves unexpectedly.
+     * @param {Document} doc - Document to inspect.
+     * @param {number} totalPages - Detected page count of the source PDF.
+     * @returns {string} Multi-line report.
+     */
+    diagnosticReport: function (doc, totalPages) {
+        var items = doc.placedItems;
+        var lines = [];
+        lines.push("  totalPages=" + totalPages + "  placedItems=" + items.length);
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            var pn = "?", lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
+            try { pn = it.pageNumber; } catch (e) { pn = "ERR"; }
+            try { lay = it.layer.name; } catch (e) {}
+            try { vis = it.layer.visible; } catch (e) {}
+            try {
+                par = it.parent.typename;
+                if (par === "GroupItem") clp = it.parent.clipped;
+            } catch (e) {}
+            try { hid = this._isOnHiddenLayer(it); } catch (e) {}
+            try { fil = it.file ? decodeURI(it.file.name) : "NONE"; } catch (e) { fil = "ERR"; }
+            lines.push("    [" + i + "] page=" + pn +
+                       " over=" + (totalPages > 0 && pn !== "ERR" && pn > totalPages) +
+                       " layer='" + lay + "' vis=" + vis +
+                       " parent=" + par + " clipped=" + clp + " hidden=" + hid + " file=" + fil);
+        }
+        return lines.join("\n");
+    },
+
+    /**
+     * Appends a UTF-8 line of text to a log file in the given folder.
+     * @param {Folder} folder - Destination folder.
+     * @param {string} fileName - Log file name.
+     * @param {string} text - Text to append.
+     */
+    appendLog: function (folder, fileName, text) {
+        try {
+            var f = new File(folder.fsName + "/" + fileName);
+            f.encoding = "UTF-8";
+            if (f.open("a")) {
+                f.write(text + "\n");
+                f.close();
+            }
+        } catch (e) {
+            this._log("appendLog failed: " + e.message);
+        }
+    },
+
     // ---------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------
@@ -975,6 +1031,9 @@ BRE.UI = {
         openCB.value = true;
         openCB.helpTip = l.TIP_OPEN;
 
+        var debugCB = configPanel.add("checkbox", undefined, l.CB_DEBUG);
+        debugCB.helpTip = l.TIP_DEBUG;
+
         // --- Footer ---
         var footerGrp = dialog.add("group");
         footerGrp.alignment = ["right", "center"];
@@ -993,6 +1052,7 @@ BRE.UI = {
         var namingPattern = namingInput.text;
         var skipExisting = skipCB.value;
         var openAfter = openCB.value;
+        var debug = debugCB.value;
 
         if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
             alert(l.ERR_TEMPLATE);
@@ -1050,6 +1110,7 @@ BRE.UI = {
             preset: preset,
             skipExisting: skipExisting,
             openAfter: openAfter,
+            debug: debug,
             pdfFiles: pdfFiles,
             templateName: templateName
         };
@@ -1399,10 +1460,29 @@ BRE.UI = {
                     doc = app.open(config.templateFile);
                     BRE.Core.beginSession(doc);
 
+                    // Diagnostic mode: snapshot the freshly-opened template
+                    // BEFORE any relink/removal, so the log shows the true
+                    // structure (pageNumbers, clip groups, layers).
+                    if (config.debug) {
+                        BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
+                            "=== " + outputName + "  (zdroj: " + sourceFileName + ") ===\n" +
+                            "BEFORE relink:\n" +
+                            BRE.Core.diagnosticReport(doc, fileInfo.pages));
+                    }
+
                     try {
                         // Reuse the page count from the pre-flight scan
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
+
+                        if (config.debug) {
+                            BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
+                                "AFTER relink: relinked=" + relinkResult.relinked +
+                                " removed=" + relinkResult.removed +
+                                " skipped=" + relinkResult.skipped +
+                                " errors=" + relinkResult.errors.length + "\n" +
+                                BRE.Core.diagnosticReport(doc, fileInfo.pages) + "\n");
+                        }
 
                         // Accumulate warnings and errors
                         var wi;

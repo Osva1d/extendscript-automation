@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.4.0
  * Author:      Osva1d
- * Updated:     2026-06-01
+ * Updated:     2026-06-02
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -201,6 +201,7 @@ ZSM.L = (function () {
             ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
             WARN_COLOR_FALLBACK: "Mark colour '%s' is not in the document — marks drawn in [Registration].",
             ERR_LAY_COLOR:       "No color selected for layer '%s'.",
+            ERR_LAY_NAME:        "A layer row has a color ('%s') but no name. Enter a layer name or remove the row.",
             ERR_SWATCH:          "Swatch '%s' not found.",
             ERR_GENERIC:         "ERROR: %s",
 
@@ -303,6 +304,7 @@ ZSM.L = (function () {
             ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
             WARN_COLOR_FALLBACK: "Barva značek ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
             ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
+            ERR_LAY_NAME:        "Řádek vrstvy má barvu (‘%s’), ale nemá název. Zadejte název vrstvy nebo řádek odeberte.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
             ERR_GENERIC:         "CHYBA: %s",
 
@@ -1897,12 +1899,22 @@ ZSM.Draw = {
             //    In multi-layer documents, only the absolute bottom layer is renamed.
             var gfxLayer = doc.layers[doc.layers.length - 1];
             if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
-                // Track rename so endSession() can restore lock state (W3)
-                var oldGfxName = gfxLayer.name;
-                gfxLayer.name    = ZSM.Config.layerGraphics;
-                for (var li = 0; li < this._lockedLayers.length; li++) {
-                    if (this._lockedLayers[li].name === oldGfxName) {
-                        this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                // Don't auto-rename a layer the user explicitly mapped in the
+                // layer table. The move/remove passes above (movePaths z-order +
+                // empty-layer cleanup) can leave a real, user-named target layer
+                // at the bottom — renaming THAT to "Graphics" surprised the user
+                // (it wasn't the artwork). sysNames holds Regmarks + every mapped
+                // layer name, so skip the rename for any of them; only a genuine
+                // leftover artwork layer gets named Graphics. (Lock/visibility/
+                // z-order and trim drawing below still run regardless.)
+                if (!sysNames[gfxLayer.name]) {
+                    // Track rename so endSession() can restore lock state (W3)
+                    var oldGfxName = gfxLayer.name;
+                    gfxLayer.name    = ZSM.Config.layerGraphics;
+                    for (var li = 0; li < this._lockedLayers.length; li++) {
+                        if (this._lockedLayers[li].name === oldGfxName) {
+                            this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                        }
                     }
                 }
                 gfxLayer.locked  = false;
@@ -2856,18 +2868,19 @@ ZSM.UI = {
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
 
-            // Refresh the window layout so the rebuilt rows actually render
-            // (the Add/Remove handlers do this inline; setUIValues didn't).
-            // Without it, Reset / preset-switch / delete leave the new rows
-            // un-laid-out — they appear "cleared" until the next interaction,
-            // which also reads as "Add added two rows". Guarded by w.visible so
-            // the initial (pre-show) load leaves sizing to w.show().
-            if (w.visible) {
-                try {
-                    w.layout.layout(true);
-                    w.size.height = w.preferredSize.height + 10;
-                } catch (e) {}
-            }
+            // Refresh the window layout so the rebuilt rows actually render.
+            // The Add/Remove handlers do this inline and work; setUIValues must
+            // do the SAME unconditionally. (An earlier `if (w.visible)` guard was
+            // the bug: Window.visible is unreliable for "dialog" windows in
+            // ExtendScript, so the relayout was skipped during Reset/preset-switch
+            // — the rebuilt rows stayed un-laid-out, looking "cleared", and the
+            // next Add was what finally revealed them, reading as "added two".)
+            // Pre-show (initial load) this is a harmless no-op that w.show()
+            // re-layouts anyway. Wrapped in try/catch defensively.
+            try {
+                w.layout.layout(true);
+                w.size.height = w.preferredSize.height + 10;
+            } catch (e) {}
         }
 
         // =================================================================
@@ -3071,6 +3084,18 @@ ZSM.UI = {
                 var colorSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
+
+            // Every row carries a colour (defaults to [Registration]); a row with
+            // a colour but a blank/whitespace name is an incomplete mapping that
+            // render would silently drop. Block with a clear message so the user
+            // names it or removes the row (symmetric to ERR_LAY_COLOR).
+            for (var lc = 0; lc < layers.length; lc++) {
+                if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
+                    alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                    return;
+                }
+            }
+
             var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
 
             var raw = {
@@ -3247,6 +3272,14 @@ ZSM.UI = {
         var wireLayerRows = function () {
             for (var ri = 0; ri < layRows.length; ri++) {
                 var row = layRows[ri];
+                // Wire each row exactly once. wireLayerRows() runs after every
+                // Add and after each setUIValues rebuild; without this guard the
+                // already-wired rows get their onChange/onClick re-wrapped on
+                // every Add, nesting handlers unboundedly. Fresh rows (from
+                // buildLayerRow) have no _zsmWired flag, so they get wired;
+                // existing ones are skipped.
+                if (row._zsmWired) continue;
+                row._zsmWired = true;
                 row.etLayer.onChange   = refreshModifiedIndicator;
                 row.etLayer.onChanging = refreshModifiedIndicator;
                 // ddLayer's onChange already updates etLayer; chain refresh after

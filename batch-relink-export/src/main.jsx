@@ -107,10 +107,29 @@
                     doc = app.open(config.templateFile);
                     BRE.Core.beginSession(doc);
 
+                    // Diagnostic mode: snapshot the freshly-opened template
+                    // BEFORE any relink/removal, so the log shows the true
+                    // structure (pageNumbers, clip groups, layers).
+                    if (config.debug) {
+                        BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
+                            "=== " + outputName + "  (zdroj: " + sourceFileName + ") ===\n" +
+                            "BEFORE relink:\n" +
+                            BRE.Core.diagnosticReport(doc, fileInfo.pages));
+                    }
+
                     try {
                         // Reuse the page count from the pre-flight scan
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
+
+                        if (config.debug) {
+                            BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
+                                "AFTER relink: relinked=" + relinkResult.relinked +
+                                " removed=" + relinkResult.removed +
+                                " skipped=" + relinkResult.skipped +
+                                " errors=" + relinkResult.errors.length + "\n" +
+                                BRE.Core.diagnosticReport(doc, fileInfo.pages) + "\n");
+                        }
 
                         // Accumulate warnings and errors
                         var wi;

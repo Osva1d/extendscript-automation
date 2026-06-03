@@ -57,6 +57,7 @@ BRE.L = (function () {
             // --- UI: Checkboxes ---
             CB_SKIP:            "Skip existing files",
             CB_OPEN_FOLDER:     "Open output folder when done",
+            CB_DEBUG:           "Diagnostic mode (write log)",
 
             // --- UI: Help Tips ---
             TIP_TEMPLATE:       "Illustrator template file (.ai) with linked PDF",
@@ -69,6 +70,7 @@ BRE.L = (function () {
             TIP_PRESET:         "PDF quality profile for export",
             TIP_SKIP:           "Skip processing if output file already exists",
             TIP_OPEN:           "Open output folder in system file manager after completion",
+            TIP_DEBUG:          "Writes a _bre-diagnostika.txt log describing every template position (pageNumber, layer, clip group) — for troubleshooting.",
 
             // --- UI: File Dialogs ---
             BROWSE_FOLDER:      "Select folder:",
@@ -159,6 +161,7 @@ BRE.L = (function () {
             // --- UI: Checkboxy ---
             CB_SKIP:            "Přeskočit existující soubory",
             CB_OPEN_FOLDER:     "Po dokončení otevřít výstupní složku",
+            CB_DEBUG:           "Diagnostický režim (zapíše log)",
 
             // --- UI: Nápovědy ---
             TIP_TEMPLATE:       "Soubor šablony Illustrator (.ai) s propojeným PDF",
@@ -171,6 +174,7 @@ BRE.L = (function () {
             TIP_PRESET:         "Profil kvality PDF pro export",
             TIP_SKIP:           "Pokud výstupní soubor již existuje, přeskočí se",
             TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
+            TIP_DEBUG:          "Zapíše log _bre-diagnostika.txt s popisem každé pozice v šabloně (pageNumber, vrstva, clip-group) — pro hledání chyby.",
 
             // --- UI: Dialogy souborů ---
             BROWSE_FOLDER:      "Vyberte složku:",

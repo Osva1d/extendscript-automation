@@ -560,6 +560,58 @@ BRE.Core = {
         return null;
     },
 
+    /**
+     * Builds a human-readable snapshot of every placed item in the document —
+     * pageNumber, "over" verdict, layer + visibility, parent group / clip
+     * state, hidden-layer result, linked file name. Used by diagnostic mode to
+     * reveal the real document structure when removal behaves unexpectedly.
+     * @param {Document} doc - Document to inspect.
+     * @param {number} totalPages - Detected page count of the source PDF.
+     * @returns {string} Multi-line report.
+     */
+    diagnosticReport: function (doc, totalPages) {
+        var items = doc.placedItems;
+        var lines = [];
+        lines.push("  totalPages=" + totalPages + "  placedItems=" + items.length);
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            var pn = "?", lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
+            try { pn = it.pageNumber; } catch (e) { pn = "ERR"; }
+            try { lay = it.layer.name; } catch (e) {}
+            try { vis = it.layer.visible; } catch (e) {}
+            try {
+                par = it.parent.typename;
+                if (par === "GroupItem") clp = it.parent.clipped;
+            } catch (e) {}
+            try { hid = this._isOnHiddenLayer(it); } catch (e) {}
+            try { fil = it.file ? decodeURI(it.file.name) : "NONE"; } catch (e) { fil = "ERR"; }
+            lines.push("    [" + i + "] page=" + pn +
+                       " over=" + (totalPages > 0 && pn !== "ERR" && pn > totalPages) +
+                       " layer='" + lay + "' vis=" + vis +
+                       " parent=" + par + " clipped=" + clp + " hidden=" + hid + " file=" + fil);
+        }
+        return lines.join("\n");
+    },
+
+    /**
+     * Appends a UTF-8 line of text to a log file in the given folder.
+     * @param {Folder} folder - Destination folder.
+     * @param {string} fileName - Log file name.
+     * @param {string} text - Text to append.
+     */
+    appendLog: function (folder, fileName, text) {
+        try {
+            var f = new File(folder.fsName + "/" + fileName);
+            f.encoding = "UTF-8";
+            if (f.open("a")) {
+                f.write(text + "\n");
+                f.close();
+            }
+        } catch (e) {
+            this._log("appendLog failed: " + e.message);
+        }
+    },
+
     // ---------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------

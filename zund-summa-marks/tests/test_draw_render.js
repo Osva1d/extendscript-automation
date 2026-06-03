@@ -573,6 +573,31 @@ assert(ZSM.Draw.swatchExists("GhostColour") === false, "swatchExists false for m
 
 
 // =====================================================
+// TEST 18 (regression W1): a user-MAPPED layer left at the bottom must NOT be
+// auto-renamed to "Graphics"
+// =====================================================
+// History: §7 renamed doc.layers[last] to "Graphics" assuming bottom = artwork.
+// But the move/remove passes can leave a real, user-named target layer at the
+// bottom — renaming THAT surprised the user. Guard: skip rename for any name in
+// the layer mapping (sysNames). Here "Cut" is both the mapped target and the
+// bottom layer; it must keep its name (color has no match, so nothing moves and
+// "Cut" stays put — exactly the case that used to mis-rename it).
+console.log("\n=== TEST 18 (regression): mapped bottom layer not renamed to Graphics ===");
+var docW1 = setupDoc({
+    layers: [{ name: "Cut", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
+});
+var sW1 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+var bW1 = ZSM.Draw.getBounds(sW1);
+var gW1 = ZSM.Core.calculateAll(sW1, bW1);
+ZSM.Draw.render(gW1, sW1);
+
+assert(findLayer(docW1, "Cut") !== null,
+    "regression: mapped 'Cut' layer kept its name (not renamed)");
+assert(findLayer(docW1, "Graphics") === null,
+    "regression: mapped bottom layer was NOT auto-renamed to 'Graphics'");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();
