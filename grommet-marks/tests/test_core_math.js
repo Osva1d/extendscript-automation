@@ -78,14 +78,35 @@ var mmFactor = GM.CONSTANTS.UNIT_FACTORS["mm"];
     assertClose(pos[0], 10 * mmFactor, 0.01, "calcPositions: single mark at offset");
 })();
 
-// Preferred spacing
+// Preferred spacing — exact division (50 divides 1000mm span evenly)
 (function () {
     var edge = { useNumber: false, number: 1, spacing: 50 };
-    var pos = GM.Core.calcPositions(edge, 1000, 0, mmFactor);
+    var span = 1000 * mmFactor;
+    var pos = GM.Core.calcPositions(edge, span, 0, mmFactor);
     assert(pos.length > 1, "calcPositions: spacing mode produces multiple marks");
     for (var i = 0; i < pos.length; i++) {
-        assert(pos[i] >= 0 && pos[i] <= 1000, "calcPositions: pos[" + i + "] within span");
+        assert(pos[i] >= 0 && pos[i] <= span, "calcPositions: pos[" + i + "] within span");
     }
+    // 1000mm / 50mm = 20 gaps → 21 marks; every gap exactly 50mm.
+    assert(pos.length === 21, "calcPositions: spacing 50 over 1000mm → 21 marks");
+    var maxErr = 0;
+    for (var j = 1; j < pos.length; j++) {
+        var gapMM = (pos[j] - pos[j - 1]) / mmFactor;
+        maxErr = Math.max(maxErr, Math.abs(gapMM - 50));
+    }
+    assert(maxErr < 0.001, "calcPositions: spacing-mode gaps are exactly 50mm");
+})();
+
+// Preferred spacing is a TARGET (even-fit), not a fixed pitch: a spacing that
+// doesn't divide the span evenly rounds to the nearest even fit. Documents the
+// intended behaviour so it isn't mistaken for the radio-group regression.
+(function () {
+    var edge = { useNumber: false, number: 1, spacing: 105 };
+    var pos = GM.Core.calcPositions(edge, 1000 * mmFactor, 0, mmFactor);
+    // 1000/105 ≈ 9.52 → nearest even fit is 10 gaps (100mm), i.e. 11 marks.
+    assert(pos.length === 11, "calcPositions: spacing 105 over 1000mm even-fits to 11 marks");
+    var gapMM = (pos[1] - pos[0]) / mmFactor;
+    assert(Math.abs(gapMM - 100) < 0.001, "calcPositions: even-fit gap is 100mm (not 105)");
 })();
 
 // Zero span edge case
