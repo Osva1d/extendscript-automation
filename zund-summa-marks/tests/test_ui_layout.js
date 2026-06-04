@@ -90,6 +90,7 @@ ZSM.Config = {
             markSizeZ: 5, markSizeS: 3, orientDist: 100,
             markColor: "[Registration]",
             scaleN: 1,                                    // Phase 2 default
+            marksOnly: false,                             // Phase 3 default
             layers: [{ name: "Cut", color: "[Registration]" }]
         };
     },

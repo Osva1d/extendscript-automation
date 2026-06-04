@@ -146,7 +146,13 @@ BRE.UI = {
         }
 
         var pdfFiles = sourceFolder.getFiles(function (f) {
-            return f instanceof File && /\.pdf$/i.test(f.name);
+            if (!(f instanceof File)) return false;
+            var nm = f.displayName || decodeURI(f.name);
+            // Skip macOS AppleDouble files (._name) and other hidden/system
+            // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
+            // and would otherwise be processed as real PDFs.
+            if (nm.charAt(0) === ".") return false;
+            return /\.pdf$/i.test(nm);
         });
         if (pdfFiles.length === 0) {
             alert(l.ERR_NO_PDF);

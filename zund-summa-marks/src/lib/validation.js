@@ -110,6 +110,7 @@ ZSM.Validation = {
         // Boolean fields: explicit cast
         settings.drawRed           = (raw.drawRed === true);
         settings.useArtboardBounds = (raw.useArtboardBounds === true);
+        settings.marksOnly         = (raw.marksOnly === true);
 
         // String / dropdown fields: empty → fallback
         settings.markColor = (raw.markColor && raw.markColor !== "")

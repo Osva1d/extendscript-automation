@@ -51,6 +51,11 @@ ZSM.Config = {
             // scaleN > 1  → doc is 1:N (user input in real mm; math divides by N
             //               on top of AI's scaleFactor). UI enabled via checkbox.
             scaleN:           1,
+            // Phase 3 (v26.5.0): "marks only" — when true, the script ONLY draws
+            // registration marks and does NOT touch layers (no path routing, no
+            // Graphics rename). For docs whose cut layers are already separated
+            // and only the marks are missing. UI checkbox; layer panel disabled.
+            marksOnly:        false,
             layers: [
                 { name: "Cut", color: "[Registration]" }
             ]

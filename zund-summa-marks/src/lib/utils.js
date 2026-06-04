@@ -127,7 +127,7 @@ ZSM.Utils = {
         var keys = ["mode", "gapInner", "gapOuter", "maxDist",
                     "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
                     "markSizeZ", "markSizeS", "orientDist", "markColor",
-                    "scaleN"];
+                    "scaleN", "marksOnly"];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }

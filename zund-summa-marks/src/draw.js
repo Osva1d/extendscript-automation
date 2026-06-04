@@ -168,8 +168,10 @@ ZSM.Draw = {
             var refLayer = reg;
 
             // 3. Dynamic layer mapping — move spot-colored paths to named layers
-            // Row existence = active (no checkbox in new UI design)
-            if (s.layers && s.layers.length > 0) {
+            // Row existence = active (no checkbox in new UI design).
+            // Skipped entirely in "marks only" mode: the user's cut layers are
+            // already separated; we must not move paths or rename anything.
+            if (!s.marksOnly && s.layers && s.layers.length > 0) {
                 // Track which target layer names were already processed so a
                 // duplicate row in s.layers (e.g. two "Cut" entries) doesn't
                 // attempt a self-move (`targetLay.move(targetLay)` would
@@ -208,17 +210,21 @@ ZSM.Draw = {
             for (var si = 0; si < s.layers.length; si++) {
                 if (s.layers[si].name) sysNames[s.layers[si].name] = true;
             }
-            for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
-                if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
-                try {
-                    var elay = doc.layers[ei];
-                    if (sysNames[elay.name]) continue;
-                    if (ZSM.Bounds.isArtifactLayer(elay)) continue;
-                    if (!elay.visible) continue;
-                    if (elay.pageItems.length === 0 && elay.layers.length === 0) {
-                        elay.remove();
-                    }
-                } catch (e) {}
+            // Skip empty-layer cleanup in marks-only mode — never remove the
+            // user's pre-separated layers.
+            if (!s.marksOnly) {
+                for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
+                    if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
+                    try {
+                        var elay = doc.layers[ei];
+                        if (sysNames[elay.name]) continue;
+                        if (ZSM.Bounds.isArtifactLayer(elay)) continue;
+                        if (!elay.visible) continue;
+                        if (elay.pageItems.length === 0 && elay.layers.length === 0) {
+                            elay.remove();
+                        }
+                    } catch (e) {}
+                }
             }
 
             // 4. Draw Zünd marks (circles)
@@ -295,79 +301,42 @@ ZSM.Draw = {
                 }
             }
 
-            // 7. Name bottom layer as Graphics and draw trim lines into it.
-            //    Assumption: the bottom-most layer is the user's artwork layer.
-            //    In multi-layer documents, only the absolute bottom layer is renamed.
-            var gfxLayer = doc.layers[doc.layers.length - 1];
-            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
-                // Don't auto-rename a layer the user explicitly mapped in the
-                // layer table. The move/remove passes above (movePaths z-order +
-                // empty-layer cleanup) can leave a real, user-named target layer
-                // at the bottom — renaming THAT to "Graphics" surprised the user
-                // (it wasn't the artwork). sysNames holds Regmarks + every mapped
-                // layer name, so skip the rename for any of them; only a genuine
-                // leftover artwork layer gets named Graphics. (Lock/visibility/
-                // z-order and trim drawing below still run regardless.)
-                if (!sysNames[gfxLayer.name]) {
-                    // Track rename so endSession() can restore lock state (W3)
-                    var oldGfxName = gfxLayer.name;
-                    gfxLayer.name    = ZSM.Config.layerGraphics;
-                    for (var li = 0; li < this._lockedLayers.length; li++) {
-                        if (this._lockedLayers[li].name === oldGfxName) {
-                            this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+            // 7. Trim lines + (normal mode only) name the artwork layer "Graphics".
+            //    MARKS-ONLY: never touch the user's layers — draw trim into the
+            //    script's own Regmarks layer and skip the rename/lock/z-order.
+            if (s.marksOnly) {
+                this._drawTrim(reg, geo.red);
+            } else {
+                // Assumption: the bottom-most layer is the user's artwork layer.
+                var gfxLayer = doc.layers[doc.layers.length - 1];
+                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                    // Don't auto-rename a layer the user explicitly mapped in the
+                    // layer table. The move/remove passes above can leave a real,
+                    // user-named target layer at the bottom — renaming THAT to
+                    // "Graphics" surprised the user. sysNames holds Regmarks +
+                    // every mapped name, so skip the rename for any of them; only
+                    // a genuine leftover artwork layer gets named Graphics.
+                    if (!sysNames[gfxLayer.name]) {
+                        // Track rename so endSession() can restore lock state (W3)
+                        var oldGfxName = gfxLayer.name;
+                        gfxLayer.name    = ZSM.Config.layerGraphics;
+                        for (var li = 0; li < this._lockedLayers.length; li++) {
+                            if (this._lockedLayers[li].name === oldGfxName) {
+                                this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                            }
                         }
                     }
-                }
-                gfxLayer.locked  = false;
-                gfxLayer.visible = true;
-                // Send Graphics layer to back, but only if not already there.
-                // Avoids redundant C++ pipeline calls that are documented as
-                // sporadic crash vectors in ExtendScript.
-                if (doc.layers.length > 0
-                    && doc.layers[doc.layers.length - 1] !== gfxLayer) {
-                    try { app.redraw(); } catch (rd3) {}  // commit pending state
-                    try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
-                        ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
-                    }
-                }
-
-                if (geo.red.length > 0) {
-                    // Draw trim lines into a sublayer to keep them
-                    // separate from artwork but inside the print layer.
-                    // Remove previous Trim sublayer to prevent accumulation.
-                    // Deselect first — removing a layer with selected items
-                    // can crash Illustrator at C++ level. Also unlock/unhide
-                    // before remove for the same C++ crash protection.
-                    var trimRemoved = false;
-                    try {
-                        var oldTrim = gfxLayer.layers.getByName("Trim");
-                        try { doc.selection = null; } catch (ds2) {}
-                        try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
-                        oldTrim.remove();
-                        trimRemoved = true;
-                    } catch (e) { /* no previous Trim — first run */ }
-                    // Force AI to commit Trim removal before adding new sublayer.
-                    if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }
-                    var trimLayer = gfxLayer.layers.add();
-                    trimLayer.name = "Trim";
-
-                    var redColor = new CMYKColor();
-                    redColor.magenta = 100;
-                    redColor.yellow  = 100;
-                    for (var r = 0; r < geo.red.length; r++) {
-                        try {
-                            var line = trimLayer.pathItems.add();
-                            line.setEntirePath([
-                                [geo.red[r].x1, geo.red[r].y1],
-                                [geo.red[r].x2, geo.red[r].y2]
-                            ]);
-                            line.strokeColor = redColor;
-                            line.strokeWidth = geo.red[r].w;
-                            line.filled      = false;
-                        } catch (e) {
-                            ZSM.Utils.log("render: failed to draw trim line at index " + r);
+                    gfxLayer.locked  = false;
+                    gfxLayer.visible = true;
+                    // Send Graphics layer to back, but only if not already there.
+                    if (doc.layers.length > 0
+                        && doc.layers[doc.layers.length - 1] !== gfxLayer) {
+                        try { app.redraw(); } catch (rd3) {}  // commit pending state
+                        try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
+                            ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
                         }
                     }
+                    this._drawTrim(gfxLayer, geo.red);
                 }
             }
 
@@ -384,6 +353,51 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Draws (or refreshes) the red trim-line "Trim" sublayer inside the given
+     * parent layer. Removes any previous "Trim" sublayer first to prevent
+     * accumulation across runs. No-op when there are no trim lines. Shared by
+     * normal mode (trim → Graphics) and marks-only mode (trim → Regmarks).
+     * @param {Layer} parentLayer - Layer to host the Trim sublayer.
+     * @param {Array}  redLines    - geo.red entries ({x1,y1,x2,y2,w}).
+     * @private
+     */
+    _drawTrim: function (parentLayer, redLines) {
+        if (!redLines || redLines.length === 0) return;
+        var doc = app.activeDocument;
+        // Remove previous Trim sublayer (deselect + unlock/unhide first — removing
+        // a locked/hidden/selected layer can crash AI at C++ level).
+        var trimRemoved = false;
+        try {
+            var oldTrim = parentLayer.layers.getByName("Trim");
+            try { doc.selection = null; } catch (ds2) {}
+            try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
+            oldTrim.remove();
+            trimRemoved = true;
+        } catch (e) { /* no previous Trim — first run */ }
+        if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }  // commit before add
+
+        var trimLayer = parentLayer.layers.add();
+        trimLayer.name = "Trim";
+        var redColor = new CMYKColor();
+        redColor.magenta = 100;
+        redColor.yellow  = 100;
+        for (var r = 0; r < redLines.length; r++) {
+            try {
+                var line = trimLayer.pathItems.add();
+                line.setEntirePath([
+                    [redLines[r].x1, redLines[r].y1],
+                    [redLines[r].x2, redLines[r].y2]
+                ]);
+                line.strokeColor = redColor;
+                line.strokeWidth = redLines[r].w;
+                line.filled      = false;
+            } catch (e) {
+                ZSM.Utils.log("render: failed to draw trim line at index " + r);
+            }
+        }
+    },
 
     /**
      * Removes all page items and sublayers from a layer, leaving it empty.

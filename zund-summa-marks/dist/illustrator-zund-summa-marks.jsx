@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.4.0
  * Author:      Osva1d
- * Updated:     2026-06-02
+ * Updated:     2026-06-04
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -277,6 +277,8 @@ ZSM.L = (function () {
             TIP_BTN_REMOVE: "Remove this mapping row.",
             TIP_BTN_ADD:    "Add another layer mapping row.",
             BTN_ADD_LAYER:  "+ Add",
+            MARKS_ONLY:     "Marks only (don't modify layers)",
+            TIP_MARKS_ONLY: "Draw only the registration marks and leave all layers untouched — no path routing, no renaming. Use when your cut layers are already separated and only the marks are missing.",
             ERR_MIN_ROW:    "At least one mapping row is required.",
             DEF_CUT:        "Cut",
             DEF_KISS:       "Kiss-cut",
@@ -380,6 +382,8 @@ ZSM.L = (function () {
             TIP_BTN_REMOVE: "Odebrat toto mapování.",
             TIP_BTN_ADD:    "Přidat další mapování vrstvy.",
             BTN_ADD_LAYER:  "+ Přidat",
+            MARKS_ONLY:     "Pouze značky (neměnit vrstvy)",
+            TIP_MARKS_ONLY: "Vykreslí pouze registrační značky a nesáhne na žádné vrstvy — žádné přesouvání cest ani přejmenování. Použijte, když máte řezací vrstvy už separované a schází jen značky.",
             ERR_MIN_ROW:    "Musí existovat alespoň jedno mapování.",
             DEF_CUT:        "Cut",
             DEF_KISS:       "Kiss-cut",
@@ -537,7 +541,7 @@ ZSM.Utils = {
         var keys = ["mode", "gapInner", "gapOuter", "maxDist",
                     "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
                     "markSizeZ", "markSizeS", "orientDist", "markColor",
-                    "scaleN"];
+                    "scaleN", "marksOnly"];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }
@@ -663,6 +667,7 @@ ZSM.Validation = {
         // Boolean fields: explicit cast
         settings.drawRed           = (raw.drawRed === true);
         settings.useArtboardBounds = (raw.useArtboardBounds === true);
+        settings.marksOnly         = (raw.marksOnly === true);
 
         // String / dropdown fields: empty → fallback
         settings.markColor = (raw.markColor && raw.markColor !== "")
@@ -906,6 +911,11 @@ ZSM.Config = {
             // scaleN > 1  → doc is 1:N (user input in real mm; math divides by N
             //               on top of AI's scaleFactor). UI enabled via checkbox.
             scaleN:           1,
+            // Phase 3 (v26.5.0): "marks only" — when true, the script ONLY draws
+            // registration marks and does NOT touch layers (no path routing, no
+            // Graphics rename). For docs whose cut layers are already separated
+            // and only the marks are missing. UI checkbox; layer panel disabled.
+            marksOnly:        false,
             layers: [
                 { name: "Cut", color: "[Registration]" }
             ]
@@ -1767,8 +1777,10 @@ ZSM.Draw = {
             var refLayer = reg;
 
             // 3. Dynamic layer mapping — move spot-colored paths to named layers
-            // Row existence = active (no checkbox in new UI design)
-            if (s.layers && s.layers.length > 0) {
+            // Row existence = active (no checkbox in new UI design).
+            // Skipped entirely in "marks only" mode: the user's cut layers are
+            // already separated; we must not move paths or rename anything.
+            if (!s.marksOnly && s.layers && s.layers.length > 0) {
                 // Track which target layer names were already processed so a
                 // duplicate row in s.layers (e.g. two "Cut" entries) doesn't
                 // attempt a self-move (`targetLay.move(targetLay)` would
@@ -1807,17 +1819,21 @@ ZSM.Draw = {
             for (var si = 0; si < s.layers.length; si++) {
                 if (s.layers[si].name) sysNames[s.layers[si].name] = true;
             }
-            for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
-                if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
-                try {
-                    var elay = doc.layers[ei];
-                    if (sysNames[elay.name]) continue;
-                    if (ZSM.Bounds.isArtifactLayer(elay)) continue;
-                    if (!elay.visible) continue;
-                    if (elay.pageItems.length === 0 && elay.layers.length === 0) {
-                        elay.remove();
-                    }
-                } catch (e) {}
+            // Skip empty-layer cleanup in marks-only mode — never remove the
+            // user's pre-separated layers.
+            if (!s.marksOnly) {
+                for (var ei = doc.layers.length - 1; ei >= 0; ei--) {
+                    if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
+                    try {
+                        var elay = doc.layers[ei];
+                        if (sysNames[elay.name]) continue;
+                        if (ZSM.Bounds.isArtifactLayer(elay)) continue;
+                        if (!elay.visible) continue;
+                        if (elay.pageItems.length === 0 && elay.layers.length === 0) {
+                            elay.remove();
+                        }
+                    } catch (e) {}
+                }
             }
 
             // 4. Draw Zünd marks (circles)
@@ -1894,79 +1910,42 @@ ZSM.Draw = {
                 }
             }
 
-            // 7. Name bottom layer as Graphics and draw trim lines into it.
-            //    Assumption: the bottom-most layer is the user's artwork layer.
-            //    In multi-layer documents, only the absolute bottom layer is renamed.
-            var gfxLayer = doc.layers[doc.layers.length - 1];
-            if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
-                // Don't auto-rename a layer the user explicitly mapped in the
-                // layer table. The move/remove passes above (movePaths z-order +
-                // empty-layer cleanup) can leave a real, user-named target layer
-                // at the bottom — renaming THAT to "Graphics" surprised the user
-                // (it wasn't the artwork). sysNames holds Regmarks + every mapped
-                // layer name, so skip the rename for any of them; only a genuine
-                // leftover artwork layer gets named Graphics. (Lock/visibility/
-                // z-order and trim drawing below still run regardless.)
-                if (!sysNames[gfxLayer.name]) {
-                    // Track rename so endSession() can restore lock state (W3)
-                    var oldGfxName = gfxLayer.name;
-                    gfxLayer.name    = ZSM.Config.layerGraphics;
-                    for (var li = 0; li < this._lockedLayers.length; li++) {
-                        if (this._lockedLayers[li].name === oldGfxName) {
-                            this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+            // 7. Trim lines + (normal mode only) name the artwork layer "Graphics".
+            //    MARKS-ONLY: never touch the user's layers — draw trim into the
+            //    script's own Regmarks layer and skip the rename/lock/z-order.
+            if (s.marksOnly) {
+                this._drawTrim(reg, geo.red);
+            } else {
+                // Assumption: the bottom-most layer is the user's artwork layer.
+                var gfxLayer = doc.layers[doc.layers.length - 1];
+                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                    // Don't auto-rename a layer the user explicitly mapped in the
+                    // layer table. The move/remove passes above can leave a real,
+                    // user-named target layer at the bottom — renaming THAT to
+                    // "Graphics" surprised the user. sysNames holds Regmarks +
+                    // every mapped name, so skip the rename for any of them; only
+                    // a genuine leftover artwork layer gets named Graphics.
+                    if (!sysNames[gfxLayer.name]) {
+                        // Track rename so endSession() can restore lock state (W3)
+                        var oldGfxName = gfxLayer.name;
+                        gfxLayer.name    = ZSM.Config.layerGraphics;
+                        for (var li = 0; li < this._lockedLayers.length; li++) {
+                            if (this._lockedLayers[li].name === oldGfxName) {
+                                this._lockedLayers[li].name = ZSM.Config.layerGraphics; break;
+                            }
                         }
                     }
-                }
-                gfxLayer.locked  = false;
-                gfxLayer.visible = true;
-                // Send Graphics layer to back, but only if not already there.
-                // Avoids redundant C++ pipeline calls that are documented as
-                // sporadic crash vectors in ExtendScript.
-                if (doc.layers.length > 0
-                    && doc.layers[doc.layers.length - 1] !== gfxLayer) {
-                    try { app.redraw(); } catch (rd3) {}  // commit pending state
-                    try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
-                        ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
-                    }
-                }
-
-                if (geo.red.length > 0) {
-                    // Draw trim lines into a sublayer to keep them
-                    // separate from artwork but inside the print layer.
-                    // Remove previous Trim sublayer to prevent accumulation.
-                    // Deselect first — removing a layer with selected items
-                    // can crash Illustrator at C++ level. Also unlock/unhide
-                    // before remove for the same C++ crash protection.
-                    var trimRemoved = false;
-                    try {
-                        var oldTrim = gfxLayer.layers.getByName("Trim");
-                        try { doc.selection = null; } catch (ds2) {}
-                        try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
-                        oldTrim.remove();
-                        trimRemoved = true;
-                    } catch (e) { /* no previous Trim — first run */ }
-                    // Force AI to commit Trim removal before adding new sublayer.
-                    if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }
-                    var trimLayer = gfxLayer.layers.add();
-                    trimLayer.name = "Trim";
-
-                    var redColor = new CMYKColor();
-                    redColor.magenta = 100;
-                    redColor.yellow  = 100;
-                    for (var r = 0; r < geo.red.length; r++) {
-                        try {
-                            var line = trimLayer.pathItems.add();
-                            line.setEntirePath([
-                                [geo.red[r].x1, geo.red[r].y1],
-                                [geo.red[r].x2, geo.red[r].y2]
-                            ]);
-                            line.strokeColor = redColor;
-                            line.strokeWidth = geo.red[r].w;
-                            line.filled      = false;
-                        } catch (e) {
-                            ZSM.Utils.log("render: failed to draw trim line at index " + r);
+                    gfxLayer.locked  = false;
+                    gfxLayer.visible = true;
+                    // Send Graphics layer to back, but only if not already there.
+                    if (doc.layers.length > 0
+                        && doc.layers[doc.layers.length - 1] !== gfxLayer) {
+                        try { app.redraw(); } catch (rd3) {}  // commit pending state
+                        try { gfxLayer.zOrder(ZOrderMethod.SENDTOBACK); } catch (zo2) {
+                            ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
                         }
                     }
+                    this._drawTrim(gfxLayer, geo.red);
                 }
             }
 
@@ -1983,6 +1962,51 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Draws (or refreshes) the red trim-line "Trim" sublayer inside the given
+     * parent layer. Removes any previous "Trim" sublayer first to prevent
+     * accumulation across runs. No-op when there are no trim lines. Shared by
+     * normal mode (trim → Graphics) and marks-only mode (trim → Regmarks).
+     * @param {Layer} parentLayer - Layer to host the Trim sublayer.
+     * @param {Array}  redLines    - geo.red entries ({x1,y1,x2,y2,w}).
+     * @private
+     */
+    _drawTrim: function (parentLayer, redLines) {
+        if (!redLines || redLines.length === 0) return;
+        var doc = app.activeDocument;
+        // Remove previous Trim sublayer (deselect + unlock/unhide first — removing
+        // a locked/hidden/selected layer can crash AI at C++ level).
+        var trimRemoved = false;
+        try {
+            var oldTrim = parentLayer.layers.getByName("Trim");
+            try { doc.selection = null; } catch (ds2) {}
+            try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
+            oldTrim.remove();
+            trimRemoved = true;
+        } catch (e) { /* no previous Trim — first run */ }
+        if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }  // commit before add
+
+        var trimLayer = parentLayer.layers.add();
+        trimLayer.name = "Trim";
+        var redColor = new CMYKColor();
+        redColor.magenta = 100;
+        redColor.yellow  = 100;
+        for (var r = 0; r < redLines.length; r++) {
+            try {
+                var line = trimLayer.pathItems.add();
+                line.setEntirePath([
+                    [redLines[r].x1, redLines[r].y1],
+                    [redLines[r].x2, redLines[r].y2]
+                ]);
+                line.strokeColor = redColor;
+                line.strokeWidth = redLines[r].w;
+                line.filled      = false;
+            } catch (e) {
+                ZSM.Utils.log("render: failed to draw trim line at index " + r);
+            }
+        }
+    },
 
     /**
      * Removes all page items and sublayers from a layer, leaving it empty.
@@ -2440,13 +2464,19 @@ ZSM.UI = {
         grpPresetBtns.alignment = ["right", "top"];
         grpPresetBtns.spacing = 6;
 
+        // Uniform width so the three buttons line up evenly (text-based widths
+        // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
+        var PRESET_BTN_W = 92;
         var btnSave = grpPresetBtns.add("button", undefined, l.BTN_SAVE);
+        btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
 
         var btnSaveAs = grpPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        btnSaveAs.preferredSize.width = PRESET_BTN_W;
         btnSaveAs.helpTip = l.TIP_SAVE_AS;
 
         var btnDel = grpPresetBtns.add("button", undefined, l.BTN_DEL);
+        btnDel.preferredSize.width = PRESET_BTN_W;
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
@@ -2500,7 +2530,7 @@ ZSM.UI = {
         stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
 
         var etScale = grpScale.add("edittext", undefined, "1");
-        etScale.preferredSize.width = 40;
+        etScale.preferredSize.width = 60;   // match the other numeric inputs (addRow)
         etScale.helpTip = l.TIP_SCALE_FIELD;
 
         // Sync UI to initial scaleN value
@@ -2626,6 +2656,13 @@ ZSM.UI = {
         pLay.margins = 15;
         pLay.spacing = 10;
 
+        // "Marks only" toggle — sits atop the mapping table it controls. When on,
+        // the script draws only marks and never touches layers, so the mapping
+        // below is irrelevant and gets greyed out (see applyMarksOnlyState).
+        var cbMarksOnly = pLay.add("checkbox", undefined, l.MARKS_ONLY);
+        cbMarksOnly.helpTip = l.TIP_MARKS_ONLY;
+        cbMarksOnly.value   = (sData.marksOnly === true);
+
         // Column headers
         var grpHeaders = pLay.add("group");
         grpHeaders.alignment = "fill";
@@ -2734,6 +2771,21 @@ ZSM.UI = {
             w.size.height = w.preferredSize.height + 10;
         };
 
+        /** Grey out the mapping table when "marks only" is active (it has no
+         *  effect then). The checkbox itself stays interactive (it's outside the
+         *  disabled groups). Restores the normal Add-button gating when off. */
+        function applyMarksOnlyState() {
+            var on = cbMarksOnly.value;
+            grpHeaders.enabled   = !on;
+            layContainer.enabled = !on;
+            btnAddLayer.enabled  = on ? false : (layRows.length < MAX_LAYERS);
+        }
+        cbMarksOnly.onClick = function () {
+            applyMarksOnlyState();
+            refreshModifiedIndicator();
+        };
+        applyMarksOnlyState();   // initial state from sData.marksOnly
+
         // =================================================================
         // Footer — copyright (greyed) + action buttons
         // =================================================================
@@ -2801,6 +2853,7 @@ ZSM.UI = {
                 orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
                 scaleN:            readScaleN(),
+                marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
         }
@@ -2867,6 +2920,11 @@ ZSM.UI = {
             }
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
+
+            // Marks-only — sync checkbox and grey/enable the freshly-rebuilt
+            // mapping controls to match.
+            cbMarksOnly.value = (obj.marksOnly === true);
+            applyMarksOnlyState();
 
             // Refresh the window layout so the rebuilt rows actually render.
             // The Add/Remove handlers do this inline and work; setUIValues must
@@ -3088,11 +3146,14 @@ ZSM.UI = {
             // Every row carries a colour (defaults to [Registration]); a row with
             // a colour but a blank/whitespace name is an incomplete mapping that
             // render would silently drop. Block with a clear message so the user
-            // names it or removes the row (symmetric to ERR_LAY_COLOR).
-            for (var lc = 0; lc < layers.length; lc++) {
-                if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
-                    alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
-                    return;
+            // names it or removes the row (symmetric to ERR_LAY_COLOR). Skipped
+            // in marks-only mode — the mapping is ignored there.
+            if (!cbMarksOnly.value) {
+                for (var lc = 0; lc < layers.length; lc++) {
+                    if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
+                        alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                        return;
+                    }
                 }
             }
 
@@ -3113,6 +3174,7 @@ ZSM.UI = {
                 markColor:         markColorSel,
                 // scaleN: derived from checkbox + field state (1 when unchecked)
                 scaleN:            readScaleN(),
+                marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
 

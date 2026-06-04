@@ -598,6 +598,39 @@ assert(findLayer(docW1, "Graphics") === null,
 
 
 // =====================================================
+// TEST 19 (Phase 3): marks-only mode draws marks but never touches layers
+// =====================================================
+// marksOnly=true must skip §3 (movePaths/routing) and §7 rename entirely, so a
+// document whose cut layers are already separated keeps them exactly as-is;
+// only the registration marks are added (into Regmarks).
+console.log("\n=== TEST 19 (Phase 3): marks-only mode leaves layers untouched ===");
+var docMO = setupDoc({
+    layers: [{
+        name: "Art",
+        items: [
+            { type: "path", bounds: [0, 100, 100, 0] },                          // plain
+            { type: "path", bounds: [5, 95, 95, 5], spot: "Cut", filled: true }  // Cut-spot
+        ]
+    }]
+});
+var sMO = makeSettings({ mode: "ZUND", marksOnly: true, layers: [{ name: "Cut", color: "Cut" }] });
+var bMO = ZSM.Draw.getBounds(sMO);
+var gMO = ZSM.Core.calculateAll(sMO, bMO);
+ZSM.Draw.render(gMO, sMO);
+
+var regMO = findLayer(docMO, "Regmarks");
+var zundMO = regMO ? findSublayer(regMO, "Zünd") : null;
+assert(zundMO !== null && countItems(zundMO, "PathItem") >= 5,
+    "marks-only: marks still drawn into Regmarks/Zünd");
+assert(findLayer(docMO, "Cut") === null,
+    "marks-only: §3 skipped — no 'Cut' routing layer created");
+assert(findLayer(docMO, "Art") !== null,
+    "marks-only: user layer 'Art' left intact");
+assert(findLayer(docMO, "Graphics") === null,
+    "marks-only: §7 rename skipped — 'Art' not renamed to 'Graphics'");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

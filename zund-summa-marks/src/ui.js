@@ -111,13 +111,19 @@ ZSM.UI = {
         grpPresetBtns.alignment = ["right", "top"];
         grpPresetBtns.spacing = 6;
 
+        // Uniform width so the three buttons line up evenly (text-based widths
+        // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
+        var PRESET_BTN_W = 92;
         var btnSave = grpPresetBtns.add("button", undefined, l.BTN_SAVE);
+        btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
 
         var btnSaveAs = grpPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        btnSaveAs.preferredSize.width = PRESET_BTN_W;
         btnSaveAs.helpTip = l.TIP_SAVE_AS;
 
         var btnDel = grpPresetBtns.add("button", undefined, l.BTN_DEL);
+        btnDel.preferredSize.width = PRESET_BTN_W;
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
@@ -171,7 +177,7 @@ ZSM.UI = {
         stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
 
         var etScale = grpScale.add("edittext", undefined, "1");
-        etScale.preferredSize.width = 40;
+        etScale.preferredSize.width = 60;   // match the other numeric inputs (addRow)
         etScale.helpTip = l.TIP_SCALE_FIELD;
 
         // Sync UI to initial scaleN value
@@ -297,6 +303,13 @@ ZSM.UI = {
         pLay.margins = 15;
         pLay.spacing = 10;
 
+        // "Marks only" toggle — sits atop the mapping table it controls. When on,
+        // the script draws only marks and never touches layers, so the mapping
+        // below is irrelevant and gets greyed out (see applyMarksOnlyState).
+        var cbMarksOnly = pLay.add("checkbox", undefined, l.MARKS_ONLY);
+        cbMarksOnly.helpTip = l.TIP_MARKS_ONLY;
+        cbMarksOnly.value   = (sData.marksOnly === true);
+
         // Column headers
         var grpHeaders = pLay.add("group");
         grpHeaders.alignment = "fill";
@@ -405,6 +418,21 @@ ZSM.UI = {
             w.size.height = w.preferredSize.height + 10;
         };
 
+        /** Grey out the mapping table when "marks only" is active (it has no
+         *  effect then). The checkbox itself stays interactive (it's outside the
+         *  disabled groups). Restores the normal Add-button gating when off. */
+        function applyMarksOnlyState() {
+            var on = cbMarksOnly.value;
+            grpHeaders.enabled   = !on;
+            layContainer.enabled = !on;
+            btnAddLayer.enabled  = on ? false : (layRows.length < MAX_LAYERS);
+        }
+        cbMarksOnly.onClick = function () {
+            applyMarksOnlyState();
+            refreshModifiedIndicator();
+        };
+        applyMarksOnlyState();   // initial state from sData.marksOnly
+
         // =================================================================
         // Footer — copyright (greyed) + action buttons
         // =================================================================
@@ -472,6 +500,7 @@ ZSM.UI = {
                 orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
                 scaleN:            readScaleN(),
+                marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
         }
@@ -538,6 +567,11 @@ ZSM.UI = {
             }
             btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
             updateRemoveButtons();
+
+            // Marks-only — sync checkbox and grey/enable the freshly-rebuilt
+            // mapping controls to match.
+            cbMarksOnly.value = (obj.marksOnly === true);
+            applyMarksOnlyState();
 
             // Refresh the window layout so the rebuilt rows actually render.
             // The Add/Remove handlers do this inline and work; setUIValues must
@@ -759,11 +793,14 @@ ZSM.UI = {
             // Every row carries a colour (defaults to [Registration]); a row with
             // a colour but a blank/whitespace name is an incomplete mapping that
             // render would silently drop. Block with a clear message so the user
-            // names it or removes the row (symmetric to ERR_LAY_COLOR).
-            for (var lc = 0; lc < layers.length; lc++) {
-                if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
-                    alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
-                    return;
+            // names it or removes the row (symmetric to ERR_LAY_COLOR). Skipped
+            // in marks-only mode — the mapping is ignored there.
+            if (!cbMarksOnly.value) {
+                for (var lc = 0; lc < layers.length; lc++) {
+                    if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
+                        alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                        return;
+                    }
                 }
             }
 
@@ -784,6 +821,7 @@ ZSM.UI = {
                 markColor:         markColorSel,
                 // scaleN: derived from checkbox + field state (1 when unchecked)
                 scaleN:            readScaleN(),
+                marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
 
