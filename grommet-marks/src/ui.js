@@ -557,8 +557,19 @@ GM.UI = {
         layerDDL.onChange = refreshModifiedIndicator;
         fillDDL.onChange = refreshModifiedIndicator;
         strokeDDL.onChange = refreshModifiedIndicator;
-        roundRB.onClick = refreshModifiedIndicator;
-        squareRB.onClick = refreshModifiedIndicator;
+        // Explicit Round/Square exclusivity. These radios are currently
+        // consecutive siblings (ScriptUI would auto-group them), but gather()
+        // reads roundRB.value directly, so a future control inserted between
+        // them — or a runtime that doesn't group — would silently desync.
+        // Set the opposite radio explicitly, same hardening as the edge radios.
+        roundRB.onClick = function () {
+            roundRB.value = true; squareRB.value = false;
+            refreshModifiedIndicator();
+        };
+        squareRB.onClick = function () {
+            squareRB.value = true; roundRB.value = false;
+            refreshModifiedIndicator();
+        };
 
         // Edge panels notify on any internal change.
         topUI.onChange    = onUserChange;
