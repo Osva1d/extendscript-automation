@@ -233,7 +233,7 @@ GM.UI = {
 
         setPanel.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = setPanel.add("dropdownlist", undefined, []);
-        loadDDL.preferredSize.width = 180;
+        loadDDL.preferredSize.width = 170;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
         var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
@@ -241,6 +241,7 @@ GM.UI = {
         var saveAsBtn = setPanel.add("button", undefined, GM.L.BTN_SAVE_AS);
         saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
         var deleteBtn = setPanel.add("button", undefined, GM.L.DELETE);
+        deleteBtn.helpTip = GM.L.TIP_DELETE;
         deleteBtn.enabled = false;
 
         // =================================================================
@@ -286,12 +287,13 @@ GM.UI = {
 
         markPanel.add("statictext", undefined, GM.L.UNIT_LABEL);
         var unitsDDL = markPanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        unitsDDL.preferredSize.width = 130;
         unitsDDL.selection = 0;
         unitsDDL.helpTip = GM.L.TIP_UNITS;
 
         markPanel.add("statictext", undefined, GM.L.SIZE_LABEL);
         var sizeInput = markPanel.add("edittext", undefined, String(defCfg.markSize));
-        sizeInput.preferredSize.width = 60;
+        sizeInput.preferredSize.width = 50;
         sizeInput.helpTip = GM.L.TIP_SIZE;
 
         markPanel.add("statictext", undefined, GM.L.SHAPE_LABEL);
@@ -314,7 +316,7 @@ GM.UI = {
         var layerGrp = appPanel.add("group");
         layerGrp.add("statictext", undefined, GM.L.LAYER);
         var layerDDL = layerGrp.add("dropdownlist", undefined, layerInfo.names);
-        layerDDL.preferredSize.width = 200;
+        layerDDL.preferredSize.width = 170;
         layerDDL.helpTip = GM.L.TIP_LAYER;
         GM.UI.selectDDL(layerDDL, GM.L.CREATE_LABEL);
 
@@ -323,7 +325,7 @@ GM.UI = {
         fillCB.value = defCfg.fillEnabled;
         fillCB.helpTip = GM.L.TIP_FILL;
         var fillDDL = fillGrp.add("dropdownlist", undefined, swatchInfo.names);
-        fillDDL.preferredSize.width = 180;
+        fillDDL.preferredSize.width = 170;
         fillDDL.helpTip = GM.L.TIP_FILL;
         GM.UI.selectDDL(fillDDL, GM.L.CREATE_LABEL);
         var fillOPCB = fillGrp.add("checkbox", undefined, GM.L.OVERPRINT);
@@ -335,7 +337,7 @@ GM.UI = {
         strokeCB.value = defCfg.strokeEnabled;
         strokeCB.helpTip = GM.L.TIP_STROKE;
         var strokeDDL = strokeGrp.add("dropdownlist", undefined, swatchInfo.names);
-        strokeDDL.preferredSize.width = 180;
+        strokeDDL.preferredSize.width = 170;
         strokeDDL.enabled = defCfg.strokeEnabled;
         strokeDDL.helpTip = GM.L.TIP_STROKE;
         GM.UI.selectDDL(strokeDDL, GM.L.CREATE_LABEL);
