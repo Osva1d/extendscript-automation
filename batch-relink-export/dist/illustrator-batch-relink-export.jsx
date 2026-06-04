@@ -1043,7 +1043,14 @@ BRE.UI = {
         var debugCB = configPanel.add("checkbox", undefined, l.CB_DEBUG);
         debugCB.helpTip = l.TIP_DEBUG;
 
-        // --- Footer ---
+        // --- Copyright footer (greyed) — extendscript-ui-standards §5 ---
+        var copyGrp = dialog.add("group");
+        copyGrp.alignment = ["fill", "top"];
+        var stCopy = copyGrp.add("statictext", undefined,
+            "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
+        stCopy.enabled = false;
+
+        // --- Buttons ---
         var footerGrp = dialog.add("group");
         footerGrp.alignment = ["right", "center"];
         footerGrp.spacing = 8;
