@@ -168,17 +168,31 @@ ZSM.UI = {
         var grpScale = pSystem.add("group");
         grpScale.orientation   = "row";
         grpScale.alignChildren = ["left", "center"];
-        grpScale.spacing       = 6;
+        grpScale.spacing       = 10;   // breathing room between checkbox and the ratio
 
         var cbScale = grpScale.add("checkbox", undefined, l.SCALE_CHECKBOX);
         cbScale.helpTip = l.TIP_SCALE_CHECKBOX;
 
-        var stScaleLabel = grpScale.add("statictext", undefined, l.SCALE_FIELD_LABEL);
+        // "1:" hugs its field as one unit (tight spacing) instead of floating
+        // with equal gaps on both sides.
+        var grpRatio = grpScale.add("group");
+        grpRatio.orientation   = "row";
+        grpRatio.alignChildren = ["left", "center"];
+        grpRatio.spacing       = 3;
+
+        var stScaleLabel = grpRatio.add("statictext", undefined, l.SCALE_FIELD_LABEL);
         stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
 
-        var etScale = grpScale.add("edittext", undefined, "1");
+        var etScale = grpRatio.add("edittext", undefined, "1");
         etScale.preferredSize.width = 60;   // match the other numeric inputs (addRow)
         etScale.helpTip = l.TIP_SCALE_FIELD;
+
+        /** Enable/disable the ratio field AND its "1:" label together, so the
+         *  whole "1:N" unit greys out as one when scaling is off. */
+        function setScaleEnabled(on) {
+            etScale.enabled      = on;
+            stScaleLabel.enabled = on;
+        }
 
         // Sync UI to initial scaleN value
         var initScaleN = parseInt(sData.scaleN, 10);
@@ -186,11 +200,11 @@ ZSM.UI = {
         if (initScaleN > 1) {
             cbScale.value   = true;
             etScale.text    = String(initScaleN);
-            etScale.enabled = true;
+            setScaleEnabled(true);
         } else {
             cbScale.value   = false;
             etScale.text    = "1";
-            etScale.enabled = false;
+            setScaleEnabled(false);
         }
 
         /** Read current scaleN from the UI controls (clean integer 1..10). */
@@ -216,12 +230,12 @@ ZSM.UI = {
 
         cbScale.onClick = function () {
             if (cbScale.value) {
-                etScale.enabled = true;
+                setScaleEnabled(true);
                 // Auto-suggest "10" when activating from "1"
                 var cur = parseInt(etScale.text, 10);
                 if (isNaN(cur) || cur <= 1) etScale.text = "10";
             } else {
-                etScale.enabled = false;
+                setScaleEnabled(false);
                 etScale.text = "1";
             }
             applyTitleSuffix();
@@ -233,7 +247,7 @@ ZSM.UI = {
             // Auto-uncheck when user explicitly types 1
             if (n === 1) {
                 cbScale.value   = false;
-                etScale.enabled = false;
+                setScaleEnabled(false);
             }
             // Clamp out-of-range silently here; validation will alert on Generate
             applyTitleSuffix();
@@ -545,11 +559,11 @@ ZSM.UI = {
             if (newScaleN > 1) {
                 cbScale.value   = true;
                 etScale.text    = String(newScaleN);
-                etScale.enabled = true;
+                setScaleEnabled(true);
             } else {
                 cbScale.value   = false;
                 etScale.text    = "1";
-                etScale.enabled = false;
+                setScaleEnabled(false);
             }
             applyTitleSuffix();
 
