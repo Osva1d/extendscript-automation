@@ -53,7 +53,7 @@
 
         // Processing loop
         var results = {
-            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0,
+            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0, manual: 0,
             cancelled: false, total: config.pdfFiles.length, log: []
         };
 
@@ -164,6 +164,21 @@
                                 results.log.push(outputName + ": " + verification.errors[wi]);
                             }
                             continue;
+                        }
+
+                        // A short source leaves more positions than pages. The
+                        // tool cannot reliably tell WHICH are excess when the
+                        // template's pageNumber is not readable, so it does not
+                        // delete them — it flags the sheet for manual cleanup
+                        // and still exports it (the operator removes the few
+                        // extra positions by hand on the last sheet).
+                        var expected = (fileInfo.pages > 0 && fileInfo.pages < slotCount)
+                            ? fileInfo.pages : slotCount;
+                        var remaining = BRE.Core.countManagedPositions(doc);
+                        if (remaining > expected) {
+                            results.manual++;
+                            results.log.push(outputName + ": " + BRE.L.format(
+                                BRE.L.LOG_MANUAL, String(remaining - expected)));
                         }
 
                         // Export PDF

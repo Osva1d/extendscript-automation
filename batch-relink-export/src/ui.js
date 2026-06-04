@@ -356,6 +356,9 @@ BRE.UI = {
         if (results.removed > 0) {
             summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
         }
+        if (results.manual > 0) {
+            summaryLine += "   |   " + l.LOG_MANUAL_LABEL + ": " + results.manual;
+        }
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
             summaryLine += "\n" + l.format(l.LOG_CANCELLED,

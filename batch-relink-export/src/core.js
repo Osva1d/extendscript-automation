@@ -143,6 +143,10 @@ BRE.Core = {
         // clipping mask — _removePosition removes the whole clip group so no
         // clip path / frame is left behind. The remove-set lets it refuse to
         // delete a clip group that also encloses a position we are keeping.
+        // Best-effort auto-removal (only fires when pageNumber is readable).
+        // Anything that cannot be removed is reported as a warning; the caller
+        // counts the leftover positions and asks the user to remove them by
+        // hand — it never refuses the sheet on this account.
         var removeRefs = [];
         for (i = 0; i < toRemove.length; i++) removeRefs.push(toRemove[i].item);
         for (i = 0; i < toRemove.length; i++) {
@@ -150,29 +154,30 @@ BRE.Core = {
                 this._removePosition(toRemove[i].item, removeRefs);
                 results.removed++;
             } catch (e) {
-                results.errors.push(BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(toRemove[i].page)));
-            }
-        }
-
-        // Post-condition: no surviving MANAGED item may still reference a page
-        // beyond the source. If one does, removal was ineffective (the original
-        // clip-mask bug) — flag it so the caller refuses to export a lossy sheet.
-        if (totalPages > 0) {
-            for (i = 0; i < items.length; i++) {
-                try {
-                    item = items[i];
-                    if (!item.file || this._isOnHiddenLayer(item)) continue;
-                    if (item.pageNumber && item.pageNumber > totalPages) {
-                        results.errors.push(
-                            BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(item.pageNumber))
-                        );
-                    }
-                } catch (e) {}
+                results.warnings.push(BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(toRemove[i].page)));
             }
         }
 
         results.ok = (results.errors.length === 0);
         return results;
+    },
+
+    /**
+     * Counts managed positions in the document — placed items that are linked
+     * (have a file) and not on a hidden layer. Used to detect how many extra
+     * positions remain on a sheet so the user can be told to remove them.
+     * @param {Document} doc - The document to inspect.
+     * @returns {number} Managed position count.
+     */
+    countManagedPositions: function (doc) {
+        var n = 0;
+        var items = doc.placedItems;
+        for (var i = 0; i < items.length; i++) {
+            try {
+                if (items[i].file && !this._isOnHiddenLayer(items[i])) n++;
+            } catch (e) {}
+        }
+        return n;
     },
 
     /**

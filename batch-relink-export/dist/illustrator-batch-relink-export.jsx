@@ -106,7 +106,7 @@ BRE.L = (function () {
             SCAN_UNCERTAIN:     "Uncertain page count (blocked): %s",
             SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
-            SCAN_FILE_PARTIAL:  "%s: %s pages — %s positions removed from last sheet.",
+            SCAN_FILE_PARTIAL:  "%s: %s pages — %s extra position(s) will remain (remove manually).",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
             SCAN_FILE_UNCERTAIN: "%s: ambiguous page count — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
@@ -124,6 +124,8 @@ BRE.L = (function () {
             LOG_SKIPPED:        "Skipped",
             LOG_BLOCKED:        "Blocked",
             LOG_REMOVED:        "Removed positions",
+            LOG_MANUAL_LABEL:   "Needs manual cleanup",
+            LOG_MANUAL:         "%s extra position(s) on this sheet — remove manually",
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
             LOG_CANCELLED:      "Cancelled by user after processing %s of %s files.",
@@ -210,7 +212,7 @@ BRE.L = (function () {
             SCAN_UNCERTAIN:     "Nejistý počet stran (blokováno): %s",
             SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
-            SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic odebráno z posledního archu.",
+            SCAN_FILE_PARTIAL:  "%s: %s stran — zůstane %s pozic navíc (odeber ručně).",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
             SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
@@ -228,6 +230,8 @@ BRE.L = (function () {
             LOG_SKIPPED:        "Přeskočeno",
             LOG_BLOCKED:        "Blokováno",
             LOG_REMOVED:        "Odebrané pozice",
+            LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu",
+            LOG_MANUAL:         "%s pozic navíc na tomto archu — odeber ručně",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",
@@ -433,6 +437,10 @@ BRE.Core = {
         // clipping mask — _removePosition removes the whole clip group so no
         // clip path / frame is left behind. The remove-set lets it refuse to
         // delete a clip group that also encloses a position we are keeping.
+        // Best-effort auto-removal (only fires when pageNumber is readable).
+        // Anything that cannot be removed is reported as a warning; the caller
+        // counts the leftover positions and asks the user to remove them by
+        // hand — it never refuses the sheet on this account.
         var removeRefs = [];
         for (i = 0; i < toRemove.length; i++) removeRefs.push(toRemove[i].item);
         for (i = 0; i < toRemove.length; i++) {
@@ -440,29 +448,30 @@ BRE.Core = {
                 this._removePosition(toRemove[i].item, removeRefs);
                 results.removed++;
             } catch (e) {
-                results.errors.push(BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(toRemove[i].page)));
-            }
-        }
-
-        // Post-condition: no surviving MANAGED item may still reference a page
-        // beyond the source. If one does, removal was ineffective (the original
-        // clip-mask bug) — flag it so the caller refuses to export a lossy sheet.
-        if (totalPages > 0) {
-            for (i = 0; i < items.length; i++) {
-                try {
-                    item = items[i];
-                    if (!item.file || this._isOnHiddenLayer(item)) continue;
-                    if (item.pageNumber && item.pageNumber > totalPages) {
-                        results.errors.push(
-                            BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(item.pageNumber))
-                        );
-                    }
-                } catch (e) {}
+                results.warnings.push(BRE.L.format(BRE.L.ERR_REMOVE_FAIL, String(toRemove[i].page)));
             }
         }
 
         results.ok = (results.errors.length === 0);
         return results;
+    },
+
+    /**
+     * Counts managed positions in the document — placed items that are linked
+     * (have a file) and not on a hidden layer. Used to detect how many extra
+     * positions remain on a sheet so the user can be told to remove them.
+     * @param {Document} doc - The document to inspect.
+     * @returns {number} Managed position count.
+     */
+    countManagedPositions: function (doc) {
+        var n = 0;
+        var items = doc.placedItems;
+        for (var i = 0; i < items.length; i++) {
+            try {
+                if (items[i].file && !this._isOnHiddenLayer(items[i])) n++;
+            } catch (e) {}
+        }
+        return n;
     },
 
     /**
@@ -1292,6 +1301,9 @@ BRE.UI = {
         if (results.removed > 0) {
             summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
         }
+        if (results.manual > 0) {
+            summaryLine += "   |   " + l.LOG_MANUAL_LABEL + ": " + results.manual;
+        }
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
             summaryLine += "\n" + l.format(l.LOG_CANCELLED,
@@ -1412,7 +1424,7 @@ BRE.UI = {
 
         // Processing loop
         var results = {
-            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0,
+            success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0, manual: 0,
             cancelled: false, total: config.pdfFiles.length, log: []
         };
 
@@ -1523,6 +1535,21 @@ BRE.UI = {
                                 results.log.push(outputName + ": " + verification.errors[wi]);
                             }
                             continue;
+                        }
+
+                        // A short source leaves more positions than pages. The
+                        // tool cannot reliably tell WHICH are excess when the
+                        // template's pageNumber is not readable, so it does not
+                        // delete them — it flags the sheet for manual cleanup
+                        // and still exports it (the operator removes the few
+                        // extra positions by hand on the last sheet).
+                        var expected = (fileInfo.pages > 0 && fileInfo.pages < slotCount)
+                            ? fileInfo.pages : slotCount;
+                        var remaining = BRE.Core.countManagedPositions(doc);
+                        if (remaining > expected) {
+                            results.manual++;
+                            results.log.push(outputName + ": " + BRE.L.format(
+                                BRE.L.LOG_MANUAL, String(remaining - expected)));
                         }
 
                         // Export PDF
