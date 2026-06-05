@@ -95,9 +95,6 @@ BRE.UI = {
         openCB.value = true;
         openCB.helpTip = l.TIP_OPEN;
 
-        var debugCB = configPanel.add("checkbox", undefined, l.CB_DEBUG);
-        debugCB.helpTip = l.TIP_DEBUG;
-
         // --- Copyright footer (greyed) — extendscript-ui-standards §5 ---
         var copyGrp = dialog.add("group");
         copyGrp.alignment = ["fill", "top"];
@@ -123,7 +120,6 @@ BRE.UI = {
         var namingPattern = namingInput.text;
         var skipExisting = skipCB.value;
         var openAfter = openCB.value;
-        var debug = debugCB.value;
 
         if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
             alert(l.ERR_TEMPLATE);
@@ -187,7 +183,6 @@ BRE.UI = {
             preset: preset,
             skipExisting: skipExisting,
             openAfter: openAfter,
-            debug: debug,
             pdfFiles: pdfFiles,
             templateName: templateName
         };

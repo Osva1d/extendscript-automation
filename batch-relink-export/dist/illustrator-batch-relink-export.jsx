@@ -3,7 +3,7 @@
  * Script:      Illustrator Batch Relink Export
  * Version:     3.0.0
  * Author:      Osva1d
- * Updated:     2026-06-04
+ * Updated:     2026-06-05
  *
  * Description:
  *   Batch PDF relinking and export for Illustrator templates.
@@ -71,7 +71,6 @@ BRE.L = (function () {
             // --- UI: Checkboxes ---
             CB_SKIP:            "Skip existing files",
             CB_OPEN_FOLDER:     "Open output folder when done",
-            CB_DEBUG:           "Diagnostic mode (write log)",
 
             // --- UI: Help Tips ---
             TIP_TEMPLATE:       "Illustrator template file (.ai) with linked PDF",
@@ -84,7 +83,6 @@ BRE.L = (function () {
             TIP_PRESET:         "PDF quality profile for export",
             TIP_SKIP:           "Skip processing if output file already exists",
             TIP_OPEN:           "Open output folder in system file manager after completion",
-            TIP_DEBUG:          "Writes a _bre-diagnostika.txt log describing every template position (pageNumber, layer, clip group) — for troubleshooting.",
 
             // --- UI: File Dialogs ---
             BROWSE_FOLDER:      "Select folder:",
@@ -177,7 +175,6 @@ BRE.L = (function () {
             // --- UI: Checkboxy ---
             CB_SKIP:            "Přeskočit existující soubory",
             CB_OPEN_FOLDER:     "Po dokončení otevřít výstupní složku",
-            CB_DEBUG:           "Diagnostický režim (zapíše log)",
 
             // --- UI: Nápovědy ---
             TIP_TEMPLATE:       "Soubor šablony Illustrator (.ai) s propojeným PDF",
@@ -190,7 +187,6 @@ BRE.L = (function () {
             TIP_PRESET:         "Profil kvality PDF pro export",
             TIP_SKIP:           "Pokud výstupní soubor již existuje, přeskočí se",
             TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
-            TIP_DEBUG:          "Zapíše log _bre-diagnostika.txt s popisem každé pozice v šabloně (pageNumber, vrstva, clip-group) — pro hledání chyby.",
 
             // --- UI: Dialogy souborů ---
             BROWSE_FOLDER:      "Vyberte složku:",
@@ -1040,9 +1036,6 @@ BRE.UI = {
         openCB.value = true;
         openCB.helpTip = l.TIP_OPEN;
 
-        var debugCB = configPanel.add("checkbox", undefined, l.CB_DEBUG);
-        debugCB.helpTip = l.TIP_DEBUG;
-
         // --- Copyright footer (greyed) — extendscript-ui-standards §5 ---
         var copyGrp = dialog.add("group");
         copyGrp.alignment = ["fill", "top"];
@@ -1068,7 +1061,6 @@ BRE.UI = {
         var namingPattern = namingInput.text;
         var skipExisting = skipCB.value;
         var openAfter = openCB.value;
-        var debug = debugCB.value;
 
         if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
             alert(l.ERR_TEMPLATE);
@@ -1132,7 +1124,6 @@ BRE.UI = {
             preset: preset,
             skipExisting: skipExisting,
             openAfter: openAfter,
-            debug: debug,
             pdfFiles: pdfFiles,
             templateName: templateName
         };
@@ -1485,10 +1476,11 @@ BRE.UI = {
                     doc = app.open(config.templateFile);
                     BRE.Core.beginSession(doc);
 
-                    // Diagnostic mode: snapshot the freshly-opened template
-                    // BEFORE any relink/removal, so the log shows the true
-                    // structure (pageNumbers, clip groups, layers).
-                    if (config.debug) {
+                    // Diagnostic logging: when BRE.Config.debug is enabled (a
+                    // source-level support switch, no UI), snapshot the freshly-
+                    // opened template BEFORE any relink/removal so the log shows
+                    // the true structure (pageNumbers, clip groups, layers).
+                    if (BRE.Config.debug) {
                         BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
                             "=== " + outputName + "  (zdroj: " + sourceFileName + ") ===\n" +
                             "BEFORE relink:\n" +
@@ -1500,7 +1492,7 @@ BRE.UI = {
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
 
-                        if (config.debug) {
+                        if (BRE.Config.debug) {
                             BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
                                 "AFTER relink: relinked=" + relinkResult.relinked +
                                 " removed=" + relinkResult.removed +

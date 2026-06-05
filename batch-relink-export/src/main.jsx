@@ -107,10 +107,11 @@
                     doc = app.open(config.templateFile);
                     BRE.Core.beginSession(doc);
 
-                    // Diagnostic mode: snapshot the freshly-opened template
-                    // BEFORE any relink/removal, so the log shows the true
-                    // structure (pageNumbers, clip groups, layers).
-                    if (config.debug) {
+                    // Diagnostic logging: when BRE.Config.debug is enabled (a
+                    // source-level support switch, no UI), snapshot the freshly-
+                    // opened template BEFORE any relink/removal so the log shows
+                    // the true structure (pageNumbers, clip groups, layers).
+                    if (BRE.Config.debug) {
                         BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
                             "=== " + outputName + "  (zdroj: " + sourceFileName + ") ===\n" +
                             "BEFORE relink:\n" +
@@ -122,7 +123,7 @@
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
 
-                        if (config.debug) {
+                        if (BRE.Config.debug) {
                             BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
                                 "AFTER relink: relinked=" + relinkResult.relinked +
                                 " removed=" + relinkResult.removed +
