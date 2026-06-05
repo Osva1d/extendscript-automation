@@ -217,7 +217,7 @@ GM.UI = {
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
         dlg.margins = 20;
-        dlg.spacing = 12;
+        dlg.spacing = 15;   // matches ZSM / BRE / extendscript-ui-standards §2
         dlg.preferredSize.width = 400;   // baseline floor; content grows if needed
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
@@ -293,7 +293,7 @@ GM.UI = {
 
         markPanel.add("statictext", undefined, GM.L.SIZE_LABEL);
         var sizeInput = markPanel.add("edittext", undefined, String(defCfg.markSize));
-        sizeInput.preferredSize.width = 50;
+        sizeInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
         sizeInput.helpTip = GM.L.TIP_SIZE;
 
         markPanel.add("statictext", undefined, GM.L.SHAPE_LABEL);
@@ -349,7 +349,7 @@ GM.UI = {
         var wGrp = appPanel.add("group");
         wGrp.add("statictext", undefined, GM.L.WEIGHT);
         var weightInput = wGrp.add("edittext", undefined, String(defCfg.strokeWeight));
-        weightInput.preferredSize.width = 50;
+        weightInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
         weightInput.enabled = defCfg.strokeEnabled;
         weightInput.helpTip = GM.L.TIP_WEIGHT;
         wGrp.add("statictext", undefined, GM.L.POINTS);
