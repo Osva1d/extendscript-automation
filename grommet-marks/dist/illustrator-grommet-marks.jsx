@@ -1398,7 +1398,7 @@ GM.UI = {
         var grp = parent.add("group");
         grp.orientation = "column";
         grp.alignChildren = ["left", "top"];
-        grp.spacing = 4;
+        grp.spacing = 6;
 
         var api = { onChange: function () {} };
 
@@ -1412,7 +1412,7 @@ GM.UI = {
         var row = grp.add("group");
         row.orientation = "row";
         row.alignChildren = ["left", "center"];
-        row.spacing = 6;
+        row.spacing = 8;
 
         var cb = row.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
@@ -1423,14 +1423,14 @@ GM.UI = {
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
         var numIn = row.add("edittext", undefined, String(defaultCfg.number));
-        numIn.preferredSize.width = 44;
+        numIn.preferredSize.width = 50;
         numIn.helpTip = GM.L.TIP_COUNT;
 
         var spcRB = row.add("radiobutton", undefined, GM.L.SPACING);
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
         var spcIn = row.add("edittext", undefined, String(defaultCfg.spacing));
-        spcIn.preferredSize.width = 44;
+        spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
 
         var _prevEnabled = defaultCfg.enabled;
@@ -1567,19 +1567,19 @@ GM.UI = {
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
         edgesPanel.margins = 15;
-        edgesPanel.spacing = 6;
+        edgesPanel.spacing = 10;
 
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
         offGrp.alignChildren = ["left", "center"];
-        offGrp.spacing = 6;
+        offGrp.spacing = 8;
         offGrp.add("statictext", undefined, GM.L.OFFSET_X);
         var offsetXIn = offGrp.add("edittext", undefined, String(defCfg.offsetX));
-        offsetXIn.preferredSize.width = 44;
+        offsetXIn.preferredSize.width = 50;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
         offGrp.add("statictext", undefined, GM.L.OFFSET_Y);
         var offsetYIn = offGrp.add("edittext", undefined, String(defCfg.offsetY));
-        offsetYIn.preferredSize.width = 44;
+        offsetYIn.preferredSize.width = 50;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
         GM.UI.addSeparator(edgesPanel);
