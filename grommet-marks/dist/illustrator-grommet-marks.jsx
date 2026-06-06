@@ -1781,10 +1781,20 @@ GM.UI = {
         function paintField(et, valid) {
             try {
                 var g = et.graphics;
-                if (g && g.newPen) {
-                    g.foregroundColor = valid
-                        ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
-                        : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
+                if (!g || !g.newPen) return;
+                // Capture the field's DEFAULT foreground pen once (after the
+                // graphics object is realised). "Valid" restores that theme
+                // default — forcing black [0,0,0] makes the text invisible on
+                // the dark UI. Light-grey is a safe fallback if it can't be read.
+                if (et._gmDefPen === undefined) {
+                    et._gmDefPen = g.foregroundColor || null;
+                }
+                if (valid) {
+                    g.foregroundColor = et._gmDefPen
+                        ? et._gmDefPen
+                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
+                } else {
+                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
                 }
             } catch (e) {}
         }
