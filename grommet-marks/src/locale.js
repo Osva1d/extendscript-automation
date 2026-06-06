@@ -50,9 +50,6 @@ GM.L = (function () {
             UNIT_LABEL: "Units:",
             TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
-            SHAPE_LABEL: "Shape:",
-            ROUND: "Round",
-            SQUARE: "Square",
 
             // Appearance panel
             APPEARANCE_PANEL: "Appearance",
@@ -71,8 +68,7 @@ GM.L = (function () {
             BTN_SAVE_AS: "Save As…",
             TIP_SAVE_AS: "Save current settings as a new preset.",
             TIP_DELETE: "Delete the selected preset.",
-            BTN_RESET: "Reset",
-            TIP_RESET: "Reset all settings to factory defaults.",
+            TIP_REVERT: "Discard unsaved changes and reload the selected preset.",
             PROMPT_SAVE_AS: "Save current settings as new preset:",
 
             // Buttons
@@ -93,8 +89,6 @@ GM.L = (function () {
             TIP_LAYER: "Target layer for mark placement",
             TIP_WEIGHT: "Stroke weight in points",
             TIP_EDGE_ENABLE: "Enable/disable mark placement on this edge",
-            TIP_SHAPE_ROUND: "Marks will be circular",
-            TIP_SHAPE_SQUARE: "Marks will be square",
             TIP_PRESET_LOAD: "Select saved preset",
             TIP_SAVE: "Save settings to the active preset.",
 
@@ -164,9 +158,6 @@ GM.L = (function () {
             UNIT_LABEL: "Měrné jednotky:",
             TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
-            SHAPE_LABEL: "Tvar:",
-            ROUND: "Kruh",
-            SQUARE: "Čtverec",
 
             // Appearance panel
             APPEARANCE_PANEL: "Vzhled",
@@ -185,8 +176,7 @@ GM.L = (function () {
             BTN_SAVE_AS: "Uložit jako…",
             TIP_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu.",
             TIP_DELETE: "Smazat vybranou předvolbu.",
-            BTN_RESET: "Reset",
-            TIP_RESET: "Obnovit všechna nastavení na výchozí hodnoty.",
+            TIP_REVERT: "Zahodit neuložené změny a znovu načíst předvolbu.",
             PROMPT_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu:",
 
             // Buttons
@@ -207,8 +197,6 @@ GM.L = (function () {
             TIP_LAYER: "Cílová vrstva pro umístění značek",
             TIP_WEIGHT: "Tloušťka obrysové linky v bodech (points)",
             TIP_EDGE_ENABLE: "Zapne/vypne umístění značek na tuto hranu",
-            TIP_SHAPE_ROUND: "Značka bude kruhová",
-            TIP_SHAPE_SQUARE: "Značka bude čtvercová",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
             TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
 
