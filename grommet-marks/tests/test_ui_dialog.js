@@ -110,20 +110,15 @@ console.log("--- UI: Count/Spacing radio exclusivity (regression) ---");
     done();
 })();
 
-// ===== TEST: Round/Square radio exclusivity =====
-console.log("--- UI: Round/Square radio exclusivity ---");
+// ===== TEST: shape is locked to circle (no shape control) =====
+console.log("--- UI: shape locked to circle ---");
 (function () {
     var ui = buildUI();
-    assert(ui.gatherAll().isRound === true, "default shape is round");
+    assert(ui.gatherAll().isRound === true, "gather reports isRound:true (circle)");
     var w = SUI.lastWindow();
-    var square = findRadio(w, GM.L.SQUARE);
-    var round = findRadio(w, GM.L.ROUND);
-    assert(square && round, "found Round and Square radios");
-    square.onClick();
-    assert(ui.gatherAll().isRound === false, "clicking Square flips to square (isRound:false)");
-    assert(round.value === false, "Round deselected after choosing Square");
-    round.onClick();
-    assert(ui.gatherAll().isRound === true, "clicking Round flips back");
+    // Only the 8 edge radios remain (4 edges × Count/Spacing); no shape radios.
+    var radios = w.find(function (c) { return c.type === "radiobutton"; });
+    assert(radios.length === 8, "exactly 8 radios (edges only, no shape radios)");
     done();
 })();
 

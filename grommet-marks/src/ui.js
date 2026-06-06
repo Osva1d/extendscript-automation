@@ -296,13 +296,6 @@ GM.UI = {
         sizeInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
         sizeInput.helpTip = GM.L.TIP_SIZE;
 
-        markPanel.add("statictext", undefined, GM.L.SHAPE_LABEL);
-        var roundRB = markPanel.add("radiobutton", undefined, GM.L.ROUND);
-        roundRB.value = defCfg.isRound;
-        roundRB.helpTip = GM.L.TIP_SHAPE_ROUND;
-        var squareRB = markPanel.add("radiobutton", undefined, GM.L.SQUARE);
-        squareRB.value = !defCfg.isRound;
-        squareRB.helpTip = GM.L.TIP_SHAPE_SQUARE;
 
         // =================================================================
         // Appearance Panel (layer, fill, stroke)
@@ -395,7 +388,7 @@ GM.UI = {
                 rightMirror: rightUI.getMirror(),
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
-                isRound: roundRB.value,
+                isRound: true,   // shape locked to circle (square removed v4.2.0)
                 markLayerName: GM.UI.toStorage(GM.UI.ddlValue(layerDDL) || GM.L.CREATE_LABEL),
                 fillEnabled: fillCB.value,
                 fillSwatchName: GM.UI.toStorage(GM.UI.ddlValue(fillDDL) || GM.L.CREATE_LABEL),
@@ -423,8 +416,6 @@ GM.UI = {
             rightUI.setMirror(s.rightMirror);   rightUI.refresh();
 
             sizeInput.text = s.markSize;
-            roundRB.value = s.isRound;
-            squareRB.value = !s.isRound;
 
             GM.UI.selectDDL(layerDDL, GM.UI.toDisplay(s.markLayerName));
 
@@ -559,19 +550,6 @@ GM.UI = {
         layerDDL.onChange = refreshModifiedIndicator;
         fillDDL.onChange = refreshModifiedIndicator;
         strokeDDL.onChange = refreshModifiedIndicator;
-        // Explicit Round/Square exclusivity. These radios are currently
-        // consecutive siblings (ScriptUI would auto-group them), but gather()
-        // reads roundRB.value directly, so a future control inserted between
-        // them — or a runtime that doesn't group — would silently desync.
-        // Set the opposite radio explicitly, same hardening as the edge radios.
-        roundRB.onClick = function () {
-            roundRB.value = true; squareRB.value = false;
-            refreshModifiedIndicator();
-        };
-        squareRB.onClick = function () {
-            squareRB.value = true; roundRB.value = false;
-            refreshModifiedIndicator();
-        };
 
         // Edge panels notify on any internal change.
         topUI.onChange    = onUserChange;
