@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     4.1.0
+ * Version:     4.2.0
  * Author:      Osva1d
- * Updated:     2026-06-05
+ * Updated:     2026-06-06
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -159,7 +159,7 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "4.1.0",
+    VERSION: "4.2.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",

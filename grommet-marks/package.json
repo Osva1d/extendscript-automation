@@ -1,6 +1,6 @@
 {
     "name": "grommet-marks",
-    "version": "4.1.0",
+    "version": "4.2.0",
     "description": "Grommet mark generator for banner production (Adobe Illustrator).",
     "scripts": {
         "build": "bash tools/build.sh",
