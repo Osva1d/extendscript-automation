@@ -1540,6 +1540,11 @@ GM.UI = {
         loadDDL.preferredSize.width = 170;
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
 
+        var revertBtn = setPanel.add("button", undefined, "↺");
+        revertBtn.preferredSize = [30, 24];
+        revertBtn.helpTip = GM.L.TIP_REVERT;
+        revertBtn.enabled = false;
+
         var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
         var saveAsBtn = setPanel.add("button", undefined, GM.L.BTN_SAVE_AS);
@@ -1664,15 +1669,8 @@ GM.UI = {
         // Footer — Reset + action buttons
         // =================================================================
         var footerGrp = dlg.add("group");
-        footerGrp.alignment = ["fill", "center"];
+        footerGrp.alignment = ["right", "center"];
         footerGrp.spacing = 8;
-
-        var resetBtn = footerGrp.add("button", undefined, GM.L.BTN_RESET);
-        resetBtn.helpTip = GM.L.TIP_RESET;
-        resetBtn.alignment = ["left", "center"];
-
-        var spacer = footerGrp.add("group");
-        spacer.alignment = ["fill", "fill"];
 
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
         var okBtn = footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
@@ -1868,6 +1866,7 @@ GM.UI = {
             var modified;
             try { modified = GM.UIState.isModified(pData, gatherAll()); } catch (e) { modified = false; }
             try { saveBtn.enabled = modified; } catch (e) {}
+            try { revertBtn.enabled = modified; } catch (e) {}
 
             if (!loadDDL.selection) return;
             var idx = loadDDL.selection.index;
@@ -1965,8 +1964,11 @@ GM.UI = {
             persistSettings();
         };
 
-        resetBtn.onClick = function () {
-            applyAll(GM.Config.getDefaults());
+        revertBtn.onClick = function () {
+            // Discard unsaved edits: reload the active preset as saved.
+            // For [Default] (immutable) this restores factory defaults.
+            var saved = pData.presets[pData.activePreset];
+            if (saved) applyAll(saved);
             refreshModifiedIndicator();
         };
 

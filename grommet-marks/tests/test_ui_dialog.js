@@ -151,6 +151,27 @@ console.log("--- UI: mirror flags via gatherAll ---");
     done();
 })();
 
+// ===== TEST: revert (↺) replaces Reset =====
+console.log("--- UI: revert button ---");
+(function () {
+    var ui = buildUI();
+    var w = SUI.lastWindow();
+    var resetBtns = w.find(function (c) { return c.type === "button" && c.text === "Reset"; });
+    assert(resetBtns.length === 0, "Reset button removed");
+    var revert = w.findOne(function (c) { return c.type === "button" && c.text === "↺"; });
+    assert(!!revert, "revert (↺) button exists");
+    assert(revert.enabled === false, "revert disabled when not modified");
+
+    var offX = w.findOne(function (c) { return c.type === "edittext"; });
+    offX.text = "999";
+    if (typeof offX.onChange === "function") offX.onChange();
+    assert(revert.enabled === true, "revert enabled after a change");
+
+    revert.onClick();
+    assert(ui.gatherAll().offsetX === 7, "revert restores offsetX to default 7");
+    done();
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
