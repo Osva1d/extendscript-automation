@@ -1,11 +1,14 @@
-# Architecture: Zünd & Summa Marks v26.3.2
+# Architecture: Zünd & Summa Marks v26.5.0
 
 > Copyright © 2025-2026 Ladislav Osvald (Osva1d) — licensed under GPL-3.0-or-later.
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
 >
-> **Aktuální verze:** v26.3.2 (Phase 1 patch — uvolnění `maxDist.min` na 5 mm pro 1:10 workflow).
-> Plně automatická scale-aware podpora je naplánována jako Phase 2 (v27.x).
+> **Aktuální verze:** v26.5.0 (Phase 3 — režim „Pouze značky", ořezové linky vždy do
+> samostatné top-level vrstvy „Trim", ↺ Revert, odstraněno tlačítko Reset; opravy:
+> `canonColor` normalizace registrační barvy v CZ locale, re-validace po `setUIValues`,
+> C++ crash guard při vytváření top-level vrstvy nad aktivním sublayerem).
+> Manuální měřítko 1:N přišlo v Phase 2 (v26.4.0).
 
 ---
 
@@ -213,7 +216,7 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 |--------|-------|
 | `README.md` | Uživatelská + vývojářská dokumentace |
 | `docs/ARCHITECTURE.md` | Tento technický brief |
-| `docs/TEST_PLAN_MASTER.md` | 28 testovacích případů (P0–P2) s konkrétními vstupy a měřeními |
+| `docs/MANUAL_TEST.md` | Jediný manuální test plán (deploy gate, P0/P1) |
 | `tests/test_core_math.js` | Jednotkové testy pro `ZSM.Core` (81 testů) |
 
 ---
@@ -238,5 +241,5 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 - Test coverage: 81 testů včetně BUG-1 symetrie a BUG-2 cliff-effect
 
 **Otevřené úkoly:**
-- Manuální testování dle TEST_PLAN_MASTER.md (TC-001 až TC-028)
+- Manuální testování dle docs/MANUAL_TEST.md (deploy gate P0)
 - Deploy do `Projects/extendscript-automation` po PASS na P0

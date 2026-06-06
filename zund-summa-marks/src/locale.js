@@ -53,6 +53,7 @@ ZSM.L = (function () {
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
             TIP_PRESET:         "Select a saved preset to load its settings, or pick [Last Settings] to restore the values from your last Generate run.",
+            TIP_REVERT:         "Discard unsaved changes and reload the selected preset as saved (enabled only when the preset has unsaved edits).",
             BTN_SAVE:           "Save",
             TIP_SAVE:           "Save changes to the current preset (disabled when no changes).",
             BTN_DEL:            "Delete",
@@ -65,8 +66,6 @@ ZSM.L = (function () {
             ERR_RESERVED_NAME:  "This name is reserved. Choose a different name.",
             BTN_SAVE_AS:        "Save As…",
             TIP_SAVE_AS:        "Save current settings as a new preset.",
-            BTN_RESET:          "Reset",
-            TIP_RESET:          "Reset all settings to factory defaults (active preset is preserved; click Save to commit).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
@@ -158,6 +157,7 @@ ZSM.L = (function () {
             // --- UI: Presets ---
             PRESET_LABEL:       "Předvolba:",
             TIP_PRESET:         "Vyberte uloženou předvolbu pro načtení jejích nastavení, nebo zvolte [Last Settings] pro obnovení hodnot z posledního spuštění.",
+            TIP_REVERT:         "Zahodit neuložené změny a načíst vybranou předvolbu znovu (aktivní jen když má předvolba neuložené úpravy).",
             BTN_SAVE:           "Uložit",
             TIP_SAVE:           "Uloží změny do aktuální předvolby (neaktivní, pokud nejsou žádné změny).",
             BTN_DEL:            "Smazat",
@@ -170,8 +170,6 @@ ZSM.L = (function () {
             ERR_RESERVED_NAME:  "Tento název je rezervovaný. Vyberte jiný.",
             BTN_SAVE_AS:        "Uložit jako…",
             TIP_SAVE_AS:        "Uložit aktuální nastavení jako novou předvolbu.",
-            BTN_RESET:          "Reset",
-            TIP_RESET:          "Obnoví všechna nastavení na výchozí hodnoty (aktivní předvolba zůstává; klikněte Uložit pro potvrzení).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",

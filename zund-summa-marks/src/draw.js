@@ -301,12 +301,14 @@ ZSM.Draw = {
                 }
             }
 
-            // 7. Trim lines + (normal mode only) name the artwork layer "Graphics".
-            //    MARKS-ONLY: never touch the user's layers — draw trim into the
-            //    script's own Regmarks layer and skip the rename/lock/z-order.
-            if (s.marksOnly) {
-                this._drawTrim(reg, geo.red);
-            } else {
+            // 7a. Trim lines → always a DEDICATED top-level "Trim" layer (both
+            //     modes). Never Regmarks (would collide with mark reading) nor a
+            //     cut layer — and consistent placement regardless of mode.
+            this._drawTrimTopLevel(geo.red);
+
+            // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
+            //     Skipped in marks-only (user's layers are left untouched).
+            if (!s.marksOnly) {
                 // Assumption: the bottom-most layer is the user's artwork layer.
                 var gfxLayer = doc.layers[doc.layers.length - 1];
                 if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
@@ -336,7 +338,6 @@ ZSM.Draw = {
                             ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
                         }
                     }
-                    this._drawTrim(gfxLayer, geo.red);
                 }
             }
 
@@ -355,37 +356,58 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
 
     /**
-     * Draws (or refreshes) the red trim-line "Trim" sublayer inside the given
-     * parent layer. Removes any previous "Trim" sublayer first to prevent
-     * accumulation across runs. No-op when there are no trim lines. Shared by
-     * normal mode (trim → Graphics) and marks-only mode (trim → Regmarks).
-     * @param {Layer} parentLayer - Layer to host the Trim sublayer.
-     * @param {Array}  redLines    - geo.red entries ({x1,y1,x2,y2,w}).
+     * Draws the red trim lines into a DEDICATED top-level "Trim" layer — never
+     * into Regmarks (would collide with mark reading) nor into a cut layer.
+     * Same placement in both normal and marks-only mode (consistent for the
+     * operator). Refreshes the layer if it already exists (idempotent re-runs).
+     * No-op when there are no trim lines.
+     * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
      * @private
      */
-    _drawTrim: function (parentLayer, redLines) {
+    _drawTrimTopLevel: function (redLines) {
         if (!redLines || redLines.length === 0) return;
         var doc = app.activeDocument;
-        // Remove previous Trim sublayer (deselect + unlock/unhide first — removing
-        // a locked/hidden/selected layer can crash AI at C++ level).
-        var trimRemoved = false;
-        try {
-            var oldTrim = parentLayer.layers.getByName("Trim");
-            try { doc.selection = null; } catch (ds2) {}
-            try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
-            oldTrim.remove();
-            trimRemoved = true;
-        } catch (e) { /* no previous Trim — first run */ }
-        if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }  // commit before add
+        // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
+        // at a SUBLAYER (the mode sublayer). Calling doc.layers.add() to create a
+        // TOP-LEVEL layer while a sublayer is active crashes Illustrator at the
+        // C++ level. Reset the active layer to a top-level layer, clear selection,
+        // and commit pending mutations BEFORE any structural change.
+        try { doc.selection = null; } catch (e1) {}
+        try { if (doc.layers.length > 0) doc.activeLayer = doc.layers[0]; } catch (e2) {}
+        try { app.redraw(); } catch (e3) {}
 
-        var trimLayer = parentLayer.layers.add();
-        trimLayer.name = "Trim";
+        var trimLayer = null;
+        try { trimLayer = doc.layers.getByName("Trim"); } catch (e) { trimLayer = null; }
+        if (trimLayer) {
+            try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
+            this._clearLayer(trimLayer);          // refresh — drop old trim lines
+            try { app.redraw(); } catch (rd) {}
+        } else {
+            try {
+                trimLayer = doc.layers.add();
+                trimLayer.name = "Trim";
+                try { app.redraw(); } catch (rd2) {}   // commit layer creation
+            } catch (eAdd) {
+                ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
+                return;
+            }
+        }
+        this._paintRedLines(trimLayer, redLines);
+    },
+
+    /**
+     * Draws red trim lines as direct children of the given layer.
+     * @param {Layer} layer    - Host layer.
+     * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @private
+     */
+    _paintRedLines: function (layer, redLines) {
         var redColor = new CMYKColor();
         redColor.magenta = 100;
         redColor.yellow  = 100;
         for (var r = 0; r < redLines.length; r++) {
             try {
-                var line = trimLayer.pathItems.add();
+                var line = layer.pathItems.add();
                 line.setEntirePath([
                     [redLines[r].x1, redLines[r].y1],
                     [redLines[r].x2, redLines[r].y2]

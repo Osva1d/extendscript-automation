@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Zund & Summa Marks
- * Version:     26.4.0
+ * Version:     26.5.0
  * Author:      Osva1d
- * Updated:     2026-06-04
+ * Updated:     2026-06-06
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -229,6 +229,7 @@ ZSM.L = (function () {
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
             TIP_PRESET:         "Select a saved preset to load its settings, or pick [Last Settings] to restore the values from your last Generate run.",
+            TIP_REVERT:         "Discard unsaved changes and reload the selected preset as saved (enabled only when the preset has unsaved edits).",
             BTN_SAVE:           "Save",
             TIP_SAVE:           "Save changes to the current preset (disabled when no changes).",
             BTN_DEL:            "Delete",
@@ -241,8 +242,6 @@ ZSM.L = (function () {
             ERR_RESERVED_NAME:  "This name is reserved. Choose a different name.",
             BTN_SAVE_AS:        "Save As…",
             TIP_SAVE_AS:        "Save current settings as a new preset.",
-            BTN_RESET:          "Reset",
-            TIP_RESET:          "Reset all settings to factory defaults (active preset is preserved; click Save to commit).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
@@ -334,6 +333,7 @@ ZSM.L = (function () {
             // --- UI: Presets ---
             PRESET_LABEL:       "Předvolba:",
             TIP_PRESET:         "Vyberte uloženou předvolbu pro načtení jejích nastavení, nebo zvolte [Last Settings] pro obnovení hodnot z posledního spuštění.",
+            TIP_REVERT:         "Zahodit neuložené změny a načíst vybranou předvolbu znovu (aktivní jen když má předvolba neuložené úpravy).",
             BTN_SAVE:           "Uložit",
             TIP_SAVE:           "Uloží změny do aktuální předvolby (neaktivní, pokud nejsou žádné změny).",
             BTN_DEL:            "Smazat",
@@ -346,8 +346,6 @@ ZSM.L = (function () {
             ERR_RESERVED_NAME:  "Tento název je rezervovaný. Vyberte jiný.",
             BTN_SAVE_AS:        "Uložit jako…",
             TIP_SAVE_AS:        "Uložit aktuální nastavení jako novou předvolbu.",
-            BTN_RESET:          "Reset",
-            TIP_RESET:          "Obnoví všechna nastavení na výchozí hodnoty (aktivní předvolba zůstává; klikněte Uložit pro potvrzení).",
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",
@@ -865,7 +863,7 @@ ZSM.Config = {
     // KEEP IN SYNC with package.json "version" — build.sh reads package.json
     // for the dist header; this constant is the runtime source of truth
     // for the dialog title, footer copyright, and any in-script "About" UI.
-    version:    "26.4.0",
+    version:    "26.5.0",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 
@@ -1910,12 +1908,14 @@ ZSM.Draw = {
                 }
             }
 
-            // 7. Trim lines + (normal mode only) name the artwork layer "Graphics".
-            //    MARKS-ONLY: never touch the user's layers — draw trim into the
-            //    script's own Regmarks layer and skip the rename/lock/z-order.
-            if (s.marksOnly) {
-                this._drawTrim(reg, geo.red);
-            } else {
+            // 7a. Trim lines → always a DEDICATED top-level "Trim" layer (both
+            //     modes). Never Regmarks (would collide with mark reading) nor a
+            //     cut layer — and consistent placement regardless of mode.
+            this._drawTrimTopLevel(geo.red);
+
+            // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
+            //     Skipped in marks-only (user's layers are left untouched).
+            if (!s.marksOnly) {
                 // Assumption: the bottom-most layer is the user's artwork layer.
                 var gfxLayer = doc.layers[doc.layers.length - 1];
                 if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
@@ -1945,7 +1945,6 @@ ZSM.Draw = {
                             ZSM.Utils.log("render: zOrder SENDTOBACK failed — " + zo2.message);
                         }
                     }
-                    this._drawTrim(gfxLayer, geo.red);
                 }
             }
 
@@ -1964,37 +1963,58 @@ ZSM.Draw = {
     // -------------------------------------------------------------------------
 
     /**
-     * Draws (or refreshes) the red trim-line "Trim" sublayer inside the given
-     * parent layer. Removes any previous "Trim" sublayer first to prevent
-     * accumulation across runs. No-op when there are no trim lines. Shared by
-     * normal mode (trim → Graphics) and marks-only mode (trim → Regmarks).
-     * @param {Layer} parentLayer - Layer to host the Trim sublayer.
-     * @param {Array}  redLines    - geo.red entries ({x1,y1,x2,y2,w}).
+     * Draws the red trim lines into a DEDICATED top-level "Trim" layer — never
+     * into Regmarks (would collide with mark reading) nor into a cut layer.
+     * Same placement in both normal and marks-only mode (consistent for the
+     * operator). Refreshes the layer if it already exists (idempotent re-runs).
+     * No-op when there are no trim lines.
+     * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
      * @private
      */
-    _drawTrim: function (parentLayer, redLines) {
+    _drawTrimTopLevel: function (redLines) {
         if (!redLines || redLines.length === 0) return;
         var doc = app.activeDocument;
-        // Remove previous Trim sublayer (deselect + unlock/unhide first — removing
-        // a locked/hidden/selected layer can crash AI at C++ level).
-        var trimRemoved = false;
-        try {
-            var oldTrim = parentLayer.layers.getByName("Trim");
-            try { doc.selection = null; } catch (ds2) {}
-            try { oldTrim.locked = false; oldTrim.visible = true; } catch (eu) {}
-            oldTrim.remove();
-            trimRemoved = true;
-        } catch (e) { /* no previous Trim — first run */ }
-        if (trimRemoved) { try { app.redraw(); } catch (rd4) {} }  // commit before add
+        // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
+        // at a SUBLAYER (the mode sublayer). Calling doc.layers.add() to create a
+        // TOP-LEVEL layer while a sublayer is active crashes Illustrator at the
+        // C++ level. Reset the active layer to a top-level layer, clear selection,
+        // and commit pending mutations BEFORE any structural change.
+        try { doc.selection = null; } catch (e1) {}
+        try { if (doc.layers.length > 0) doc.activeLayer = doc.layers[0]; } catch (e2) {}
+        try { app.redraw(); } catch (e3) {}
 
-        var trimLayer = parentLayer.layers.add();
-        trimLayer.name = "Trim";
+        var trimLayer = null;
+        try { trimLayer = doc.layers.getByName("Trim"); } catch (e) { trimLayer = null; }
+        if (trimLayer) {
+            try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
+            this._clearLayer(trimLayer);          // refresh — drop old trim lines
+            try { app.redraw(); } catch (rd) {}
+        } else {
+            try {
+                trimLayer = doc.layers.add();
+                trimLayer.name = "Trim";
+                try { app.redraw(); } catch (rd2) {}   // commit layer creation
+            } catch (eAdd) {
+                ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
+                return;
+            }
+        }
+        this._paintRedLines(trimLayer, redLines);
+    },
+
+    /**
+     * Draws red trim lines as direct children of the given layer.
+     * @param {Layer} layer    - Host layer.
+     * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @private
+     */
+    _paintRedLines: function (layer, redLines) {
         var redColor = new CMYKColor();
         redColor.magenta = 100;
         redColor.yellow  = 100;
         for (var r = 0; r < redLines.length; r++) {
             try {
-                var line = trimLayer.pathItems.add();
+                var line = layer.pathItems.add();
                 line.setEntirePath([
                     [redLines[r].x1, redLines[r].y1],
                     [redLines[r].x2, redLines[r].y2]
@@ -2459,6 +2479,15 @@ ZSM.UI = {
         ddPreset.alignment = ["fill", "center"];
         ddPreset.helpTip = l.TIP_PRESET;
 
+        // Revert (↺) — reload the active preset as saved, discarding unsaved
+        // edits. Sits right next to the preset it reverts; enabled only when the
+        // preset has unsaved changes (gated in refreshModifiedIndicator). Distinct
+        // from Reset (which loads factory defaults).
+        var btnRevert = grpPresetTop.add("button", undefined, "↺");
+        btnRevert.preferredSize = [30, 24];
+        btnRevert.alignment = ["right", "center"];
+        btnRevert.helpTip = l.TIP_REVERT;
+
         // Row 2: action buttons (right-aligned)
         var grpPresetBtns = pPreset.add("group");
         grpPresetBtns.alignment = ["right", "top"];
@@ -2812,18 +2841,12 @@ ZSM.UI = {
             "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
         stCopy.enabled = false;
 
+        // Cancel (left) | Generate (right), right-aligned. Factory defaults are
+        // reachable by selecting [Default] in the preset dropdown; reverting a
+        // preset's edits is the ↺ button — so no separate Reset button.
         var grpButtons = w.add("group");
-        grpButtons.alignment = ["fill", "center"];
+        grpButtons.alignment = ["right", "center"];
         grpButtons.spacing   = 8;
-
-        // Reset is left-aligned (secondary, less commonly used)
-        var btnReset = grpButtons.add("button", undefined, l.BTN_RESET);
-        btnReset.helpTip = l.TIP_RESET;
-        btnReset.alignment = ["left", "center"];
-
-        // Spacer pushes Cancel/Generate to the right edge
-        var grpFooterSpacer = grpButtons.add("group");
-        grpFooterSpacer.alignment = ["fill", "fill"];
 
         var btnCan = grpButtons.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         btnCan.helpTip = l.TIP_CANCEL;
@@ -2840,6 +2863,26 @@ ZSM.UI = {
         }
 
         /**
+         * Normalise a colour read from a dropdown back to the canonical
+         * "[Registration]" token. selectDDL's registration alias selects the
+         * document's LOCALIZED registration swatch (e.g. CS "[Registrace]"), so
+         * ddlValue reads that localized name back — but presets store the
+         * canonical English token. Without this, a localized Illustrator would
+         * see every registration colour as "changed" (a permanent "*" on every
+         * preset, including [Default]). Maps the localized reg name → canonical;
+         * leaves all other swatch names untouched.
+         */
+        function canonColor(name) {
+            if (!name) return name;
+            var regName;
+            try {
+                regName = (ZSM.Draw && ZSM.Draw.getRegistrationName)
+                    ? ZSM.Draw.getRegistrationName() : "[Registration]";
+            } catch (e) { regName = "[Registration]"; }
+            return (name === regName) ? "[Registration]" : name;
+        }
+
+        /**
          * Reads current UI state into a flat settings object.
          * Only reads controls that exist in the current mode;
          * missing-mode values are preserved from the previous preset.
@@ -2848,10 +2891,10 @@ ZSM.UI = {
             var prev = pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var cSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
+                var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
             }
-            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
+            var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
             return {
                 mode:              mode,
@@ -2953,6 +2996,14 @@ ZSM.UI = {
                 w.layout.layout(true);
                 w.size.height = w.preferredSize.height + 10;
             } catch (e) {}
+
+            // Re-run live validation after a programmatic value change. setUIValues
+            // sets .text directly, which does NOT fire the edittext onChange that
+            // normally drives validation — so without this, a stale "invalid" red +
+            // disabled Generate button would persist after Reset / Revert / preset
+            // switch even though the freshly-loaded values are valid (the dialog
+            // looked permanently broken). No-op during the initial build (guarded).
+            liveValidateAll();
         }
 
         // =================================================================
@@ -2988,7 +3039,8 @@ ZSM.UI = {
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
-            try { btnSave.enabled = modified; } catch (e) {}
+            try { btnSave.enabled   = modified; } catch (e) {}
+            try { btnRevert.enabled = modified; } catch (e) {}
 
             if (!ddPreset.selection) return;
             var idx = ddPreset.selection.index;
@@ -3101,18 +3153,16 @@ ZSM.UI = {
         };
 
         /**
-         * Reset = load factory defaults into UI, but keep activePreset pointer.
-         * Modified indicator will show * (unless on [Default]).
-         * User can then click Save to commit defaults to current preset, or
-         * Save As to create a new preset, or Cancel to discard.
-         * Does NOT persist — same as any other UI change.
+         * Revert = reload the ACTIVE preset's saved values, discarding the
+         * current unsaved UI edits. Distinct from Reset (factory defaults):
+         * Revert restores exactly what the selected preset holds on disk, so the
+         * user can undo experimental edits without re-picking the preset. Enabled
+         * only when modified (see refreshModifiedIndicator). Does NOT persist.
          */
-        btnReset.onClick = function () {
-            var defaults = c.getDefaults();
-            // Preserve current mode in defaults (so Reset doesn't switch dialog)
-            defaults.mode = mode;
-            setUIValues(defaults);
-            // Re-wire layer rows that setUIValues just rebuilt
+        btnRevert.onClick = function () {
+            var preset = pData.presets[pData.activePreset];
+            if (!preset) return;
+            setUIValues(preset);
             wireLayerRows();
             refreshModifiedIndicator();
         };
@@ -3153,7 +3203,7 @@ ZSM.UI = {
             // Collect raw UI values (everything as written by user, no validation yet)
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var colorSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
+                var colorSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
 
@@ -3171,7 +3221,7 @@ ZSM.UI = {
                 }
             }
 
-            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
+            var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
             var raw = {
                 mode:              mode,
@@ -3279,14 +3329,29 @@ ZSM.UI = {
             try {
                 var g = et.graphics;
                 if (!g || !g.newPen) return;
-                var color = valid
-                    ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
-                    : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
-                g.foregroundColor = color;
+                // Capture the field's DEFAULT foreground pen once (after graphics
+                // is realised). "Valid" must restore that theme default — forcing
+                // black [0,0,0] is wrong on Illustrator's dark UI (text vanishes)
+                // and visually fails to clear the red. Light-grey is a safe
+                // fallback if the default pen can't be read.
+                if (et._zsmDefPen === undefined) {
+                    et._zsmDefPen = g.foregroundColor || null;
+                }
+                if (valid) {
+                    g.foregroundColor = et._zsmDefPen
+                        ? et._zsmDefPen
+                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
+                } else {
+                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
+                }
             } catch (e) { /* graphics not ready or unsupported — ignored */ }
         }
 
         function liveValidateAll() {
+            // numericRows is assigned below this function in source order; the
+            // initial setUIValues() call (during dialog build) runs before that,
+            // so guard against the not-yet-wired state — it re-runs after init.
+            if (!numericRows) return true;
             var allValid = true;
             for (var i = 0; i < numericRows.length; i++) {
                 var nr = numericRows[i];

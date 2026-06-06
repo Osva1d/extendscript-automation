@@ -6,7 +6,7 @@
  * with mutation tracking. Tests verify:
  *   - render() doesn't throw on edge cases
  *   - Correct number of mark items created (Zünd circles, Summa squares)
- *   - Correct sublayer structure (Regmarks/Zünd, Regmarks/Summa, Graphics/Trim)
+ *   - Correct sublayer structure (Regmarks/Zünd, Regmarks/Summa) + top-level Trim
  *   - Mode-specific sublayer cleanup (Zünd run removes Zünd sub, preserves Summa)
  *   - Bottom-most layer renamed to Graphics
  *   - Coordinate validation prevents creation beyond AI's 16383pt limit
@@ -305,9 +305,11 @@ assert(zundSub !== null, "Legacy: Zünd sublayer created after cleanup");
 
 
 // =====================================================
-// TEST 8: drawRed = true → trim lines added
+// TEST 8: drawRed = true → trim lines in a top-level "Trim" layer
 // =====================================================
-console.log("\n=== TEST 8: Trim lines on Graphics ===");
+// Trim is now ALWAYS a dedicated top-level "Trim" layer (both modes), never a
+// Graphics/Trim sublayer — consistent placement, out of Regmarks and cut layers.
+console.log("\n=== TEST 8: Trim lines in top-level 'Trim' layer ===");
 doc = setupDoc({
     layers: [{ name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
 });
@@ -316,18 +318,19 @@ bounds = ZSM.Draw.getBounds(settings);
 geo = ZSM.Core.calculateAll(settings, bounds);
 ZSM.Draw.render(geo, settings);
 
-var graphicsLayer = findLayer(doc, "Graphics");
-assert(graphicsLayer !== null, "drawRed: Graphics layer exists");
-var trimSub = graphicsLayer ? findSublayer(graphicsLayer, "Trim") : null;
-assert(trimSub !== null, "drawRed: Trim sublayer created");
-var trimCount = trimSub ? countItems(trimSub, "PathItem") : 0;
+var trimLayer = findLayer(doc, "Trim");
+assert(trimLayer !== null, "drawRed: top-level 'Trim' layer created");
+var trimCount = trimLayer ? countItems(trimLayer, "PathItem") : 0;
 assertEq(trimCount, 2, "drawRed: 2 trim lines (top + bottom)");
+var graphicsLayer = findLayer(doc, "Graphics");
+assert(!graphicsLayer || findSublayer(graphicsLayer, "Trim") === null,
+    "drawRed: NO Trim sublayer inside Graphics (trim is top-level now)");
 
 
 // =====================================================
-// TEST 9: drawRed = false → no Trim sublayer
+// TEST 9: drawRed = false → no Trim layer at all
 // =====================================================
-console.log("\n=== TEST 9: No trim lines when drawRed=false ===");
+console.log("\n=== TEST 9: No trim layer when drawRed=false ===");
 doc = setupDoc({
     layers: [{ name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
 });
@@ -336,9 +339,7 @@ bounds = ZSM.Draw.getBounds(settings);
 geo = ZSM.Core.calculateAll(settings, bounds);
 ZSM.Draw.render(geo, settings);
 
-graphicsLayer = findLayer(doc, "Graphics");
-trimSub = graphicsLayer ? findSublayer(graphicsLayer, "Trim") : null;
-assert(trimSub === null, "drawRed=false: no Trim sublayer");
+assert(findLayer(doc, "Trim") === null, "drawRed=false: no 'Trim' layer");
 
 
 // =====================================================
@@ -628,6 +629,29 @@ assert(findLayer(docMO, "Art") !== null,
     "marks-only: user layer 'Art' left intact");
 assert(findLayer(docMO, "Graphics") === null,
     "marks-only: §7 rename skipped — 'Art' not renamed to 'Graphics'");
+
+
+// =====================================================
+// TEST 20 (Phase 3, bug E): marks-only SUMMA trim → dedicated top-level "Trim"
+// =====================================================
+// The red trim lines must NOT land in Regmarks (would collide with mark reading)
+// nor in any cut layer — they go into their own top-level "Trim" layer.
+console.log("\n=== TEST 20 (bug E): marks-only SUMMA trim is a top-level layer, not in Regmarks ===");
+var docMT = setupDoc({
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
+});
+var sMT = makeSettings({ mode: "SUMMA", marksOnly: true, drawRed: true });
+var bMT = ZSM.Draw.getBounds(sMT);
+var gMT = ZSM.Core.calculateAll(sMT, bMT);
+assert(gMT.red.length > 0, "precondition: SUMMA drawRed produced trim lines");
+ZSM.Draw.render(gMT, sMT);
+
+var trimTop = findLayer(docMT, "Trim");
+var regMT   = findLayer(docMT, "Regmarks");
+assert(trimTop !== null && countItems(trimTop, "PathItem") >= 1,
+    "marks-only SUMMA: trim lines in a top-level 'Trim' layer");
+assert(regMT === null || findSublayer(regMT, "Trim") === null,
+    "marks-only SUMMA: NO 'Trim' sublayer inside Regmarks (bug E fixed)");
 
 
 // =====================================================

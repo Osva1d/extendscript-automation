@@ -106,6 +106,15 @@ ZSM.UI = {
         ddPreset.alignment = ["fill", "center"];
         ddPreset.helpTip = l.TIP_PRESET;
 
+        // Revert (↺) — reload the active preset as saved, discarding unsaved
+        // edits. Sits right next to the preset it reverts; enabled only when the
+        // preset has unsaved changes (gated in refreshModifiedIndicator). Distinct
+        // from Reset (which loads factory defaults).
+        var btnRevert = grpPresetTop.add("button", undefined, "↺");
+        btnRevert.preferredSize = [30, 24];
+        btnRevert.alignment = ["right", "center"];
+        btnRevert.helpTip = l.TIP_REVERT;
+
         // Row 2: action buttons (right-aligned)
         var grpPresetBtns = pPreset.add("group");
         grpPresetBtns.alignment = ["right", "top"];
@@ -459,18 +468,12 @@ ZSM.UI = {
             "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
         stCopy.enabled = false;
 
+        // Cancel (left) | Generate (right), right-aligned. Factory defaults are
+        // reachable by selecting [Default] in the preset dropdown; reverting a
+        // preset's edits is the ↺ button — so no separate Reset button.
         var grpButtons = w.add("group");
-        grpButtons.alignment = ["fill", "center"];
+        grpButtons.alignment = ["right", "center"];
         grpButtons.spacing   = 8;
-
-        // Reset is left-aligned (secondary, less commonly used)
-        var btnReset = grpButtons.add("button", undefined, l.BTN_RESET);
-        btnReset.helpTip = l.TIP_RESET;
-        btnReset.alignment = ["left", "center"];
-
-        // Spacer pushes Cancel/Generate to the right edge
-        var grpFooterSpacer = grpButtons.add("group");
-        grpFooterSpacer.alignment = ["fill", "fill"];
 
         var btnCan = grpButtons.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         btnCan.helpTip = l.TIP_CANCEL;
@@ -487,6 +490,26 @@ ZSM.UI = {
         }
 
         /**
+         * Normalise a colour read from a dropdown back to the canonical
+         * "[Registration]" token. selectDDL's registration alias selects the
+         * document's LOCALIZED registration swatch (e.g. CS "[Registrace]"), so
+         * ddlValue reads that localized name back — but presets store the
+         * canonical English token. Without this, a localized Illustrator would
+         * see every registration colour as "changed" (a permanent "*" on every
+         * preset, including [Default]). Maps the localized reg name → canonical;
+         * leaves all other swatch names untouched.
+         */
+        function canonColor(name) {
+            if (!name) return name;
+            var regName;
+            try {
+                regName = (ZSM.Draw && ZSM.Draw.getRegistrationName)
+                    ? ZSM.Draw.getRegistrationName() : "[Registration]";
+            } catch (e) { regName = "[Registration]"; }
+            return (name === regName) ? "[Registration]" : name;
+        }
+
+        /**
          * Reads current UI state into a flat settings object.
          * Only reads controls that exist in the current mode;
          * missing-mode values are preserved from the previous preset.
@@ -495,10 +518,10 @@ ZSM.UI = {
             var prev = pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var cSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
+                var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
             }
-            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
+            var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
             return {
                 mode:              mode,
@@ -600,6 +623,14 @@ ZSM.UI = {
                 w.layout.layout(true);
                 w.size.height = w.preferredSize.height + 10;
             } catch (e) {}
+
+            // Re-run live validation after a programmatic value change. setUIValues
+            // sets .text directly, which does NOT fire the edittext onChange that
+            // normally drives validation — so without this, a stale "invalid" red +
+            // disabled Generate button would persist after Reset / Revert / preset
+            // switch even though the freshly-loaded values are valid (the dialog
+            // looked permanently broken). No-op during the initial build (guarded).
+            liveValidateAll();
         }
 
         // =================================================================
@@ -635,7 +666,8 @@ ZSM.UI = {
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
-            try { btnSave.enabled = modified; } catch (e) {}
+            try { btnSave.enabled   = modified; } catch (e) {}
+            try { btnRevert.enabled = modified; } catch (e) {}
 
             if (!ddPreset.selection) return;
             var idx = ddPreset.selection.index;
@@ -748,18 +780,16 @@ ZSM.UI = {
         };
 
         /**
-         * Reset = load factory defaults into UI, but keep activePreset pointer.
-         * Modified indicator will show * (unless on [Default]).
-         * User can then click Save to commit defaults to current preset, or
-         * Save As to create a new preset, or Cancel to discard.
-         * Does NOT persist — same as any other UI change.
+         * Revert = reload the ACTIVE preset's saved values, discarding the
+         * current unsaved UI edits. Distinct from Reset (factory defaults):
+         * Revert restores exactly what the selected preset holds on disk, so the
+         * user can undo experimental edits without re-picking the preset. Enabled
+         * only when modified (see refreshModifiedIndicator). Does NOT persist.
          */
-        btnReset.onClick = function () {
-            var defaults = c.getDefaults();
-            // Preserve current mode in defaults (so Reset doesn't switch dialog)
-            defaults.mode = mode;
-            setUIValues(defaults);
-            // Re-wire layer rows that setUIValues just rebuilt
+        btnRevert.onClick = function () {
+            var preset = pData.presets[pData.activePreset];
+            if (!preset) return;
+            setUIValues(preset);
             wireLayerRows();
             refreshModifiedIndicator();
         };
@@ -800,7 +830,7 @@ ZSM.UI = {
             // Collect raw UI values (everything as written by user, no validation yet)
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
-                var colorSel = ZSM.UI.ddlValue(layRows[i].ddColor) || "[Registration]";
+                var colorSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
                 layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
             }
 
@@ -818,7 +848,7 @@ ZSM.UI = {
                 }
             }
 
-            var markColorSel = ZSM.UI.ddlValue(rColor.ddl) || "[Registration]";
+            var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
             var raw = {
                 mode:              mode,
@@ -926,14 +956,29 @@ ZSM.UI = {
             try {
                 var g = et.graphics;
                 if (!g || !g.newPen) return;
-                var color = valid
-                    ? g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1.0], 1)
-                    : g.newPen(g.PenType.SOLID_COLOR, [0.85, 0.0, 0.0, 1.0], 1);
-                g.foregroundColor = color;
+                // Capture the field's DEFAULT foreground pen once (after graphics
+                // is realised). "Valid" must restore that theme default — forcing
+                // black [0,0,0] is wrong on Illustrator's dark UI (text vanishes)
+                // and visually fails to clear the red. Light-grey is a safe
+                // fallback if the default pen can't be read.
+                if (et._zsmDefPen === undefined) {
+                    et._zsmDefPen = g.foregroundColor || null;
+                }
+                if (valid) {
+                    g.foregroundColor = et._zsmDefPen
+                        ? et._zsmDefPen
+                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
+                } else {
+                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
+                }
             } catch (e) { /* graphics not ready or unsupported — ignored */ }
         }
 
         function liveValidateAll() {
+            // numericRows is assigned below this function in source order; the
+            // initial setUIValues() call (during dialog build) runs before that,
+            // so guard against the not-yet-wired state — it re-runs after init.
+            if (!numericRows) return true;
             var allValid = true;
             for (var i = 0; i < numericRows.length; i++) {
                 var nr = numericRows[i];

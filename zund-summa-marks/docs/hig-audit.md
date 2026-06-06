@@ -1,7 +1,7 @@
-# HIG Audit — ZSM Dialog (v26.4.0)
+# HIG Audit — ZSM Dialog (v26.5.0)
 
-**Stav:** Aktuální pro v26.4.0 (květen 2026)
-**Změny v UI od v26.3.2:** přidán checkbox „Pracovat v měřítku" + pole 1:N v panelu technologie (Phase 2); tlačítko Cancel přejmenováno na „Storno"; mazání předvolby vyžaduje potvrzovací dialog; barva/vrstva chybějící v dokumentu se v dropdownu zobrazí jako „… (chybí)". Základní layout (šířky, marginy, pořadí panelů, Cancel-left / OK-right) beze změny.
+**Stav:** Aktuální pro v26.5.0 (červen 2026)
+**Změny v UI od v26.4.0:** přidán checkbox „Pouze značky (neměnit vrstvy)" v panelu mapování; tlačítko **↺ Revert** vedle dropdownu předvoleb (návrat k uloženým hodnotám); **odstraněno tlačítko Reset** (footer je nyní jen Storno + Generovat, zarovnáno vpravo). Základní layout (šířky, marginy, pořadí panelů, Cancel-left / OK-right) beze změny.
 **Auditor:** Automated assertions in `tests/test_ui_layout.js` + manual review
 
 Tento dokument definuje **závazné konvence vizuálního layoutu** pro ScriptUI dialog skriptu Zünd & Summa Marks. Každá položka je buď automaticky vynucena testem (📋 viz `tests/test_ui_layout.js`), nebo platí jako review-checklist.
@@ -47,20 +47,18 @@ Každý panel ohraničuje logickou skupinu nastavení. Pořadí v dialogu (shora
 ## 3. Footer (akční tlačítka)
 
 ```
-[Reset]                                 [Cancel] [Generate]
+                                        [Storno] [Generovat]
 ```
 
 | Tlačítko | Vlastnost | Hodnota | Kde vynuceno |
 |----------|-----------|---------|--------------|
-| Reset | text | `l.BTN_RESET` | TEST 3 |
-| Reset | alignment | `["left", "center"]` | TEST 3 (HIG: destructive separation) |
 | Cancel | name | `"cancel"` | TEST 3 (ScriptUI binding for Esc key) |
-| Cancel | text | `l.BTN_CANCEL` | manuál |
+| Cancel | text | `l.BTN_CANCEL` („Storno") | manuál |
 | Generate | name | `"ok"` | TEST 3 (ScriptUI binding for Enter key) |
 | Generate | text | `l.BTN_OK` | manuál |
-| Order | OK after Cancel (sibling index) | TEST 3 |
+| Order | OK after Cancel (sibling index), zarovnáno vpravo | TEST 3 |
 
-**HIG rationale:** Adobe konvence — destructive akce (Reset) je vlevo, oddělená od primárních (Cancel/OK), aby uživatel omylem neresetoval místo zrušení dialogu. OK musí být **vpravo od** Cancel — z toho vyplývá pořadí konstrukce v `grpButtons.add()`.
+**HIG rationale:** OK musí být **vpravo od** Cancel — z toho vyplývá pořadí konstrukce v `grpButtons.add()`. Tlačítko **Reset bylo odstraněno (v26.5.0)** — tovární hodnoty se načtou výběrem `[Výchozí]` v dropdownu předvoleb, návrat k uloženým hodnotám předvolby řeší ↺ Revert vedle dropdownu. Footer tak obsahuje jen Storno + Generovat.
 
 ---
 

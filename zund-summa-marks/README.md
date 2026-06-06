@@ -80,7 +80,7 @@ zund-summa-marks/
 │   └── illustrator-zund-summa-marks.jsx   # Build output (single file)
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   └── TEST_PLAN_MASTER.md
+│   └── MANUAL_TEST.md
 ├── tests/
 │   └── test_core_math.js
 ├── tools/
@@ -221,11 +221,21 @@ Skript automaticky migruje starší formáty:
 
 Jednotkové testy pro `ZSM.Core` (pure math): `tests/test_core_math.js`
 
-Manuální testy: viz `docs/TEST_PLAN_MASTER.md`
+Manuální testy: viz `docs/MANUAL_TEST.md`
 
 ---
 
 ## Changelog
+
+### v26.5.0 (2026-06) — Phase 3: pouze značky + UI polish + crash fix
+- **Feat:** Režim **„Pouze značky (neměnit vrstvy)"** — pro dokumenty s už separovanými vrstvami. Vykreslí jen značky, uživatelské vrstvy nechá beze změny (žádný přesun cest, žádné přejmenování na „Graphics").
+- **Feat:** Tlačítko **↺ Revert** vedle dropdownu předvoleb — vrátí aktivní předvolbu na uložené hodnoty (aktivní jen při neuložených změnách). Odlišné od továrních hodnot.
+- **Change:** Ořezové linky (SUMMA) jdou nově **vždy do samostatné top-level vrstvy „Trim"** (oba režimy) — mimo Regmarks i cut vrstvy, konzistentní umístění.
+- **Change:** Tlačítko **Reset odstraněno** — tovární hodnoty se načtou výběrem `[Výchozí]` v dropdownu, návrat k předvolbě řeší ↺. Footer je nyní jen `Storno` + `Generovat`.
+- **Fix (kritický, CZ locale):** Falešná `*` u každé předvolby s registrační barvou — `selectDDL` v české lokalizaci četl zpět „[Registrace]" místo kanonického „[Registration]". Nové `canonColor()` normalizuje čtení barev → `*` jen při skutečné změně.
+- **Fix (kritický):** Po zadání neplatné hodnoty zůstávalo pole červené a `Generovat` vypnutý i po opravě / Reset / Revert (zaseknutý dialog) — `setUIValues` nově spouští re-validaci; „valid" stav obnoví výchozí barvu místo černé (čitelné na tmavém theme).
+- **Fix (kritický, C++ crash):** Vytváření top-level vrstvy „Trim", když byl aktivní sublayer (z kreslení značek), shazovalo celý Illustrator. Reset `activeLayer` na top-level + commit před `doc.layers.add()`.
+- Testy: 13 suites (přidány regresní testy marks-only, marks-only SUMMA trim → top-level „Trim", trim placement).
 
 ### v26.4.0 (2026-05) — Phase 2: manuální měřítko + review-round hardening
 - **Feat:** Manuální měřítko 1:N (`scaleN`, rozsah 1–10) — checkbox „Pracovat v měřítku" + pole v panelu technologie. `ZSM.Utils.getEffectiveSF()` skládá Large Canvas `scaleFactor` × `scaleN` a používá ho **core.js i draw.js** (oprava: dříve draw.js škáloval pozice, ale ne velikost značek → značky se v 1:10 nezmenšily). Titulek dialogu ukazuje „— 1:N".

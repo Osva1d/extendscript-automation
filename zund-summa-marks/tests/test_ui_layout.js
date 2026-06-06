@@ -68,7 +68,7 @@ ZSM.L = {
     TIP_ORIENT_DIST: "tip", TIP_FEED_TOP: "tip", TIP_FEED_BOT: "tip", TIP_DRAW_RED: "tip",
     TIP_LAY_COLOR: "tip", TIP_LAY_NAME: "tip", TIP_BTN_REMOVE: "tip", TIP_BTN_ADD: "tip",
     TIP_SAVE: "tip", TIP_SAVE_AS: "tip", TIP_DEL: "tip", TIP_RESET: "tip",
-    TIP_OK: "tip", TIP_CANCEL: "tip", TIP_PRESET: "tip",
+    TIP_OK: "tip", TIP_CANCEL: "tip", TIP_PRESET: "tip", TIP_REVERT: "tip",
     DEF_CUT: "Cut", DEF_KISS: "Kiss-cut",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -168,23 +168,18 @@ for (var i = 0; i < panels.length; i++) {
 
 
 // =====================================================
-// TEST 3: Footer button order — Reset left, Cancel/OK right
+// TEST 3: Footer button order — Cancel left | Generate right
 // =====================================================
 console.log("\n=== TEST 3: Footer layout (HIG button order) ===");
-var resetBtn = w.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_RESET; });
 var okBtn    = w.findOne(function (c) { return c.type === "button" && c.name === "ok"; });
 var cancelBtn= w.findOne(function (c) { return c.type === "button" && c.name === "cancel"; });
 
-assert(resetBtn !== null, "Reset button exists");
 assert(okBtn    !== null, "OK button exists with name='ok'");
 assert(cancelBtn!== null, "Cancel button exists with name='cancel'");
 
-// Reset is left-aligned (destructive separated from primary)
-if (resetBtn) {
-    var resetAlign = resetBtn.alignment;
-    var alignStr = Array.isArray(resetAlign) ? resetAlign[0] : resetAlign;
-    assertEq(alignStr, "left", "Reset button alignment[0]=left (HIG: destructive separation)");
-}
+// Reset was removed (factory defaults = pick [Default]; revert edits = ↺).
+var resetBtn = w.findOne(function (c) { return c.type === "button" && c.text === "Reset"; });
+assert(resetBtn === null, "Reset button removed (no longer in footer)");
 
 // Cancel/OK are siblings within the same group, OK after Cancel
 if (okBtn && cancelBtn) {
