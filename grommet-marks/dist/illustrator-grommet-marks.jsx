@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     4.2.0
  * Author:      Osva1d
- * Updated:     2026-06-06
+ * Updated:     2026-06-07
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -1616,7 +1616,8 @@ GM.UI = {
         appPanel.spacing = 10;
 
         var layerGrp = appPanel.add("group");
-        layerGrp.add("statictext", undefined, GM.L.LAYER);
+        var layerLbl = layerGrp.add("statictext", undefined, GM.L.LAYER);
+        layerLbl.preferredSize.width = 75;
         var layerDDL = layerGrp.add("dropdownlist", undefined, layerInfo.names);
         layerDDL.preferredSize.width = 170;
         layerDDL.helpTip = GM.L.TIP_LAYER;
@@ -1626,6 +1627,7 @@ GM.UI = {
         var fillCB = fillGrp.add("checkbox", undefined, GM.L.FILL);
         fillCB.value = defCfg.fillEnabled;
         fillCB.helpTip = GM.L.TIP_FILL;
+        fillCB.preferredSize.width = 75;
         var fillDDL = fillGrp.add("dropdownlist", undefined, swatchInfo.names);
         fillDDL.preferredSize.width = 170;
         fillDDL.helpTip = GM.L.TIP_FILL;
@@ -1638,6 +1640,7 @@ GM.UI = {
         var strokeCB = strokeGrp.add("checkbox", undefined, GM.L.STROKE);
         strokeCB.value = defCfg.strokeEnabled;
         strokeCB.helpTip = GM.L.TIP_STROKE;
+        strokeCB.preferredSize.width = 75;
         var strokeDDL = strokeGrp.add("dropdownlist", undefined, swatchInfo.names);
         strokeDDL.preferredSize.width = 170;
         strokeDDL.enabled = defCfg.strokeEnabled;
@@ -1649,7 +1652,8 @@ GM.UI = {
         strokeOPCB.enabled = defCfg.strokeEnabled;
 
         var wGrp = appPanel.add("group");
-        wGrp.add("statictext", undefined, GM.L.WEIGHT);
+        var weightLbl = wGrp.add("statictext", undefined, GM.L.WEIGHT);
+        weightLbl.preferredSize.width = 75;
         var weightInput = wGrp.add("edittext", undefined, String(defCfg.strokeWeight));
         weightInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
         weightInput.enabled = defCfg.strokeEnabled;

@@ -151,6 +151,24 @@ console.log("--- UI: mirror flags via gatherAll ---");
     done();
 })();
 
+// ===== TEST: Appearance labels share a fixed width (aligned dropdowns) =====
+console.log("--- UI: Appearance label column ---");
+(function () {
+    var ui = buildUI();
+    var w = SUI.lastWindow();
+    var LABEL_W = 75;
+    function widthOf(pred) { var c = w.findOne(pred); return c ? c.preferredSize.width : -1; }
+    var layer  = widthOf(function (c) { return c.type === "statictext" && c.text === GM.L.LAYER; });
+    var fill   = widthOf(function (c) { return c.type === "checkbox"   && c.text === GM.L.FILL; });
+    var stroke = widthOf(function (c) { return c.type === "checkbox"   && c.text === GM.L.STROKE; });
+    var weight = widthOf(function (c) { return c.type === "statictext" && c.text === GM.L.WEIGHT; });
+    assert(layer === LABEL_W,  "Vrstva label width fixed to " + LABEL_W);
+    assert(fill === LABEL_W,   "Výplň checkbox width fixed to " + LABEL_W);
+    assert(stroke === LABEL_W, "Obrys checkbox width fixed to " + LABEL_W);
+    assert(weight === LABEL_W, "Tloušťka label width fixed to " + LABEL_W);
+    done();
+})();
+
 // ===== TEST: revert (↺) replaces Reset =====
 console.log("--- UI: revert button ---");
 (function () {
