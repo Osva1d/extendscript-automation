@@ -226,26 +226,37 @@ GM.UI = {
         // Presets Panel
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
-        setPanel.orientation = "row";
-        setPanel.alignChildren = ["left", "center"];
+        setPanel.alignChildren = ["fill", "top"];
         setPanel.margins = 15;
         setPanel.spacing = 8;
 
-        setPanel.add("statictext", undefined, GM.L.LOAD);
-        var loadDDL = setPanel.add("dropdownlist", undefined, []);
-        loadDDL.preferredSize.width = 170;
+        // Row 1: label + dropdown (fills) + revert (↺), ZSM layout.
+        var presetTop = setPanel.add("group");
+        presetTop.alignment = ["fill", "top"];
+        presetTop.spacing = 8;
+        presetTop.add("statictext", undefined, GM.L.LOAD);
+        var loadDDL = presetTop.add("dropdownlist", undefined, []);
+        loadDDL.alignment = ["fill", "center"];
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
-
-        var revertBtn = setPanel.add("button", undefined, "↺");
+        var revertBtn = presetTop.add("button", undefined, "↺");
         revertBtn.preferredSize = [30, 24];
+        revertBtn.alignment = ["right", "center"];
         revertBtn.helpTip = GM.L.TIP_REVERT;
         revertBtn.enabled = false;
 
-        var saveBtn = setPanel.add("button", undefined, GM.L.SAVE);
+        // Row 2: Save / Save As / Delete, right-aligned, equal width (ZSM layout).
+        var PRESET_BTN_W = 92;
+        var presetBtns = setPanel.add("group");
+        presetBtns.alignment = ["right", "top"];
+        presetBtns.spacing = 6;
+        var saveBtn = presetBtns.add("button", undefined, GM.L.SAVE);
+        saveBtn.preferredSize.width = PRESET_BTN_W;
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
-        var saveAsBtn = setPanel.add("button", undefined, GM.L.BTN_SAVE_AS);
+        var saveAsBtn = presetBtns.add("button", undefined, GM.L.BTN_SAVE_AS);
+        saveAsBtn.preferredSize.width = PRESET_BTN_W;
         saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
-        var deleteBtn = setPanel.add("button", undefined, GM.L.DELETE);
+        var deleteBtn = presetBtns.add("button", undefined, GM.L.DELETE);
+        deleteBtn.preferredSize.width = PRESET_BTN_W;
         deleteBtn.helpTip = GM.L.TIP_DELETE;
         deleteBtn.enabled = false;
 
