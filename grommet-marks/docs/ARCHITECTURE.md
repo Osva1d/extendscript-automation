@@ -1,4 +1,4 @@
-# Architecture: Grommet Marks v4.1.0
+# Architecture: Grommet Marks v4.2.0
 
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
@@ -200,27 +200,35 @@ Pokrývají pure moduly (žádné ScriptUI).
 
 ---
 
-## Layout dialogu (v4.1.0)
+## Layout dialogu (v4.2.0)
 
 Kanonický jednosloupcový layout dle `extendscript-ui-standards`:
 
 ```
 Window("dialog")
- ├─ Panel: Předvolby            (Načíst / Uložit / Uložit jako… / Smazat)
+ ├─ Panel: Předvolby            ř.1: Načíst [dropdown] ↺ (revert)
+ │                              ř.2: Uložit / Uložit jako… / Smazat (vpravo, ZSM layout)
  ├─ Panel: Hrany                offsety X/Y + 4 kompaktní edge řádky;
  │                              mirror checkbox uvnitř dolní/pravé hrany (TD-001)
- ├─ Panel: Značka               jednotky / velikost / tvar
- ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka
+ ├─ Panel: Značka               jednotky / velikost  (tvar zamčen na kruh)
+ ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka (zarovnaný label sloupec 75px)
  ├─ Group: Footer               šedý copyright
- └─ Group: Tlačítka             Reset (vlevo) · Storno · OK (vpravo)
+ └─ Group: Tlačítka             Storno · Generovat (vpravo)
 ```
 
 ---
 
 ## Aktuální stav projektu
 
-**Verze:** 4.1.0
-**Fáze:** Cyklus 2 kompletní — UI redesign (kanonický sloupec), připraveno k manuálnímu testu a deployi.
+**Verze:** 4.2.0
+**Fáze:** Cyklus 3 kompletní — zjednodušení UI; připraveno k manuálnímu testu a deployi.
+
+**Co je hotovo (v4.2.0 — cyklus 3):**
+- Tvar zamčen na kruh (Kruh/Čtverec odstraněno; `isRound:true` napevno)
+- Revert (↺) ve stylu ZSM nahradil tlačítko Reset; preset panel dvouřádkový (ZSM layout)
+- Oprava barvy live-validace (uloží/obnoví výchozí barvu pole — konec neviditelného černého textu)
+- Zarovnání panelu Vzhled (pevný label sloupec 75px)
+- UI-test vrstva (`test_ui_dialog.js` + mock ScriptUI): chytá radio-grouping třídu chyb (5 suit)
 
 **Co je hotovo (v4.1.0 — cyklus 2):**
 - Kanonický jednosloupcový layout dle extendscript-ui-standards; offsety přesunuty do panelu Hrany
