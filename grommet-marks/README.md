@@ -6,7 +6,7 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 
 - **Automatické rozmístění** — pozice značek podle pevného počtu nebo preferovaného rozestupu, samostatně pro každou hranu (Horní, Dolní, Levá, Pravá) se zrcadlením protějších hran.
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
-- **Vzhled** — výplň a/nebo obrys s výběrem vzorníku, přetisk (overprint), tvar kruh/čtverec, jednotky mm/cm/in.
+- **Vzhled** — výplň a/nebo obrys s výběrem vzorníku, přetisk (overprint), jednotky mm/cm/in.
 - **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); indikátor neuložených změn.
 - **Robustnost** — chybějící vzorník degraduje na `[Registration]` (nikdy tichý pád ani překvapivý spot); chybějící vrstva se vytvoří; zamčená cílová vrstva se dočasně odemkne a zase zamkne.
 - **Živá validace** — neplatná číselná pole zčervenají a zablokují tlačítko Generovat.
@@ -74,6 +74,13 @@ Veškerý kód je kompatibilní s ExtendScript ES3:
 ---
 
 ## Changelog
+
+### v4.2.0 (2026-06)
+- **UI:** Tvar značky zamčen na kruh — volba kruh/čtverec odstraněna.
+- **UI:** Tlačítko ↺ Revert vedle dropdownu předvoleb (návrat k uloženým hodnotám); nahrazuje Reset.
+- **UI:** Dvouřádkový panel předvoleb (Uložit / Uložit jako / Smazat pod dropdownem) — layout podle Zünd & Summa Marks.
+- **UI:** Zarovnání dropdownů vzhledu přes pevný sloupec popisků.
+- **FIX:** Živá validace obnoví výchozí barvu textu (žádné černé pole na tmavém pozadí).
 
 ### v4.1.0 (2026-05)
 - **UI:** Kanonický jednosloupcový layout dialogu (redesign cyklu 2).
