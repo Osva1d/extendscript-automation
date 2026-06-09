@@ -60,7 +60,7 @@ npm test          # spustí testovací suity (Node.js)
 npm run verify    # build + test
 ```
 
-Testy (`tests/`) pokrývají čisté moduly v Node.js: core math, storage migrace, ui_state, validace. UI a DOM se ověřují manuálně — viz [docs/TEST_PLAN.md](docs/TEST_PLAN.md).
+Testy (`tests/`) pokrývají čisté moduly v Node.js: core math, storage migrace, ui_state, validace. UI a DOM se ověřují manuálně — viz [docs/MANUAL_TEST.md](docs/MANUAL_TEST.md).
 
 Build čte verzi z `package.json` a ověřuje shodu s `src/constants.js` (selže při rozporu).
 

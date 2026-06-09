@@ -250,5 +250,5 @@ Window("dialog")
 - Verze z package.json v build.sh, `set -euo pipefail`
 
 **Otevřené úkoly:**
-- Manuální P0 test v Illustratoru (viz `TEST_PLAN.md`), zvlášť ověření `onDraw` náhledu
+- Manuální P0 test v Illustratoru (viz `MANUAL_TEST.md`), zvlášť ověření `onDraw` náhledu
 - TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)

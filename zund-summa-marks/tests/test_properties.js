@@ -437,7 +437,7 @@ runProp("calculateAll is total for any reasonable scaleFactor (no NaN/Infinity, 
 // legitimately varies across sf in edge cases. See test runs with
 // {w:10,h:10,maxDist:50,markSize:1,sf=3} for a concrete counterexample.
 // We keep only the totality property above; visual-fidelity tests live in
-// the manual TEST_PLAN.md (TC-022 Large Canvas).
+// the manual MANUAL_TEST.md (TC-022 Large Canvas).
 
 
 // =====================================================
