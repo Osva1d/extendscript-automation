@@ -1,0 +1,85 @@
+INSTALLING THE SCRIPTS ON macOS
+===============================
+
+Language: English | Čeština -> docs/INSTALL_MAC.cs.txt
+
+This guide walks through installing the scripts from this suite into
+Adobe Illustrator on macOS. The procedure is the same for every script
+in the Scripts/ folder.
+
+----------------------------------------------------------------------
+1. GETTING THE SCRIPTS
+----------------------------------------------------------------------
+The files live in the Scripts/ folder of this repository:
+
+  - illustrator-zund-summa-marks.jsx     (Zünd & Summa Marks v26.5.0)
+  - illustrator-grommet-marks.jsx        (Grommet Marks v4.2.0)
+  - illustrator-batch-relink-export.jsx  (Batch Relink & Export v3.0.0)
+
+Download the one you need (or all of them).
+
+----------------------------------------------------------------------
+2. PERMANENT INSTALLATION INTO ILLUSTRATOR'S MENU
+----------------------------------------------------------------------
+To make a script appear under "File > Scripts", copy it into the
+script folder of the relevant Illustrator version and locale.
+
+  a) Open Finder.
+  b) Press Cmd + Shift + G and paste the path:
+
+       /Applications/Adobe Illustrator 2024/Presets.localized/en_US/Scripts/
+
+     (Adjust the year for your installation - 2024, 2025...
+      For a Czech localised Illustrator, use cs_CZ instead of en_US.)
+
+  c) Drop the .jsx file into that folder.
+  d) Restart Adobe Illustrator.
+  e) The script appears under File > Scripts > [script name].
+
+----------------------------------------------------------------------
+3. RUN ONCE WITHOUT INSTALLING
+----------------------------------------------------------------------
+If you only want to run a script once:
+
+  a) In Illustrator: File > Scripts > Other Script...
+     Keyboard shortcut: Cmd + F12
+  b) Pick the .jsx file and click Open.
+
+----------------------------------------------------------------------
+4. IMPORTANT NOTES
+----------------------------------------------------------------------
+- The scripts require an open document in Illustrator.
+- Locked layers are temporarily unlocked for calculation and drawing,
+  and re-locked afterwards.
+- The scripts NEVER delete or modify your artwork - they only add
+  registration marks and optionally move spot-colored paths into
+  named layers.
+- Zünd & Summa Marks settings (presets) are stored in:
+    ~/Library/Application Support/ZSM/settings.json
+- To reset everything, delete that file - the script falls back to
+  default values.
+
+----------------------------------------------------------------------
+5. UPDATING
+----------------------------------------------------------------------
+When updating, overwrite the existing .jsx file in Illustrator's
+Scripts folder with the new version (same filename -> the new code
+runs on the next launch). Settings and presets are preserved (the
+script migrates older structures if needed).
+
+----------------------------------------------------------------------
+6. TROUBLESHOOTING
+----------------------------------------------------------------------
+The script does not appear in the menu:
+  -> Check that the file extension is really .jsx (Finder may hide
+     extensions).
+  -> Check the correct locale folder (en_US vs cs_CZ).
+  -> Restart Illustrator.
+
+The script throws an error or "crashes":
+  -> Check that a document is open.
+  -> Restart Illustrator and try again (clean DOM state).
+  -> For zund-summa-marks: see Troubleshooting in the repository
+     README.
+
+----------------------------------------------------------------------

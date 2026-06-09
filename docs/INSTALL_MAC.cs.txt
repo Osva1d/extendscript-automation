@@ -1,0 +1,83 @@
+INSTALACE SKRIPTŮ NA macOS
+==========================
+
+Jazyk: English -> docs/INSTALL_MAC.txt | Čeština
+
+Tento návod popisuje instalaci skriptů z této sady do Adobe Illustratoru
+na macOS. Postup je stejný pro všechny skripty ve složce Scripts/.
+
+----------------------------------------------------------------------
+1. ZÍSKÁNÍ SKRIPTŮ
+----------------------------------------------------------------------
+Soubory najdete ve složce Scripts/ tohoto repozitáře:
+
+  - illustrator-zund-summa-marks.jsx     (Zünd & Summa Marks v26.5.0)
+  - illustrator-grommet-marks.jsx        (Grommet Marks v4.2.0)
+  - illustrator-batch-relink-export.jsx  (Batch Relink & Export v3.0.0)
+
+Stáhněte ten, který potřebujete (nebo všechny).
+
+----------------------------------------------------------------------
+2. TRVALÁ INSTALACE DO MENU ILLUSTRATORU
+----------------------------------------------------------------------
+Aby se skript zobrazoval v menu "Soubor > Skripty", zkopírujte jej
+do skriptové složky příslušné verze a jazykové mutace Illustratoru.
+
+  a) Otevřete Finder.
+  b) Stiskněte Cmd + Shift + G a vložte cestu:
+
+       /Applications/Adobe Illustrator 2024/Presets.localized/cs_CZ/Scripts/
+
+     (Upravte rok verze podle vaší instalace — 2024, 2025…
+      Pro anglickou verzi použijte en_US místo cs_CZ.)
+
+  c) Vložte .jsx soubor do této složky.
+  d) Restartujte Adobe Illustrator.
+  e) Skript najdete v menu Soubor > Skripty > [název skriptu].
+
+----------------------------------------------------------------------
+3. RYCHLÉ SPUŠTĚNÍ BEZ INSTALACE
+----------------------------------------------------------------------
+Pokud chcete skript spustit jen jednorázově:
+
+  a) V Illustratoru: Soubor > Skripty > Jiný skript...
+     Klávesová zkratka: Cmd + F12
+  b) Vyberte .jsx soubor a klikněte na Otevřít.
+
+----------------------------------------------------------------------
+4. DŮLEŽITÉ POZNÁMKY
+----------------------------------------------------------------------
+- Skripty vyžadují otevřený dokument v Illustratoru.
+- Zamknuté vrstvy se dočasně odemknou pro výpočet a kresbu, po
+  dokončení se zamknutí obnoví.
+- Skript NIKDY nemaže ani neupravuje vaši grafiku — pouze přidává
+  registrační značky a volitelně přesouvá spot-colored cesty do
+  pojmenovaných vrstev.
+- Nastavení (presety) Zünd & Summa Marks se ukládají do:
+    ~/Library/Application Support/ZSM/settings.json
+- Pro reset stačí tento soubor smazat — skript se vrátí k výchozím
+  hodnotám.
+
+----------------------------------------------------------------------
+5. AKTUALIZACE
+----------------------------------------------------------------------
+Při aktualizaci přepište existující .jsx soubor ve Scripts složce
+Illustratoru novou verzí (stejný název → automaticky se použije nový
+kód při dalším spuštění). Nastavení a presety zůstanou zachovány
+(skript je migruje, pokud je struktura starší).
+
+----------------------------------------------------------------------
+6. ŘEŠENÍ PROBLÉMŮ
+----------------------------------------------------------------------
+Skript se nezobrazuje v menu:
+  → Zkontrolujte, že soubor má skutečně příponu .jsx (Finder může
+    příponu skrývat).
+  → Zkontrolujte správnou jazykovou složku (cs_CZ vs en_US).
+  → Restartujte Illustrator.
+
+Skript hlásí chybu nebo "spadne":
+  → Zkontrolujte, že máte otevřený dokument.
+  → Zkuste skript spustit po restartu Illustratoru (čistý DOM stav).
+  → Pro zund-summa-marks: viz Troubleshooting v README repozitáře.
+
+----------------------------------------------------------------------
