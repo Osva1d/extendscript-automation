@@ -254,7 +254,7 @@ Manuální testy: viz `docs/MANUAL_TEST.md`
 #### Test pyramide (post-v26.3.1 milestones zachované)
 - 12 test suites, **1051 tests** + 24 properties (~2400 random cases)
 - ES3 compliance linter (`tests/test_es3_compliance.js`) — chrání proti ExtendScript runtime crashům typu `Array.map is not a function`
-- HIG audit `docs/hig-audit.md` + automatizované `tests/test_ui_layout.js`
+- UI layout dialogu vynucený automatizovaným `tests/test_ui_layout.js`
 - E2E workflow simulace (`tests/test_e2e_workflow.js`) — zachytává integrace UI ↔ render
 
 ### v26.3.1 (2026-03)
