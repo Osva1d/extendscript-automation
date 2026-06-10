@@ -282,4 +282,4 @@ If the suite saves you time in daily work and you want to fund further developme
 
 - **Concept & development:** Ladislav Osvald (Osva1d)
 - **Year:** 2025–2026
-- **Contact:** via GitHub Issues or direct message
+- **Contact:** via [Issues](https://codeberg.org/Osva1d/extendscript-automation/issues) or direct message
