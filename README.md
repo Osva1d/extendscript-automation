@@ -1,6 +1,6 @@
 # ExtendScript Automation for Adobe Illustrator
 
-[![Version](https://img.shields.io/gitea/v/tag/Osva1d/extendscript-automation?gitea_url=https%3A%2F%2Fcodeberg.org&label=version&color=blue)](https://codeberg.org/Osva1d/extendscript-automation/tags)
+[![Version](https://img.shields.io/gitea/v/release/Osva1d/extendscript-automation?gitea_url=https%3A%2F%2Fcodeberg.org&label=version&color=blue)](https://codeberg.org/Osva1d/extendscript-automation/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 > A professional toolkit of JavaScript (`.jsx`) scripts that automate prepress preparation and speed up production work in Adobe Illustrator.
