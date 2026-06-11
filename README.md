@@ -68,7 +68,7 @@ Detailed macOS guide: [`docs/INSTALL_MAC.txt`](./docs/INSTALL_MAC.txt).
 
 | # | Script | Version | Purpose |
 |---|--------|---------|---------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.0** | Registration mark generator for Zünd + Summa, named presets, localisation |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Registration mark generator for Zünd + Summa, named presets, localisation |
 | 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | 4.2.0 | Banner grommet marks |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Batch-relink PDFs into `.ai` imposition templates and export print-ready PDFs |
 
@@ -208,6 +208,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` /
 - **Changed:** Appearance dropdowns aligned via a fixed label column.
 - **Removed:** Reset button (replaced by ↺ revert) and the Round/Square shape choice — marks are now always circular.
 - **Fixed:** Live validation restored the default text colour (no black-on-dark fields).
+
+### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
+- **Fixed:** Re-running SUMMA with trim lines grew the artboard on every run — the "Trim" layer was incorrectly included in the bounds measurement (regression in v26.5.0).
+- **Fixed:** A SUMMA run with trim lines off now removes the stale "Trim" layer from a previous run.
+- **Fixed:** Settings-file write failures (full disk, permissions) are reported instead of silently ignored.
+- **Fixed:** Typing a multi-digit scale (e.g. "12") no longer disables the field after the first keystroke; an out-of-range scale paints red and blocks Generate instead of being silently clamped.
+- **Fixed:** Save/Revert buttons grey out immediately after a successful Save.
+- **Fixed:** Preset names of the form `[Text]` are reserved; minor consistency and error-message fixes.
 
 ### v1.4.0 (2026-06) — Zünd & Summa Marks v26.5.0
 - **Added:** "Marks only" mode — for documents with already-separated layers; draws only the marks and leaves user layers untouched.

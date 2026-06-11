@@ -68,7 +68,7 @@ Detailní návod pro macOS: [`docs/INSTALL_MAC.cs.txt`](./docs/INSTALL_MAC.cs.tx
 
 | # | Skript | Verze | Účel |
 |---|--------|-------|------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.0** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
 | 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | 4.2.0 | Značky pro oka (banner grommets) |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Hromadný relink PDF do `.ai` vyřazovacích šablon a export tiskových PDF |
 
@@ -208,6 +208,14 @@ Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` /
 - **Changed:** Zarovnání dropdownů vzhledu přes pevný sloupec popisků.
 - **Removed:** Tlačítko Reset (nahrazeno ↺ revert) a volba tvaru kruh/čtverec — značky jsou nyní vždy kruhové.
 - **Fixed:** Živá validace obnoví výchozí barvu textu (žádné černé pole na tmavém pozadí).
+
+### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
+- **Fixed:** Opakované spuštění SUMMA s ořezovými linkami zvětšovalo artboard při každém běhu — vrstva „Trim" se chybně započítávala do měření hranic (regrese z v26.5.0).
+- **Fixed:** SUMMA běh s vypnutými ořezovými linkami nyní odstraní zastaralou vrstvu „Trim" z předchozího běhu.
+- **Fixed:** Selhání zápisu souboru nastavení (plný disk, oprávnění) se hlásí, místo tichého ignorování.
+- **Fixed:** Psaní víceciferného měřítka (např. „12") už nezamkne pole po první číslici; měřítko mimo rozsah zčervená a zablokuje Generovat, místo tichého oříznutí.
+- **Fixed:** Tlačítka Uložit/↺ se deaktivují ihned po úspěšném uložení.
+- **Fixed:** Názvy předvoleb tvaru `[Text]` jsou rezervované; drobné opravy konzistence a chybových hlášek.
 
 ### v1.4.0 (2026-06) — Zünd & Summa Marks v26.5.0
 - **Added:** Režim „Pouze značky" — pro dokumenty s už separovanými vrstvami; vykreslí jen značky, uživatelské vrstvy nechá beze změny.
