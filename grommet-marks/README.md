@@ -75,6 +75,14 @@ Veškerý kód je kompatibilní s ExtendScript ES3:
 
 ## Changelog
 
+### v4.2.1 (2026-06)
+- **FIX:** Selhání zápisu nastavení na disk se vždy nahlásí uživateli (dříve mohlo tiše „oživit" smazanou předvolbu po restartu).
+- **FIX:** Neumístěné značky se hlásí souhrnným varováním (dříve tichý nedostatek značek na výstupu).
+- **FIX:** Fallback na [Registration] ověřuje, že vzorník je skutečně registrační (uživatelem smazaný [Registration] dříve tiše obarvil značky náhodným vzorníkem).
+- **FIX:** Desetinný počet značek („10.5") se odmítne místo tichého oříznutí na 10.
+- **FIX:** Prázdný název předvolby hlásí „Zadejte název" místo zavádějícího „rezervovaný název"; potvrzení přepisu zobrazuje název předvolby.
+- **CLEANUP:** Odstraněno 10 mrtvých lokalizačních klíčů; test synchronizace rezervovaných preset klíčů.
+
 ### v4.2.0 (2026-06)
 - **UI:** Tvar značky zamčen na kruh — volba kruh/čtverec odstraněna.
 - **UI:** Tlačítko ↺ Revert vedle dropdownu předvoleb (návrat k uloženým hodnotám); nahrazuje Reset.

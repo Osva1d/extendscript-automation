@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     4.2.0
+ * Version:     4.2.1
  * Author:      Osva1d
- * Updated:     2026-06-09
+ * Updated:     2026-06-11
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -159,7 +159,7 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "4.2.0",
+    VERSION: "4.2.1",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
@@ -217,9 +217,7 @@ GM.L = (function () {
             TOP: "Top",
             LEFT: "Left",
             BOTTOM_MIRROR: "Mirror top",
-            BOTTOM_CUSTOM: "Bottom — custom",
             RIGHT_MIRROR: "Mirror left",
-            RIGHT_CUSTOM: "Right — custom",
 
             // Edge fields
             COUNT: "Count:",
@@ -276,25 +274,18 @@ GM.L = (function () {
             ERR_NO_DOC: "Open a document before running the script.",
             ERR_NO_EDGE: "At least one edge must be enabled.",
             ERR_NO_APPEARANCE: "Marks must have fill and/or stroke.",
-            ERR_MARK_SIZE: "Mark size must be a positive number.",
-            ERR_NEGATIVE_OFFSET: "Offset X and Y must not be negative.",
-            ERR_INVALID_OFFSET: "Offset X and Y must be valid non-negative numbers.",
-            ERR_INVALID_WEIGHT: "Stroke weight must be a positive number.",
-            ERR_EDGE_COUNT: "Mark count must be a whole number ≥ 1.",
-            ERR_EDGE_SPACING: "Mark spacing must be a positive number.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
             WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
             WARN_LAYER_CREATED: "Layer '%s' was not in the document — it has been created.",
+            WARN_MARKS_FAILED: "%s mark(s) could not be placed — check the target layer.",
             WARN_PREFIX: "WARNING: ",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
             ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
-            ERR_PRESET_EXISTS: "Preset already exists. Overwrite?",
             ERR_MUST_BE_NUMBER: "%s must be a number!",
             ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
-            PRESET_PLACEHOLDER: "My Preset",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -325,9 +316,7 @@ GM.L = (function () {
             TOP: "Horní",
             LEFT: "Levá",
             BOTTOM_MIRROR: "Zrcadlit horní",
-            BOTTOM_CUSTOM: "Dolní — vlastní",
             RIGHT_MIRROR: "Zrcadlit levou",
-            RIGHT_CUSTOM: "Pravá — vlastní",
 
             // Edge fields
             COUNT: "Počet ok:",
@@ -384,25 +373,18 @@ GM.L = (function () {
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
             ERR_NO_EDGE: "Musí být zapnutá alespoň jedna hrana.",
             ERR_NO_APPEARANCE: "Značky musí mít výplň a/nebo obrys.",
-            ERR_MARK_SIZE: "Velikost značky musí být kladné číslo.",
-            ERR_NEGATIVE_OFFSET: "Odsazení X a Y nesmí být záporné.",
-            ERR_INVALID_OFFSET: "Odsazení X a Y: zadejte platné nezáporné číslo.",
-            ERR_INVALID_WEIGHT: "Tloušťka obrysu musí být kladné číslo.",
-            ERR_EDGE_COUNT: "Počet značek musí být celé číslo ≥ 1.",
-            ERR_EDGE_SPACING: "Rozestup značek musí být kladné číslo.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
             WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
             WARN_LAYER_CREATED: "Vrstva ‘%s’ nebyla v dokumentu — byla vytvořena.",
+            WARN_MARKS_FAILED: "%s značek se nepodařilo umístit — zkontrolujte cílovou vrstvu.",
             WARN_PREFIX: "UPOZORNĚNÍ: ",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
             ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
-            ERR_PRESET_EXISTS: "Předvolba již existuje. Přepsat?",
             ERR_MUST_BE_NUMBER: "%s musí být číslo!",
             ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
-            PRESET_PLACEHOLDER: "Moje předvolba",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
@@ -580,7 +562,11 @@ GM.Storage = {
 
     /**
      * Serializes and saves the full preset wrapper to disk.
+     * Reports write failures to the user itself (single source of truth for
+     * all call-sites) — a stale on-disk state that "resurrects" a deleted
+     * preset after restart is a data-integrity bug, never swallow it.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
+     * @returns {boolean} True if the file was written.
      */
     save: function (data) {
         try {
@@ -588,12 +574,15 @@ GM.Storage = {
             f.encoding = "UTF-8";
             if (!f.open("w")) {
                 GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
-                return;
+                return false;
             }
             f.write(JSON.stringify(data));
             f.close();
+            return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
+            GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+            return false;
         }
     },
 
@@ -1251,25 +1240,34 @@ GM.Illustrator = {
     },
 
     /**
-     * Returns the document's [Registration] swatch colour (always swatches[1]
-     * in any AI locale; index 0 is [None]), or 100% K CMYK as a last-resort
-     * fallback. Used when a named fill/stroke swatch is missing — marks degrade
-     * to a safe, cutter-readable colour instead of being dropped or aborted.
+     * Returns the document's [Registration] swatch colour (swatches[1] in any
+     * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
+     * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
+     * the user can delete [Registration] from the Swatches panel, and then
+     * swatches[1] is an arbitrary swatch that would silently mis-colour the
+     * fallback marks. Used when a named fill/stroke swatch is missing — marks
+     * degrade to a safe, cutter-readable colour instead of being dropped.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
         try {
-            return GM.Illustrator.doc.swatches[1].color;
-        } catch (e) {
-            var k = new CMYKColor();
-            k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
-            return k;
-        }
+            var c = GM.Illustrator.doc.swatches[1].color;
+            if (c && c.typename === "SpotColor" && c.spot &&
+                c.spot.colorType === ColorModel.REGISTRATION) {
+                return c;
+            }
+        } catch (e) {}
+        var k = new CMYKColor();
+        k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
+        return k;
     },
 
     /**
      * Places a single mark on the target layer.
      * x, y are the CENTER coordinates of the mark in document space.
+     * @returns {boolean} True if the mark was placed — the caller counts
+     * failures and surfaces one summary warning (never per-mark alert spam,
+     * never silently missing marks on prepress output).
      */
     placeMark: function (targetLayer, x, y, radius, size, isRound, fillCol, strokeCol, cfg) {
         try {
@@ -1296,8 +1294,10 @@ GM.Illustrator = {
             } else {
                 m.stroked = false;
             }
+            return true;
         } catch (e) {
             $.writeln("placeMark [" + x + ", " + y + "]: " + e.message);
+            return false;
         }
     }
 };
@@ -1479,7 +1479,10 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                number: parseInt(numIn.text.replace(/,/g, "."), 10),
+                // parseFloat (not parseInt) — parseInt would silently truncate
+                // "10.5" to 10 before GM.Validation ever sees it, making the
+                // edgeCount integer rule unenforceable on the submit path.
+                number: parseFloat(numIn.text.replace(/,/g, ".")),
                 spacing: parseFloat(spcIn.text.replace(/,/g, "."))
             };
         };
@@ -1923,22 +1926,6 @@ GM.UI = {
         if (initPreset) applyAll(initPreset);
         updatePresetList();
 
-        /**
-         * Persist the preset wrapper to disk with consistent error reporting.
-         * Single source of truth for all save call-sites (Save / Save As /
-         * Delete) so a failed write is never silently swallowed — a stale
-         * on-disk state that "resurrects" a deleted preset after restart is a
-         * data-integrity bug, not a cosmetic one.
-         */
-        function persistSettings() {
-            try {
-                GM.Storage.save(pData);
-            } catch (e) {
-                GM.Utils.log("Storage.save failed: " + e.message);
-                alert(GM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
-            }
-        }
-
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var key = sortedKeys[loadDDL.selection.index];
@@ -1954,7 +1941,7 @@ GM.UI = {
             var r = GM.UIState.save(pData, gatherAll());
             if (r.ok) {
                 updatePresetList();
-                persistSettings();
+                GM.Storage.save(pData);   // reports failure itself
                 return;
             }
             if (r.reason === "needs-name") saveAsBtn.onClick();
@@ -1962,16 +1949,22 @@ GM.UI = {
 
         saveAsBtn.onClick = function () {
             var raw = prompt(GM.L.PROMPT_SAVE_AS, "");
-            if (raw === null || raw === "") return;
+            if (raw === null) return;   // cancelled
             var clean = GM.UIState.validatePresetName(raw);
-            if (!clean) { alert(GM.L.ERR_RESERVED_NAME); return; }
-            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function () {
-                return confirm(GM.L.ERR_PRESET_EXISTS);
+            if (!clean) {
+                // Distinguish empty/whitespace-only (needs a name) from a
+                // reserved key — "name is reserved" for "" is misleading.
+                var isEmpty = String(raw).replace(/^\s+|\s+$/g, "") === "";
+                alert(isEmpty ? GM.L.ERR_ENTER_NAME : GM.L.ERR_RESERVED_NAME);
+                return;
+            }
+            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function (name) {
+                return confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!r.ok) return;
             updatePresetList();
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         deleteBtn.onClick = function () {
@@ -1986,7 +1979,7 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         revertBtn.onClick = function () {
@@ -2194,14 +2187,16 @@ GM.Main = {
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
 
             var placed = {};
+            var failedMarks = 0;
             function place(x, y) {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
-                GM.Illustrator.placeMark(
+                var ok = GM.Illustrator.placeMark(
                     targetLayer, x, y, radius, markSizePoints,
                     cfg.isRound, fillColor, strokeColor, cfg
                 );
+                if (!ok) failedMarks++;
             }
 
             for (var i = 0; i < doc.artboards.length; i++) {
@@ -2247,6 +2242,13 @@ GM.Main = {
             // Restore layer lock/visibility (normal path).
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
+            }
+
+            // Failed placements must be visible — silently missing marks on
+            // prepress output are worse than a warning. One summary line, no
+            // per-mark alert spam (details are in the ExtendScript console).
+            if (failedMarks > 0) {
+                addWarning(GM.L.format(GM.L.WARN_MARKS_FAILED, failedMarks));
             }
 
             // Surface any non-blocking colour-fallback warnings once, after the

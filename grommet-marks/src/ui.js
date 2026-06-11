@@ -175,7 +175,10 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                number: parseInt(numIn.text.replace(/,/g, "."), 10),
+                // parseFloat (not parseInt) — parseInt would silently truncate
+                // "10.5" to 10 before GM.Validation ever sees it, making the
+                // edgeCount integer rule unenforceable on the submit path.
+                number: parseFloat(numIn.text.replace(/,/g, ".")),
                 spacing: parseFloat(spcIn.text.replace(/,/g, "."))
             };
         };
@@ -619,22 +622,6 @@ GM.UI = {
         if (initPreset) applyAll(initPreset);
         updatePresetList();
 
-        /**
-         * Persist the preset wrapper to disk with consistent error reporting.
-         * Single source of truth for all save call-sites (Save / Save As /
-         * Delete) so a failed write is never silently swallowed — a stale
-         * on-disk state that "resurrects" a deleted preset after restart is a
-         * data-integrity bug, not a cosmetic one.
-         */
-        function persistSettings() {
-            try {
-                GM.Storage.save(pData);
-            } catch (e) {
-                GM.Utils.log("Storage.save failed: " + e.message);
-                alert(GM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
-            }
-        }
-
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
             var key = sortedKeys[loadDDL.selection.index];
@@ -650,7 +637,7 @@ GM.UI = {
             var r = GM.UIState.save(pData, gatherAll());
             if (r.ok) {
                 updatePresetList();
-                persistSettings();
+                GM.Storage.save(pData);   // reports failure itself
                 return;
             }
             if (r.reason === "needs-name") saveAsBtn.onClick();
@@ -658,16 +645,22 @@ GM.UI = {
 
         saveAsBtn.onClick = function () {
             var raw = prompt(GM.L.PROMPT_SAVE_AS, "");
-            if (raw === null || raw === "") return;
+            if (raw === null) return;   // cancelled
             var clean = GM.UIState.validatePresetName(raw);
-            if (!clean) { alert(GM.L.ERR_RESERVED_NAME); return; }
-            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function () {
-                return confirm(GM.L.ERR_PRESET_EXISTS);
+            if (!clean) {
+                // Distinguish empty/whitespace-only (needs a name) from a
+                // reserved key — "name is reserved" for "" is misleading.
+                var isEmpty = String(raw).replace(/^\s+|\s+$/g, "") === "";
+                alert(isEmpty ? GM.L.ERR_ENTER_NAME : GM.L.ERR_RESERVED_NAME);
+                return;
+            }
+            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function (name) {
+                return confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!r.ok) return;
             updatePresetList();
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         deleteBtn.onClick = function () {
@@ -682,7 +675,7 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         revertBtn.onClick = function () {

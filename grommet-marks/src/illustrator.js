@@ -144,25 +144,34 @@ GM.Illustrator = {
     },
 
     /**
-     * Returns the document's [Registration] swatch colour (always swatches[1]
-     * in any AI locale; index 0 is [None]), or 100% K CMYK as a last-resort
-     * fallback. Used when a named fill/stroke swatch is missing — marks degrade
-     * to a safe, cutter-readable colour instead of being dropped or aborted.
+     * Returns the document's [Registration] swatch colour (swatches[1] in any
+     * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
+     * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
+     * the user can delete [Registration] from the Swatches panel, and then
+     * swatches[1] is an arbitrary swatch that would silently mis-colour the
+     * fallback marks. Used when a named fill/stroke swatch is missing — marks
+     * degrade to a safe, cutter-readable colour instead of being dropped.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
         try {
-            return GM.Illustrator.doc.swatches[1].color;
-        } catch (e) {
-            var k = new CMYKColor();
-            k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
-            return k;
-        }
+            var c = GM.Illustrator.doc.swatches[1].color;
+            if (c && c.typename === "SpotColor" && c.spot &&
+                c.spot.colorType === ColorModel.REGISTRATION) {
+                return c;
+            }
+        } catch (e) {}
+        var k = new CMYKColor();
+        k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
+        return k;
     },
 
     /**
      * Places a single mark on the target layer.
      * x, y are the CENTER coordinates of the mark in document space.
+     * @returns {boolean} True if the mark was placed — the caller counts
+     * failures and surfaces one summary warning (never per-mark alert spam,
+     * never silently missing marks on prepress output).
      */
     placeMark: function (targetLayer, x, y, radius, size, isRound, fillCol, strokeCol, cfg) {
         try {
@@ -189,8 +198,10 @@ GM.Illustrator = {
             } else {
                 m.stroked = false;
             }
+            return true;
         } catch (e) {
             $.writeln("placeMark [" + x + ", " + y + "]: " + e.message);
+            return false;
         }
     }
 };

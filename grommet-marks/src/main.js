@@ -129,14 +129,16 @@ GM.Main = {
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
 
             var placed = {};
+            var failedMarks = 0;
             function place(x, y) {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
-                GM.Illustrator.placeMark(
+                var ok = GM.Illustrator.placeMark(
                     targetLayer, x, y, radius, markSizePoints,
                     cfg.isRound, fillColor, strokeColor, cfg
                 );
+                if (!ok) failedMarks++;
             }
 
             for (var i = 0; i < doc.artboards.length; i++) {
@@ -182,6 +184,13 @@ GM.Main = {
             // Restore layer lock/visibility (normal path).
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
+            }
+
+            // Failed placements must be visible — silently missing marks on
+            // prepress output are worse than a warning. One summary line, no
+            // per-mark alert spam (details are in the ExtendScript console).
+            if (failedMarks > 0) {
+                addWarning(GM.L.format(GM.L.WARN_MARKS_FAILED, failedMarks));
             }
 
             // Surface any non-blocking colour-fallback warnings once, after the

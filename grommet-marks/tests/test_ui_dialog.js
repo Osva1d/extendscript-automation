@@ -63,6 +63,18 @@ function findRadio(win, labelText) {
     });
 }
 
+// ===== TEST: reserved preset keys stay in sync =====
+// GM.UIState intentionally duplicates the reserved keys (unit-testable without
+// Config/Storage). The "MUST stay in sync" comment is enforced here — this is
+// the only suite that loads all three modules together.
+console.log("--- UIState reserved-key sync ---");
+(function () {
+    assert(GM.UIState.PRESET_KEY_DEFAULT === GM.Config.PRESET_KEY_DEFAULT,
+        "UIState.PRESET_KEY_DEFAULT === Config.PRESET_KEY_DEFAULT");
+    assert(GM.UIState.PRESET_KEY_LAST === GM.Storage.PRESET_KEY_LAST,
+        "UIState.PRESET_KEY_LAST === Storage.PRESET_KEY_LAST");
+})();
+
 // ===== TEST: dialog builds =====
 console.log("--- UI.buildDialog: builds ---");
 (function () {

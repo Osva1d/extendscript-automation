@@ -24,7 +24,11 @@ GM.Storage = {
 
     /**
      * Serializes and saves the full preset wrapper to disk.
+     * Reports write failures to the user itself (single source of truth for
+     * all call-sites) — a stale on-disk state that "resurrects" a deleted
+     * preset after restart is a data-integrity bug, never swallow it.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
+     * @returns {boolean} True if the file was written.
      */
     save: function (data) {
         try {
@@ -32,12 +36,15 @@ GM.Storage = {
             f.encoding = "UTF-8";
             if (!f.open("w")) {
                 GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
-                return;
+                return false;
             }
             f.write(JSON.stringify(data));
             f.close();
+            return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
+            GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+            return false;
         }
     },
 
