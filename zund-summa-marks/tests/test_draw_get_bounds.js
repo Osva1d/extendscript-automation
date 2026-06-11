@@ -49,6 +49,7 @@ ZSM.L = { ERROR_PREFIX: "ERR: ", ERR_NO_SEL: "Nothing selected" };
 ZSM.Config = {
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
+    layerTrim:     "Trim",
     debug: false
 };
 // Load utils (mm2pt, log) — adds ZSM.Utils to our ZSM
@@ -167,6 +168,25 @@ b = runWith({
 }, defaultSettings);
 assertClose(b[0], 0, 0.01, "Trim skipped: L stays at 0");
 assertClose(b[2], 100, 0.01, "Trim skipped: R stays at 100");
+
+
+// =====================================================
+// TEST 6b (H1 regression, v26.5.1): TOP-LEVEL "Trim" layer is skipped
+// =====================================================
+// v26.5.0 moved trim lines to a dedicated top-level "Trim" layer. Its lines
+// sit at the artboard edges (beyond the graphic) — measuring them would grow
+// the artboard on EVERY re-run (idempotence violation). Must be skipped.
+console.log("\n=== TEST 6b: top-level 'Trim' layer skipped (idempotent re-runs) ===");
+b = runWith({
+    layers: [
+        { name: "Trim", items: [{ type: "path", bounds: [-80, 250, 250, -80] }] },
+        { name: "Art",  items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+}, defaultSettings);
+assertClose(b[0], 0,   0.01, "top-level Trim skipped: L stays at 0");
+assertClose(b[1], 100, 0.01, "top-level Trim skipped: T stays at 100");
+assertClose(b[2], 100, 0.01, "top-level Trim skipped: R stays at 100");
+assertClose(b[3], 0,   0.01, "top-level Trim skipped: B stays at 0");
 
 
 // =====================================================

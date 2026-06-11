@@ -227,6 +227,17 @@ Manuální testy: viz `docs/MANUAL_TEST.md`
 
 ## Changelog
 
+### v26.5.1 (2026-06) — Hotfix: idempotence Trim vrstvy + nálezy z code review
+- **Fix (kritický, regrese v26.5.0):** Top-level vrstva „Trim" se měřila do bounds → každé další spuštění SUMMA s ořezovými linkami zvětšilo artboard (linky leží na hranách archu). `ZSM.Bounds.get` ji nyní přeskakuje; „Trim" se ani nenabízí v dropdownu vrstev.
+- **Fix:** SUMMA běh s vypnutými ořezovými linkami odstraní zastaralou vrstvu „Trim" z předchozího běhu (ZUND ji nechává — patří k SUMMA layoutu).
+- **Fix:** `Storage.save` kontroluje open/write/close a vrací úspěch — selhání zápisu (plný disk, oprávnění) už není tiché; volající zobrazí chybu.
+- **Fix (UX):** Psaní víceciferného měřítka (např. „12") už po první „1" nezamkne pole — auto-odškrtnutí běží jen při potvrzení hodnoty. Pole 1:N je nově v live-validaci (mimo rozsah → červené + vypnutý Generovat, místo tichého oříznutí na 10).
+- **Fix (UX):** Po Uložit se tlačítka Uložit/↺ správně deaktivují.
+- **Fix:** Názvy předvoleb tvaru `[Text]` jsou rezervované (kolize s migrací sentinelů); závorky uvnitř názvu zůstávají povolené.
+- **Fix:** Fixed režim neblokuje Generovat kvůli neaktivnímu (irelevantnímu) poli „Mezera od grafiky".
+- **Chore:** `ZSM.Config.layerTrim` konstanta; `scriptName` s přehláskou („Zünd") v patičce; ošetřen `e.line` v kritickém hlášení.
+- Testy: regresní test top-level Trim v bounds (6b), stale-trim removal (TEST 21), rezervace bracket-názvů.
+
 ### v26.5.0 (2026-06) — Phase 3: pouze značky + UI polish + crash fix
 - **Feat:** Režim **„Pouze značky (neměnit vrstvy)"** — pro dokumenty s už separovanými vrstvami. Vykreslí jen značky, uživatelské vrstvy nechá beze změny (žádný přesun cest, žádné přejmenování na „Graphics").
 - **Feat:** Tlačítko **↺ Revert** vedle dropdownu předvoleb — vrátí aktivní předvolbu na uložené hodnoty (aktivní jen při neuložených změnách). Odlišné od továrních hodnot.

@@ -54,6 +54,7 @@ ZSM.L = {
 ZSM.Config = {
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
+    layerTrim:     "Trim",
     summaXCenter: 10,    // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,    // mm: gap from graphic edge to Summa mark outer edge (Y)
     redLineWidth: 1,
@@ -652,6 +653,41 @@ assert(trimTop !== null && countItems(trimTop, "PathItem") >= 1,
     "marks-only SUMMA: trim lines in a top-level 'Trim' layer");
 assert(regMT === null || findSublayer(regMT, "Trim") === null,
     "marks-only SUMMA: NO 'Trim' sublayer inside Regmarks (bug E fixed)");
+
+
+// =====================================================
+// TEST 21 (v26.5.1): stale Trim removed when SUMMA re-runs with drawRed=false
+// =====================================================
+// Run 1: SUMMA + trim → Trim layer exists. Run 2: SUMMA, trim OFF → the stale
+// Trim layer must be REMOVED (its lines sit at outdated artboard edges).
+console.log("\n=== TEST 21: SUMMA drawRed=false removes stale Trim layer ===");
+var docST = setupDoc({
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
+});
+var sST = makeSettings({ mode: "SUMMA", drawRed: true });
+var bST = ZSM.Draw.getBounds(sST);
+var gST = ZSM.Core.calculateAll(sST, bST);
+ZSM.Draw.render(gST, sST);
+assert(findLayer(docST, "Trim") !== null, "precondition: run 1 created Trim layer");
+
+sST = makeSettings({ mode: "SUMMA", drawRed: false });
+bST = ZSM.Draw.getBounds(sST);
+gST = ZSM.Core.calculateAll(sST, bST);
+ZSM.Draw.render(gST, sST);
+assert(findLayer(docST, "Trim") === null,
+    "SUMMA drawRed=false: stale Trim layer removed");
+
+// ZUND run must NOT delete an existing Trim (belongs to the SUMMA layout)
+var docZT = setupDoc({
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
+});
+var sZT = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZT, ZSM.Draw.getBounds(sZT)), sZT);
+assert(findLayer(docZT, "Trim") !== null, "precondition: SUMMA created Trim");
+sZT = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZT, ZSM.Draw.getBounds(sZT)), sZT);
+assert(findLayer(docZT, "Trim") !== null,
+    "ZUND run leaves the SUMMA Trim layer alone");
 
 
 // =====================================================

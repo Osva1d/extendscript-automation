@@ -304,7 +304,15 @@ ZSM.Draw = {
             // 7a. Trim lines → always a DEDICATED top-level "Trim" layer (both
             //     modes). Never Regmarks (would collide with mark reading) nor a
             //     cut layer — and consistent placement regardless of mode.
-            this._drawTrimTopLevel(geo.red);
+            //     With trim OFF in SUMMA, remove any stale Trim layer from a
+            //     previous run — its lines sit at outdated artboard edges and
+            //     would mislead the operator. ZUND leaves an existing Trim
+            //     alone (it belongs to the SUMMA layout, not ours to delete).
+            if (geo.red && geo.red.length > 0) {
+                this._drawTrimTopLevel(geo.red);
+            } else if (s.mode === "SUMMA") {
+                this._removeTrimLayer();
+            }
 
             // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
             //     Skipped in marks-only (user's layers are left untouched).
@@ -377,7 +385,7 @@ ZSM.Draw = {
         try { app.redraw(); } catch (e3) {}
 
         var trimLayer = null;
-        try { trimLayer = doc.layers.getByName("Trim"); } catch (e) { trimLayer = null; }
+        try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { trimLayer = null; }
         if (trimLayer) {
             try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
             this._clearLayer(trimLayer);          // refresh — drop old trim lines
@@ -385,7 +393,7 @@ ZSM.Draw = {
         } else {
             try {
                 trimLayer = doc.layers.add();
-                trimLayer.name = "Trim";
+                trimLayer.name = ZSM.Config.layerTrim;
                 try { app.redraw(); } catch (rd2) {}   // commit layer creation
             } catch (eAdd) {
                 ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
@@ -393,6 +401,35 @@ ZSM.Draw = {
             }
         }
         this._paintRedLines(trimLayer, redLines);
+    },
+
+    /**
+     * Removes the top-level "Trim" layer if present. Called when a SUMMA run
+     * has trim lines OFF — stale lines from a previous run sit at outdated
+     * artboard edges. Same C++ crash guard as _drawTrimTopLevel: deselect,
+     * move activeLayer OFF the layer being removed, commit, then remove.
+     * @private
+     */
+    _removeTrimLayer: function () {
+        var doc = app.activeDocument;
+        var trimLayer = null;
+        try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { return; }
+        if (!trimLayer || doc.layers.length <= 1) return;  // AI needs >= 1 layer
+        try { doc.selection = null; } catch (e1) {}
+        // activeLayer must NOT be the layer being removed
+        try {
+            for (var i = 0; i < doc.layers.length; i++) {
+                if (doc.layers[i] !== trimLayer) { doc.activeLayer = doc.layers[i]; break; }
+            }
+        } catch (e2) {}
+        try { app.redraw(); } catch (e3) {}
+        try {
+            trimLayer.locked = false; trimLayer.visible = true;
+            trimLayer.remove();
+            try { app.redraw(); } catch (rd) {}
+        } catch (e4) {
+            ZSM.Utils.log("trim: stale layer remove failed — " + e4.message);
+        }
     },
 
     /**
@@ -743,7 +780,8 @@ ZSM.Draw = {
             var layers = app.activeDocument.layers;
             for (var i = 0; i < layers.length; i++) {
                 var n = layers[i].name;
-                if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics) continue;
+                if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics
+                    || n === ZSM.Config.layerTrim) continue;
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
                 if (ZSM.Bounds.isArtifactLayer(layers[i])) continue;
                 docNames.push(n);

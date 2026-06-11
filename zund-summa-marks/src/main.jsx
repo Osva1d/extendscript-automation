@@ -35,14 +35,12 @@
         if (!resultWrapper) return;
 
         // Persist settings before rendering (so a crash doesn't lose the config).
-        // Log + alert on failure but continue with the render — the user already
+        // Alert on failure but continue with the render — the user already
         // submitted the dialog, blocking the render because we cannot persist
-        // would surprise them. The next run can re-save.
-        try {
-            ZSM.Storage.save(resultWrapper);
-        } catch (e) {
-            ZSM.Utils.log("Storage.save failed: " + e.message);
-            alert(ZSM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+        // would surprise them. The next run can re-save. Storage.save never
+        // throws; it returns false on any open/write/close failure.
+        if (!ZSM.Storage.save(resultWrapper)) {
+            alert(ZSM.L.ERR_WRITE_SETTINGS);
         }
 
         // Extract runtime settings. Source: `[Last Settings]` always reflects
@@ -55,7 +53,10 @@
         var res = resultWrapper.presets["[Last Settings]"]
                || resultWrapper.presets[resultWrapper.activePreset];
 
-        // Unlock layers, set ruler origin
+        // Unlock layers, set ruler origin. The [0,0] origin is intentional and
+        // NOT restored afterwards — all geometry math assumes it, and a restored
+        // custom origin would visually desync the rulers from the marks just
+        // placed. Document-state side effect, accepted by design.
         draw.beginSession();
         app.activeDocument.rulerOrigin = [0, 0];
 
@@ -69,7 +70,8 @@
         draw.render(geo, res);
 
     } catch (e) {
-        alert(ZSM.L.ERR_CRITICAL + e.message + " (line " + e.line + ")");
+        // e.line is undefined for non-Error throws — append only when present.
+        alert(ZSM.L.ERR_CRITICAL + e.message + (e.line ? " (line " + e.line + ")" : ""));
     } finally {
         // Always restore layer locks, even if render throws
         if (app.documents.length > 0) draw.endSession();

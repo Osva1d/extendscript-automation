@@ -1,11 +1,11 @@
 var ZSM = ZSM || {};
 
 ZSM.Config = {
-    scriptName: "Zund & Summa Marks",
+    scriptName: "Zünd & Summa Marks",
     // KEEP IN SYNC with package.json "version" — build.sh reads package.json
     // for the dist header; this constant is the runtime source of truth
     // for the dialog title, footer copyright, and any in-script "About" UI.
-    version:    "26.5.0",
+    version:    "26.5.1",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 
@@ -18,6 +18,7 @@ ZSM.Config = {
     // System layer names — not localized (must match document layer names exactly)
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
+    layerTrim:     "Trim",
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {

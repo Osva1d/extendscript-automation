@@ -1,4 +1,4 @@
-# Architecture: Zünd & Summa Marks v26.5.0
+# Architecture: Zünd & Summa Marks v26.5.1
 
 > Copyright © 2025-2026 Ladislav Osvald (Osva1d) — licensed under GPL-3.0-or-later.
 > Technický přehled projektu.

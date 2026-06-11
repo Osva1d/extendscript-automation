@@ -32,7 +32,12 @@ ZSM.UIState = {
     validatePresetName: function (rawName) {
         var name = String(rawName == null ? "" : rawName).replace(/^\s+|\s+$/g, "");
         if (!name) return null;
-        if (name === this.PRESET_KEY_DEFAULT || name === this.PRESET_KEY_LAST) return null;
+        // The whole "[...]" namespace is reserved for sentinels — not just the
+        // two current keys. A user preset named e.g. "[Foo]" would collide with
+        // the localized-default migration in Storage.load (its sentinel regex
+        // would rename it to [Default] on a legacy file) and with any future
+        // reserved key.
+        if (/^\[.+\]$/.test(name)) return null;
         return name;
     },
 

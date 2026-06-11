@@ -57,7 +57,10 @@ ZSM.Bounds = {
         // Per-layer skip rules for sublayer recursion
         var regmarksSkip = {};
         regmarksSkip[currentMode] = true;
-        var graphicsSkip = { "Trim": true };
+        // Legacy: pre-v26.5.0 versions drew trim as a Graphics/Trim SUBLAYER —
+        // keep skipping it so old documents don't inflate bounds either.
+        var graphicsSkip = {};
+        graphicsSkip[ZSM.Config.layerTrim] = true;
 
         for (var li = 0; li < doc.layers.length; li++) {
             try {
@@ -69,6 +72,12 @@ ZSM.Bounds = {
                 // heuristic in _measureLayer detect <Clip Group> wrappers.
 
                 var layName = layer.name;
+
+                // Top-level "Trim" is OUR trim-line layer (v26.5.0+). Its lines
+                // sit at the artboard edges — beyond the graphic — so measuring
+                // them would inflate bounds on every re-run (artboard grows each
+                // time = idempotence violation). Never measure it.
+                if (layName === ZSM.Config.layerTrim) continue;
 
                 if (layName === ZSM.Config.layerRegmarks) {
                     // Regmarks is OUR output layer. Skip its direct items

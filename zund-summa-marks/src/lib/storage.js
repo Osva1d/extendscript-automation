@@ -33,20 +33,31 @@ ZSM.Storage = {
 
     /**
      * Serializes and saves the full preset wrapper to disk.
+     * Returns success so CALLERS decide how to surface a failure (alert with
+     * context); this module never alerts itself. open(), write() and close()
+     * are all checked — File.write returns false on a full disk / permission
+     * error without throwing, so an unchecked call would lose settings silently.
      * @param {Object} data - Full preset wrapper {presets, activePreset}.
+     * @returns {boolean} True when the file was written completely.
      */
     save: function (data) {
         try {
             var f = this.getFile();
             f.encoding = "UTF-8";
             if (!f.open("w")) {
-                ZSM.Utils.error(ZSM.L.ERR_WRITE_SETTINGS);
-                return;
+                ZSM.Utils.log("Storage.save: open(w) failed for " + f.fsName);
+                return false;
             }
-            f.write(JSON.stringify(data));
-            f.close();
+            var wrote  = f.write(JSON.stringify(data));
+            var closed = f.close();
+            if (!wrote || !closed) {
+                ZSM.Utils.log("Storage.save: write/close failed for " + f.fsName);
+                return false;
+            }
+            return true;
         } catch (e) {
             ZSM.Utils.log("Storage.save failed: " + e.message);
+            return false;
         }
     },
 

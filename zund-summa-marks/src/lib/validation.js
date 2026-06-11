@@ -92,9 +92,9 @@ ZSM.Validation = {
             if (val === null) {
                 errors.push({ field: field, label: label });
             } else if (rule.integer && val !== Math.floor(val)) {
-                // Integer-only rule (e.g. scaleN): reject decimals.
-                // validateNumber already showed range alert; we add a precise
-                // "must be integer" alert via the same locale mechanism.
+                // Integer-only rule (e.g. scaleN): reject decimals. The value
+                // passed the range check, so validateNumber showed NO alert —
+                // this "must be integer" alert is the only message the user sees.
                 try {
                     if (typeof alert === "function" && L.ERR_MUST_BE_INTEGER) {
                         alert(L.format ? L.format(L.ERR_MUST_BE_INTEGER, label) : L.ERR_MUST_BE_INTEGER);

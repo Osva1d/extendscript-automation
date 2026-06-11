@@ -77,7 +77,7 @@ ZSM.L = {
     }
 };
 ZSM.Config = {
-    layerRegmarks: "Regmarks", layerGraphics: "Graphics", PRESET_KEY_DEFAULT: "[Default]",
+    layerRegmarks: "Regmarks", layerGraphics: "Graphics", layerTrim: "Trim", PRESET_KEY_DEFAULT: "[Default]",
     summaXCenter: 10, summaYVisual: 10, redLineWidth: 1, debug: false,
     zundSize: 5, summaSize: 3,
     ui: { title: "Zünd & Summa Marks v26.4.0" },

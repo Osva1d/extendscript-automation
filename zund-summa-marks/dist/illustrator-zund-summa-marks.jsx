@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Zund & Summa Marks
- * Version:     26.5.0
+ * Version:     26.5.1
  * Author:      Osva1d
- * Updated:     2026-06-06
+ * Updated:     2026-06-11
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -647,9 +647,9 @@ ZSM.Validation = {
             if (val === null) {
                 errors.push({ field: field, label: label });
             } else if (rule.integer && val !== Math.floor(val)) {
-                // Integer-only rule (e.g. scaleN): reject decimals.
-                // validateNumber already showed range alert; we add a precise
-                // "must be integer" alert via the same locale mechanism.
+                // Integer-only rule (e.g. scaleN): reject decimals. The value
+                // passed the range check, so validateNumber showed NO alert —
+                // this "must be integer" alert is the only message the user sees.
                 try {
                     if (typeof alert === "function" && L.ERR_MUST_BE_INTEGER) {
                         alert(L.format ? L.format(L.ERR_MUST_BE_INTEGER, label) : L.ERR_MUST_BE_INTEGER);
@@ -717,7 +717,12 @@ ZSM.UIState = {
     validatePresetName: function (rawName) {
         var name = String(rawName == null ? "" : rawName).replace(/^\s+|\s+$/g, "");
         if (!name) return null;
-        if (name === this.PRESET_KEY_DEFAULT || name === this.PRESET_KEY_LAST) return null;
+        // The whole "[...]" namespace is reserved for sentinels — not just the
+        // two current keys. A user preset named e.g. "[Foo]" would collide with
+        // the localized-default migration in Storage.load (its sentinel regex
+        // would rename it to [Default] on a legacy file) and with any future
+        // reserved key.
+        if (/^\[.+\]$/.test(name)) return null;
         return name;
     },
 
@@ -859,11 +864,11 @@ ZSM.UIState = {
 var ZSM = ZSM || {};
 
 ZSM.Config = {
-    scriptName: "Zund & Summa Marks",
+    scriptName: "Zünd & Summa Marks",
     // KEEP IN SYNC with package.json "version" — build.sh reads package.json
     // for the dist header; this constant is the runtime source of truth
     // for the dialog title, footer copyright, and any in-script "About" UI.
-    version:    "26.5.0",
+    version:    "26.5.1",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 
@@ -876,6 +881,7 @@ ZSM.Config = {
     // System layer names — not localized (must match document layer names exactly)
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
+    layerTrim:     "Trim",
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {
@@ -964,20 +970,31 @@ ZSM.Storage = {
 
     /**
      * Serializes and saves the full preset wrapper to disk.
+     * Returns success so CALLERS decide how to surface a failure (alert with
+     * context); this module never alerts itself. open(), write() and close()
+     * are all checked — File.write returns false on a full disk / permission
+     * error without throwing, so an unchecked call would lose settings silently.
      * @param {Object} data - Full preset wrapper {presets, activePreset}.
+     * @returns {boolean} True when the file was written completely.
      */
     save: function (data) {
         try {
             var f = this.getFile();
             f.encoding = "UTF-8";
             if (!f.open("w")) {
-                ZSM.Utils.error(ZSM.L.ERR_WRITE_SETTINGS);
-                return;
+                ZSM.Utils.log("Storage.save: open(w) failed for " + f.fsName);
+                return false;
             }
-            f.write(JSON.stringify(data));
-            f.close();
+            var wrote  = f.write(JSON.stringify(data));
+            var closed = f.close();
+            if (!wrote || !closed) {
+                ZSM.Utils.log("Storage.save: write/close failed for " + f.fsName);
+                return false;
+            }
+            return true;
         } catch (e) {
             ZSM.Utils.log("Storage.save failed: " + e.message);
+            return false;
         }
     },
 
@@ -1367,7 +1384,10 @@ ZSM.Bounds = {
         // Per-layer skip rules for sublayer recursion
         var regmarksSkip = {};
         regmarksSkip[currentMode] = true;
-        var graphicsSkip = { "Trim": true };
+        // Legacy: pre-v26.5.0 versions drew trim as a Graphics/Trim SUBLAYER —
+        // keep skipping it so old documents don't inflate bounds either.
+        var graphicsSkip = {};
+        graphicsSkip[ZSM.Config.layerTrim] = true;
 
         for (var li = 0; li < doc.layers.length; li++) {
             try {
@@ -1379,6 +1399,12 @@ ZSM.Bounds = {
                 // heuristic in _measureLayer detect <Clip Group> wrappers.
 
                 var layName = layer.name;
+
+                // Top-level "Trim" is OUR trim-line layer (v26.5.0+). Its lines
+                // sit at the artboard edges — beyond the graphic — so measuring
+                // them would inflate bounds on every re-run (artboard grows each
+                // time = idempotence violation). Never measure it.
+                if (layName === ZSM.Config.layerTrim) continue;
 
                 if (layName === ZSM.Config.layerRegmarks) {
                     // Regmarks is OUR output layer. Skip its direct items
@@ -1911,7 +1937,15 @@ ZSM.Draw = {
             // 7a. Trim lines → always a DEDICATED top-level "Trim" layer (both
             //     modes). Never Regmarks (would collide with mark reading) nor a
             //     cut layer — and consistent placement regardless of mode.
-            this._drawTrimTopLevel(geo.red);
+            //     With trim OFF in SUMMA, remove any stale Trim layer from a
+            //     previous run — its lines sit at outdated artboard edges and
+            //     would mislead the operator. ZUND leaves an existing Trim
+            //     alone (it belongs to the SUMMA layout, not ours to delete).
+            if (geo.red && geo.red.length > 0) {
+                this._drawTrimTopLevel(geo.red);
+            } else if (s.mode === "SUMMA") {
+                this._removeTrimLayer();
+            }
 
             // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
             //     Skipped in marks-only (user's layers are left untouched).
@@ -1984,7 +2018,7 @@ ZSM.Draw = {
         try { app.redraw(); } catch (e3) {}
 
         var trimLayer = null;
-        try { trimLayer = doc.layers.getByName("Trim"); } catch (e) { trimLayer = null; }
+        try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { trimLayer = null; }
         if (trimLayer) {
             try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
             this._clearLayer(trimLayer);          // refresh — drop old trim lines
@@ -1992,7 +2026,7 @@ ZSM.Draw = {
         } else {
             try {
                 trimLayer = doc.layers.add();
-                trimLayer.name = "Trim";
+                trimLayer.name = ZSM.Config.layerTrim;
                 try { app.redraw(); } catch (rd2) {}   // commit layer creation
             } catch (eAdd) {
                 ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
@@ -2000,6 +2034,35 @@ ZSM.Draw = {
             }
         }
         this._paintRedLines(trimLayer, redLines);
+    },
+
+    /**
+     * Removes the top-level "Trim" layer if present. Called when a SUMMA run
+     * has trim lines OFF — stale lines from a previous run sit at outdated
+     * artboard edges. Same C++ crash guard as _drawTrimTopLevel: deselect,
+     * move activeLayer OFF the layer being removed, commit, then remove.
+     * @private
+     */
+    _removeTrimLayer: function () {
+        var doc = app.activeDocument;
+        var trimLayer = null;
+        try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { return; }
+        if (!trimLayer || doc.layers.length <= 1) return;  // AI needs >= 1 layer
+        try { doc.selection = null; } catch (e1) {}
+        // activeLayer must NOT be the layer being removed
+        try {
+            for (var i = 0; i < doc.layers.length; i++) {
+                if (doc.layers[i] !== trimLayer) { doc.activeLayer = doc.layers[i]; break; }
+            }
+        } catch (e2) {}
+        try { app.redraw(); } catch (e3) {}
+        try {
+            trimLayer.locked = false; trimLayer.visible = true;
+            trimLayer.remove();
+            try { app.redraw(); } catch (rd) {}
+        } catch (e4) {
+            ZSM.Utils.log("trim: stale layer remove failed — " + e4.message);
+        }
     },
 
     /**
@@ -2350,7 +2413,8 @@ ZSM.Draw = {
             var layers = app.activeDocument.layers;
             for (var i = 0; i < layers.length; i++) {
                 var n = layers[i].name;
-                if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics) continue;
+                if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics
+                    || n === ZSM.Config.layerTrim) continue;
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
                 if (ZSM.Bounds.isArtifactLayer(layers[i])) continue;
                 docNames.push(n);
@@ -2624,18 +2688,27 @@ ZSM.UI = {
             refreshModifiedIndicator();
         };
 
+        // onChange (commit, focus leaves the field) vs onChanging (every
+        // keystroke) MUST differ here: the auto-uncheck on "1" may only run on
+        // commit. If it ran per keystroke, typing "12" would disable the field
+        // after the first "1" — mid-typing lockout. liveValidateAll paints the
+        // field red / gates Generate for out-of-range values (e.g. 50).
         etScale.onChange = function () {
             var n = parseInt(etScale.text, 10);
-            // Auto-uncheck when user explicitly types 1
+            // Auto-uncheck when user explicitly commits 1
             if (n === 1) {
                 cbScale.value   = false;
                 setScaleEnabled(false);
             }
-            // Clamp out-of-range silently here; validation will alert on Generate
             applyTitleSuffix();
             refreshModifiedIndicator();
+            liveValidateAll();
         };
-        etScale.onChanging = etScale.onChange;
+        etScale.onChanging = function () {
+            applyTitleSuffix();
+            refreshModifiedIndicator();
+            liveValidateAll();
+        };
 
         // =================================================================
         // Panel: Gap / Geometry (mode-specific rows)
@@ -3062,12 +3135,9 @@ ZSM.UI = {
          * data-integrity bug, not a cosmetic one.
          */
         function persistSettings() {
-            try {
-                ZSM.Storage.save(pData);
-            } catch (e) {
-                ZSM.Utils.log("Storage.save failed: " + e.message);
-                alert(l.ERR_WRITE_SETTINGS + "\n\n" + e.message);
-            }
+            var ok = false;
+            try { ok = ZSM.Storage.save(pData); } catch (e) { ok = false; }
+            if (!ok) alert(l.ERR_WRITE_SETTINGS);
         }
 
         ddPreset.onChange = function () {
@@ -3094,6 +3164,9 @@ ZSM.UI = {
             var r = ZSM.UIState.save(pData, getUIValues());
             if (r.ok) {
                 updatePresetList();
+                // Saved → UI now matches the preset; Save/Revert must grey out
+                // (updatePresetList refreshes the asterisk but not the buttons).
+                refreshModifiedIndicator();
                 persistSettings();
                 return;
             }
@@ -3227,7 +3300,11 @@ ZSM.UI = {
                 mode:              mode,
                 gapOuter:          rGapZO.inp.text,
                 maxDist:           rMaxD.inp.text,
-                gapInner:          isZ ? rGapGZ.inp.text     : undefined,
+                // gapInner is irrelevant (and its field disabled) in Fixed mode —
+                // pass undefined so validation falls back to prev instead of
+                // blocking Generate on a stale out-of-range value the user
+                // cannot even edit.
+                gapInner:          (isZ && rGapGZ.inp.enabled) ? rGapGZ.inp.text : undefined,
                 markSizeZ:         isZ ? rMarkSize.inp.text  : undefined,
                 orientDist:        isZ ? rOrientDist.inp.text: undefined,
                 markSizeS:         isS ? rMarkSize.inp.text  : undefined,
@@ -3314,6 +3391,11 @@ ZSM.UI = {
         }
         numericRows.push({ row: rGapZO, rule: ZSM.Validation.rules.gapOuter });
         numericRows.push({ row: rMaxD,  rule: ZSM.Validation.rules.maxDist  });
+        // Scale field (1:N) — without this an out-of-range N (e.g. 50) would be
+        // silently clamped to 10 by readScaleN with no visual signal. Wrapped in
+        // {inp:} to match the row shape; skipped automatically when the checkbox
+        // is off (the field is disabled then).
+        numericRows.push({ row: { inp: etScale }, rule: ZSM.Validation.rules.scaleN });
 
         function isValueInRange(et, rule) {
             var raw = String(et.text || "").replace(/,/g, ".");
@@ -3609,14 +3691,12 @@ ZSM.UI = {
         if (!resultWrapper) return;
 
         // Persist settings before rendering (so a crash doesn't lose the config).
-        // Log + alert on failure but continue with the render — the user already
+        // Alert on failure but continue with the render — the user already
         // submitted the dialog, blocking the render because we cannot persist
-        // would surprise them. The next run can re-save.
-        try {
-            ZSM.Storage.save(resultWrapper);
-        } catch (e) {
-            ZSM.Utils.log("Storage.save failed: " + e.message);
-            alert(ZSM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
+        // would surprise them. The next run can re-save. Storage.save never
+        // throws; it returns false on any open/write/close failure.
+        if (!ZSM.Storage.save(resultWrapper)) {
+            alert(ZSM.L.ERR_WRITE_SETTINGS);
         }
 
         // Extract runtime settings. Source: `[Last Settings]` always reflects
@@ -3629,7 +3709,10 @@ ZSM.UI = {
         var res = resultWrapper.presets["[Last Settings]"]
                || resultWrapper.presets[resultWrapper.activePreset];
 
-        // Unlock layers, set ruler origin
+        // Unlock layers, set ruler origin. The [0,0] origin is intentional and
+        // NOT restored afterwards — all geometry math assumes it, and a restored
+        // custom origin would visually desync the rulers from the marks just
+        // placed. Document-state side effect, accepted by design.
         draw.beginSession();
         app.activeDocument.rulerOrigin = [0, 0];
 
@@ -3643,7 +3726,8 @@ ZSM.UI = {
         draw.render(geo, res);
 
     } catch (e) {
-        alert(ZSM.L.ERR_CRITICAL + e.message + " (line " + e.line + ")");
+        // e.line is undefined for non-Error throws — append only when present.
+        alert(ZSM.L.ERR_CRITICAL + e.message + (e.line ? " (line " + e.line + ")" : ""));
     } finally {
         // Always restore layer locks, even if render throws
         if (app.documents.length > 0) draw.endSession();

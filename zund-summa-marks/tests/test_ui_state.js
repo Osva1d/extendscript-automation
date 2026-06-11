@@ -89,8 +89,11 @@ assertEq(ZSM.UIState.validatePresetName(null), null, "null invalid");
 assertEq(ZSM.UIState.validatePresetName(undefined), null, "undefined invalid");
 assertEq(ZSM.UIState.validatePresetName("[Default]"), null, "[Default] is reserved");
 assertEq(ZSM.UIState.validatePresetName("[Last Settings]"), null, "[Last Settings] is reserved");
-// Names that contain brackets but aren't reserved are OK
-assertEq(ZSM.UIState.validatePresetName("[MyCustom]"), "[MyCustom]", "Other bracket names valid");
+// The whole "[...]" namespace is reserved (sentinel collision with the
+// localized-default migration in Storage.load) — any fully-bracketed name
+// is rejected. Brackets INSIDE a name remain fine.
+assertEq(ZSM.UIState.validatePresetName("[MyCustom]"), null, "Fully-bracketed names reserved");
+assertEq(ZSM.UIState.validatePresetName("My [10] preset"), "My [10] preset", "Inner brackets still valid");
 
 
 // =====================================================

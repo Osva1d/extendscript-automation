@@ -251,18 +251,27 @@ ZSM.UI = {
             refreshModifiedIndicator();
         };
 
+        // onChange (commit, focus leaves the field) vs onChanging (every
+        // keystroke) MUST differ here: the auto-uncheck on "1" may only run on
+        // commit. If it ran per keystroke, typing "12" would disable the field
+        // after the first "1" — mid-typing lockout. liveValidateAll paints the
+        // field red / gates Generate for out-of-range values (e.g. 50).
         etScale.onChange = function () {
             var n = parseInt(etScale.text, 10);
-            // Auto-uncheck when user explicitly types 1
+            // Auto-uncheck when user explicitly commits 1
             if (n === 1) {
                 cbScale.value   = false;
                 setScaleEnabled(false);
             }
-            // Clamp out-of-range silently here; validation will alert on Generate
             applyTitleSuffix();
             refreshModifiedIndicator();
+            liveValidateAll();
         };
-        etScale.onChanging = etScale.onChange;
+        etScale.onChanging = function () {
+            applyTitleSuffix();
+            refreshModifiedIndicator();
+            liveValidateAll();
+        };
 
         // =================================================================
         // Panel: Gap / Geometry (mode-specific rows)
@@ -689,12 +698,9 @@ ZSM.UI = {
          * data-integrity bug, not a cosmetic one.
          */
         function persistSettings() {
-            try {
-                ZSM.Storage.save(pData);
-            } catch (e) {
-                ZSM.Utils.log("Storage.save failed: " + e.message);
-                alert(l.ERR_WRITE_SETTINGS + "\n\n" + e.message);
-            }
+            var ok = false;
+            try { ok = ZSM.Storage.save(pData); } catch (e) { ok = false; }
+            if (!ok) alert(l.ERR_WRITE_SETTINGS);
         }
 
         ddPreset.onChange = function () {
@@ -721,6 +727,9 @@ ZSM.UI = {
             var r = ZSM.UIState.save(pData, getUIValues());
             if (r.ok) {
                 updatePresetList();
+                // Saved → UI now matches the preset; Save/Revert must grey out
+                // (updatePresetList refreshes the asterisk but not the buttons).
+                refreshModifiedIndicator();
                 persistSettings();
                 return;
             }
@@ -854,7 +863,11 @@ ZSM.UI = {
                 mode:              mode,
                 gapOuter:          rGapZO.inp.text,
                 maxDist:           rMaxD.inp.text,
-                gapInner:          isZ ? rGapGZ.inp.text     : undefined,
+                // gapInner is irrelevant (and its field disabled) in Fixed mode —
+                // pass undefined so validation falls back to prev instead of
+                // blocking Generate on a stale out-of-range value the user
+                // cannot even edit.
+                gapInner:          (isZ && rGapGZ.inp.enabled) ? rGapGZ.inp.text : undefined,
                 markSizeZ:         isZ ? rMarkSize.inp.text  : undefined,
                 orientDist:        isZ ? rOrientDist.inp.text: undefined,
                 markSizeS:         isS ? rMarkSize.inp.text  : undefined,
@@ -941,6 +954,11 @@ ZSM.UI = {
         }
         numericRows.push({ row: rGapZO, rule: ZSM.Validation.rules.gapOuter });
         numericRows.push({ row: rMaxD,  rule: ZSM.Validation.rules.maxDist  });
+        // Scale field (1:N) — without this an out-of-range N (e.g. 50) would be
+        // silently clamped to 10 by readScaleN with no visual signal. Wrapped in
+        // {inp:} to match the row shape; skipped automatically when the checkbox
+        // is off (the field is disabled then).
+        numericRows.push({ row: { inp: etScale }, rule: ZSM.Validation.rules.scaleN });
 
         function isValueInRange(et, rule) {
             var raw = String(et.text || "").replace(/,/g, ".");
