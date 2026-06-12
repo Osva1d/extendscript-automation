@@ -179,6 +179,9 @@ GM.Core = {
      * (anchor 0 = start of segments[0]). Open circuits: both endpoints are
      * corners by definition; the last anchor index equals segments.length.
      *
+     * Note: for highly curved segments the chord approximation may over- or
+     * under-estimate the tangent angle at a degenerate handle by up to ~30°.
+     *
      * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...]
      * @param {boolean} closed - Closed path flag.
      * @param {number} minAngleDeg - Threshold (GM.CONSTANTS.CORNER_ANGLE_MIN).
