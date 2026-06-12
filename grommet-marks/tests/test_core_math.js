@@ -13,6 +13,7 @@ var path = require("path");
 var GM = {};
 
 GM.CONSTANTS = {
+    MAX_MARKS: 9999,
     UNIT_FACTORS: {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,

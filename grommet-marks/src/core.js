@@ -76,7 +76,7 @@ GM.Core = {
                     spc = sCeil;
                 }
                 // Safety cap — prevent freeze from very small spacing values
-                if (count > 9999) { count = 9999; spc = count > 1 ? available / (count - 1) : 0; }
+                if (count > GM.CONSTANTS.MAX_MARKS) { count = GM.CONSTANTS.MAX_MARKS; spc = count > 1 ? available / (count - 1) : 0; }
             }
         }
 

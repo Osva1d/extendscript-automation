@@ -220,6 +220,7 @@ console.log("--- v5 forward-fill ---");
     assert(p.cornerZone.count === 5, "forward-fill: cornerZone.count");
     assert(p.cornerZone.pitch === 100, "forward-fill: cornerZone.pitch");
     assert(p.pathDist && p.pathDist.useNumber === false, "forward-fill: pathDist.useNumber");
+    assert(p.pathDist.number === 24, "forward-fill: pathDist.number");
     assert(p.pathDist.spacing === 105, "forward-fill: pathDist.spacing");
 })();
 
