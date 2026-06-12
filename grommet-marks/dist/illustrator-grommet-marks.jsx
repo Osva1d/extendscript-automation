@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     4.2.1
+ * Version:     5.0.0
  * Author:      Osva1d
- * Updated:     2026-06-11
+ * Updated:     2026-06-12
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -159,7 +159,7 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "4.2.1",
+    VERSION: "5.0.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
@@ -167,6 +167,15 @@ GM.CONSTANTS = {
 
     // Layer/swatch auto-creation sentinel — never displayed, used in logic only
     SENTINEL_CREATE: "__create__",
+
+    // Placement modes
+    MODE_ARTBOARD: "artboard",
+    MODE_PATH: "path",
+
+    // Path geometry
+    CORNER_ANGLE_MIN: 15,      // deg — tangent deviation above this = corner
+    SAMPLES_PER_SEGMENT: 64,   // arc-length table resolution per Bézier
+    MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
@@ -238,6 +247,30 @@ GM.L = (function () {
             WEIGHT: "Weight:",
             POINTS: "pt",
 
+            // Placement panel
+            PLACEMENT_PANEL: "Placement",
+            MODE_ARTBOARD: "Artboard edges",
+            MODE_PATH: "Selected path",
+            TIP_MODE_PATH_DISABLED: "Select a path in the document first, then run the script again.",
+
+            // Path panel
+            PATH_PANEL: "Path",
+            PATH_INFO_CLOSED: "Closed path",
+            PATH_INFO_OPEN: "Open path",
+            PATH_INFO_CORNERS: "%s corners",
+            PATH_INFO_NO_CORNERS: "no corners",
+            PATH_INFO_LENGTH: "perimeter ≈ %s %s",
+            PATH_OFFSET_NOTE: "Marks sit centred on the path. For an inset from the material edge, offset the path first (Object ▸ Path ▸ Offset Path…).",
+            TIP_PATH_COUNT_DISABLED: "A path with corners follows the spacing — the mark count emerges from the span lengths.",
+
+            // Corner zones panel
+            ZONES_PANEL: "Corner zones",
+            ZONES_ENABLE: "Densify at corners",
+            ZONES_COUNT: "Count:",
+            ZONES_PITCH: "Pitch:",
+            TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
+            TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
+
             // Settings panel
             SETTINGS_PANEL: "Presets",
             LOAD: "Load:",
@@ -286,6 +319,11 @@ GM.L = (function () {
             ERR_MUST_BE_NUMBER: "%s must be a number!",
             ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
+            ERR_PATH_NO_SELECTION: "Nothing is selected. Select one path and run the script again.",
+            ERR_PATH_NOT_A_PATH: "The selection is not a simple path. Release compound paths first: Object ▸ Compound Path ▸ Release.",
+            ERR_PATH_TOO_SHORT: "The selected path has fewer than 2 points.",
+            ERR_PATH_GONE: "The selected path is no longer available — select it again and rerun.",
+            WARN_MODE_FALLBACK: "The preset uses Selected path mode, but no path is selected — switched to Artboard edges.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -337,6 +375,30 @@ GM.L = (function () {
             WEIGHT: "Tloušťka:",
             POINTS: "pt",
 
+            // Placement panel
+            PLACEMENT_PANEL: "Umístění",
+            MODE_ARTBOARD: "Hrany artboardu",
+            MODE_PATH: "Vybraná cesta",
+            TIP_MODE_PATH_DISABLED: "Nejdřív vyberte cestu v dokumentu a spusťte skript znovu.",
+
+            // Path panel
+            PATH_PANEL: "Cesta",
+            PATH_INFO_CLOSED: "Uzavřená cesta",
+            PATH_INFO_OPEN: "Otevřená cesta",
+            PATH_INFO_CORNERS: "%s rohů",
+            PATH_INFO_NO_CORNERS: "bez rohů",
+            PATH_INFO_LENGTH: "obvod ≈ %s %s",
+            PATH_OFFSET_NOTE: "Značky leží středem na cestě. Potřebujete-li odsazení od kraje, posuňte si cestu předem (Objekt ▸ Cesta ▸ Posunout cestu…).",
+            TIP_PATH_COUNT_DISABLED: "Cesta s rohy se řídí roztečí — počet značek vyplyne z délek úseků.",
+
+            // Corner zones panel
+            ZONES_PANEL: "Rohové zóny",
+            ZONES_ENABLE: "Zhustit u rohů",
+            ZONES_COUNT: "Počet:",
+            ZONES_PITCH: "Rozteč:",
+            TIP_ZONES: "Prvních N značek od každého rohu použije tuto rozteč; zbytek jede podle rozteče hrany/cesty.",
+            TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
+
             // Settings panel
             SETTINGS_PANEL: "Předvolby",
             LOAD: "Načíst:",
@@ -385,6 +447,11 @@ GM.L = (function () {
             ERR_MUST_BE_NUMBER: "%s musí být číslo!",
             ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
+            ERR_PATH_NO_SELECTION: "Nic není vybráno. Vyberte jednu cestu a spusťte skript znovu.",
+            ERR_PATH_NOT_A_PATH: "Výběr není jednoduchá cesta. Složenou cestu nejdřív rozdělte: Objekt ▸ Složená cesta ▸ Uvolnit.",
+            ERR_PATH_TOO_SHORT: "Vybraná cesta má méně než 2 body.",
+            ERR_PATH_GONE: "Vybraná cesta už není dostupná — vyberte ji znovu a spusťte skript.",
+            WARN_MODE_FALLBACK: "Předvolba používá režim Vybraná cesta, ale žádná cesta není vybraná — přepnuto na Hrany artboardu.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
@@ -531,7 +598,10 @@ GM.Config = {
             strokeEnabled: false,
             strokeSwatchName: S,
             strokeOverprint: true,
-            strokeWeight: 1
+            strokeWeight: 1,
+            placementMode: GM.CONSTANTS.MODE_ARTBOARD,
+            cornerZone: { enabled: false, count: 5, pitch: 100 },
+            pathDist: { useNumber: false, number: 24, spacing: 105 }
         };
     }
 };

@@ -51,7 +51,10 @@ GM.Config = {
             strokeEnabled: false,
             strokeSwatchName: S,
             strokeOverprint: true,
-            strokeWeight: 1
+            strokeWeight: 1,
+            placementMode: GM.CONSTANTS.MODE_ARTBOARD,
+            cornerZone: { enabled: false, count: 5, pitch: 100 },
+            pathDist: { useNumber: false, number: 24, spacing: 105 }
         };
     }
 };

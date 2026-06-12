@@ -207,6 +207,22 @@ console.log("--- Forward-fill: new keys added to old presets ---");
     assert(p.markSize === 2, "forward-fill: existing value preserved");
 })();
 
+console.log("--- v5 forward-fill ---");
+(function () {
+    var preset = { offsetX: 5, offsetY: 5, units: "mm", markSize: 2 };
+    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    setup(data);
+
+    var result = GM.Storage.load();
+    var p = result.presets["[Default]"];
+    assert(p.placementMode === "artboard", "forward-fill: placementMode added");
+    assert(p.cornerZone && p.cornerZone.enabled === false, "forward-fill: cornerZone.enabled");
+    assert(p.cornerZone.count === 5, "forward-fill: cornerZone.count");
+    assert(p.cornerZone.pitch === 100, "forward-fill: cornerZone.pitch");
+    assert(p.pathDist && p.pathDist.useNumber === false, "forward-fill: pathDist.useNumber");
+    assert(p.pathDist.spacing === 105, "forward-fill: pathDist.spacing");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
