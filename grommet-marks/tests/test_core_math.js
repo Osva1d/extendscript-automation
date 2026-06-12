@@ -157,13 +157,13 @@ console.log("--- Core.buildCircuit ---");
     for (var qi = 1; qi < 10; qi++) {
         var q = GM.Core.pointAtDistance(cc, expected * qi / 10);
         var r = Math.sqrt(q[0] * q[0] + q[1] * q[1]);
-        if (Math.abs(r - 100) > 0.5) onCircle = false;
+        if (Math.abs(r - 100) > 0.1) onCircle = false;
     }
     assert(onCircle, "pointAtDistance stays on the circle");
 
     // Wrap: s == totalLen returns the start point (closed circuit)
     var w = GM.Core.pointAtDistance(cc, expected);
-    assert(Math.abs(w[0] - 100) < 0.5 && Math.abs(w[1]) < 0.5, "closed wrap to start");
+    assert(Math.abs(w[0] - 100) < 0.1 && Math.abs(w[1]) < 0.1, "closed wrap to start");
 
     // Open circuit clamps beyond-end distances
     var clamped = GM.Core.pointAtDistance(c, 150);

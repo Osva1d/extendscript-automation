@@ -138,10 +138,12 @@ GM.Core = {
      * Resolves the point at arc distance s along the circuit (linear
      * interpolation between samples; closed circuits wrap, open clamp).
      * @param {Object} circuit - From buildCircuit.
-     * @param {number} s - Distance 0..totalLen.
+     * @param {number} s - Distance along the circuit. Closed: any value
+     *   (wraps); open: clamped to [0, totalLen].
      * @returns {Array<number>} [x, y]
      */
     pointAtDistance: function (circuit, s) {
+        if (!circuit.segments || circuit.segments.length === 0) return [0, 0];
         if (circuit.closed) {
             s = s % circuit.totalLen;
             if (s < 0) s += circuit.totalLen;
