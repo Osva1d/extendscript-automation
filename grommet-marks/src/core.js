@@ -167,5 +167,55 @@ GM.Core = {
         }
         var last = circuit.segments[circuit.segments.length - 1];
         return last.pts[last.pts.length - 1].p;
+    },
+
+    /**
+     * Detects corner anchors by tangent deviation. An anchor is a corner when
+     * the angle between the incoming and outgoing tangents exceeds
+     * minAngleDeg. Geometric truth — independent of Illustrator PointType
+     * (which does not guarantee visual sharpness).
+     *
+     * Returns anchor indices: anchor i joins segments[i-1] -> segments[i]
+     * (anchor 0 = start of segments[0]). Open circuits: both endpoints are
+     * corners by definition; the last anchor index equals segments.length.
+     *
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...]
+     * @param {boolean} closed - Closed path flag.
+     * @param {number} minAngleDeg - Threshold (GM.CONSTANTS.CORNER_ANGLE_MIN).
+     * @returns {Array<number>} Sorted corner anchor indices.
+     */
+    detectCorners: function (segments, closed, minAngleDeg) {
+        var n = segments.length;
+        var corners = [];
+        var minRad = minAngleDeg * Math.PI / 180;
+
+        // Outgoing tangent at segment start; falls back to the chord when the
+        // handle collapses onto the anchor (degenerate handle).
+        function outTangent(seg) {
+            var dx = seg.p1[0] - seg.p0[0], dy = seg.p1[1] - seg.p0[1];
+            if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+            return [dx, dy];
+        }
+        function inTangent(seg) {
+            var dx = seg.p3[0] - seg.p2[0], dy = seg.p3[1] - seg.p2[1];
+            if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+            return [dx, dy];
+        }
+        function deviation(a, b) {
+            var cross = a[0] * b[1] - a[1] * b[0];
+            var dot = a[0] * b[0] + a[1] * b[1];
+            return Math.abs(Math.atan2(cross, dot));
+        }
+
+        for (var i = 0; i < n; i++) {
+            var isEndpoint = !closed && i === 0;
+            if (isEndpoint) { corners.push(i); continue; }
+            var prev = segments[(i - 1 + n) % n];
+            if (deviation(inTangent(prev), outTangent(segments[i])) > minRad) {
+                corners.push(i);
+            }
+        }
+        if (!closed) corners.push(n); // last anchor of an open path
+        return corners;
     }
 };

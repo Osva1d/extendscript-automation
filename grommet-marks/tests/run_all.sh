@@ -22,6 +22,7 @@ fi
 
 SUITES=(
     "tests/test_core_math.js"
+    "tests/test_core_circuit.js"
     "tests/test_storage_migrations.js"
     "tests/test_ui_state.js"
     "tests/test_validation.js"
