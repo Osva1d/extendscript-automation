@@ -143,7 +143,7 @@ BRE.UI = {
             alert(l.ERR_PRESET);
             return null;
         }
-        if (namingPattern.indexOf("{n}") === -1) {
+        if (namingPattern.indexOf(c.placeholders.N) === -1) {
             alert(l.ERR_NAMING_PATTERN);
             return null;
         }
@@ -338,7 +338,8 @@ BRE.UI = {
 
     /**
      * Shows a summary dialog after processing completes.
-     * @param {Object} results - { success, errors, skipped, removed, cancelled, total, log }
+     * @param {Object} results - { success, errors, skipped, blocked, removed,
+     *        manual, cancelled, total, log }
      */
     showSummary: function (results) {
         var l = BRE.L;

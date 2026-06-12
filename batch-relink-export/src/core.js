@@ -54,6 +54,9 @@ BRE.Core = {
 
     /**
      * Restores layer and item locks cleared by beginSession().
+     * Note: in the current flow the document is always closed without saving,
+     * so the restore never persists — it is kept as a cheap defensive measure
+     * (ZSM session pattern) in case a future flow ever saves the document.
      * @param {Document} doc - The active Illustrator document.
      */
     endSession: function (doc) {
@@ -92,7 +95,7 @@ BRE.Core = {
      * @param {Document} doc - The active document.
      * @param {File} targetPdf - The PDF file to relink to.
      * @param {number} totalPages - Total pages in targetPdf (0 = unknown).
-     * @returns {Object} { relinked, skipped, removed, warnings, errors }
+     * @returns {Object} { relinked, skipped, removed, relinkedItems, warnings, errors, ok }
      */
     relinkDocument: function (doc, targetPdf, totalPages) {
         var results = {
@@ -112,7 +115,7 @@ BRE.Core = {
                 continue;
             }
 
-            if (this._isOnHiddenLayer(item)) {
+            if (this._isHidden(item)) {
                 results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, label));
                 results.skipped++;
                 continue;
@@ -164,8 +167,9 @@ BRE.Core = {
 
     /**
      * Counts managed positions in the document — placed items that are linked
-     * (have a file) and not on a hidden layer. Used to detect how many extra
-     * positions remain on a sheet so the user can be told to remove them.
+     * (have a file) and not hidden (item itself or any ancestor layer). Used
+     * to detect how many extra positions remain on a sheet so the user can be
+     * told to remove them.
      * @param {Document} doc - The document to inspect.
      * @returns {number} Managed position count.
      */
@@ -174,7 +178,7 @@ BRE.Core = {
         var items = doc.placedItems;
         for (var i = 0; i < items.length; i++) {
             try {
-                if (items[i].file && !this._isOnHiddenLayer(items[i])) n++;
+                if (items[i].file && !this._isHidden(items[i])) n++;
             } catch (e) {}
         }
         return n;
@@ -190,8 +194,9 @@ BRE.Core = {
      * is itself being removed (removeRefs). A clip group that also encloses a
      * position we are KEEPING is never removed — otherwise good artwork would
      * be silently deleted. In that case removal falls back to the bare item
-     * (an ineffective no-op for clipped content), which the post-condition
-     * re-scan then catches and turns into a loud ERR_REMOVE_FAIL.
+     * (an ineffective no-op for clipped content); the caller then counts the
+     * surviving positions (countManagedPositions) and flags the sheet for
+     * manual cleanup instead of failing it.
      *
      * @param {PlacedItem} item - The placed item to remove.
      * @param {Array} removeRefs - All placed items scheduled for removal.
@@ -396,17 +401,6 @@ BRE.Core = {
         return count;
     },
 
-    /**
-     * Reads page count from PDF binary data (highest /Count in the page tree).
-     * @param {File} pdfFile - The PDF file to inspect.
-     * @returns {number} Page count, or 0 on failure.
-     */
-    countPdfPages: function (pdfFile) {
-        var content = this._readPdfBinary(pdfFile);
-        if (content === null) return 0;
-        return this._maxCount(content);
-    },
-
     // ---------------------------------------------------------------------
     // Pre-flight scan
     // ---------------------------------------------------------------------
@@ -436,7 +430,7 @@ BRE.Core = {
      *
      * @param {File[]} pdfFiles - Source PDF files (already sorted).
      * @param {number} slotCount - Number of PlacedItems in the template.
-     * @returns {Object} { items: [{name, pages, pageObjs, status}], counts, processable }
+     * @returns {Object} { items: [{file, name, pages, pageObjs, status}], counts, processable }
      */
     scanSources: function (pdfFiles, slotCount) {
         var items = [];
@@ -464,7 +458,9 @@ BRE.Core = {
             }
 
             counts[status]++;
-            items.push({ name: name, pages: pages, pageObjs: pageObjs, status: status });
+            // Carry the File reference so callers iterate scan items directly
+            // instead of index-coupling back to the pdfFiles array.
+            items.push({ file: f, name: name, pages: pages, pageObjs: pageObjs, status: status });
         }
 
         // "over" and "uncertain" files are hard-blocked; the rest are processable.
@@ -494,10 +490,11 @@ BRE.Core = {
         var num = String(index + 1);
         while (num.length < padLen) num = "0" + num;
 
+        var ph = BRE.Config.placeholders;
         var name = pattern;
-        name = name.split("{n}").join(num);
-        name = name.split("{template}").join(templateName);
-        name = name.split("{source}").join(sourceName);
+        name = name.split(ph.N).join(num);
+        name = name.split(ph.TEMPLATE).join(templateName);
+        name = name.split(ph.SOURCE).join(sourceName);
         return name + ".pdf";
     },
 
@@ -588,7 +585,7 @@ BRE.Core = {
                 par = it.parent.typename;
                 if (par === "GroupItem") clp = it.parent.clipped;
             } catch (e) {}
-            try { hid = this._isOnHiddenLayer(it); } catch (e) {}
+            try { hid = this._isHidden(it); } catch (e) {}
             try { fil = it.file ? decodeURI(it.file.name) : "NONE"; } catch (e) { fil = "ERR"; }
             lines.push("    [" + i + "] page=" + pn +
                        " over=" + (totalPages > 0 && pn !== "ERR" && pn > totalPages) +
@@ -622,12 +619,14 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Checks whether an item resides on a hidden layer (or nested hidden parent).
+     * Checks whether an item is effectively invisible — the item itself is
+     * hidden, or it resides on a hidden layer (or nested hidden parent layer).
      * @param {PlacedItem} item - The item to check.
-     * @returns {boolean} True if any ancestor layer is hidden.
+     * @returns {boolean} True if the item or any ancestor layer is hidden.
      */
-    _isOnHiddenLayer: function (item) {
+    _isHidden: function (item) {
         try {
+            if (item.hidden) return true;
             var obj = item.layer;
             while (obj) {
                 if (!obj.visible) return true;

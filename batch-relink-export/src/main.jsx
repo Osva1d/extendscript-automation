@@ -51,6 +51,16 @@
         var clean = (scan.counts.ok === config.pdfFiles.length);
         if (!clean && !BRE.UI.showPreview(config, slotCount, scan)) return;
 
+        // Every sheet must build from the template's saved on-disk state. If
+        // the user still has it open, app.open() would return that in-memory
+        // instance — including unsaved edits — for the FIRST sheet only, making
+        // sheet 01 inconsistent with the rest. Close it now, after the user
+        // confirmed all dialogs (cancelling above leaves their document intact).
+        if (openTpl) {
+            try { openTpl.close(SaveOptions.DONOTSAVECHANGES); } catch (e) {}
+            openTpl = null;
+        }
+
         // Processing loop
         var results = {
             success: 0, errors: 0, skipped: 0, blocked: 0, removed: 0, manual: 0,
@@ -68,8 +78,9 @@
                     break;
                 }
 
-                var currentFile = config.pdfFiles[i];
-                var sourceFileName = currentFile.displayName || decodeURI(currentFile.name);
+                var fileInfo = scan.items[i];
+                var currentFile = fileInfo.file;
+                var sourceFileName = fileInfo.name;
                 var sourceName = BRE.Core.stripExtension(sourceFileName);
 
                 var outputName = BRE.Core.buildOutputName(
@@ -83,7 +94,6 @@
                 // Hard block: a file with more pages than positions would
                 // silently drop pages. Refuse to process — never emit a lossy
                 // sheet (the user cannot manually verify a large batch).
-                var fileInfo = scan.items[i];
                 if (fileInfo.status === "over") {
                     results.blocked++;
                     results.log.push(outputName + ": " + BRE.L.format(
@@ -94,6 +104,15 @@
                     results.blocked++;
                     results.log.push(outputName + ": " + BRE.L.ERR_UNCERTAIN);
                     continue;
+                }
+
+                // Unreadable page count: the sheet still processes (relink all,
+                // remove none), but the short-sheet check below cannot work
+                // without a page count — note it in the summary so the operator
+                // verifies this sheet by eye.
+                if (fileInfo.status === "unreadable") {
+                    results.log.push(outputName + ": " + BRE.L.format(
+                        BRE.L.SCAN_FILE_UNREAD, sourceFileName));
                 }
 
                 // Skip existing
