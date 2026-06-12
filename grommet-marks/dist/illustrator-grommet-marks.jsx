@@ -1161,6 +1161,86 @@ GM.Core = {
             positions.push(startOff + i * spc);
         }
         return positions;
+    },
+
+    /**
+     * Evaluates a cubic Bezier at parameter t.
+     * Segment: {p0,p1,p2,p3} — each [x, y]. Straight lines are encoded as
+     * p1 === p0 and p2 === p3 (Illustrator anchors without handles).
+     * @param {Object} seg - Segment.
+     * @param {number} t - Parameter 0..1.
+     * @returns {Array<number>} [x, y]
+     */
+    bezierPoint: function (seg, t) {
+        var u = 1 - t;
+        var a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+        return [
+            a * seg.p0[0] + b * seg.p1[0] + c * seg.p2[0] + d * seg.p3[0],
+            a * seg.p0[1] + b * seg.p1[1] + c * seg.p2[1] + d * seg.p3[1]
+        ];
+    },
+
+    /**
+     * Builds a circuit: samples every segment into a cumulative arc-length
+     * table so positions along the circuit can be resolved by distance.
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...] in draw order.
+     * @param {boolean} closed - True for a closed path (wraps around).
+     * @returns {Object} {segments:[{seg, len, pts}], totalLen, closed}
+     */
+    buildCircuit: function (segments, closed) {
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT;
+        var out = [];
+        var total = 0;
+        for (var i = 0; i < segments.length; i++) {
+            var seg = segments[i];
+            var pts = [];
+            var len = 0;
+            var prev = GM.Core.bezierPoint(seg, 0);
+            pts.push({ s: 0, p: prev });
+            for (var j = 1; j <= n; j++) {
+                var cur = GM.Core.bezierPoint(seg, j / n);
+                var dx = cur[0] - prev[0], dy = cur[1] - prev[1];
+                len += Math.sqrt(dx * dx + dy * dy);
+                pts.push({ s: len, p: cur });
+                prev = cur;
+            }
+            out.push({ seg: seg, len: len, pts: pts });
+            total += len;
+        }
+        return { segments: out, totalLen: total, closed: closed };
+    },
+
+    /**
+     * Resolves the point at arc distance s along the circuit (linear
+     * interpolation between samples; closed circuits wrap, open clamp).
+     * @param {Object} circuit - From buildCircuit.
+     * @param {number} s - Distance 0..totalLen.
+     * @returns {Array<number>} [x, y]
+     */
+    pointAtDistance: function (circuit, s) {
+        if (circuit.closed) {
+            s = s % circuit.totalLen;
+            if (s < 0) s += circuit.totalLen;
+        } else {
+            if (s < 0) s = 0;
+            if (s > circuit.totalLen) s = circuit.totalLen;
+        }
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var sg = circuit.segments[i];
+            if (s > sg.len) { s -= sg.len; continue; }
+            // Binary search in the sample table
+            var pts = sg.pts, lo = 0, hi = pts.length - 1;
+            while (hi - lo > 1) {
+                var midI = (lo + hi) >> 1;
+                if (pts[midI].s < s) lo = midI; else hi = midI;
+            }
+            var a = pts[lo], b = pts[hi];
+            var span = b.s - a.s;
+            var f = span > 0 ? (s - a.s) / span : 0;
+            return [a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f];
+        }
+        var last = circuit.segments[circuit.segments.length - 1];
+        return last.pts[last.pts.length - 1].p;
     }
 };
 

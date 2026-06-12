@@ -14,6 +14,7 @@ var GM = {};
 
 GM.CONSTANTS = {
     MAX_MARKS: 9999,
+    SAMPLES_PER_SEGMENT: 64,
     UNIT_FACTORS: {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,
@@ -122,6 +123,51 @@ var mmFactor = GM.CONSTANTS.UNIT_FACTORS["mm"];
     var edge = { useNumber: false, number: 1, spacing: 0.001 };
     var pos = GM.Core.calcPositions(edge, 10000, 0, mmFactor);
     assert(pos.length <= 9999, "calcPositions: safety cap prevents freeze");
+})();
+
+// ===== TEST: bezierPoint + buildCircuit + pointAtDistance =====
+console.log("--- Core.buildCircuit ---");
+(function () {
+    // Straight segment 0,0 -> 100,0 (handles on anchors = straight)
+    var straight = { p0: [0, 0], p1: [0, 0], p2: [100, 0], p3: [100, 0] };
+    var c = GM.Core.buildCircuit([straight], false);
+    assert(Math.abs(c.totalLen - 100) < 1e-6, "straight segment length exact");
+
+    var mid = GM.Core.pointAtDistance(c, 50);
+    assert(Math.abs(mid[0] - 50) < 1e-3 && Math.abs(mid[1]) < 1e-3, "pointAtDistance midpoint");
+
+    var end = GM.Core.pointAtDistance(c, 100);
+    assert(Math.abs(end[0] - 100) < 1e-3, "pointAtDistance endpoint");
+
+    // Circle of radius 100 from 4 cubic segments, kappa = 0.5522847498
+    var k = 55.22847498;
+    var circle = [
+        { p0: [100, 0],  p1: [100, k],   p2: [k, 100],   p3: [0, 100] },
+        { p0: [0, 100],  p1: [-k, 100],  p2: [-100, k],  p3: [-100, 0] },
+        { p0: [-100, 0], p1: [-100, -k], p2: [-k, -100], p3: [0, -100] },
+        { p0: [0, -100], p1: [k, -100],  p2: [100, -k],  p3: [100, 0] }
+    ];
+    var cc = GM.Core.buildCircuit(circle, true);
+    var expected = 2 * Math.PI * 100;
+    assert(Math.abs(cc.totalLen - expected) / expected < 0.001,
+        "circle perimeter within 0.1% of 2*pi*r (got " + cc.totalLen + ")");
+
+    // All resolved points lie on the radius (sampling tolerance)
+    var onCircle = true;
+    for (var qi = 1; qi < 10; qi++) {
+        var q = GM.Core.pointAtDistance(cc, expected * qi / 10);
+        var r = Math.sqrt(q[0] * q[0] + q[1] * q[1]);
+        if (Math.abs(r - 100) > 0.5) onCircle = false;
+    }
+    assert(onCircle, "pointAtDistance stays on the circle");
+
+    // Wrap: s == totalLen returns the start point (closed circuit)
+    var w = GM.Core.pointAtDistance(cc, expected);
+    assert(Math.abs(w[0] - 100) < 0.5 && Math.abs(w[1]) < 0.5, "closed wrap to start");
+
+    // Open circuit clamps beyond-end distances
+    var clamped = GM.Core.pointAtDistance(c, 150);
+    assert(Math.abs(clamped[0] - 100) < 1e-3, "open circuit clamps past end");
 })();
 
 // ===== SUMMARY =====
