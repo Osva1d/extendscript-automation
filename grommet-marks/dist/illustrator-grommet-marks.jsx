@@ -1246,6 +1246,108 @@ GM.Core = {
     },
 
     /**
+     * Distributes mark positions over one corner-to-corner span.
+     * Returns sorted distances 0..L from the span start; endpoints (corner
+     * marks) are always included. The caller deduplicates shared corners.
+     *
+     * Corner zone: zone.count marks INCLUDING the corner mark at zone.pitch,
+     * mirrored from both ends ((count-1)*pitch from each end). Middle region
+     * is filled with the preferred pitch using the same count selection as
+     * the legacy calcPositions (floor/ceil pick) so that zones-off output is
+     * positionally identical to v4 behaviour. Count mode (mid.useNumber)
+     * applies to the whole span and is only used with zones disabled.
+     *
+     * All lengths share one unit — the caller pre-converts to points.
+     *
+     * @param {number} L - Span length (>= 0).
+     * @param {Object} zone - {enabled, count, pitch}.
+     * @param {Object} mid - {useNumber, number, spacing}.
+     * @returns {Array<number>} Sorted distances from span start.
+     */
+    distributeOnSpan: function (L, zone, mid) {
+        var positions = [];
+        var seen = {};
+        function push(d) {
+            if (d < 0) d = 0;
+            if (d > L) d = L;
+            var key = String(Math.round(d * 1e6));
+            if (seen[key]) return;
+            seen[key] = true;
+            positions.push(d);
+        }
+        // Legacy count selection over a region of length M with already-placed
+        // boundary marks: returns {count, spc} where count includes both
+        // boundary marks (mirrors calcPositions' spacing mode exactly).
+        function legacyCount(M, preferred) {
+            if (preferred <= 0) return { count: 1, spc: 0 };
+            var raw = (M / preferred) + 1;
+            var floor = Math.max(Math.floor(raw), 1);
+            var ceil = Math.max(Math.ceil(raw), 1);
+            var sFloor = floor > 1 ? M / (floor - 1) : 0;
+            var sCeil = ceil > 1 ? M / (ceil - 1) : 0;
+            var count, spc;
+            if (floor <= 1) { count = ceil; spc = sCeil; }
+            else if (Math.abs(sFloor - preferred) <= Math.abs(sCeil - preferred)) { count = floor; spc = sFloor; }
+            else { count = ceil; spc = sCeil; }
+            if (count > GM.CONSTANTS.MAX_MARKS) {
+                count = GM.CONSTANTS.MAX_MARKS;
+                spc = count > 1 ? M / (count - 1) : 0;
+            }
+            return { count: count, spc: spc };
+        }
+
+        if (L <= 0) { push(0); return positions; }
+
+        var zoneActive = !!(zone && zone.enabled);
+        var zc = zoneActive ? Math.max(zone.count || 1, 1) : 0;
+        var zp = zoneActive ? Math.max(zone.pitch || 0, 0) : 0;
+        var zoneLen = zoneActive ? (zc - 1) * zp : 0;
+
+        if (zoneActive && zp > 0 && zc > 1 && 2 * zoneLen >= L) {
+            // Degradation: zones meet or overlap — mirror from both ends, dedup.
+            for (var di = 0; di < zc; di++) {
+                var d = di * zp;
+                if (d > L) break;
+                push(d); push(L - d);
+            }
+            positions.sort(function (a, b) { return a - b; });
+            return positions;
+        }
+
+        push(0); push(L);
+        if (zoneActive && zp > 0) {
+            for (var zi = 1; zi < zc; zi++) { push(zi * zp); push(L - zi * zp); }
+        } else {
+            zoneLen = 0;
+        }
+
+        if (mid.useNumber && !zoneActive) {
+            var num = Math.max(mid.number || 1, 1);
+            if (num > GM.CONSTANTS.MAX_MARKS) num = GM.CONSTANTS.MAX_MARKS;
+            if (num === 1) {
+                // Legacy: single mark at span start only.
+                positions = [];
+                seen = {};
+                push(0);
+            } else {
+                var cspc = L / (num - 1);
+                for (var ci = 0; ci < num; ci++) push(ci * cspc);
+            }
+        } else {
+            var m0 = zoneLen, m1 = L - zoneLen;
+            var M = m1 - m0;
+            var preferred = Math.max(mid.spacing || 0, 0);
+            if (M > 0 && preferred > 0) {
+                var sel = legacyCount(M, preferred);
+                for (var gi = 1; gi < sel.count - 1; gi++) push(m0 + gi * sel.spc);
+            }
+        }
+
+        positions.sort(function (a, b) { return a - b; });
+        return positions;
+    },
+
+    /**
      * Detects corner anchors by tangent deviation. An anchor is a corner when
      * the angle between the incoming and outgoing tangents exceeds
      * minAngleDeg. Geometric truth — independent of Illustrator PointType
