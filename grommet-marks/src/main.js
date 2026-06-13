@@ -17,7 +17,7 @@ GM.Main = {
 
             // Pin Y-up document coordinate system. A per-document
             // "Y origin from artboard top-left" preference can flip the axis
-            // and mis-place marks; placeMark() and the artboard math assume
+            // and mis-place marks; placeMarkGroup() and the artboard math assume
             // Y-up. CS6 lacks the enum, so the swallow is safe (CS6 is Y-up).
             try {
                 app.coordinateSystem = CoordinateSystem.DOCUMENTCOORDINATESYSTEM;
@@ -72,7 +72,7 @@ GM.Main = {
             }
 
             // Fixed target layer "Grommet Marks" (created if missing, silently).
-            var targetLayer = GM.Illustrator.getOrCreateLayer(GM.CONSTANTS.SENTINEL_CREATE);
+            var targetLayer = GM.Illustrator.getOrCreateLayer();
 
             var markSizePoints = cfg.markSize * unitFactor;
             var markOpts = {

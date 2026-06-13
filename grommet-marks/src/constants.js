@@ -11,9 +11,8 @@ GM.CONSTANTS = {
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
-    SWATCH_NAME: "Grommet Marks",
 
-    // Layer/swatch auto-creation sentinel — never displayed, used in logic only
+    // Layer auto-creation sentinel — never displayed, used in storage migration only
     SENTINEL_CREATE: "__create__",
 
     // Placement modes

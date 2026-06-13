@@ -46,7 +46,7 @@ function assert(cond, msg) {
 }
 function validCfg(over) {
     var c = GM.Config.getDefaults();
-    // defaults: top+left enabled (count mode), bottom/right mirrored, fill on
+    // defaults: top+left enabled (count mode), bottom/right mirrored
     if (over) { for (var k in over) if (over.hasOwnProperty(k)) c[k] = over[k]; }
     return c;
 }
@@ -69,7 +69,7 @@ var R = GM.Validation.rules;
     assert(GM.Validation.validateNumber("3.5", R.edgeCount, "Count", L) === null, "non-integer for integer rule → null");
 
     lastAlert = null;
-    assert(GM.Validation.validateNumber("101", R.strokeWeight, "W", L) === null, "above max → null");
+    assert(GM.Validation.validateNumber("101", R.haloWeight, "W", L) === null, "above max → null");
     assert(GM.Validation.validateNumber("0", R.markSize, "S", L) === null, "below min → null");
 })();
 
@@ -118,9 +118,9 @@ console.log("--- Validation.validate: invalid ---");
     });
     assert(GM.Validation.validate(badCount, L).valid === false, "edge count 0 → invalid");
 
-    // stroke enabled with bad weight
-    var badWeight = validCfg({ strokeEnabled: true, strokeWeight: "abc" });
-    assert(GM.Validation.validate(badWeight, L).valid === false, "bad stroke weight → invalid");
+    // bad halo weight
+    var badWeight = validCfg({ haloWeight: "abc" });
+    assert(GM.Validation.validate(badWeight, L).valid === false, "bad halo weight → invalid");
 })();
 
 // ===== validate: spacing-mode edge =====

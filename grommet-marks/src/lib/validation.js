@@ -14,7 +14,6 @@ GM.Validation = {
         offsetX:      { min: 0,    max: 9999, integer: false },
         offsetY:      { min: 0,    max: 9999, integer: false },
         markSize:     { min: 0.01, max: 9999, integer: false },
-        strokeWeight: { min: 0.01, max: 100,  integer: false },
         regWeight:    { min: 0.1,  max: 50,   integer: false },
         haloWeight:   { min: 0.1,  max: 50,   integer: false },
         edgeCount:    { min: 1,    max: 9999, integer: true  },
@@ -73,12 +72,6 @@ GM.Validation = {
 
         var markSize = vn(cfg.markSize, rules.markSize, L.SIZE_LABEL || "Mark size", L);
         if (markSize === null) return { valid: false, settings: null };
-
-        var strokeWeight = cfg.strokeWeight;
-        if (cfg.strokeEnabled) {
-            strokeWeight = vn(cfg.strokeWeight, rules.strokeWeight, L.WEIGHT || "Stroke weight", L);
-            if (strokeWeight === null) return { valid: false, settings: null };
-        }
 
         // Corner zones (both modes; skipped when disabled)
         var zone = cfg.cornerZone || { enabled: false };
@@ -148,7 +141,6 @@ GM.Validation = {
         settings.markSize = markSize;
         settings.regWeight = regWeight;
         settings.haloWeight = haloWeight;
-        if (cfg.strokeEnabled) settings.strokeWeight = strokeWeight;
         if (zone.enabled) {
             settings.cornerZone.count = zoneCount;
             settings.cornerZone.pitch = zonePitch;

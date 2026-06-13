@@ -201,8 +201,10 @@ console.log("--- Forward-fill: new keys added to old presets ---");
 
     var result = GM.Storage.load();
     var p = result.presets["[Default]"];
-    assert(p.isRound === true, "forward-fill: isRound added from defaults");
-    assert(p.fillEnabled === true, "forward-fill: fillEnabled added");
+    assert(p.markCircle === true, "forward-fill: markCircle added from defaults");
+    assert(p.markCross === false, "forward-fill: markCross added from defaults");
+    assert(p.regWeight === 1.0, "forward-fill: regWeight added");
+    assert(p.haloWeight === 3.0, "forward-fill: haloWeight added");
     assert(p.top !== undefined, "forward-fill: top edge added");
     assert(p.markSize === 2, "forward-fill: existing value preserved");
 })();

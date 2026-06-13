@@ -31,7 +31,6 @@ GM.Config = {
      */
     getDefaults: function () {
         var c = GM.Config.createEdgeDef;
-        var S = GM.CONSTANTS.SENTINEL_CREATE;
         return {
             offsetX: 7,
             offsetY: 7,
@@ -48,15 +47,6 @@ GM.Config = {
             markCross: false,
             regWeight: 1.0,
             haloWeight: 3.0,
-            isRound: true,
-            markLayerName: S,
-            fillEnabled: true,
-            fillSwatchName: S,
-            fillOverprint: true,
-            strokeEnabled: false,
-            strokeSwatchName: S,
-            strokeOverprint: true,
-            strokeWeight: 1,
             placementMode: GM.CONSTANTS.MODE_ARTBOARD,
             cornerZone: { enabled: false, count: 5, pitch: 100 },
             pathDist: { useNumber: false, number: 24, spacing: 105 }

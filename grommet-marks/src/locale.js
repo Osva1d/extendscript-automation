@@ -15,9 +15,7 @@ GM.L = (function () {
     var strings = {
         en: {
             // Sentinel display strings
-            CREATE_LABEL: "[Create 'Grommet Marks']",
             DEFAULT_PRESET: "[Default]",
-            DDL_MISSING_SUFFIX: "(missing)",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -58,12 +56,6 @@ GM.L = (function () {
 
             // Appearance panel
             APPEARANCE_PANEL: "Appearance",
-            LAYER: "Layer:",
-            FILL: "Fill:",
-            STROKE: "Stroke:",
-            OVERPRINT: "Overprint",
-            WEIGHT: "Weight:",
-            POINTS: "pt",
 
             // Placement panel
             PLACEMENT_PANEL: "Placement",
@@ -111,12 +103,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferred distance between mark centers (count is calculated)",
             TIP_MIRROR_BOTTOM: "Use same settings as top edge",
             TIP_MIRROR_RIGHT: "Use same settings as left edge",
-            TIP_OVERPRINT: "Mark will print over other colors (overprint)",
             TIP_SIZE: "Circle diameter or square side length in selected units",
-            TIP_FILL: "Mark fill color",
-            TIP_STROKE: "Mark stroke color",
-            TIP_LAYER: "Target layer for mark placement",
-            TIP_WEIGHT: "Stroke weight in points",
             TIP_EDGE_ENABLE: "Enable/disable mark placement on this edge",
             TIP_PRESET_LOAD: "Select saved preset",
             TIP_SAVE: "Save settings to the active preset.",
@@ -127,8 +114,6 @@ GM.L = (function () {
             ERR_NO_APPEARANCE: "Marks must have at least one shape — circle and/or cross.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
-            WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
-            WARN_LAYER_CREATED: "Layer '%s' was not in the document — it has been created.",
             WARN_MARKS_FAILED: "%s mark(s) could not be placed — check the target layer.",
             WARN_PREFIX: "WARNING: ",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
@@ -150,9 +135,7 @@ GM.L = (function () {
 
         cs: {
             // Sentinel display strings
-            CREATE_LABEL: "[Vytvořit 'Grommet Marks']",
             DEFAULT_PRESET: "[Výchozí]",
-            DDL_MISSING_SUFFIX: "(chybí)",
 
             // Units
             UNIT_MM: "Milimetry",
@@ -193,12 +176,6 @@ GM.L = (function () {
 
             // Appearance panel
             APPEARANCE_PANEL: "Vzhled",
-            LAYER: "Vrstva:",
-            FILL: "Výplň:",
-            STROKE: "Obrys:",
-            OVERPRINT: "Přetisk",
-            WEIGHT: "Tloušťka:",
-            POINTS: "pt",
 
             // Placement panel
             PLACEMENT_PANEL: "Umístění",
@@ -246,12 +223,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)",
             TIP_MIRROR_BOTTOM: "Použije stejné nastavení jako horní strana",
             TIP_MIRROR_RIGHT: "Použije stejné nastavení jako levá strana",
-            TIP_OVERPRINT: "Značka bude tištěna přes ostatní barvy (overprint)",
             TIP_SIZE: "Průměr kruhu nebo délka strany čtverce v měrných jednotkách",
-            TIP_FILL: "Barevná výplň značky",
-            TIP_STROKE: "Obrysová linka značky",
-            TIP_LAYER: "Cílová vrstva pro umístění značek",
-            TIP_WEIGHT: "Tloušťka obrysové linky v bodech (points)",
             TIP_EDGE_ENABLE: "Zapne/vypne umístění značek na tuto hranu",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
             TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
@@ -262,8 +234,6 @@ GM.L = (function () {
             ERR_NO_APPEARANCE: "Značka musí mít aspoň jeden tvar — kruh a/nebo kříž.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
-            WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
-            WARN_LAYER_CREATED: "Vrstva ‘%s’ nebyla v dokumentu — byla vytvořena.",
             WARN_MARKS_FAILED: "%s značek se nepodařilo umístit — zkontrolujte cílovou vrstvu.",
             WARN_PREFIX: "UPOZORNĚNÍ: ",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
@@ -286,7 +256,7 @@ GM.L = (function () {
 
     var active = strings[lang] || strings["en"];
 
-    // Simple string formatter: GM.L.format(GM.L.WARN_SWATCH_FALLBACK, swatchName)
+    // Simple string formatter: GM.L.format(GM.L.WARN_MARKS_FAILED, count)
     active.format = function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) {
