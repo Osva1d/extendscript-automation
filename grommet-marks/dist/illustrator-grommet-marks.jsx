@@ -1356,6 +1356,83 @@ GM.Core = {
     },
 
     /**
+     * Distributes marks over a whole circuit.
+     * - With corners: every corner gets a mandatory mark; each corner-to-corner
+     *   span is filled by distributeOnSpan (zones + preferred middle). Count
+     *   mode is not applicable here (the UI disables it) — spacing rules.
+     * - Without corners + closed: even ring — count mode places exactly N,
+     *   spacing mode places round(totalLen/spacing), starting at distance 0.
+     * Marks are deduplicated by rounded coordinate (spans share corner anchors)
+     * and capped at GM.CONSTANTS.MAX_MARKS.
+     *
+     * @param {Object} circuit - From buildCircuit.
+     * @param {Array<number>} corners - Corner anchor indices (detectCorners).
+     * @param {Object} zone - {enabled, count, pitch} (already unit-converted).
+     * @param {Object} dist - {useNumber, number, spacing} (unit-converted).
+     * @returns {Array<Array<number>>} [[x, y], ...]
+     */
+    distributeOnCircuit: function (circuit, corners, zone, dist) {
+        var marks = [];
+        var seen = {};
+        function place(p) {
+            var key = Math.round(p[0] * 10) / 10 + "|" + Math.round(p[1] * 10) / 10;
+            if (seen[key]) return;
+            seen[key] = true;
+            marks.push(p);
+        }
+
+        var total = circuit.totalLen;
+        if (total <= 0) return marks;
+
+        if (corners.length === 0) {
+            // Smooth ring (any cornerless path, not just circles).
+            var count;
+            if (dist.useNumber) {
+                count = Math.max(dist.number || 1, 1);
+            } else {
+                var sp = Math.max(dist.spacing || 0, 0);
+                count = sp > 0 ? Math.round(total / sp) : 1;
+                if (count < 1) count = 1;
+            }
+            if (count > GM.CONSTANTS.MAX_MARKS) count = GM.CONSTANTS.MAX_MARKS;
+            var step = total / count;
+            for (var i = 0; i < count; i++) place(GM.Core.pointAtDistance(circuit, i * step));
+            return marks;
+        }
+
+        // Corner anchor index -> arc distance from circuit start.
+        var anchorDist = [0];
+        for (var a = 0; a < circuit.segments.length; a++) {
+            anchorDist.push(anchorDist[a] + circuit.segments[a].len);
+        }
+
+        var spans = [];
+        for (var ci = 0; ci < corners.length; ci++) {
+            var from = anchorDist[corners[ci]];
+            var to;
+            if (ci + 1 < corners.length) {
+                to = anchorDist[corners[ci + 1]];
+            } else if (circuit.closed) {
+                to = total + anchorDist[corners[0]]; // wrap to first corner
+            } else {
+                break; // open: last corner is the path end, no further span
+            }
+            spans.push({ from: from, len: to - from });
+        }
+
+        for (var si = 0; si < spans.length; si++) {
+            var span = spans[si];
+            var pos = GM.Core.distributeOnSpan(span.len, zone,
+                { useNumber: false, number: 1, spacing: dist.spacing });
+            for (var pi = 0; pi < pos.length; pi++) {
+                if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
+                place(GM.Core.pointAtDistance(circuit, span.from + pos[pi]));
+            }
+        }
+        return marks;
+    },
+
+    /**
      * Detects corner anchors by tangent deviation. An anchor is a corner when
      * the angle between the incoming and outgoing tangents exceeds
      * minAngleDeg. Geometric truth — independent of Illustrator PointType

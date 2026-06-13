@@ -171,5 +171,111 @@ console.log("--- Core.distributeOnSpan ---");
     assert(pz0.length === 1 && nearly(pz0[0], 0), "zero-length span: single mark");
 })();
 
+// ===== TEST: distributeOnCircuit =====
+console.log("--- Core.distributeOnCircuit ---");
+(function () {
+    function nearly(a, b, eps) { return Math.abs(a - b) < (eps || 1e-3); }
+    var zOff = { enabled: false, count: 5, pitch: 100 };
+
+    // Square 400x400 perimeter 1600, corners mandatory, spacing 200
+    var sq = [
+        { p0: [0, 0], p1: [0, 0], p2: [400, 0], p3: [400, 0] },
+        { p0: [400, 0], p1: [400, 0], p2: [400, 400], p3: [400, 400] },
+        { p0: [400, 400], p1: [400, 400], p2: [0, 400], p3: [0, 400] },
+        { p0: [0, 400], p1: [0, 400], p2: [0, 0], p3: [0, 0] }
+    ];
+    var circuit = GM.Core.buildCircuit(sq, true);
+    var corners = GM.Core.detectCorners(sq, true, 15);
+    var marks = GM.Core.distributeOnCircuit(
+        circuit, corners, zOff, { useNumber: false, number: 1, spacing: 200 });
+    // Per side: corners + 1 interior at 200 -> 4 corners + 4 interiors = 8
+    assert(marks.length === 8, "square spacing 200: 8 marks (got " + marks.length + ")");
+    var hasCorner = false, hasMid = false;
+    for (var i = 0; i < marks.length; i++) {
+        if (nearly(marks[i][0], 0) && nearly(marks[i][1], 0)) hasCorner = true;
+        if (nearly(marks[i][0], 200) && nearly(marks[i][1], 0)) hasMid = true;
+    }
+    assert(hasCorner, "square: corner mark present");
+    assert(hasMid, "square: mid-edge mark present");
+
+    // Corner is placed exactly once despite being shared by two spans (dedup)
+    var cornerHits = 0;
+    for (var ch = 0; ch < marks.length; ch++) {
+        if (nearly(marks[ch][0], 400) && nearly(marks[ch][1], 0)) cornerHits++;
+    }
+    assert(cornerHits === 1, "shared corner placed once (dedup)");
+
+    // Smooth closed circle: count mode, exactly N evenly
+    var k = 55.22847498;
+    var circle = [
+        { p0: [100, 0],  p1: [100, k],   p2: [k, 100],   p3: [0, 100] },
+        { p0: [0, 100],  p1: [-k, 100],  p2: [-100, k],  p3: [-100, 0] },
+        { p0: [-100, 0], p1: [-100, -k], p2: [-k, -100], p3: [0, -100] },
+        { p0: [0, -100], p1: [k, -100],  p2: [100, -k],  p3: [100, 0] }
+    ];
+    var cc = GM.Core.buildCircuit(circle, true);
+    var noCorners = GM.Core.detectCorners(circle, true, 15);
+    var ringCount = GM.Core.distributeOnCircuit(
+        cc, noCorners, zOff, { useNumber: true, number: 8, spacing: 0 });
+    assert(ringCount.length === 8, "smooth ring count mode: exactly 8 (got " + ringCount.length + ")");
+    var onR = true;
+    for (var ri = 0; ri < ringCount.length; ri++) {
+        var r = Math.sqrt(ringCount[ri][0] * ringCount[ri][0] + ringCount[ri][1] * ringCount[ri][1]);
+        if (Math.abs(r - 100) > 0.5) onR = false;
+    }
+    assert(onR, "smooth ring: marks on the circle");
+
+    // Smooth ring spacing mode: round(perimeter/B)
+    var ringSp = GM.Core.distributeOnCircuit(
+        cc, noCorners, zOff, { useNumber: false, number: 1, spacing: 157 });
+    assert(ringSp.length === Math.round(cc.totalLen / 157),
+        "smooth ring spacing mode: round(perimeter/spacing) (got " + ringSp.length + ")");
+
+    // Cap: micro spacing must not freeze
+    var capped = GM.Core.distributeOnCircuit(
+        cc, noCorners, zOff, { useNumber: false, number: 1, spacing: 0.0001 });
+    assert(capped.length <= GM.CONSTANTS.MAX_MARKS, "MAX_MARKS cap holds (got " + capped.length + ")");
+
+    // Triangle with zones ON: each corner gets a mark + zone densification
+    var tri = [
+        { p0: [0, 0], p1: [0, 0], p2: [600, 0], p3: [600, 0] },
+        { p0: [600, 0], p1: [600, 0], p2: [300, 500], p3: [300, 500] },
+        { p0: [300, 500], p1: [300, 500], p2: [0, 0], p3: [0, 0] }
+    ];
+    var triC = GM.Core.buildCircuit(tri, true);
+    var triCorners = GM.Core.detectCorners(tri, true, 15);
+    assert(triCorners.length === 3, "triangle 3 corners precheck");
+    var zOn = { enabled: true, count: 3, pitch: 50 };
+    var triMarks = GM.Core.distributeOnCircuit(
+        triC, triCorners, zOn, { useNumber: false, number: 1, spacing: 200 });
+    // Each of 3 corners present exactly once
+    var triCornerOk = true;
+    var triCornerPts = [[0,0],[600,0],[300,500]];
+    for (var tc = 0; tc < 3; tc++) {
+        var hits = 0;
+        for (var tm = 0; tm < triMarks.length; tm++) {
+            if (nearly(triMarks[tm][0], triCornerPts[tc][0]) && nearly(triMarks[tm][1], triCornerPts[tc][1])) hits++;
+        }
+        if (hits !== 1) triCornerOk = false;
+    }
+    assert(triCornerOk, "triangle: each corner placed exactly once with zones on");
+
+    // Open path (corners include endpoints): marks span end to end, no wrap span
+    var openSegs = [
+        { p0: [0, 0], p1: [0, 0], p2: [300, 0], p3: [300, 0] },
+        { p0: [300, 0], p1: [300, 0], p2: [300, 300], p3: [300, 300] }
+    ];
+    var openC = GM.Core.buildCircuit(openSegs, false);
+    var openCorners = GM.Core.detectCorners(openSegs, false, 15);
+    var openMarks = GM.Core.distributeOnCircuit(
+        openC, openCorners, zOff, { useNumber: false, number: 1, spacing: 150 });
+    var hasStart = false, hasEnd = false;
+    for (var om = 0; om < openMarks.length; om++) {
+        if (nearly(openMarks[om][0], 0) && nearly(openMarks[om][1], 0)) hasStart = true;
+        if (nearly(openMarks[om][0], 300) && nearly(openMarks[om][1], 300)) hasEnd = true;
+    }
+    assert(hasStart && hasEnd, "open path: both endpoints marked");
+})();
+
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 if (fail > 0) process.exit(1);
