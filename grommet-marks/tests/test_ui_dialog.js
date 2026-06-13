@@ -244,6 +244,25 @@ console.log("--- UI v5: placement mode ---");
     done();
 })();
 
+// ===== TEST: v6 mark shape + weight controls =====
+console.log("--- UI v6: mark shape controls ---");
+(function () {
+    var ui = buildUI();
+    var w = SUI.lastWindow();
+    var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
+    var cross  = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CROSS; });
+    assert(!!circle, "Circle checkbox exists");
+    assert(!!cross, "Cross checkbox exists");
+    assert(circle.value === true, "Circle on by default");
+    assert(cross.value === false, "Cross off by default");
+    var cfg = ui.gatherAll();
+    assert(cfg.markCircle === true, "gather markCircle true");
+    assert(cfg.markCross === false, "gather markCross false");
+    assert(String(cfg.regWeight) === "1" || cfg.regWeight === 1, "gather regWeight default");
+    assert(String(cfg.haloWeight) === "3" || cfg.haloWeight === 3, "gather haloWeight default");
+    done();
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

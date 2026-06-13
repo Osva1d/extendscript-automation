@@ -48,6 +48,13 @@ GM.L = (function () {
             UNIT_LABEL: "Units:",
             TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
+            MARK_CIRCLE: "Circle",
+            MARK_CROSS: "Cross",
+            REG_WEIGHT: "Reg. stroke:",
+            HALO_WEIGHT: "White halo:",
+            TIP_MARK_SHAPE: "Mark shape — circle, cross, or both (registration over a white halo).",
+            TIP_REG_WEIGHT: "Registration stroke weight in points (overprints).",
+            TIP_HALO_WEIGHT: "White halo (knockout) stroke weight in points — keeps the mark legible on artwork.",
 
             // Appearance panel
             APPEARANCE_PANEL: "Appearance",
@@ -176,6 +183,13 @@ GM.L = (function () {
             UNIT_LABEL: "Měrné jednotky:",
             TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
+            MARK_CIRCLE: "Kruh",
+            MARK_CROSS: "Kříž",
+            REG_WEIGHT: "Reg. tah:",
+            HALO_WEIGHT: "Bílé halo:",
+            TIP_MARK_SHAPE: "Tvar značky — kruh, kříž, nebo oba (registrace přes bílé halo).",
+            TIP_REG_WEIGHT: "Tloušťka registračního tahu v bodech (přetiskuje).",
+            TIP_HALO_WEIGHT: "Tloušťka bílého podkladu (knockout) v bodech — udrží značku čitelnou na motivu.",
 
             // Appearance panel
             APPEARANCE_PANEL: "Vzhled",

@@ -414,24 +414,51 @@ GM.UI = {
         pathRB.onClick = function () { artboardRB.value = false; pathRB.value = true; refreshModeUI(); };
 
         // =================================================================
-        // Mark Panel (units, size, shape)
+        // Mark Panel (units, size, shape, weights)
         // =================================================================
         var markPanel = dlg.add("panel", undefined, GM.L.MARK_PANEL);
-        markPanel.orientation = "row";
-        markPanel.alignChildren = ["left", "center"];
+        markPanel.orientation = "column";
+        markPanel.alignChildren = ["left", "top"];
         markPanel.margins = 15;
         markPanel.spacing = 8;
 
-        markPanel.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = markPanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        var mRow1 = markPanel.add("group");
+        mRow1.orientation = "row";
+        mRow1.alignChildren = ["left", "center"];
+        mRow1.spacing = 8;
+        mRow1.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = mRow1.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
         unitsDDL.preferredSize.width = 130;
         unitsDDL.selection = 0;
         unitsDDL.helpTip = GM.L.TIP_UNITS;
-
-        markPanel.add("statictext", undefined, GM.L.SIZE_LABEL);
-        var sizeInput = markPanel.add("edittext", undefined, String(defCfg.markSize));
-        sizeInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
+        mRow1.add("statictext", undefined, GM.L.SIZE_LABEL);
+        var sizeInput = mRow1.add("edittext", undefined, String(defCfg.markSize));
+        sizeInput.preferredSize.width = 60;
         sizeInput.helpTip = GM.L.TIP_SIZE;
+
+        var mRow2 = markPanel.add("group");
+        mRow2.orientation = "row";
+        mRow2.alignChildren = ["left", "center"];
+        mRow2.spacing = 12;
+        var circleCB = mRow2.add("checkbox", undefined, GM.L.MARK_CIRCLE);
+        circleCB.value = defCfg.markCircle;
+        circleCB.helpTip = GM.L.TIP_MARK_SHAPE;
+        var crossCB = mRow2.add("checkbox", undefined, GM.L.MARK_CROSS);
+        crossCB.value = defCfg.markCross;
+        crossCB.helpTip = GM.L.TIP_MARK_SHAPE;
+
+        var mRow3 = markPanel.add("group");
+        mRow3.orientation = "row";
+        mRow3.alignChildren = ["left", "center"];
+        mRow3.spacing = 8;
+        mRow3.add("statictext", undefined, GM.L.REG_WEIGHT);
+        var regWIn = mRow3.add("edittext", undefined, String(defCfg.regWeight));
+        regWIn.preferredSize.width = 50;
+        regWIn.helpTip = GM.L.TIP_REG_WEIGHT;
+        mRow3.add("statictext", undefined, GM.L.HALO_WEIGHT);
+        var haloWIn = mRow3.add("edittext", undefined, String(defCfg.haloWeight));
+        haloWIn.preferredSize.width = 50;
+        haloWIn.helpTip = GM.L.TIP_HALO_WEIGHT;
 
 
         // =================================================================
@@ -523,6 +550,10 @@ GM.UI = {
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
                 isRound: true,   // shape locked to circle (square removed v4.2.0)
+                markCircle: circleCB.value,
+                markCross: crossCB.value,
+                regWeight: parseFloat(regWIn.text.replace(/,/g, ".")),
+                haloWeight: parseFloat(haloWIn.text.replace(/,/g, ".")),
                 markLayerName: GM.UI.toStorage(GM.UI.ddlValue(layerDDL) || GM.L.CREATE_LABEL),
                 fillEnabled: fillCB.value,
                 fillSwatchName: GM.UI.toStorage(GM.UI.ddlValue(fillDDL) || GM.L.CREATE_LABEL),
@@ -561,6 +592,10 @@ GM.UI = {
             rightUI.setMirror(s.rightMirror);   rightUI.refresh();
 
             sizeInput.text = s.markSize;
+            circleCB.value = !!s.markCircle;
+            crossCB.value = !!s.markCross;
+            regWIn.text = s.regWeight;
+            haloWIn.text = s.haloWeight;
 
             GM.UI.selectDDL(layerDDL, GM.UI.toDisplay(s.markLayerName));
 
@@ -632,6 +667,8 @@ GM.UI = {
             { et: offsetXIn,   rule: R.offsetX },
             { et: offsetYIn,   rule: R.offsetY },
             { et: sizeInput,   rule: R.markSize },
+            { et: regWIn,      rule: R.regWeight },
+            { et: haloWIn,     rule: R.haloWeight },
             { et: weightInput, rule: R.strokeWeight },
             { et: zoneCountIn, rule: R.cornerCount },
             { et: zonePitchIn, rule: R.cornerPitch },
@@ -842,13 +879,15 @@ GM.UI = {
         };
 
         // Wire numeric edits to the shared change hook.
-        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput,
+        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput, regWIn, haloWIn,
                         zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
             allEdits[ei].onChange = onUserChange;
             allEdits[ei].onChanging = onUserChange;
         }
+        circleCB.onClick = onUserChange;
+        crossCB.onClick = onUserChange;
 
         // Initial pass: modified indicator (Save disabled when UI matches the
         // active preset) + live validation (paints fields, sets OK initial state).
