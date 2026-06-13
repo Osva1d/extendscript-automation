@@ -221,6 +221,64 @@ GM.Illustrator = {
     },
 
     /**
+     * Places one Esko-style registration eyelet mark as a GroupItem centred at
+     * (x, y) in document space. White halo strokes (knockout) sit BELOW the
+     * registration strokes (overprint) so the mark stays legible on any
+     * artwork. Draws a circle and/or a cross per opts flags.
+     *
+     * @param {Layer} targetLayer - Destination layer.
+     * @param {number} x - Centre X (document space, points).
+     * @param {number} y - Centre Y (document space, points).
+     * @param {number} size - Diameter / cross arm span (points).
+     * @param {Object} opts - {circle, cross, regWeight, haloWeight} (weights in pt).
+     * @returns {boolean} True on success — caller counts failures.
+     */
+    placeMarkGroup: function (targetLayer, x, y, size, opts) {
+        try {
+            var grp = targetLayer.groupItems.add();
+            var regCol = GM.Illustrator.registrationColor();
+            var white = new CMYKColor();
+            white.cyan = 0; white.magenta = 0; white.yellow = 0; white.black = 0;
+            // bottom -> top: white halo (knockout), then registration (overprint)
+            if (opts.circle) GM.Illustrator._strokeEllipse(grp, x, y, size, white,  opts.haloWeight, false);
+            if (opts.cross)  GM.Illustrator._strokeCross(grp,   x, y, size, white,  opts.haloWeight, false);
+            if (opts.circle) GM.Illustrator._strokeEllipse(grp, x, y, size, regCol, opts.regWeight,  true);
+            if (opts.cross)  GM.Illustrator._strokeCross(grp,   x, y, size, regCol, opts.regWeight,  true);
+            return true;
+        } catch (e) {
+            $.writeln("placeMarkGroup [" + x + ", " + y + "]: " + e.message);
+            return false;
+        }
+    },
+
+    /** Stroked (unfilled) circle centred at (x,y); size = diameter. */
+    _strokeEllipse: function (grp, x, y, size, color, weight, overprint) {
+        var r = size / 2;
+        var el = grp.pathItems.ellipse(y + r, x - r, size, size); // top, left, w, h
+        el.filled = false;
+        el.stroked = true;
+        el.strokeColor = color;
+        el.strokeWidth = weight;
+        el.strokeOverprint = overprint;
+        return el;
+    },
+
+    /** Crosshair centred at (x,y); arm span = size (radius each direction). */
+    _strokeCross: function (grp, x, y, size, color, weight, overprint) {
+        var r = size / 2;
+        var hLine = grp.pathItems.add();
+        hLine.setEntirePath([[x - r, y], [x + r, y]]);
+        hLine.filled = false; hLine.stroked = true;
+        hLine.strokeColor = color; hLine.strokeWidth = weight;
+        hLine.strokeOverprint = overprint;
+        var vLine = grp.pathItems.add();
+        vLine.setEntirePath([[x, y - r], [x, y + r]]);
+        vLine.filled = false; vLine.stroked = true;
+        vLine.strokeColor = color; vLine.strokeWidth = weight;
+        vLine.strokeOverprint = overprint;
+    },
+
+    /**
      * Places a single mark on the target layer.
      * x, y are the CENTER coordinates of the mark in document space.
      * @returns {boolean} True if the mark was placed — the caller counts
