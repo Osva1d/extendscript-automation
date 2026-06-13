@@ -8,9 +8,9 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 - **Rozmístění na tvar** — volba „Vybraná cesta" umístí značky na libovolnou uzavřenou nebo otevřenou vektorovou cestu; krajní body a rohy jsou vždy kotvy.
 - **Rohové zóny** — zhustí N značek u každého rohu s vlastní roztečí; střed hrany/cesty pak jede standardním rozestupem.
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
-- **Vzhled** — výplň a/nebo obrys s výběrem vzorníku, přetisk (overprint), jednotky mm/cm/in.
+- **Jednotný vzhled značky** — registrační Esko-styl terč (bílé halo + registrační tah, kruh a/nebo kříž); vždy na samostatnou vrstvu „Grommet Marks".
 - **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); indikátor neuložených změn.
-- **Robustnost** — chybějící vzorník degraduje na `[Registration]` (nikdy tichý pád ani překvapivý spot); chybějící vrstva se vytvoří; zamčená cílová vrstva se dočasně odemkne a zase zamkne.
+- **Robustnost** — chybějící vrstva „Grommet Marks" se vytvoří; zamčená vrstva se dočasně odemkne a zase zamkne.
 - **Živá validace** — neplatná číselná pole zčervenají a zablokují tlačítko Generovat.
 - **Lokalizace** — čeština / angličtina podle jazyka Illustratoru.
 
@@ -76,6 +76,11 @@ Veškerý kód je kompatibilní s ExtendScript ES3:
 ---
 
 ## Changelog
+
+### v6.0.0 (2026-06)
+- **BREAKING:** Sjednocený vzhled značky — registrační Esko terč (bílé halo knockout + registrační tah s přetiskem, kruh a/nebo kříž, jedna velikost). Zrušena volba výplně/tahu/vrstvy; značky vždy na pevnou vrstvu „Grommet Marks".
+- **UI:** Zrušen panel Vzhled; ovládání tvaru a tlouštěk tahů přesunuto do panelu Značka. Dialog jednosloupcový kompaktní (~795 px) — řeší uříznutá tlačítka na 13" displejích.
+- **SCHEMA:** Odebráno 9 polí (fill/stroke/layer); přidáno markCircle/markCross/regWeight/haloWeight; forward-fill migrace.
 
 ### v5.0.0 (2026-06)
 - **FEATURE:** Umístění na tvar — panel „Vybraná cesta" rozmístí značky po libovolné vektorové cestě (otevřené i uzavřené); rohové kotvy jsou vždy přítomné; hladká cesta (bez rohů) podporuje i počítání.

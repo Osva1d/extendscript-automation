@@ -1,13 +1,13 @@
-# Grommet Marks — Manuální testovací protokol v5.0.0
+# Grommet Marks — Manuální testovací protokol v6.0.0
 
-> **Verze:** 5.0.0
+> **Verze:** 6.0.0
 > **Aktualizováno:** 2026-06-13
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
 > migrace, ui_state, validace, UI dialog). Tento protokol jsou **manuální P0 kontroly**,
 > které vyžadují běžící Illustrator.
 >
-> **Priorita, když není čas na všechno:** E1, E3, F1, F3 (nové v5) → C1, C2 (regrese jádra).
+> **Priorita, když není čas na všechno:** G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
 
 ---
 
@@ -22,7 +22,7 @@
 ## A) NOVÉ z cyklu 2 — UI
 
 ### A1 — Layout (kanonický sloupec)
-- [ ] Dialog je **jeden svislý sloupec**: Předvolby → Hrany → Značka → Vzhled → patička → tlačítka.
+- [ ] Dialog je **jeden svislý sloupec**: Předvolby → Umístění → Hrany → Rohové zóny → Značka → patička → tlačítka.
 - [ ] Žádný schématický náhled tam **není** (byl zahozen).
 - [ ] Šířka dialogu rozumná, nic se neořezává; české texty mají **správnou diakritiku** (Odsazení, Měrné jednotky, Generovat…).
 - [ ] Tlačítka: **Storno vlevo, Generovat vpravo**, Reset úplně vlevo.
@@ -47,32 +47,21 @@
 - [ ] **Nové:** u **Horní hrany** v poli **Počet** napiš `0` nebo `abc` → zčervená a **Generovat zešedne** (dřív se to chytlo až po kliknutí).
 - [ ] **Velikost = 0** → zčervená, Generovat zakázán (pravidlo min 0.01).
 
-### A6 — Tooltipy *(opravené chybějící)*
-- [ ] Najeď myší ~2 s nad **Měrné jednotky**, **Výplň** a **Obrys** (dropdowny) → objeví se český tooltip. (Tyhle tři dřív chyběly.)
+### A6 — Tooltipy
+- [ ] Najeď myší ~2 s nad **Měrné jednotky** (dropdown) a **Kruh**/**Kříž** (checkboxy) → objeví se český tooltip.
 
 ---
 
-## B) NOVÉ z review — robustnost (prepress!)
+## B) Robustnost (prepress!)
 
-### B1 — Chybějící swatch → [Registration] místo pádu *(změna chování)*
-1. Vytvoř vlastní swatch, vyber ho ve Výplni, **Uložit jako…** novou předvolbu.
-2. **Smaž ten swatch** z dokumentu (panel Vzorník).
-3. Spusť skript znovu, načti tu předvolbu.
-- [ ] V rozbalovátku Výplň je název swatche s označením **„(chybí)"**.
-- [ ] Generovat → značky **v barvě [Registration]** + **jedno upozornění** „Vzorník … není v dokumentu".
-- [ ] **Nesmí** spadnout ani tiše vytvořit překvapivý spot.
-
-### B2 — Chybějící hodnota nedělá falešnou „změnu" *(jemný fix)*
-- [ ] Po načtení předvolby s chybějícím swatchem (B1) u aktivní předvolby **nesvítí** hvězdička `*` (zobrazí se „(chybí)", ale interně je to původní název → není to změna).
-
-### B3 — Generování na ZAMČENOU vrstvu *(nový layer-session)*
-1. Vytvoř vrstvu „Grommet Marks", **zamkni ji** (zámek v panelu Vrstvy).
-2. Vyber ji ve Vzhled ▸ Vrstva, Generovat.
-- [ ] Značky se **vytvoří** (dřív by se tiše ztratily).
+### B3 — Generování na ZAMČENOU vrstvu „Grommet Marks"
+1. Vytvoř vrstvu **„Grommet Marks"**, **zamkni ji** (zámek v panelu Vrstvy).
+2. Generovat.
+- [ ] Značky se **vytvoří** (skript dočasně odemkne zamčenou vrstvu).
 - [ ] Po dokončení je vrstva **zase zamčená** (stav obnoven).
 
 ### B4 — Chybějící vrstva se vytvoří
-- [ ] Načti předvolbu odkazující na neexistující vrstvu → dropdown ukáže „(chybí)"; po Generovat se vrstva **vytvoří** a značky jsou v ní.
+- [ ] Smaž vrstvu „Grommet Marks" (nebo spusť v dokumentu kde chybí) → po Generovat se vrstva **automaticky vytvoří** a značky jsou v ní.
 
 ### B5 — Tichý fail při uložení *(volitelné, těžké vyvolat)*
 - [ ] Přeskoč, pokud nevíš jak. (Šlo by odebráním práv k zápisu do `~/Library/Application Support/GrommetMarks/`.) Cíl: selhání zápisu ukáže **alert**, ne tichý fail.
@@ -118,16 +107,10 @@ Rozteč 5 značek: 805.03 / (5−1) = 201.26 pt ≈ 71 mm
 ### C6 — Více artboardů
 - [ ] Dokument se 2 artboardy → značky **na obou**, na rozích se nepřekrývají (žádné dvojité).
 
-### C7 — Tvar a vzhled
-- [ ] Kruh/Čtverec → značky odpovídají.
-- [ ] Zapni Obrys → zaktivní dropdown obrysu + Tloušťka; vypni → zašedne.
-
 ### C8 — Migrace starého nastavení (volitelné)
-Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json` z v2/v3:
+Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json` z v2/v3/v5:
 - [ ] Po spuštění se hodnoty načtou bez chyby; per-edge x/y se převede na globální Odsazení; jednotky/sentinel se nezobrazí jako cizí stringy.
-
-### C9 — Lokalizace swatchů (volitelné, dle locale)
-- [ ] V CZ i EN Illustratoru: systémové swatche (`[Registration]`/`[Registrační]`, `[None]`/`[Žádná]`) **nejsou** v dropdownech Výplň/Obrys; uživatelské ano.
+- [ ] Stará pole (fill/stroke/layer) jsou ignorována; nová pole (markCircle, markCross, regWeight, haloWeight) se doplní výchozími hodnotami.
 
 ---
 
@@ -204,6 +187,29 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 
 ---
 
+## G) NOVÉ v6 — Jednotný vzhled značky
+
+### G1 — Kruh (default)
+- [ ] Generovat s default: značky = kruh, registrační tah na bílém halu (halo širší).
+- [ ] Bílý kruh **knockout** (vykrojí motiv pod sebou), registrační kruh **overprint** (Okno ▸ Atributy).
+
+### G2 — Kříž
+- [ ] Zaškrtni Kříž, odškrtni Kruh → značka = kříž (rameno = Velikost), stejná halo+reg konstrukce.
+
+### G3 — Kruh + kříž
+- [ ] Oba zaškrtnuté → kruh i kříž ve společné grupě, společný střed.
+
+### G4 — Žádný tvar
+- [ ] Odškrtni oba → Generovat **šedé** (live validace).
+
+### G5 — Tloušťky
+- [ ] Změň Reg. tah / Bílé halo → tahy odpovídají; halo > reg = viditelné halo.
+
+### G6 — Pevná vrstva
+- [ ] Značky vždy na vrstvě „Grommet Marks" (vytvoří se když chybí); zamčená vrstva se odemkne a zase zamkne.
+
+---
+
 ## Hlášení problému
 
 U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **locale (CZ/EN)**, **co jsi čekal vs. co se stalo**, případně text z ExtendScript konzole.
@@ -217,4 +223,4 @@ U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **lo
 
 ---
 
-*Připravil: Osva1d — Test Plan v5.0.0, 2026-06-13*
+*Připravil: Osva1d — Test Plan v6.0.0, 2026-06-13*

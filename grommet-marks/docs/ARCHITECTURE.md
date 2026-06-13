@@ -1,4 +1,4 @@
-# Architecture: Grommet Marks v5.0.0
+# Architecture: Grommet Marks v6.0.0
 
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
@@ -30,7 +30,7 @@ src/
 │   └── ui_state.js         GM.UIState — pure state-transition logika pro presety
 ├── config.js               GM.Config — getDefaults(), PRESET_KEY_DEFAULT, createEdgeDef()
 ├── core.js                 GM.Core — calcPositions, distributeOnSpan/Circuit, buildCircuit, detectCorners — PURE MATH
-├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMark(), getOrCreateLayer/Swatch(), getSelectedPathInfo()
+├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMarkGroup(), getOrCreateLayer(), registrationColor(), getSelectedPathInfo()
 ├── ui.js                   GM.UI — ScriptUI dialog, deleguje preset logiku na GM.UIState
 └── main.js                 GM.Main — entry point, deleguje validaci na GM.Validation
 ```
@@ -67,16 +67,12 @@ npm run verify    # build + test
     bottomMirror:   true,                   // true = bottom kopíruje top
     rightMirror:    true,                   // true = right kopíruje left
     units:          "mm",                   // interní klíč: "mm" | "cm" | "in"
-    markSize:       3,                      // user units — průměr/strana
-    isRound:        true,                   // true = kruh (čtverec odstraněn v4.2.0)
-    markLayerName:  "__create__",           // název vrstvy nebo SENTINEL_CREATE
-    fillEnabled:    true,
-    fillSwatchName: "__create__",           // název swatche nebo SENTINEL_CREATE
-    fillOverprint:  true,
-    strokeEnabled:  false,
-    strokeSwatchName: "__create__",
-    strokeOverprint: true,
-    strokeWeight:   1,                      // points
+    markSize:       3,                      // user units — průměr kruhu i délka ramen kříže
+    // --- v6.0.0 ---
+    markCircle:     true,                   // vykreslit kruh (default ON)
+    markCross:      false,                  // vykreslit kříž (default OFF)
+    regWeight:      1.0,                    // tloušťka registračního tahu (points)
+    haloWeight:     3.0,                    // tloušťka bílého hala (points, knockout)
     // --- v5.0.0 ---
     placementMode:  "artboard",             // "artboard" | "path"
     cornerZone: {
@@ -94,7 +90,6 @@ npm run verify    # build + test
 
 ### Sentinel hodnoty
 ```javascript
-GM.CONSTANTS.SENTINEL_CREATE = "__create__"    // → vytvořit default vrstvu/swatch
 GM.Config.PRESET_KEY_DEFAULT = "[Default]"     // → klíč výchozího presetu
 GM.Storage.PRESET_KEY_LAST   = "[Last Settings]" // → automaticky uložený poslední stav
 ```
@@ -121,8 +116,8 @@ Soubor: `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json`
 
 ```
 GM.Storage.load()
-    → GM.Illustrator.getLayerNames() + getSwatchNames() + getSelectedPathInfo()
-        → GM.UI.buildDialog(pData, layerInfo, swatchInfo, pathInfo)
+    → GM.Illustrator.getSelectedPathInfo()
+        → GM.UI.buildDialog(pData, pathInfo)
             [uživatel nastaví a klikne OK]
             → ui.gatherAll() → cfg objekt
                 → GM.Validation.validate(cfg, GM.L)
@@ -130,11 +125,11 @@ GM.Storage.load()
                         → GM.Main.process(settings)
                             ┌─ artboard mode:
                             │    GM.Core.distributeOnSpan() per hrana
-                            │        → GM.Illustrator.placeMark() per pozice
+                            │        → GM.Illustrator.placeMarkGroup() per pozice
                             └─ path mode:
                                  GM.Illustrator.getSelectedPathInfo()  // fresh check
                                      → GM.Core.distributeOnCircuit()
-                                         → GM.Illustrator.placeMark() per pozice
+                                         → GM.Illustrator.placeMarkGroup() per pozice
     → app.redraw()
 ```
 
@@ -207,8 +202,8 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 | Výpočet pozic artboard (count/spacing/zones) | `src/core.js` → `distributeOnSpan()` |
 | Výpočet pozic na cestě | `src/core.js` → `distributeOnCircuit()` |
 | Cubic Bézier arc-length, detekce rohů | `src/core.js` → `buildCircuit()`, `detectCorners()` |
-| Vykreslování v Illustratoru | `src/illustrator.js` → `placeMark()` |
-| Vytvoření vrstvy / swatche | `src/illustrator.js` → `getOrCreateLayer/Swatch()` |
+| Vykreslování v Illustratoru | `src/illustrator.js` → `placeMarkGroup()` |
+| Vytvoření vrstvy „Grommet Marks" | `src/illustrator.js` → `getOrCreateLayer()` |
 | Dialog a presety | `src/ui.js` → `GM.UI.buildDialog()` |
 | Edge panel + mirror inline | `src/ui.js` → `GM.UI.buildEdgePanel()` |
 | Preset state transitions | `src/lib/ui_state.js` → `GM.UIState` |
@@ -221,9 +216,9 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 
 ---
 
-## Layout dialogu (v5.0.0)
+## Layout dialogu (v6.0.0)
 
-Kanonický jednosloupcový layout dle `extendscript-ui-standards`:
+Kanonický jednosloupcový kompaktní layout (~795 px), dle `extendscript-ui-standards`. Panel Vzhled odstraněn.
 
 ```
 Window("dialog")
@@ -232,12 +227,13 @@ Window("dialog")
  ├─ Panel: Umístění             radio: Hrany artboardu | Vybraná cesta  (path disabled bez výběru)
  ├─ Panel: Hrany                (visible pouze v artboard módu)
  │                              offsety X/Y + 4 kompaktní edge řádky;
- │                              mirror checkbox uvnitř dolní/pravé hrany (TD-001)
+ │                              mirror checkbox uvnitř dolní/pravé hrany
  ├─ Panel: Cesta                (visible pouze v path módu)
  │                              info řádek (uzavřená/otevřená · rohy) + Počet/Rozestup
  ├─ Panel: Rohové zóny          Zhustit u rohů + Počet + Rozteč  (zakázáno na hladké cestě)
- ├─ Panel: Značka               jednotky / velikost  (tvar zamčen na kruh)
- ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka (zarovnaný label sloupec 75px)
+ ├─ Panel: Značka               Jednotky / Velikost;
+ │                              [✓] Kruh  [ ] Kříž;
+ │                              Reg. tah [] pt  Bílé halo [] pt
  ├─ Group: Footer               šedý copyright
  └─ Group: Tlačítka             Storno · Generovat (vpravo)
 ```
@@ -246,16 +242,18 @@ Window("dialog")
 
 ## Aktuální stav projektu
 
-**Verze:** 5.0.0
-**Fáze:** Cyklus 4 kompletní — path mode + corner zones; 234 testů / 6 suit green; připraveno k manuálnímu P0 testu.
+**Verze:** 6.0.0
+**Fáze:** Cyklus 5 kompletní — jednotný Esko vzhled značky + kompaktní layout; testy green; připraveno k manuálnímu P0 testu.
 
-**Co je hotovo (v5.0.0 — cyklus 4):**
-- Path mode: `getSelectedPathInfo()` (Illustrator DOM → plain segments), `buildCircuit()` (Bézier arc-length, 64 smp/seg), `detectCorners()` (tangentová odchylka, práh 15°), `distributeOnCircuit()` (rohové kotvy + span → span fill; smooth ring = count/spacing).
-- Corner zones: `distributeOnSpan()` nahradil `calcPositions()` v `process()`; zóny-off výstup je poziční identický s v4 (regresní kontrakt: legacyCount inner helper, nikoliv Math.round).
-- UI: panel Umístění (radio artboard/path), panel Cesta (info + Počet/Rozestup), panel Rohové zóny; `refreshModeUI()` přepíná Hrany↔Cesta; živá validace zakáže edge strukturální testy v path módu; zóny zakázány na hladké cestě.
-- Forward-fill: staré presety bez v5 polí dostanou defaulty při načtení; `presetEquals()` presence-guarded (garantováno forward-fillem).
-- Nová suite `test_core_circuit.js` (36 testů), `test_ui_dialog.js` rozšířena o 8 v5 scénářů.
+**Co je hotovo (v6.0.0 — cyklus 5):**
+- `placeMarkGroup()`: GroupItem s halo tahy (bílé, knockout) + reg. tahy ([Registration], overprint); kruh a/nebo kříž dle `markCircle`/`markCross` flagů.
+- Vrstva napevno `GM.CONSTANTS.LAYER_NAME` ("Grommet Marks"); `getOrCreateLayer()` bez argumentů; zamčená vrstva se dočasně odemkne a zase zamkne.
+- Panel Vzhled odstraněn; panel Značka rozšířen o checkboxy Kruh/Kříž a pole Reg. tah / Bílé halo.
+- Schema: odstraněno 9 polí (isRound, markLayerName, fill/stroke sada), přidáno 4 (markCircle, markCross, regWeight, haloWeight); forward-fill migrace.
+- Validace: pravidla strokeWeight/fill-stroke nahrazena circle/cross + regWeight/haloWeight; „oba tvary OFF" blokuje Generovat.
+- `buildDialog(pData, pathInfo)` — `layerInfo`/`swatchInfo` argumenty odstraněny.
+- Testy: 6 suitů green.
 
 **Otevřené úkoly:**
-- Manuální P0 test v Illustratoru (viz `docs/MANUAL_TEST.md` sekce E, F + regresní C1/C2)
+- Manuální P0 test v Illustratoru (viz `docs/MANUAL_TEST.md` sekce G + regresní C1/C2, E1, F1)
 - TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)
