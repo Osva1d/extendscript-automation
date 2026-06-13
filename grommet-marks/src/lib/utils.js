@@ -86,6 +86,13 @@ GM.Utils = {
                 if (String(pA[pdKeys[pk]]) !== String(pB[pdKeys[pk]])) return false;
             }
         }
+        // Compare v6 fields only when both sides carry them (presence-guard mirrors v5).
+        var v6Keys = ["markCircle", "markCross", "regWeight", "haloWeight"];
+        if (a.markCircle !== undefined && b.markCircle !== undefined) {
+            for (var vi = 0; vi < v6Keys.length; vi++) {
+                if (String(a[v6Keys[vi]]) !== String(b[v6Keys[vi]])) return false;
+            }
+        }
         return true;
     }
 };

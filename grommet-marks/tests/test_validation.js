@@ -25,7 +25,7 @@ var L = {
     ERR_MUST_BE_NUMBER:  "%s must be a number!",
     ERR_MUST_BE_INTEGER: "%s must be a whole number!",
     ERR_OUT_OF_RANGE:    "%s must be between %s and %s!",
-    ERR_NO_APPEARANCE:   "Marks must have fill and/or stroke.",
+    ERR_NO_APPEARANCE:   "Marks must have at least one shape — circle and/or cross.",
     ERR_NO_EDGE:         "At least one edge must be enabled.",
     OFFSET_X: "Offset X", OFFSET_Y: "Offset Y", SIZE_LABEL: "Size",
     WEIGHT: "Weight", COUNT: "Count", SPACING: "Spacing"
@@ -95,10 +95,10 @@ console.log("--- Validation.validate: invalid ---");
     var zeroSize = validCfg({ markSize: 0 });
     assert(GM.Validation.validate(zeroSize, L).valid === false, "markSize 0 → invalid");
 
-    // no appearance
-    var noApp = validCfg({ fillEnabled: false, strokeEnabled: false });
+    // no appearance (shape gate: neither circle nor cross)
+    var noApp = validCfg({ markCircle: false, markCross: false });
     lastAlert = null;
-    assert(GM.Validation.validate(noApp, L).valid === false, "no fill/stroke → invalid");
+    assert(GM.Validation.validate(noApp, L).valid === false, "no circle/cross → invalid");
     assert(lastAlert === L.ERR_NO_APPEARANCE, "no-appearance alert shown");
 
     // no edges (top+left off, both mirrored)
@@ -242,6 +242,19 @@ console.log("--- Validation v6: weight rules + defaults ---");
     assert(d.haloWeight === 3.0,   "default haloWeight 3.0");
     assert(GM.Validation.rules.regWeight.min === 0.1,  "regWeight rule present");
     assert(GM.Validation.rules.haloWeight.max === 50,  "haloWeight rule present");
+})();
+
+// ===== TEST: v6 shape requirement + weights =====
+console.log("--- Validation v6: shape requirement + weights ---");
+(function () {
+    var noShape = GM.Validation.validate(validCfg({ markCircle: false, markCross: false }), L);
+    assert(noShape.valid === false, "no shape -> invalid");
+    var crossOnly = GM.Validation.validate(validCfg({ markCircle: false, markCross: true }), L);
+    assert(crossOnly.valid === true, "cross only -> valid");
+    var badHalo = GM.Validation.validate(validCfg({ haloWeight: 0 }), L);
+    assert(badHalo.valid === false, "haloWeight 0 -> invalid");
+    var ok = GM.Validation.validate(validCfg(), L);
+    assert(ok.valid === true && ok.settings.regWeight === 1.0, "defaults valid, regWeight parsed");
 })();
 
 // ===== SUMMARY =====

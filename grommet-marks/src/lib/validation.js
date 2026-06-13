@@ -90,8 +90,12 @@ GM.Validation = {
             if (zonePitch === null) return { valid: false, settings: null };
         }
 
-        // Appearance check (common to both modes)
-        if (!cfg.fillEnabled && !cfg.strokeEnabled) {
+        // Appearance: validate weights (always relevant), require a shape.
+        var regWeight = vn(cfg.regWeight, rules.regWeight, L.REG_WEIGHT || "Reg stroke", L);
+        if (regWeight === null) return { valid: false, settings: null };
+        var haloWeight = vn(cfg.haloWeight, rules.haloWeight, L.HALO_WEIGHT || "Halo", L);
+        if (haloWeight === null) return { valid: false, settings: null };
+        if (!cfg.markCircle && !cfg.markCross) {
             alert(L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
@@ -142,6 +146,8 @@ GM.Validation = {
         settings.offsetX = offsetX;
         settings.offsetY = offsetY;
         settings.markSize = markSize;
+        settings.regWeight = regWeight;
+        settings.haloWeight = haloWeight;
         if (cfg.strokeEnabled) settings.strokeWeight = strokeWeight;
         if (zone.enabled) {
             settings.cornerZone.count = zoneCount;

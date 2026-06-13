@@ -731,8 +731,8 @@ GM.UI = {
                 var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
                 if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
             }
-            // 2) Marks must have a fill and/or a stroke.
-            if (!fillCB.value && !strokeCB.value) allValid = false;
+            // 2) Marks must have at least one shape (circle and/or cross).
+            if (!circleCB.value && !crossCB.value) allValid = false;
 
             try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;

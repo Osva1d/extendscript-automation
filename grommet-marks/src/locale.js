@@ -124,7 +124,7 @@ GM.L = (function () {
             // Errors
             ERR_NO_DOC: "Open a document before running the script.",
             ERR_NO_EDGE: "At least one edge must be enabled.",
-            ERR_NO_APPEARANCE: "Marks must have fill and/or stroke.",
+            ERR_NO_APPEARANCE: "Marks must have at least one shape — circle and/or cross.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
             WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
@@ -259,7 +259,7 @@ GM.L = (function () {
             // Errors
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
             ERR_NO_EDGE: "Musí být zapnutá alespoň jedna hrana.",
-            ERR_NO_APPEARANCE: "Značky musí mít výplň a/nebo obrys.",
+            ERR_NO_APPEARANCE: "Značka musí mít aspoň jeden tvar — kruh a/nebo kříž.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
             WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
