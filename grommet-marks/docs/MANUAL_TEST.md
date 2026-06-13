@@ -1,15 +1,13 @@
-# Grommet Marks — Manuální testovací protokol v4.1.0
+# Grommet Marks — Manuální testovací protokol v5.0.0
 
-> **Verze:** 4.1.0
-> **Aktualizováno:** 2026-05-31
+> **Verze:** 5.0.0
+> **Aktualizováno:** 2026-06-13
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
-> migrace, ui_state, validace). Tento protokol jsou **manuální P0 kontroly**,
-> které vyžadují běžící Illustrator — zaměřené na to, co cyklus 2 a review
-> kolo reálně změnily.
+> migrace, ui_state, validace, UI dialog). Tento protokol jsou **manuální P0 kontroly**,
+> které vyžadují běžící Illustrator.
 >
-> **Priorita, když není čas na všechno:** A4, A5, B1, B3 (reálně měněné, dosud
-> neozkoušené) → pak C1, C2 (regrese jádra).
+> **Priorita, když není čas na všechno:** E1, E3, F1, F3 (nové v5) → C1, C2 (regrese jádra).
 
 ---
 
@@ -139,6 +137,73 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 
 ---
 
+---
+
+## E) NOVÉ v5 — Umístění na cestu (path mode)
+
+### E1 — Zapnutí path mode
+1. Otevři dokument, **nevybírej nic** a spusť skript.
+- [ ] V panelu Umístění je radio **Vybraná cesta** zašedlé (disabled).
+- [ ] Tooltip na zašedlém radiu říká: „Nejdřív vyberte cestu…"
+
+2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
+- [ ] Radio **Vybraná cesta** je aktivní.
+- [ ] Klikni na něj → panel **Hrany zmizí**, místo něj se zobrazí panel **Cesta**.
+- [ ] Panel Cesta zobrazuje: „Uzavřená cesta · 4 rohů".
+
+### E2 — Cesta bez rohů (kruh)
+1. Nakresli **elipsu** (Ellipse Tool; kruh = Shift), vyber ji, spusť skript.
+- [ ] Panel Cesta: „Uzavřená cesta · bez rohů".
+- [ ] Radio **Počet** i **Rozestup** jsou oba aktivní (počet povolený bez rohů).
+- [ ] Panel **Rohové zóny** je zašedlý (žádné rohy → zóny nedávají smysl).
+
+### E3 — Generování na uzavřené cestě se 4 rohy
+Obdélník **100×200 mm**, Rozestup **50 mm**. Přepni na Vybraná cesta → Generovat.
+- [ ] Značky leží **na obrysu** obdélníku (ne uvnitř, ne na artboardu).
+- [ ] U každého rohu je **přesně 1 značka** (roh = povinná kotva).
+- [ ] Celkem přibližně: 2×(100/50) + 2×(200/50) − 4 rohů + 4 rohů = ~12 značek.
+- [ ] **Žádné duplicity** na rohových bodech.
+
+### E4 — Otevřená cesta
+1. Nakresli **otevřenou lomenou čáru** (Pen Tool, bez uzavření), vyber ji, spusť.
+- [ ] Panel Cesta: „Otevřená cesta · N rohů" (N ≥ 2, krajní body jsou vždy rohy).
+- [ ] Generovat → krajní body cesty mají **vždy značku** (endpoint = povinný roh).
+
+### E5 — ERR_PATH_GONE (fallback)
+1. Přepni na Vybraná cesta v dialogu.
+2. Přepni zpět na jinou aplikaci, odznak cestu (klikni mimo), vrať se do Illustratoru.
+3. Klikni Generovat.
+- [ ] Zobrazí se **upozornění** o přepnutí zpět na Hrany artboardu (ne pád).
+- [ ] Pokud je to možné replikovat: značky se umístí na artboard jako záloha.
+
+---
+
+## F) NOVÉ v5 — Rohové zóny (corner zones)
+
+### F1 — Zapnutí zón v artboard módu
+Dokument **300×200 mm**. Hrany: jen Horní, Rozestup **70 mm**, Odsazení X/Y **0**.
+- [ ] Bez zón: rovnoměrné rozmístění (cca 5 značek).
+- [ ] Zaškrtni **Zhustit u rohů**, Počet **3**, Rozteč **15 mm** → Generovat.
+- [ ] U každého rohu horní hrany jsou **3 značky s roztečí ~15 mm**; prostřední část hrany má větší rozteče.
+- [ ] Celkový počet se zvětšil oproti bez-zón variantě.
+
+### F2 — Degradace zón (zóny se překrývají)
+Krátká hrana (~40 mm), Zóny: Počet **5**, Rozteč **15 mm** (5×15 = 75 mm > 40 mm).
+- [ ] Nedojde k pádu ani záporným pozicím.
+- [ ] Výsledek: značky zrcadlově z obou konců, se zpracovatelným překryvem (dedup).
+
+### F3 — Zóny zakázané na hladké cestě
+Uzavřená elipsa (bez rohů), path mode.
+- [ ] Panel Rohové zóny: checkbox **Zhustit u rohů** je zašedlý.
+- [ ] Tooltip říká: „Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně…"
+
+### F4 — Zóny na cestě s rohy
+Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
+- [ ] U každého ze 4 rohů jsou **2 značky** na vzdálenost 10 mm od rohu.
+- [ ] Středy stran mají větší rozteče (dle nastavení Rozestupu v panelu Cesta).
+
+---
+
 ## Hlášení problému
 
 U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **locale (CZ/EN)**, **co jsi čekal vs. co se stalo**, případně text z ExtendScript konzole.
@@ -152,4 +217,4 @@ U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **lo
 
 ---
 
-*Připravil: Osva1d — Test Plan v4.1.0, 2026-05-31*
+*Připravil: Osva1d — Test Plan v5.0.0, 2026-06-13*

@@ -1,4 +1,4 @@
-# Architecture: Grommet Marks v4.2.0
+# Architecture: Grommet Marks v5.0.0
 
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
@@ -29,8 +29,8 @@ src/
 │   ├── validation.js       GM.Validation — rules-based validace vstupů
 │   └── ui_state.js         GM.UIState — pure state-transition logika pro presety
 ├── config.js               GM.Config — getDefaults(), PRESET_KEY_DEFAULT, createEdgeDef()
-├── core.js                 GM.Core — calcPositions(), convertVal() — PURE MATH, žádný DOM
-├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMark(), getOrCreateLayer/Swatch()
+├── core.js                 GM.Core — calcPositions, distributeOnSpan/Circuit, buildCircuit, detectCorners — PURE MATH
+├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMark(), getOrCreateLayer/Swatch(), getSelectedPathInfo()
 ├── ui.js                   GM.UI — ScriptUI dialog, deleguje preset logiku na GM.UIState
 └── main.js                 GM.Main — entry point, deleguje validaci na GM.Validation
 ```
@@ -68,7 +68,7 @@ npm run verify    # build + test
     rightMirror:    true,                   // true = right kopíruje left
     units:          "mm",                   // interní klíč: "mm" | "cm" | "in"
     markSize:       3,                      // user units — průměr/strana
-    isRound:        true,                   // true = kruh, false = čtverec
+    isRound:        true,                   // true = kruh (čtverec odstraněn v4.2.0)
     markLayerName:  "__create__",           // název vrstvy nebo SENTINEL_CREATE
     fillEnabled:    true,
     fillSwatchName: "__create__",           // název swatche nebo SENTINEL_CREATE
@@ -76,7 +76,19 @@ npm run verify    # build + test
     strokeEnabled:  false,
     strokeSwatchName: "__create__",
     strokeOverprint: true,
-    strokeWeight:   1                       // points
+    strokeWeight:   1,                      // points
+    // --- v5.0.0 ---
+    placementMode:  "artboard",             // "artboard" | "path"
+    cornerZone: {
+        enabled: false,
+        count:   5,                         // počet značek v zóně (včetně rohové kotvy)
+        pitch:   100                        // rozteč v user units
+    },
+    pathDist: {
+        useNumber: false,                   // false = spacing mode (počet z délek úseků)
+        number:    24,                      // počet (smooth path + count mode)
+        spacing:   105                      // rozteč v user units
+    }
 }
 ```
 
@@ -109,15 +121,20 @@ Soubor: `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json`
 
 ```
 GM.Storage.load()
-    → GM.Illustrator.getLayerNames() + getSwatchNames()
-        → GM.UI.buildDialog(pData, layerInfo, swatchInfo)
+    → GM.Illustrator.getLayerNames() + getSwatchNames() + getSelectedPathInfo()
+        → GM.UI.buildDialog(pData, layerInfo, swatchInfo, pathInfo)
             [uživatel nastaví a klikne OK]
             → ui.gatherAll() → cfg objekt
                 → GM.Validation.validate(cfg, GM.L)
                     → GM.Storage.save(pData)  // [Last Settings] auto-save
                         → GM.Main.process(settings)
-                            → GM.Core.calcPositions() per hrana
-                                → GM.Illustrator.placeMark() per pozice
+                            ┌─ artboard mode:
+                            │    GM.Core.distributeOnSpan() per hrana
+                            │        → GM.Illustrator.placeMark() per pozice
+                            └─ path mode:
+                                 GM.Illustrator.getSelectedPathInfo()  // fresh check
+                                     → GM.Core.distributeOnCircuit()
+                                         → GM.Illustrator.placeMark() per pozice
     → app.redraw()
 ```
 
@@ -153,14 +170,16 @@ GM.Storage.load()
 ```
 tests/
 ├── run_all.sh                  Test runner (bash, ANSI output)
-├── test_core_math.js           GM.Core: calcPositions, convertVal, round
-├── test_storage_migrations.js  GM.Storage: celý migrační řetěz
+├── test_core_math.js           GM.Core: calcPositions, convertVal, buildCircuit, pointAtDistance
+├── test_core_circuit.js        GM.Core: detectCorners, distributeOnSpan, distributeOnCircuit
+├── test_storage_migrations.js  GM.Storage: celý migrační řetěz (vč. v5 forward-fill)
 ├── test_ui_state.js            GM.UIState: validate/save/saveAs/delete/select/list
-└── test_validation.js          GM.Validation: validateNumber + validate
+├── test_validation.js          GM.Validation: validateNumber + validate (vč. v5 pravidel)
+└── test_ui_dialog.js           GM.UI: ScriptUI dialog (mock ScriptUI, gather/apply, radio excl.)
 ```
 
-Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock objekty (File, Folder, alert, $).
-Pokrývají pure moduly (žádné ScriptUI).
+Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock objekty (File, Folder, alert, $, ScriptUI).
+`test_ui_dialog.js` pokrývá reálný UI kód přes `lib/mock_scriptui.js` — chytí radio-grouping chyby.
 
 ---
 
@@ -185,7 +204,9 @@ Pokrývají pure moduly (žádné ScriptUI).
 | Potřebuješ změnit | Soubor |
 |-------------------|--------|
 | Výchozí hodnoty parametrů | `src/config.js` → `getDefaults()` |
-| Výpočet pozic (count/spacing logika) | `src/core.js` → `calcPositions()` |
+| Výpočet pozic artboard (count/spacing/zones) | `src/core.js` → `distributeOnSpan()` |
+| Výpočet pozic na cestě | `src/core.js` → `distributeOnCircuit()` |
+| Cubic Bézier arc-length, detekce rohů | `src/core.js` → `buildCircuit()`, `detectCorners()` |
 | Vykreslování v Illustratoru | `src/illustrator.js` → `placeMark()` |
 | Vytvoření vrstvy / swatche | `src/illustrator.js` → `getOrCreateLayer/Swatch()` |
 | Dialog a presety | `src/ui.js` → `GM.UI.buildDialog()` |
@@ -200,7 +221,7 @@ Pokrývají pure moduly (žádné ScriptUI).
 
 ---
 
-## Layout dialogu (v4.2.0)
+## Layout dialogu (v5.0.0)
 
 Kanonický jednosloupcový layout dle `extendscript-ui-standards`:
 
@@ -208,8 +229,13 @@ Kanonický jednosloupcový layout dle `extendscript-ui-standards`:
 Window("dialog")
  ├─ Panel: Předvolby            ř.1: Načíst [dropdown] ↺ (revert)
  │                              ř.2: Uložit / Uložit jako… / Smazat (vpravo, ZSM layout)
- ├─ Panel: Hrany                offsety X/Y + 4 kompaktní edge řádky;
+ ├─ Panel: Umístění             radio: Hrany artboardu | Vybraná cesta  (path disabled bez výběru)
+ ├─ Panel: Hrany                (visible pouze v artboard módu)
+ │                              offsety X/Y + 4 kompaktní edge řádky;
  │                              mirror checkbox uvnitř dolní/pravé hrany (TD-001)
+ ├─ Panel: Cesta                (visible pouze v path módu)
+ │                              info řádek (uzavřená/otevřená · rohy) + Počet/Rozestup
+ ├─ Panel: Rohové zóny          Zhustit u rohů + Počet + Rozteč  (zakázáno na hladké cestě)
  ├─ Panel: Značka               jednotky / velikost  (tvar zamčen na kruh)
  ├─ Panel: Vzhled               vrstva / výplň / obrys / tloušťka (zarovnaný label sloupec 75px)
  ├─ Group: Footer               šedý copyright
@@ -220,35 +246,16 @@ Window("dialog")
 
 ## Aktuální stav projektu
 
-**Verze:** 4.2.0
-**Fáze:** Cyklus 3 kompletní — zjednodušení UI; připraveno k manuálnímu testu a deployi.
+**Verze:** 5.0.0
+**Fáze:** Cyklus 4 kompletní — path mode + corner zones; 234 testů / 6 suit green; připraveno k manuálnímu P0 testu.
 
-**Co je hotovo (v4.2.0 — cyklus 3):**
-- Tvar zamčen na kruh (Kruh/Čtverec odstraněno; `isRound:true` napevno)
-- Revert (↺) ve stylu ZSM nahradil tlačítko Reset; preset panel dvouřádkový (ZSM layout)
-- Oprava barvy live-validace (uloží/obnoví výchozí barvu pole — konec neviditelného černého textu)
-- Zarovnání panelu Vzhled (pevný label sloupec 75px)
-- UI-test vrstva (`test_ui_dialog.js` + mock ScriptUI): chytá radio-grouping třídu chyb (5 suit)
-
-**Co je hotovo (v4.1.0 — cyklus 2):**
-- Kanonický jednosloupcový layout dle extendscript-ui-standards; offsety přesunuty do panelu Hrany
-- Kompaktní edge řádky; TD-001: mirror checkbox uvnitř edge skupiny (`buildEdgePanel`)
-- TD-003: obnova předchozího stavu při vypnutí mirror (`_prevEnabled`)
-- Sdílený `onUserChange` hook (modified indicator + live validace)
-- Rozšířená test suite: + ui_state, validation (4 suity)
-
-> Pozn.: cyklus 2 původně zkoušel schématický náhled (Concept B), ale po vizuálním
-> vyhodnocení se přešlo na čistý kanonický sloupec (Concept A). Modul `GM.PreviewModel`
-> byl odstraněn.
-
-**Co je hotovo (v4.0.0 — cyklus 1):**
-- Modulární lib/ extrakce (utils, storage, validation, ui_state)
-- Wrapper persistence formát s `[Last Settings]` auto-save
-- Migrační řetěz flat→wrapper + sentinel rename
-- Namespace guards a module headers na všech souborech
-- Rules-based validace, modified indicator, Save As, Reset, live validace
-- Verze z package.json v build.sh, `set -euo pipefail`
+**Co je hotovo (v5.0.0 — cyklus 4):**
+- Path mode: `getSelectedPathInfo()` (Illustrator DOM → plain segments), `buildCircuit()` (Bézier arc-length, 64 smp/seg), `detectCorners()` (tangentová odchylka, práh 15°), `distributeOnCircuit()` (rohové kotvy + span → span fill; smooth ring = count/spacing).
+- Corner zones: `distributeOnSpan()` nahradil `calcPositions()` v `process()`; zóny-off výstup je poziční identický s v4 (regresní kontrakt: legacyCount inner helper, nikoliv Math.round).
+- UI: panel Umístění (radio artboard/path), panel Cesta (info + Počet/Rozestup), panel Rohové zóny; `refreshModeUI()` přepíná Hrany↔Cesta; živá validace zakáže edge strukturální testy v path módu; zóny zakázány na hladké cestě.
+- Forward-fill: staré presety bez v5 polí dostanou defaulty při načtení; `presetEquals()` presence-guarded (garantováno forward-fillem).
+- Nová suite `test_core_circuit.js` (36 testů), `test_ui_dialog.js` rozšířena o 8 v5 scénářů.
 
 **Otevřené úkoly:**
-- Manuální P0 test v Illustratoru (viz `MANUAL_TEST.md`), zvlášť ověření `onDraw` náhledu
+- Manuální P0 test v Illustratoru (viz `docs/MANUAL_TEST.md` sekce E, F + regresní C1/C2)
 - TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)

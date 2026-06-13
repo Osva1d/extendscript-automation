@@ -5,6 +5,8 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 ## Funkce
 
 - **Automatické rozmístění** — pozice značek podle pevného počtu nebo preferovaného rozestupu, samostatně pro každou hranu (Horní, Dolní, Levá, Pravá) se zrcadlením protějších hran.
+- **Rozmístění na tvar** — volba „Vybraná cesta" umístí značky na libovolnou uzavřenou nebo otevřenou vektorovou cestu; krajní body a rohy jsou vždy kotvy.
+- **Rohové zóny** — zhustí N značek u každého rohu s vlastní roztečí; střed hrany/cesty pak jede standardním rozestupem.
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
 - **Vzhled** — výplň a/nebo obrys s výběrem vzorníku, přetisk (overprint), jednotky mm/cm/in.
 - **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); indikátor neuložených změn.
@@ -74,6 +76,13 @@ Veškerý kód je kompatibilní s ExtendScript ES3:
 ---
 
 ## Changelog
+
+### v5.0.0 (2026-06)
+- **FEATURE:** Umístění na tvar — panel „Vybraná cesta" rozmístí značky po libovolné vektorové cestě (otevřené i uzavřené); rohové kotvy jsou vždy přítomné; hladká cesta (bez rohů) podporuje i počítání.
+- **FEATURE:** Rohové zóny — checkbox „Zhustit u rohů" s volitelným počtem a roztečí; střed hrany/cesty jede standardním rozestupem; funguje v artboard i path módu.
+- **CORE:** Cubic Bézier arc-length tabulka (64 vzorků/segment), binární vyhledávání na obvodu, detekce rohů tangentovou odchylkou (práh 15°).
+- **REGRESE:** `distributeOnSpan` (zóny vypnuté) je poziční identický s `calcPositions` z v4 — existující presety zachovají přesně stejný rozmístění.
+- **TEST:** +1 suite (`test_core_circuit.js`), +1 suite (`test_ui_dialog.js` rozšířena o v5 scénáře); celkem 234 testů / 6 suit.
 
 ### v4.2.1 (2026-06)
 - **FIX:** Selhání zápisu nastavení na disk se vždy nahlásí uživateli (dříve mohlo tiše „oživit" smazanou předvolbu po restartu).
