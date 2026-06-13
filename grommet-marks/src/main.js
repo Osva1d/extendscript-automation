@@ -63,22 +63,8 @@ GM.Main = {
     process: function (cfg) {
         try {
             var doc = GM.Illustrator.doc;
-
-            var topCfg = cfg.top;
-            var leftCfg = cfg.left;
-            var bottomCfg = cfg.bottomMirror ? topCfg : cfg.bottom;
-            var rightCfg = cfg.rightMirror ? leftCfg : cfg.right;
-
-            var topOn = topCfg.enabled;
-            var leftOn = leftCfg.enabled;
-            var bottomOn = cfg.bottomMirror ? topOn : bottomCfg.enabled;
-            var rightOn = cfg.rightMirror ? leftOn : rightCfg.enabled;
-
             var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
 
-            // Non-blocking warnings — collected, de-duplicated, shown once at
-            // the end. (e.g. fill and stroke referencing the same missing
-            // swatch must not produce two identical lines.)
             var warnings = [];
             function addWarning(msg) {
                 for (var w = 0; w < warnings.length; w++) {
@@ -87,23 +73,13 @@ GM.Main = {
                 warnings.push(msg);
             }
 
-            // A named (non-sentinel) target layer that doesn't exist will be
-            // created by getOrCreateLayer — warn so the user knows a new layer
-            // appeared. The SENTINEL_CREATE default means "create it", so that
-            // case is intentional and silent (symmetric with swatch handling).
             var resolvedLayerName = GM.Illustrator.resolveLayerName(cfg.markLayerName);
             if (cfg.markLayerName !== GM.CONSTANTS.SENTINEL_CREATE &&
                 !GM.Illustrator.layerExists(resolvedLayerName)) {
                 addWarning(GM.L.format(GM.L.WARN_LAYER_CREATED, resolvedLayerName));
             }
-            // getOrCreateLayer always returns a layer (creates it if missing),
-            // so no not-found guard is needed; a genuine create failure throws
-            // up to the outer try/catch as an unexpected error.
             var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
 
-            // Missing named fill/stroke swatch → degrade to [Registration] +
-            // a non-blocking warning. Never hard-abort and never silently
-            // auto-create a surprise spot.
             var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
             if (cfg.fillEnabled && !fillColor) {
                 addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
@@ -119,12 +95,6 @@ GM.Main = {
             var markSizePoints = cfg.markSize * unitFactor;
             var radius = markSizePoints / 2;
 
-            var offX = cfg.offsetX;
-            var offY = cfg.offsetY;
-
-            // Layer session — unlock/show the target layer so placeMark can
-            // write to it (a locked layer would silently swallow every mark).
-            // The user's lock/visibility state is restored afterwards.
             var prevLocked = false, prevVisible = true, sessionOpen = false;
             try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
@@ -142,63 +112,109 @@ GM.Main = {
                 if (!ok) failedMarks++;
             }
 
-            for (var i = 0; i < doc.artboards.length; i++) {
-                var ab = doc.artboards[i];
-                var r = ab.artboardRect;
-                var abLeft = r[0], abTop = r[1], abRight = r[2], abBottom = r[3];
-                var abWidth = abRight - abLeft;
-                var abHeight = abTop - abBottom;
+            // Zone config (pitch unit-converted once; shared by both modes).
+            var cz = cfg.cornerZone || {};
+            var zoneCfg = {
+                enabled: !!(cz.enabled),
+                count:   Math.max(cz.count  || 1, 1),
+                pitch:   (cz.pitch  || 0) * unitFactor
+            };
 
-                if (topOn) {
-                    var tPositions = GM.Core.calcPositions(topCfg, abWidth, offX, unitFactor);
-                    var tY = abTop - (offY * unitFactor);
-                    for (var ti = 0; ti < tPositions.length; ti++) {
-                        place(abLeft + tPositions[ti], tY);
-                    }
-                }
+            var doArtboard = true;
 
-                if (bottomOn) {
-                    var bPositions = GM.Core.calcPositions(bottomCfg, abWidth, offX, unitFactor);
-                    var bY = abBottom + (offY * unitFactor);
-                    for (var bi = 0; bi < bPositions.length; bi++) {
-                        place(abLeft + bPositions[bi], bY);
-                    }
-                }
-
-                if (leftOn) {
-                    var lPositions = GM.Core.calcPositions(leftCfg, abHeight, offY, unitFactor);
-                    var lX = abLeft + (offX * unitFactor);
-                    for (var li = 0; li < lPositions.length; li++) {
-                        place(lX, abTop - lPositions[li]);
-                    }
-                }
-
-                if (rightOn) {
-                    var rPositions = GM.Core.calcPositions(rightCfg, abHeight, offY, unitFactor);
-                    var rX = abRight - (offX * unitFactor);
-                    for (var ri = 0; ri < rPositions.length; ri++) {
-                        place(rX, abTop - rPositions[ri]);
+            if (cfg.placementMode === GM.CONSTANTS.MODE_PATH) {
+                // Re-fetch selection: the user may have deselected between
+                // dialog OK and process() — treat as a non-fatal fallback.
+                var pathInfo = GM.Illustrator.getSelectedPathInfo();
+                if (!pathInfo.ok) {
+                    addWarning(GM.L.WARN_MODE_FALLBACK);
+                } else {
+                    doArtboard = false;
+                    var pd = cfg.pathDist || {};
+                    var distCfg = {
+                        useNumber: !!(pd.useNumber),
+                        number:    Math.max(pd.number  || 1, 1),
+                        spacing:   (pd.spacing || 0) * unitFactor
+                    };
+                    var pathMarks = GM.Core.distributeOnCircuit(
+                        pathInfo.circuit, pathInfo.corners, zoneCfg, distCfg
+                    );
+                    for (var pi = 0; pi < pathMarks.length; pi++) {
+                        place(pathMarks[pi][0], pathMarks[pi][1]);
                     }
                 }
             }
 
-            // Restore layer lock/visibility (normal path).
+            if (doArtboard) {
+                var topCfg    = cfg.top;
+                var leftCfg   = cfg.left;
+                var bottomCfg = cfg.bottomMirror ? topCfg    : cfg.bottom;
+                var rightCfg  = cfg.rightMirror  ? leftCfg   : cfg.right;
+
+                var topOn    = topCfg.enabled;
+                var leftOn   = leftCfg.enabled;
+                var bottomOn = cfg.bottomMirror ? topOn  : bottomCfg.enabled;
+                var rightOn  = cfg.rightMirror  ? leftOn : rightCfg.enabled;
+
+                // Offsets pre-converted to points so artboard math is uniform.
+                var offX = cfg.offsetX * unitFactor;
+                var offY = cfg.offsetY * unitFactor;
+
+                function edgeMid(edgeCfg) {
+                    return {
+                        useNumber: !!(edgeCfg.useNumber),
+                        number:    Math.max(edgeCfg.number  || 1, 1),
+                        spacing:   (edgeCfg.spacing || 0) * unitFactor
+                    };
+                }
+
+                for (var i = 0; i < doc.artboards.length; i++) {
+                    var ab = doc.artboards[i];
+                    var r = ab.artboardRect;
+                    var abLeft = r[0], abTop = r[1], abRight = r[2], abBottom = r[3];
+                    var abWidth  = abRight  - abLeft;
+                    var abHeight = abTop    - abBottom;
+
+                    if (topOn) {
+                        var tL   = Math.max(abWidth  - 2 * offX, 0);
+                        var tPos = GM.Core.distributeOnSpan(tL, zoneCfg, edgeMid(topCfg));
+                        var tY   = abTop - offY;
+                        for (var ti = 0; ti < tPos.length; ti++) place(abLeft + offX + tPos[ti], tY);
+                    }
+
+                    if (bottomOn) {
+                        var bL   = Math.max(abWidth  - 2 * offX, 0);
+                        var bPos = GM.Core.distributeOnSpan(bL, zoneCfg, edgeMid(bottomCfg));
+                        var bY   = abBottom + offY;
+                        for (var bi = 0; bi < bPos.length; bi++) place(abLeft + offX + bPos[bi], bY);
+                    }
+
+                    if (leftOn) {
+                        var lL   = Math.max(abHeight - 2 * offY, 0);
+                        var lPos = GM.Core.distributeOnSpan(lL, zoneCfg, edgeMid(leftCfg));
+                        var lX   = abLeft + offX;
+                        for (var li = 0; li < lPos.length; li++) place(lX, abTop - offY - lPos[li]);
+                    }
+
+                    if (rightOn) {
+                        var rL   = Math.max(abHeight - 2 * offY, 0);
+                        var rPos = GM.Core.distributeOnSpan(rL, zoneCfg, edgeMid(rightCfg));
+                        var rX   = abRight - offX;
+                        for (var ri = 0; ri < rPos.length; ri++) place(rX, abTop - offY - rPos[ri]);
+                    }
+                }
+            }
+
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
             }
 
-            // Failed placements must be visible — silently missing marks on
-            // prepress output are worse than a warning. One summary line, no
-            // per-mark alert spam (details are in the ExtendScript console).
             if (failedMarks > 0) {
                 addWarning(GM.L.format(GM.L.WARN_MARKS_FAILED, failedMarks));
             }
 
-            // Surface any non-blocking colour-fallback warnings once, after the
-            // marks are placed (the operation still succeeded).
             if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
-            // Restore on error too — never leave the layer unlocked.
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst2) {}
             }
