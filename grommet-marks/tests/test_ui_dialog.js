@@ -51,7 +51,7 @@ function freshPData() {
 }
 function buildUI(pData, pathInfo) {
     SUI.install();
-    var ui = GM.UI.buildDialog(pData || freshPData(), { names: [] }, { names: [] },
+    var ui = GM.UI.buildDialog(pData || freshPData(),
         pathInfo || { ok: false, reason: "no-selection" });
     return ui; // {window, gatherAll, modeUI, pathUI, zonesUI}
 }
@@ -131,7 +131,6 @@ console.log("--- UI: Count/Spacing radio exclusivity (regression) ---");
 console.log("--- UI: shape locked to circle ---");
 (function () {
     var ui = buildUI();
-    assert(ui.gatherAll().isRound === true, "gather reports isRound:true (circle)");
     var w = SUI.lastWindow();
     // 8 edge radios (4 edges × Count/Spacing) + 2 mode radios (artboard/path)
     // + 2 path-panel radios (count/spacing) — no shape radios.
@@ -166,24 +165,6 @@ console.log("--- UI: mirror flags via gatherAll ---");
     // Defaults: bottom & right mirror enabled.
     assert(cfg.bottomMirror === true, "default bottomMirror true");
     assert(cfg.rightMirror === true, "default rightMirror true");
-    done();
-})();
-
-// ===== TEST: Appearance labels share a fixed width (aligned dropdowns) =====
-console.log("--- UI: Appearance label column ---");
-(function () {
-    var ui = buildUI();
-    var w = SUI.lastWindow();
-    var LABEL_W = 75;
-    function widthOf(pred) { var c = w.findOne(pred); return c ? c.preferredSize.width : -1; }
-    var layer  = widthOf(function (c) { return c.type === "statictext" && c.text === GM.L.LAYER; });
-    var fill   = widthOf(function (c) { return c.type === "checkbox"   && c.text === GM.L.FILL; });
-    var stroke = widthOf(function (c) { return c.type === "checkbox"   && c.text === GM.L.STROKE; });
-    var weight = widthOf(function (c) { return c.type === "statictext" && c.text === GM.L.WEIGHT; });
-    assert(layer === LABEL_W,  "Vrstva label width fixed to " + LABEL_W);
-    assert(fill === LABEL_W,   "Výplň checkbox width fixed to " + LABEL_W);
-    assert(stroke === LABEL_W, "Obrys checkbox width fixed to " + LABEL_W);
-    assert(weight === LABEL_W, "Tloušťka label width fixed to " + LABEL_W);
     done();
 })();
 

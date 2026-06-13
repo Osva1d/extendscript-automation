@@ -34,11 +34,9 @@ GM.Main = {
                 pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
             }
 
-            var layerInfo = GM.Illustrator.getLayerNames();
-            var swatchInfo = GM.Illustrator.getSwatchNames();
             var pathInfo = GM.Illustrator.getSelectedPathInfo();
 
-            var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo, pathInfo);
+            var ui = GM.UI.buildDialog(pData, pathInfo);
 
             if (ui.window.show() !== 1) return;
 

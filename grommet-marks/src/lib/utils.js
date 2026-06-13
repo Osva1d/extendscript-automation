@@ -46,9 +46,7 @@ GM.Utils = {
         if (!a || !b) return false;
         var keys = [
             "offsetX", "offsetY", "bottomMirror", "rightMirror",
-            "units", "markSize", "isRound",
-            "markLayerName", "fillEnabled", "fillSwatchName", "fillOverprint",
-            "strokeEnabled", "strokeSwatchName", "strokeOverprint", "strokeWeight"
+            "units", "markSize"
         ];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
