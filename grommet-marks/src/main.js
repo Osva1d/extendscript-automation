@@ -36,8 +36,9 @@ GM.Main = {
 
             var layerInfo = GM.Illustrator.getLayerNames();
             var swatchInfo = GM.Illustrator.getSwatchNames();
+            var pathInfo = GM.Illustrator.getSelectedPathInfo();
 
-            var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
+            var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo, pathInfo);
 
             if (ui.window.show() !== 1) return;
 

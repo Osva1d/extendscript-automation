@@ -213,9 +213,10 @@ GM.UI = {
      * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} layerInfo - Layer names and existence flags
      * @param {Object} swatchInfo - Swatch names and existence flags
-     * @returns {Object} Dialog object with window and gatherAll methods
+     * @param {Object} pathInfo - {ok, cornerCount, closed, totalLen} or {ok:false, reason}
+     * @returns {Object} Dialog object with window, gatherAll, modeUI, pathUI, zonesUI
      */
-    buildDialog: function (pData, layerInfo, swatchInfo) {
+    buildDialog: function (pData, layerInfo, swatchInfo, pathInfo) {
         var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
@@ -264,6 +265,21 @@ GM.UI = {
         deleteBtn.enabled = false;
 
         // =================================================================
+        // Placement Panel (artboard edges vs selected path)
+        // =================================================================
+        var pathOk = !!(pathInfo && pathInfo.ok);
+        var modePanel = dlg.add("panel", undefined, GM.L.PLACEMENT_PANEL);
+        modePanel.orientation = "row";
+        modePanel.alignChildren = ["left", "center"];
+        modePanel.margins = 15;
+        modePanel.spacing = 16;
+        var artboardRB = modePanel.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
+        artboardRB.value = true;
+        var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
+        pathRB.enabled = pathOk;
+        pathRB.helpTip = pathOk ? "" : GM.L.TIP_MODE_PATH_DISABLED;
+
+        // =================================================================
         // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
         var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
@@ -294,6 +310,102 @@ GM.UI = {
 
         var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
         var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
+
+        // =================================================================
+        // Path Panel (replaces Edges in path mode)
+        // =================================================================
+        var pathPanel = dlg.add("panel", undefined, GM.L.PATH_PANEL);
+        pathPanel.orientation = "column";
+        pathPanel.alignChildren = ["left", "top"];
+        pathPanel.margins = 15;
+        pathPanel.spacing = 10;
+        pathPanel.visible = false;
+
+        var infoText = "";
+        if (pathOk) {
+            infoText = (pathInfo.closed ? GM.L.PATH_INFO_CLOSED : GM.L.PATH_INFO_OPEN)
+                + " · "
+                + (pathInfo.cornerCount > 0
+                    ? GM.L.format(GM.L.PATH_INFO_CORNERS, pathInfo.cornerCount)
+                    : GM.L.PATH_INFO_NO_CORNERS);
+        }
+        var pathInfoLbl = pathPanel.add("statictext", undefined, infoText);
+        pathInfoLbl.enabled = false;
+
+        var pathRow = pathPanel.add("group");
+        pathRow.orientation = "row";
+        pathRow.alignChildren = ["left", "center"];
+        pathRow.spacing = 8;
+        var pathNumRB = pathRow.add("radiobutton", undefined, GM.L.COUNT);
+        var pathNumIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.number));
+        pathNumIn.preferredSize.width = 50;
+        var pathSpcRB = pathRow.add("radiobutton", undefined, GM.L.SPACING);
+        var pathSpcIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.spacing));
+        pathSpcIn.preferredSize.width = 50;
+        pathSpcRB.value = true;
+
+        var hasCorners = pathOk && pathInfo.cornerCount > 0;
+        if (hasCorners) {
+            pathNumRB.enabled = false;
+            pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+        }
+        pathNumRB.onClick = function () {
+            pathNumRB.value = true; pathSpcRB.value = false;
+            pathNumIn.enabled = true; pathSpcIn.enabled = false;
+            onUserChange();
+        };
+        pathSpcRB.onClick = function () {
+            pathSpcRB.value = true; pathNumRB.value = false;
+            pathNumIn.enabled = false; pathSpcIn.enabled = true;
+            onUserChange();
+        };
+        pathNumIn.enabled = false;
+
+        var offsetNote = pathPanel.add("statictext", undefined, GM.L.PATH_OFFSET_NOTE,
+            { multiline: true });
+        offsetNote.enabled = false;
+        offsetNote.preferredSize.width = 330;
+
+        // =================================================================
+        // Corner Zones Panel (shared by both modes)
+        // =================================================================
+        var zonesPanel = dlg.add("panel", undefined, GM.L.ZONES_PANEL);
+        zonesPanel.orientation = "row";
+        zonesPanel.alignChildren = ["left", "center"];
+        zonesPanel.margins = 15;
+        zonesPanel.spacing = 8;
+        var zoneCB = zonesPanel.add("checkbox", undefined, GM.L.ZONES_ENABLE);
+        zoneCB.value = defCfg.cornerZone.enabled;
+        zoneCB.helpTip = GM.L.TIP_ZONES;
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_COUNT);
+        var zoneCountIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.count));
+        zoneCountIn.preferredSize.width = 50;
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_PITCH);
+        var zonePitchIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.pitch));
+        zonePitchIn.preferredSize.width = 50;
+
+        function refreshZonesEnabled() {
+            var pathMode = pathRB.value;
+            var zonesPossible = !pathMode || hasCorners;
+            zoneCB.enabled = zonesPossible;
+            zoneCB.helpTip = zonesPossible ? GM.L.TIP_ZONES : GM.L.TIP_ZONES_NO_CORNERS;
+            var fieldsOn = zonesPossible && zoneCB.value;
+            zoneCountIn.enabled = fieldsOn;
+            zonePitchIn.enabled = fieldsOn;
+        }
+        zoneCB.onClick = function () { refreshZonesEnabled(); onUserChange(); };
+
+        // (d) Mode switching
+        function refreshModeUI() {
+            var pathMode = pathRB.value;
+            edgesPanel.visible = !pathMode;
+            pathPanel.visible = pathMode;
+            refreshZonesEnabled();
+            dlg.layout.layout(true);
+            onUserChange();
+        }
+        artboardRB.onClick = function () { pathRB.value = false; artboardRB.value = true; refreshModeUI(); };
+        pathRB.onClick = function () { artboardRB.value = false; pathRB.value = true; refreshModeUI(); };
 
         // =================================================================
         // Mark Panel (units, size, shape)
@@ -412,7 +524,18 @@ GM.UI = {
                 strokeEnabled: strokeCB.value,
                 strokeSwatchName: GM.UI.toStorage(GM.UI.ddlValue(strokeDDL) || GM.L.CREATE_LABEL),
                 strokeOverprint: strokeOPCB.value,
-                strokeWeight: parseFloat(weightInput.text.replace(/,/g, "."))
+                strokeWeight: parseFloat(weightInput.text.replace(/,/g, ".")),
+                placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
+                cornerZone: {
+                    enabled: zoneCB.value,
+                    count: parseFloat(zoneCountIn.text.replace(/,/g, ".")),
+                    pitch: parseFloat(zonePitchIn.text.replace(/,/g, "."))
+                },
+                pathDist: {
+                    useNumber: pathNumRB.value,
+                    number: parseFloat(pathNumIn.text.replace(/,/g, ".")),
+                    spacing: parseFloat(pathSpcIn.text.replace(/,/g, "."))
+                }
             };
         }
 
@@ -448,6 +571,25 @@ GM.UI = {
             strokeDDL.enabled = s.strokeEnabled;
             strokeOPCB.enabled = s.strokeEnabled;
             weightInput.enabled = s.strokeEnabled;
+
+            var wantPath = (s.placementMode === GM.CONSTANTS.MODE_PATH);
+            if (wantPath && !pathOk) {
+                wantPath = false;
+            }
+            pathRB.value = wantPath; artboardRB.value = !wantPath;
+
+            var z = s.cornerZone || defCfg.cornerZone;
+            zoneCB.value = !!z.enabled;
+            zoneCountIn.text = z.count;
+            zonePitchIn.text = z.pitch;
+
+            var pd = s.pathDist || defCfg.pathDist;
+            var pdUseNum = !!pd.useNumber && !hasCorners;
+            pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
+            pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
+            pathNumIn.enabled = pdUseNum; pathSpcIn.enabled = !pdUseNum;
+
+            refreshModeUI();
         }
 
         // =================================================================
@@ -457,7 +599,7 @@ GM.UI = {
         unitsDDL.onChange = function () {
             var newUnit = GM.UI.getUnitKey(unitsDDL);
             if (newUnit === currentUnit) return;
-            var fields = [offsetXIn, offsetYIn, sizeInput]
+            var fields = [offsetXIn, offsetYIn, sizeInput, zonePitchIn, pathSpcIn]
                 .concat(topUI.getConvertFields())
                 .concat(leftUI.getConvertFields())
                 .concat(bottomUI.getConvertFields())
@@ -484,7 +626,11 @@ GM.UI = {
             { et: offsetXIn,   rule: R.offsetX },
             { et: offsetYIn,   rule: R.offsetY },
             { et: sizeInput,   rule: R.markSize },
-            { et: weightInput, rule: R.strokeWeight }
+            { et: weightInput, rule: R.strokeWeight },
+            { et: zoneCountIn, rule: R.cornerCount },
+            { et: zonePitchIn, rule: R.cornerPitch },
+            { et: pathNumIn,   rule: R.pathNumber },
+            { et: pathSpcIn,   rule: R.pathSpacing }
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
@@ -534,12 +680,14 @@ GM.UI = {
             // Structural checks (mirror GM.Validation.validate) so OK greys out
             // for these too, not just numeric ranges. These have no single field
             // to paint, so they only gate the button.
-            // 1) At least one effective edge enabled (mirror copies the opposite).
-            var topOn = topUI.cb.value;
-            var leftOn = leftUI.cb.value;
-            var bottomOn = bottomUI.getMirror() ? topOn : bottomUI.cb.value;
-            var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
-            if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+            // 1) At least one effective edge enabled (artboard mode only).
+            if (!pathRB.value) {
+                var topOn = topUI.cb.value;
+                var leftOn = leftUI.cb.value;
+                var bottomOn = bottomUI.getMirror() ? topOn : bottomUI.cb.value;
+                var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
+                if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+            }
             // 2) Marks must have a fill and/or a stroke.
             if (!fillCB.value && !strokeCB.value) allValid = false;
 
@@ -620,6 +768,7 @@ GM.UI = {
         // Load initial values from [Last Settings] or active preset
         var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
         if (initPreset) applyAll(initPreset);
+        else refreshModeUI();
         updatePresetList();
 
         loadDDL.onChange = function () {
@@ -687,7 +836,8 @@ GM.UI = {
         };
 
         // Wire numeric edits to the shared change hook.
-        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput];
+        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput,
+                        zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
             allEdits[ei].onChange = onUserChange;
@@ -701,7 +851,10 @@ GM.UI = {
 
         return {
             window: dlg,
-            gatherAll: gatherAll
+            gatherAll: gatherAll,
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB },
+            pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn },
+            zonesUI: { enableCB: zoneCB, countIn: zoneCountIn, pitchIn: zonePitchIn }
         };
     },
 

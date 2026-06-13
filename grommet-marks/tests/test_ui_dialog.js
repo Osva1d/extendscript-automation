@@ -49,10 +49,15 @@ function freshPData() {
     p.presets["[Default]"] = GM.Config.getDefaults();
     return p;
 }
-function buildUI(pData) {
+function buildUI(pData, pathInfo) {
     SUI.install();
-    var ui = GM.UI.buildDialog(pData || freshPData(), { names: [] }, { names: [] });
-    return ui; // {window, gatherAll}
+    var ui = GM.UI.buildDialog(pData || freshPData(), { names: [] }, { names: [] },
+        pathInfo || { ok: false, reason: "no-selection" });
+    return ui; // {window, gatherAll, modeUI, pathUI, zonesUI}
+}
+function mockPathInfo(cornerCount, closed, totalLen) {
+    return { ok: true, cornerCount: cornerCount, closed: closed,
+             totalLen: totalLen || 1000, corners: [], circuit: null, pathRef: {} };
 }
 function done() { SUI.uninstall(); }
 
@@ -103,8 +108,8 @@ console.log("--- UI: Count/Spacing radio exclusivity (regression) ---");
     var countRadios = w.find(function (c) {
         return c.type === "radiobutton" && c.text === GM.L.COUNT;
     });
-    assert(spacingRadios.length === 4, "four Spacing radios (one per edge)");
-    assert(countRadios.length === 4, "four Count radios (one per edge)");
+    assert(spacingRadios.length === 5, "five Spacing radios (four edges + path panel)");
+    assert(countRadios.length === 5, "five Count radios (four edges + path panel)");
 
     // Fire the top edge's Spacing onClick.
     spacingRadios[0].onClick();
@@ -128,9 +133,10 @@ console.log("--- UI: shape locked to circle ---");
     var ui = buildUI();
     assert(ui.gatherAll().isRound === true, "gather reports isRound:true (circle)");
     var w = SUI.lastWindow();
-    // Only the 8 edge radios remain (4 edges × Count/Spacing); no shape radios.
+    // 8 edge radios (4 edges × Count/Spacing) + 2 mode radios (artboard/path)
+    // + 2 path-panel radios (count/spacing) — no shape radios.
     var radios = w.find(function (c) { return c.type === "radiobutton"; });
-    assert(radios.length === 8, "exactly 8 radios (edges only, no shape radios)");
+    assert(radios.length === 12, "exactly 12 radios (8 edges + 2 mode + 2 path, no shape radios)");
     done();
 })();
 
@@ -199,6 +205,42 @@ console.log("--- UI: revert button ---");
 
     revert.onClick();
     assert(ui.gatherAll().offsetX === 7, "revert restores offsetX to default 7");
+    done();
+})();
+
+// ===== TEST: v5 placement mode UI =====
+console.log("--- UI v5: placement mode ---");
+(function () {
+    // No selection -> path radio disabled, artboard active
+    var ui = buildUI();
+    assert(ui.modeUI.pathRB.enabled === false, "path radio disabled without selection");
+    assert(ui.gatherAll().placementMode === "artboard", "default mode artboard");
+    done();
+
+    // Valid path with corners -> radio enabled; switching gathers "path"
+    var ui2 = buildUI(null, mockPathInfo(4, true));
+    assert(ui2.modeUI.pathRB.enabled === true, "path radio enabled with selection");
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    assert(ui2.gatherAll().placementMode === "path", "gather reports path mode");
+    // Path with corners -> count radio disabled (spacing only)
+    assert(ui2.pathUI.numRB.enabled === false, "count radio disabled on cornered path");
+    assert(ui2.pathUI.spcRB.value === true, "spacing radio forced on cornered path");
+    done();
+
+    // Smooth path (0 corners) -> count allowed, zones panel disabled
+    var ui3 = buildUI(null, mockPathInfo(0, true));
+    ui3.modeUI.pathRB.value = true; ui3.modeUI.pathRB.onClick();
+    assert(ui3.pathUI.numRB.enabled === true, "count radio enabled on smooth path");
+    assert(ui3.zonesUI.enableCB.enabled === false, "zones disabled on smooth path");
+    done();
+
+    // Zones gather/apply roundtrip (artboard mode)
+    var ui4 = buildUI();
+    ui4.zonesUI.enableCB.value = true; ui4.zonesUI.enableCB.onClick();
+    ui4.zonesUI.countIn.text = "5"; ui4.zonesUI.pitchIn.text = "100";
+    var g = ui4.gatherAll();
+    assert(g.cornerZone.enabled === true, "gather: zones enabled");
+    assert(String(g.cornerZone.count) === "5" || g.cornerZone.count === 5, "gather: zone count");
     done();
 })();
 
