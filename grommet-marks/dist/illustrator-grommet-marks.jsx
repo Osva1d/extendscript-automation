@@ -531,6 +531,10 @@ GM.Utils = {
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }
+        // Compare placementMode only when both sides carry the field
+        if (a.placementMode !== undefined && b.placementMode !== undefined) {
+            if (String(a.placementMode) !== String(b.placementMode)) return false;
+        }
         // Compare edge sub-objects
         var edgeNames = ["top", "left", "bottom", "right"];
         var edgeKeys = ["enabled", "useNumber", "number", "spacing"];
@@ -539,6 +543,21 @@ GM.Utils = {
             var bE = b[edgeNames[ei]] || {};
             for (var ek = 0; ek < edgeKeys.length; ek++) {
                 if (String(aE[edgeKeys[ek]]) !== String(bE[edgeKeys[ek]])) return false;
+            }
+        }
+        // Compare v5 sub-objects only when both sides carry the field
+        if (a.cornerZone !== undefined && b.cornerZone !== undefined) {
+            var zA = a.cornerZone, zB = b.cornerZone;
+            var zoneKeys = ["enabled", "count", "pitch"];
+            for (var zk = 0; zk < zoneKeys.length; zk++) {
+                if (String(zA[zoneKeys[zk]]) !== String(zB[zoneKeys[zk]])) return false;
+            }
+        }
+        if (a.pathDist !== undefined && b.pathDist !== undefined) {
+            var pA = a.pathDist, pB = b.pathDist;
+            var pdKeys = ["useNumber", "number", "spacing"];
+            for (var pk = 0; pk < pdKeys.length; pk++) {
+                if (String(pA[pdKeys[pk]]) !== String(pB[pdKeys[pk]])) return false;
             }
         }
         return true;
@@ -817,7 +836,11 @@ GM.Validation = {
         markSize:     { min: 0.01, max: 9999, integer: false },
         strokeWeight: { min: 0.01, max: 100,  integer: false },
         edgeCount:    { min: 1,    max: 9999, integer: true  },
-        edgeSpacing:  { min: 0.01, max: 9999, integer: false }
+        edgeSpacing:  { min: 0.01, max: 9999, integer: false },
+        cornerCount:  { min: 1,    max: 999,  integer: true  },
+        cornerPitch:  { min: 0.01, max: 9999, integer: false },
+        pathNumber:   { min: 1,    max: 9999, integer: true  },
+        pathSpacing:  { min: 0.01, max: 9999, integer: false }
     },
 
     /**
@@ -875,36 +898,59 @@ GM.Validation = {
             if (strokeWeight === null) return { valid: false, settings: null };
         }
 
-        // Appearance check
+        // Corner zones (both modes; skipped when disabled)
+        var zone = cfg.cornerZone || { enabled: false };
+        var zoneCount = zone.count, zonePitch = zone.pitch;
+        if (zone.enabled) {
+            zoneCount = vn(zone.count, rules.cornerCount, L.ZONES_COUNT || "Count", L);
+            if (zoneCount === null) return { valid: false, settings: null };
+            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Pitch", L);
+            if (zonePitch === null) return { valid: false, settings: null };
+        }
+
+        // Appearance check (common to both modes)
         if (!cfg.fillEnabled && !cfg.strokeEnabled) {
             alert(L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
 
-        // Edge enabled check (accounting for mirrors)
-        var topOn = cfg.top.enabled;
-        var leftOn = cfg.left.enabled;
-        var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
-        var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
-        if (!topOn && !leftOn && !bottomOn && !rightOn) {
-            alert(L.ERR_NO_EDGE);
-            return { valid: false, settings: null };
-        }
-
-        // Validate non-mirrored enabled edges
-        var edgeKeys = ["top", "left"];
-        if (!cfg.bottomMirror) edgeKeys.push("bottom");
-        if (!cfg.rightMirror) edgeKeys.push("right");
-
-        for (var i = 0; i < edgeKeys.length; i++) {
-            var e = cfg[edgeKeys[i]];
-            if (!e.enabled) continue;
-            if (e.useNumber) {
-                var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
-                if (cnt === null) return { valid: false, settings: null };
+        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
+        var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
+        var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
+        if (isPathMode) {
+            if (cfg.pathDist.useNumber) {
+                pathNumber = vn(cfg.pathDist.number, rules.pathNumber, L.COUNT || "Count", L);
+                if (pathNumber === null) return { valid: false, settings: null };
             } else {
-                var spc = vn(e.spacing, rules.edgeSpacing, L.SPACING || "Spacing", L);
-                if (spc === null) return { valid: false, settings: null };
+                pathSpacing = vn(cfg.pathDist.spacing, rules.pathSpacing, L.SPACING || "Spacing", L);
+                if (pathSpacing === null) return { valid: false, settings: null };
+            }
+        } else {
+            // Edge enabled check (accounting for mirrors)
+            var topOn = cfg.top.enabled;
+            var leftOn = cfg.left.enabled;
+            var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
+            var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
+            if (!topOn && !leftOn && !bottomOn && !rightOn) {
+                alert(L.ERR_NO_EDGE);
+                return { valid: false, settings: null };
+            }
+
+            // Validate non-mirrored enabled edges
+            var edgeKeys = ["top", "left"];
+            if (!cfg.bottomMirror) edgeKeys.push("bottom");
+            if (!cfg.rightMirror) edgeKeys.push("right");
+
+            for (var i = 0; i < edgeKeys.length; i++) {
+                var e = cfg[edgeKeys[i]];
+                if (!e.enabled) continue;
+                if (e.useNumber) {
+                    var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
+                    if (cnt === null) return { valid: false, settings: null };
+                } else {
+                    var spc = vn(e.spacing, rules.edgeSpacing, L.SPACING || "Spacing", L);
+                    if (spc === null) return { valid: false, settings: null };
+                }
             }
         }
 
@@ -914,6 +960,14 @@ GM.Validation = {
         settings.offsetY = offsetY;
         settings.markSize = markSize;
         if (cfg.strokeEnabled) settings.strokeWeight = strokeWeight;
+        if (zone.enabled) {
+            settings.cornerZone.count = zoneCount;
+            settings.cornerZone.pitch = zonePitch;
+        }
+        if (isPathMode) {
+            if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
+            else settings.pathDist.spacing = pathSpacing;
+        }
 
         return { valid: true, settings: settings };
     }

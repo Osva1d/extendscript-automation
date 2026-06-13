@@ -53,6 +53,10 @@ GM.Utils = {
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }
+        // Compare placementMode only when both sides carry the field
+        if (a.placementMode !== undefined && b.placementMode !== undefined) {
+            if (String(a.placementMode) !== String(b.placementMode)) return false;
+        }
         // Compare edge sub-objects
         var edgeNames = ["top", "left", "bottom", "right"];
         var edgeKeys = ["enabled", "useNumber", "number", "spacing"];
@@ -61,6 +65,21 @@ GM.Utils = {
             var bE = b[edgeNames[ei]] || {};
             for (var ek = 0; ek < edgeKeys.length; ek++) {
                 if (String(aE[edgeKeys[ek]]) !== String(bE[edgeKeys[ek]])) return false;
+            }
+        }
+        // Compare v5 sub-objects only when both sides carry the field
+        if (a.cornerZone !== undefined && b.cornerZone !== undefined) {
+            var zA = a.cornerZone, zB = b.cornerZone;
+            var zoneKeys = ["enabled", "count", "pitch"];
+            for (var zk = 0; zk < zoneKeys.length; zk++) {
+                if (String(zA[zoneKeys[zk]]) !== String(zB[zoneKeys[zk]])) return false;
+            }
+        }
+        if (a.pathDist !== undefined && b.pathDist !== undefined) {
+            var pA = a.pathDist, pB = b.pathDist;
+            var pdKeys = ["useNumber", "number", "spacing"];
+            for (var pk = 0; pk < pdKeys.length; pk++) {
+                if (String(pA[pdKeys[pk]]) !== String(pB[pdKeys[pk]])) return false;
             }
         }
         return true;

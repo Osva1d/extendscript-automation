@@ -134,6 +134,100 @@ console.log("--- Validation.validate: spacing edge ---");
     assert(r.valid === true, "valid spacing-mode edge passes");
 })();
 
+// ===== TEST: v5 rules =====
+console.log("--- Validation v5: zones + path ---");
+(function () {
+    var rules = GM.Validation.rules;
+    assert(rules.cornerCount.integer === true, "cornerCount is integer rule");
+    assert(rules.cornerCount.min === 1 && rules.cornerCount.max === 999, "cornerCount range");
+    assert(rules.cornerPitch.min === 0.01, "cornerPitch min");
+    assert(rules.pathNumber.integer === true && rules.pathNumber.max === 9999, "pathNumber rule");
+    assert(rules.pathSpacing.min === 0.01, "pathSpacing min");
+
+    // Zones enabled -> cornerCount/Pitch validated
+    var cfg = validCfg();
+    cfg.cornerZone = { enabled: true, count: 2.5, pitch: 100 };
+    assert(GM.Validation.validate(cfg, L).valid === false, "fractional cornerCount rejected");
+
+    cfg.cornerZone = { enabled: true, count: 5, pitch: 0 };
+    assert(GM.Validation.validate(cfg, L).valid === false, "zero cornerPitch rejected");
+
+    // Zones disabled -> zone fields ignored
+    cfg.cornerZone = { enabled: false, count: 0, pitch: 0 };
+    assert(GM.Validation.validate(cfg, L).valid === true, "disabled zones skip zone fields");
+
+    // Path mode: pathDist validated, edges ignored
+    var pc = validCfg();
+    pc.placementMode = "path";
+    pc.pathDist = { useNumber: false, number: 1, spacing: 0 };
+    assert(GM.Validation.validate(pc, L).valid === false, "path spacing 0 rejected");
+
+    pc.pathDist = { useNumber: false, number: 1, spacing: 105 };
+    pc.top.enabled = false; pc.left.enabled = false;
+    pc.bottom.enabled = false; pc.right.enabled = false;
+    pc.bottomMirror = false; pc.rightMirror = false;
+    assert(GM.Validation.validate(pc, L).valid === true,
+        "path mode ignores edge-enabled structural check");
+
+    // Path mode count: fractional rejected
+    pc.pathDist = { useNumber: true, number: 3.5, spacing: 105 };
+    assert(GM.Validation.validate(pc, L).valid === false, "path count fractional rejected");
+
+    // Clean settings carry parsed zone values
+    var cz = validCfg();
+    cz.cornerZone = { enabled: true, count: "5", pitch: "100" };
+    var rcz = GM.Validation.validate(cz, L);
+    assert(rcz.valid === true && rcz.settings.cornerZone.count === 5, "zone count parsed to number");
+})();
+
+// ===== TEST: presetEquals v5 fields =====
+console.log("--- Utils.presetEquals v5 ---");
+(function () {
+    var a = GM.Config.getDefaults();
+    var b = GM.Config.getDefaults();
+    assert(GM.Utils.presetEquals(a, b) === true, "identical defaults are equal");
+
+    // Differing only in cornerZone.pitch → NOT equal
+    var c = GM.Config.getDefaults();
+    c.cornerZone = { enabled: false, count: 5, pitch: 200 };
+    assert(GM.Utils.presetEquals(a, c) === false, "differing cornerZone.pitch → not equal");
+
+    // Differing only in placementMode → NOT equal
+    var d = GM.Config.getDefaults();
+    d.placementMode = "path";
+    assert(GM.Utils.presetEquals(a, d) === false, "differing placementMode → not equal");
+
+    // Differing only in pathDist.spacing → NOT equal
+    var e = GM.Config.getDefaults();
+    e.pathDist = { useNumber: false, number: 24, spacing: 999 };
+    assert(GM.Utils.presetEquals(a, e) === false, "differing pathDist.spacing → not equal");
+
+    // Presets without v5 fields compare equal to each other (backward-compat)
+    var f = { offsetX: 7, offsetY: 7, bottomMirror: true, rightMirror: true,
+              units: "mm", markSize: 3, isRound: true, markLayerName: "__create__",
+              fillEnabled: true, fillSwatchName: "__create__", fillOverprint: true,
+              strokeEnabled: false, strokeSwatchName: "__create__", strokeOverprint: true,
+              strokeWeight: 1,
+              top: { enabled: true, useNumber: true, number: 10, spacing: 105 },
+              left: { enabled: true, useNumber: true, number: 10, spacing: 105 },
+              bottom: { enabled: false, useNumber: true, number: 10, spacing: 105 },
+              right: { enabled: false, useNumber: true, number: 10, spacing: 105 } };
+    var g = GM.Config.getDefaults();
+    // f has no v5 fields; g has them — they should NOT be equal
+    // (presetEquals sees undefined vs defined values)
+    // BUT two old-format presets without v5 fields should be equal to each other
+    var h = { offsetX: 7, offsetY: 7, bottomMirror: true, rightMirror: true,
+              units: "mm", markSize: 3, isRound: true, markLayerName: "__create__",
+              fillEnabled: true, fillSwatchName: "__create__", fillOverprint: true,
+              strokeEnabled: false, strokeSwatchName: "__create__", strokeOverprint: true,
+              strokeWeight: 1,
+              top: { enabled: true, useNumber: true, number: 10, spacing: 105 },
+              left: { enabled: true, useNumber: true, number: 10, spacing: 105 },
+              bottom: { enabled: false, useNumber: true, number: 10, spacing: 105 },
+              right: { enabled: false, useNumber: true, number: 10, spacing: 105 } };
+    assert(GM.Utils.presetEquals(f, h) === true, "two old-format presets (no v5 fields) are equal");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
