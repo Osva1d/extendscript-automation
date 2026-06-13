@@ -531,6 +531,10 @@ GM.Utils = {
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }
+        // Presence-guard the v5 fields: pre-v5 presets lack them. Storage.load()
+        // forward-fills from getDefaults() after load, so at runtime both sides
+        // always carry them; the guard only protects hand-built presets in tests
+        // and the brief pre-forward-fill window.
         // Compare placementMode only when both sides carry the field
         if (a.placementMode !== undefined && b.placementMode !== undefined) {
             if (String(a.placementMode) !== String(b.placementMode)) return false;
@@ -918,6 +922,7 @@ GM.Validation = {
         var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
         var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
         if (isPathMode) {
+            if (!cfg.pathDist) return { valid: false, settings: null };
             if (cfg.pathDist.useNumber) {
                 pathNumber = vn(cfg.pathDist.number, rules.pathNumber, L.COUNT || "Count", L);
                 if (pathNumber === null) return { valid: false, settings: null };

@@ -178,6 +178,7 @@ console.log("--- Validation v5: zones + path ---");
     cz.cornerZone = { enabled: true, count: "5", pitch: "100" };
     var rcz = GM.Validation.validate(cz, L);
     assert(rcz.valid === true && rcz.settings.cornerZone.count === 5, "zone count parsed to number");
+    assert(rcz.settings.cornerZone.pitch === 100, "zone pitch parsed to number");
 })();
 
 // ===== TEST: presetEquals v5 fields =====
@@ -213,8 +214,11 @@ console.log("--- Utils.presetEquals v5 ---");
               bottom: { enabled: false, useNumber: true, number: 10, spacing: 105 },
               right: { enabled: false, useNumber: true, number: 10, spacing: 105 } };
     var g = GM.Config.getDefaults();
-    // f has no v5 fields; g has them — they should NOT be equal
-    // (presetEquals sees undefined vs defined values)
+    // f has no v5 fields; g has them — the presence-guard in presetEquals skips
+    // v5-field comparison when one side lacks them, so f and g compare as EQUAL
+    // (they differ only in v5-field presence; all base/edge fields match).
+    assert(GM.Utils.presetEquals(f, g) === true,
+        "presence-guarded v5 fields: old preset compares equal to new default ignoring v5-only differences");
     // BUT two old-format presets without v5 fields should be equal to each other
     var h = { offsetX: 7, offsetY: 7, bottomMirror: true, rightMirror: true,
               units: "mm", markSize: 3, isRound: true, markLayerName: "__create__",

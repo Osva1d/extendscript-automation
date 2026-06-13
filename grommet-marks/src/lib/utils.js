@@ -53,6 +53,10 @@ GM.Utils = {
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }
+        // Presence-guard the v5 fields: pre-v5 presets lack them. Storage.load()
+        // forward-fills from getDefaults() after load, so at runtime both sides
+        // always carry them; the guard only protects hand-built presets in tests
+        // and the brief pre-forward-fill window.
         // Compare placementMode only when both sides carry the field
         if (a.placementMode !== undefined && b.placementMode !== undefined) {
             if (String(a.placementMode) !== String(b.placementMode)) return false;

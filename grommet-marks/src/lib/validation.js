@@ -98,6 +98,7 @@ GM.Validation = {
         var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
         var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
         if (isPathMode) {
+            if (!cfg.pathDist) return { valid: false, settings: null };
             if (cfg.pathDist.useNumber) {
                 pathNumber = vn(cfg.pathDist.number, rules.pathNumber, L.COUNT || "Count", L);
                 if (pathNumber === null) return { valid: false, settings: null };
