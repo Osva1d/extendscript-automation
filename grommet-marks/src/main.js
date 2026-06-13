@@ -73,27 +73,16 @@ GM.Main = {
                 warnings.push(msg);
             }
 
-            var resolvedLayerName = GM.Illustrator.resolveLayerName(cfg.markLayerName);
-            if (cfg.markLayerName !== GM.CONSTANTS.SENTINEL_CREATE &&
-                !GM.Illustrator.layerExists(resolvedLayerName)) {
-                addWarning(GM.L.format(GM.L.WARN_LAYER_CREATED, resolvedLayerName));
-            }
-            var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
-
-            var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
-            if (cfg.fillEnabled && !fillColor) {
-                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
-                fillColor = GM.Illustrator.registrationColor();
-            }
-
-            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
-            if (cfg.strokeEnabled && !strokeColor) {
-                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
-                strokeColor = GM.Illustrator.registrationColor();
-            }
+            // Fixed target layer "Grommet Marks" (created if missing, silently).
+            var targetLayer = GM.Illustrator.getOrCreateLayer(GM.CONSTANTS.SENTINEL_CREATE);
 
             var markSizePoints = cfg.markSize * unitFactor;
-            var radius = markSizePoints / 2;
+            var markOpts = {
+                circle: !!cfg.markCircle,
+                cross: !!cfg.markCross,
+                regWeight: cfg.regWeight,
+                haloWeight: cfg.haloWeight
+            };
 
             var prevLocked = false, prevVisible = true, sessionOpen = false;
             try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
@@ -105,10 +94,7 @@ GM.Main = {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
-                var ok = GM.Illustrator.placeMark(
-                    targetLayer, x, y, radius, markSizePoints,
-                    cfg.isRound, fillColor, strokeColor, cfg
-                );
+                var ok = GM.Illustrator.placeMarkGroup(targetLayer, x, y, markSizePoints, markOpts);
                 if (!ok) failedMarks++;
             }
 
