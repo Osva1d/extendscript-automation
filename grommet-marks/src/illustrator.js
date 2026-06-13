@@ -153,13 +153,18 @@ GM.Illustrator = {
      *                   or {ok:false, reason:"no-selection"|"not-a-path"|"too-short"}
      */
     getSelectedPathInfo: function () {
-        var sel;
-        try { sel = GM.Illustrator.doc.selection; } catch (eSel) { sel = null; }
-        if (!sel || sel.length === 0) return { ok: false, reason: "no-selection" };
-        if (sel.length !== 1 || sel[0].typename !== "PathItem") {
+        var sel, item;
+        // Whole selection probe in one try — typename on a stale/deleted ref
+        // can throw ("no such element"); treat any such failure as not-a-path.
+        try {
+            sel = GM.Illustrator.doc.selection;
+            if (!sel || sel.length === 0) return { ok: false, reason: "no-selection" };
+            if (sel.length !== 1) return { ok: false, reason: "not-a-path" };
+            item = sel[0];
+            if (item.typename !== "PathItem") return { ok: false, reason: "not-a-path" };
+        } catch (eSel) {
             return { ok: false, reason: "not-a-path" };
         }
-        var item = sel[0];
         var pts;
         try { pts = item.pathPoints; } catch (ePts) { return { ok: false, reason: "not-a-path" }; }
         if (!pts || pts.length < 2) return { ok: false, reason: "too-short" };
