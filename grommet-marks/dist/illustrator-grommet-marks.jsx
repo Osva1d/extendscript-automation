@@ -1692,6 +1692,55 @@ GM.Illustrator = {
     },
 
     /**
+     * Inspects the current selection for path-mode placement.
+     * Pure read — never mutates the selection. Everything computable is
+     * delegated to GM.Core so this stays a thin DOM extraction layer.
+     *
+     * @returns {Object} {ok:true, circuit, corners, closed, cornerCount,
+     *                    totalLen, pathRef}
+     *                   or {ok:false, reason:"no-selection"|"not-a-path"|"too-short"}
+     */
+    getSelectedPathInfo: function () {
+        var sel;
+        try { sel = GM.Illustrator.doc.selection; } catch (eSel) { sel = null; }
+        if (!sel || sel.length === 0) return { ok: false, reason: "no-selection" };
+        if (sel.length !== 1 || sel[0].typename !== "PathItem") {
+            return { ok: false, reason: "not-a-path" };
+        }
+        var item = sel[0];
+        var pts;
+        try { pts = item.pathPoints; } catch (ePts) { return { ok: false, reason: "not-a-path" }; }
+        if (!pts || pts.length < 2) return { ok: false, reason: "too-short" };
+
+        // Extract anchors/handles into plain arrays — core stays DOM-free.
+        var segments = [];
+        var n = pts.length;
+        var segCount = item.closed ? n : n - 1;
+        for (var i = 0; i < segCount; i++) {
+            var aP = pts[i], bP = pts[(i + 1) % n];
+            segments.push({
+                p0: [aP.anchor[0], aP.anchor[1]],
+                p1: [aP.rightDirection[0], aP.rightDirection[1]],
+                p2: [bP.leftDirection[0], bP.leftDirection[1]],
+                p3: [bP.anchor[0], bP.anchor[1]]
+            });
+        }
+
+        var circuit = GM.Core.buildCircuit(segments, !!item.closed);
+        var corners = GM.Core.detectCorners(segments, !!item.closed,
+            GM.CONSTANTS.CORNER_ANGLE_MIN);
+        return {
+            ok: true,
+            circuit: circuit,
+            corners: corners,
+            closed: !!item.closed,
+            cornerCount: corners.length,
+            totalLen: circuit.totalLen,
+            pathRef: item
+        };
+    },
+
+    /**
      * Returns the document's [Registration] swatch colour (swatches[1] in any
      * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
      * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
