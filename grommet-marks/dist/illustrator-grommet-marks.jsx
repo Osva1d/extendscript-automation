@@ -2082,7 +2082,7 @@ GM.UI = {
         modePanel.orientation = "row";
         modePanel.alignChildren = ["left", "center"];
         modePanel.margins = 15;
-        modePanel.spacing = 16;
+        modePanel.spacing = 15;
         var artboardRB = modePanel.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
         artboardRB.value = true;
         var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
@@ -2147,11 +2147,15 @@ GM.UI = {
         pathRow.alignChildren = ["left", "center"];
         pathRow.spacing = 8;
         var pathNumRB = pathRow.add("radiobutton", undefined, GM.L.COUNT);
+        pathNumRB.helpTip = GM.L.TIP_COUNT;
         var pathNumIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.number));
         pathNumIn.preferredSize.width = 50;
+        pathNumIn.helpTip = GM.L.TIP_COUNT;
         var pathSpcRB = pathRow.add("radiobutton", undefined, GM.L.SPACING);
+        pathSpcRB.helpTip = GM.L.TIP_SPACING;
         var pathSpcIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.spacing));
         pathSpcIn.preferredSize.width = 50;
+        pathSpcIn.helpTip = GM.L.TIP_SPACING;
         pathSpcRB.value = true;
 
         var hasCorners = pathOk && pathInfo.cornerCount > 0;
@@ -2190,9 +2194,11 @@ GM.UI = {
         zonesPanel.add("statictext", undefined, GM.L.ZONES_COUNT);
         var zoneCountIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.count));
         zoneCountIn.preferredSize.width = 50;
+        zoneCountIn.helpTip = GM.L.TIP_ZONES;
         zonesPanel.add("statictext", undefined, GM.L.ZONES_PITCH);
         var zonePitchIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.pitch));
         zonePitchIn.preferredSize.width = 50;
+        zonePitchIn.helpTip = GM.L.TIP_ZONES;
 
         function refreshZonesEnabled() {
             var pathMode = pathRB.value;
