@@ -43,6 +43,11 @@ GM.Config = {
             rightMirror: true,
             units: GM.CONSTANTS.UNIT.MM,
             markSize: 3,
+            // v6 — uniform Esko mark (circle/cross, white halo + registration)
+            markCircle: true,
+            markCross: false,
+            regWeight: 1.0,
+            haloWeight: 3.0,
             isRound: true,
             markLayerName: S,
             fillEnabled: true,

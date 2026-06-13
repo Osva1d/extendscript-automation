@@ -15,6 +15,8 @@ GM.Validation = {
         offsetY:      { min: 0,    max: 9999, integer: false },
         markSize:     { min: 0.01, max: 9999, integer: false },
         strokeWeight: { min: 0.01, max: 100,  integer: false },
+        regWeight:    { min: 0.1,  max: 50,   integer: false },
+        haloWeight:   { min: 0.1,  max: 50,   integer: false },
         edgeCount:    { min: 1,    max: 9999, integer: true  },
         edgeSpacing:  { min: 0.01, max: 9999, integer: false },
         cornerCount:  { min: 1,    max: 999,  integer: true  },

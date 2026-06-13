@@ -232,6 +232,18 @@ console.log("--- Utils.presetEquals v5 ---");
     assert(GM.Utils.presetEquals(f, h) === true, "two old-format presets (no v5 fields) are equal");
 })();
 
+// ===== TEST: v6 mark schema =====
+console.log("--- Validation v6: weight rules + defaults ---");
+(function () {
+    var d = GM.Config.getDefaults();
+    assert(d.markCircle === true,  "default markCircle true");
+    assert(d.markCross === false,  "default markCross false");
+    assert(d.regWeight === 1.0,    "default regWeight 1.0");
+    assert(d.haloWeight === 3.0,   "default haloWeight 3.0");
+    assert(GM.Validation.rules.regWeight.min === 0.1,  "regWeight rule present");
+    assert(GM.Validation.rules.haloWeight.max === 50,  "haloWeight rule present");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
