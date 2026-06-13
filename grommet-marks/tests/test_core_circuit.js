@@ -153,7 +153,9 @@ console.log("--- Core.distributeOnSpan ---");
 
     // Exact fit: L = 2*(N-1)*A -> zones touch, no middle
     var pf = GM.Core.distributeOnSpan(400, zOn, { useNumber: false, number: 1, spacing: 300 });
-    assert(pf.length === 5, "exact-fit zones touch (got " + pf.length + ")");
+    // L == 2*zoneLen satisfies the >= L degradation guard, so this exercises
+    // the degradation path (still 5 marks: 0,100,200,300,400).
+    assert(pf.length === 5, "exact-fit triggers degradation L==2*zoneLen (got " + pf.length + ")");
 
     // Middle smaller than preferred: L=500 -> M=100 < 300 -> no interior
     var pm = GM.Core.distributeOnSpan(500, zOn, { useNumber: false, number: 1, spacing: 300 });

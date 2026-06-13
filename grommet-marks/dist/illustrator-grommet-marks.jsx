@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     5.0.0
  * Author:      Osva1d
- * Updated:     2026-06-12
+ * Updated:     2026-06-13
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -1254,8 +1254,12 @@ GM.Core = {
      * mirrored from both ends ((count-1)*pitch from each end). Middle region
      * is filled with the preferred pitch using the same count selection as
      * the legacy calcPositions (floor/ceil pick) so that zones-off output is
-     * positionally identical to v4 behaviour. Count mode (mid.useNumber)
-     * applies to the whole span and is only used with zones disabled.
+     * positionally identical to v4 behaviour. Equivalence is a regression
+     * contract: existing presets store spacing values users calibrated by eye
+     * against v4 output, so zones-off must reproduce v4 positions exactly. Do
+     * not replace legacyCount with a Math.round shortcut — the floor/ceil
+     * tie-break differs. Count mode (mid.useNumber) applies to the whole span
+     * and is only used with zones disabled.
      *
      * All lengths share one unit — the caller pre-converts to points.
      *
@@ -1296,7 +1300,9 @@ GM.Core = {
             return { count: count, spc: spc };
         }
 
-        if (L <= 0) { push(0); return positions; }
+        // !(L > 0) also catches NaN (a degenerate zero-length Bezier span)
+        // so the circuit loop never propagates NaN coordinates downstream.
+        if (!(L > 0)) { push(0); return positions; }
 
         var zoneActive = !!(zone && zone.enabled);
         var zc = zoneActive ? Math.max(zone.count || 1, 1) : 0;
@@ -1325,7 +1331,9 @@ GM.Core = {
             var num = Math.max(mid.number || 1, 1);
             if (num > GM.CONSTANTS.MAX_MARKS) num = GM.CONSTANTS.MAX_MARKS;
             if (num === 1) {
-                // Legacy: single mark at span start only.
+                // Legacy parity: N=1 places a single mark at the span start.
+                // Undo the initial push(0)/push(L) above (push closes over the
+                // `positions` variable binding, so reassigning it is safe).
                 positions = [];
                 seen = {};
                 push(0);
@@ -1334,8 +1342,8 @@ GM.Core = {
                 for (var ci = 0; ci < num; ci++) push(ci * cspc);
             }
         } else {
-            var m0 = zoneLen, m1 = L - zoneLen;
-            var M = m1 - m0;
+            var m0 = zoneLen;
+            var M = (L - zoneLen) - m0;
             var preferred = Math.max(mid.spacing || 0, 0);
             if (M > 0 && preferred > 0) {
                 var sel = legacyCount(M, preferred);
