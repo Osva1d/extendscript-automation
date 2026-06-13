@@ -1391,6 +1391,7 @@ GM.Core = {
                 count = Math.max(dist.number || 1, 1);
             } else {
                 var sp = Math.max(dist.spacing || 0, 0);
+                // round() yields 0 when spacing > 2*perimeter — clamp to 1 mark.
                 count = sp > 0 ? Math.round(total / sp) : 1;
                 if (count < 1) count = 1;
             }
