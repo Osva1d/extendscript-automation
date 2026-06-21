@@ -297,7 +297,11 @@ GM.UI = {
         pathPanel.alignChildren = ["left", "top"];
         pathPanel.margins = 15;
         pathPanel.spacing = 10;
+        // Start collapsed (artboard is the default mode). refreshModeUI() flips
+        // this; the zero maximumSize keeps the hidden panel from reserving a slot.
         pathPanel.visible = false;
+        pathPanel.maximumSize.height = 0;
+        pathPanel.preferredSize.height = 0;
 
         var infoText = "";
         if (pathOk) {
@@ -380,10 +384,20 @@ GM.UI = {
         zoneCB.onClick = function () { refreshZonesEnabled(); onUserChange(); };
 
         // (d) Mode switching
+        // A hidden panel keeps its layout slot on some Illustrator/ScriptUI
+        // builds, leaving a vertical gap in the single column. Collapse the
+        // hidden panel to zero height (maximumSize + preferredSize) so the
+        // column reclaims the space; restore auto-height when shown.
+        function showPanel(panel, shown) {
+            panel.visible = shown;
+            panel.maximumSize.height = shown ? 10000 : 0;
+            panel.preferredSize.height = shown ? -1 : 0;
+        }
+
         function refreshModeUI() {
             var pathMode = pathRB.value;
-            edgesPanel.visible = !pathMode;
-            pathPanel.visible = pathMode;
+            showPanel(edgesPanel, !pathMode);
+            showPanel(pathPanel, pathMode);
             refreshZonesEnabled();
             dlg.layout.layout(true);
             onUserChange();
