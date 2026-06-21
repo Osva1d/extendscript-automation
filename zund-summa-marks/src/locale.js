@@ -31,7 +31,6 @@ ZSM.L = (function () {
 
             // --- UI: Panels ---
             PANEL_PRESET: "Presets",
-            PANEL_TECH:   "Technology Selection",
             PANEL_GEO:    "Mark Geometry & Gaps",
             PANEL_FEED:   "Feed Settings",
             PANEL_LAYERS: "Layer to Color Mapping",
@@ -41,6 +40,7 @@ ZSM.L = (function () {
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Select cutting technology (Zünd / Summa).",
+            LBL_SOURCE:    "Source:",
             SRC_AUTO:      "Auto-fit to selection",
             SRC_FIXED:     "Fixed to Artboard",
             TIP_SRC_AUTO:  "Marks adapt to selected graphics; Artboard resized automatically.",
@@ -119,7 +119,7 @@ ZSM.L = (function () {
             STATUS_RANGE_MULTI: "%s fields out of range — fix the highlighted ones.",
             STATUS_OK:         "%s · layers: %s",
             STATUS_OK_MARKS:   "%s · marks only",
-            PANEL_DOC:         "Document",
+            PANEL_OUTPUT:      "Output Settings",
             BTN_RESET:         "Defaults",
             TIP_RESET:         "Load factory default settings into the dialog (does not overwrite any saved preset).",
             DEC_SEP:           "."
@@ -146,7 +146,6 @@ ZSM.L = (function () {
 
             // --- UI: Panels ---
             PANEL_PRESET: "Předvolby",
-            PANEL_TECH:   "Výběr technologie",
             PANEL_GEO:    "Značky a mezery",
             PANEL_FEED:   "Nastavení role (Feed)",
             PANEL_LAYERS: "Přiřazení vrstev k barvám",
@@ -156,6 +155,7 @@ ZSM.L = (function () {
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Výběr cílové technologie řezu (Zünd / Summa).",
+            LBL_SOURCE:    "Zdroj:",
             SRC_AUTO:      "Dle výběru (Auto-fit)",
             SRC_FIXED:     "Dle Artboardu (Fixed)",
             TIP_SRC_AUTO:  "Pozice značek se určí podle vybrané grafiky a Artboard se automaticky přizpůsobí.",
@@ -234,7 +234,7 @@ ZSM.L = (function () {
             STATUS_RANGE_MULTI: "%s pole mimo rozsah — opravte zvýrazněná.",
             STATUS_OK:         "%s · vrstvy: %s",
             STATUS_OK_MARKS:   "%s · pouze značky",
-            PANEL_DOC:         "Dokument",
+            PANEL_OUTPUT:      "Nastavení výstupu",
             BTN_RESET:         "Výchozí",
             TIP_RESET:         "Načte tovární výchozí nastavení do dialogu (uloženou předvolbu nepřepíše).",
             DEC_SEP:           ","

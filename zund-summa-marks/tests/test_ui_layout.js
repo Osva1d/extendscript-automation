@@ -53,7 +53,8 @@ ZSM.L = {
     PROMPT_NEW_PRESET: "Name?", PROMPT_SAVE_AS: "Save as?",
     BTN_SAVE: "Save", BTN_SAVE_AS: "Save As…", BTN_DEL: "Delete", BTN_RESET: "Defaults",
     BTN_OK: "Generate", BTN_CANCEL: "Cancel", BTN_ADD_LAYER: "+ Add",
-    PANEL_PRESET: "Presets", PANEL_TECH: "Technology", PANEL_GEO: "Gaps",
+    PANEL_PRESET: "Presets", PANEL_OUTPUT: "Output Settings", PANEL_GEO: "Gaps",
+    LBL_SOURCE: "Source:",
     PANEL_FEED: "Feed", PANEL_LAYERS: "Layers",
     LBL_MODE: "Mode:", MODE_ZUND: "ZUND", MODE_SUMMA: "SUMMA",
     SRC_AUTO: "Auto", SRC_FIXED: "Fixed",
@@ -338,19 +339,19 @@ assert(radioTexts.indexOf(ZSM.L.MODE_ZUND) !== -1 && radioTexts.indexOf(ZSM.L.MO
 
 
 // =====================================================
-// TEST 9: Mode selector — two radio buttons in Technology panel
+// TEST 9: Mode selector — two radio buttons in Output Settings panel
 // =====================================================
 console.log("\n=== TEST 9: Mode radio selector ===");
 w = buildAndCapture("ZUND");
 var techPanel = w.findOne(function (c) {
-    return c.type === "panel" && c.text === ZSM.L.PANEL_TECH;
+    return c.type === "panel" && c.text === ZSM.L.PANEL_OUTPUT;
 });
-assert(techPanel !== null, "Technology panel exists");
+assert(techPanel !== null, "Output Settings panel exists");
 var modeRadios = techPanel ? techPanel.find(function (c) {
     return c.type === "radiobutton" &&
         (c.text === ZSM.L.MODE_ZUND || c.text === ZSM.L.MODE_SUMMA);
 }) : [];
-assertEq(modeRadios.length, 2, "Mode selector has 2 radios (Zünd/Summa) in Technology panel");
+assertEq(modeRadios.length, 2, "Mode selector has 2 radios (Zünd/Summa) in Output Settings panel");
 var modeRadioTexts = modeRadios.map(function (r) { return r.text; });
 assert(modeRadioTexts.indexOf(ZSM.L.MODE_ZUND) !== -1, "Mode selector has 'ZUND' radio");
 assert(modeRadioTexts.indexOf(ZSM.L.MODE_SUMMA) !== -1, "Mode selector has 'SUMMA' radio");
@@ -429,7 +430,7 @@ if (saveBtn) {
 console.log("\n=== TEST 13: Mode radio reflects current mode ===");
 w = buildAndCapture("SUMMA");
 techPanel = w.findOne(function (c) {
-    return c.type === "panel" && c.text === ZSM.L.PANEL_TECH;
+    return c.type === "panel" && c.text === ZSM.L.PANEL_OUTPUT;
 });
 var rbSummaSel = techPanel ? techPanel.findOne(function (c) {
     return c.type === "radiobutton" && c.text === ZSM.L.MODE_SUMMA;
