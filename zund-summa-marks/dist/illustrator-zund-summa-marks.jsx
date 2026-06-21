@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.6.0
  * Author:      Osva1d
- * Updated:     2026-06-20
+ * Updated:     2026-06-21
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -207,7 +207,6 @@ ZSM.L = (function () {
 
             // --- UI: Panels ---
             PANEL_PRESET: "Presets",
-            PANEL_TECH:   "Technology Selection",
             PANEL_GEO:    "Mark Geometry & Gaps",
             PANEL_FEED:   "Feed Settings",
             PANEL_LAYERS: "Layer to Color Mapping",
@@ -217,6 +216,7 @@ ZSM.L = (function () {
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Select cutting technology (Zünd / Summa).",
+            LBL_SOURCE:    "Source:",
             SRC_AUTO:      "Auto-fit to selection",
             SRC_FIXED:     "Fixed to Artboard",
             TIP_SRC_AUTO:  "Marks adapt to selected graphics; Artboard resized automatically.",
@@ -295,7 +295,7 @@ ZSM.L = (function () {
             STATUS_RANGE_MULTI: "%s fields out of range — fix the highlighted ones.",
             STATUS_OK:         "%s · layers: %s",
             STATUS_OK_MARKS:   "%s · marks only",
-            PANEL_DOC:         "Document",
+            PANEL_OUTPUT:      "Output Settings",
             BTN_RESET:         "Defaults",
             TIP_RESET:         "Load factory default settings into the dialog (does not overwrite any saved preset).",
             DEC_SEP:           "."
@@ -322,7 +322,6 @@ ZSM.L = (function () {
 
             // --- UI: Panels ---
             PANEL_PRESET: "Předvolby",
-            PANEL_TECH:   "Výběr technologie",
             PANEL_GEO:    "Značky a mezery",
             PANEL_FEED:   "Nastavení role (Feed)",
             PANEL_LAYERS: "Přiřazení vrstev k barvám",
@@ -332,6 +331,7 @@ ZSM.L = (function () {
             MODE_ZUND:     "ZUND",
             MODE_SUMMA:    "SUMMA",
             TIP_MODE:      "Výběr cílové technologie řezu (Zünd / Summa).",
+            LBL_SOURCE:    "Zdroj:",
             SRC_AUTO:      "Dle výběru (Auto-fit)",
             SRC_FIXED:     "Dle Artboardu (Fixed)",
             TIP_SRC_AUTO:  "Pozice značek se určí podle vybrané grafiky a Artboard se automaticky přizpůsobí.",
@@ -410,7 +410,7 @@ ZSM.L = (function () {
             STATUS_RANGE_MULTI: "%s pole mimo rozsah — opravte zvýrazněná.",
             STATUS_OK:         "%s · vrstvy: %s",
             STATUS_OK_MARKS:   "%s · pouze značky",
-            PANEL_DOC:         "Dokument",
+            PANEL_OUTPUT:      "Nastavení výstupu",
             BTN_RESET:         "Výchozí",
             TIP_RESET:         "Načte tovární výchozí nastavení do dialogu (uloženou předvolbu nepřepíše).",
             DEC_SEP:           ","
@@ -2636,22 +2636,31 @@ ZSM.UI = {
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
-        // Panel: Technology
+        // Panel: Output Settings (merges the former Technology + Document panels)
+        // Mode, source and scale all describe HOW the job is emitted, so one
+        // bordered block groups them and lowers the dialog by one panel border.
         // =================================================================
-        var pSystem = w.add("panel", undefined, l.PANEL_TECH);
-        pSystem.alignChildren = ["fill", "top"];
-        pSystem.margins = 12;
+        var pOutput = w.add("panel", undefined, l.PANEL_OUTPUT);
+        pOutput.alignChildren = ["left", "top"];
+        pOutput.margins = 12;
+        pOutput.spacing = 8;
+
+        // Shared left-column width: "Režim:", "Zdroj:" and the scale spacer all
+        // reserve this, so the controls after them share one left edge. A
+        // statictext (not a group) carries the width — ScriptUI honours
+        // preferredSize on leaf controls but ignores it on groups.
+        var LABEL_COL_W = 72;
 
         // Mode row: label + segmented-style selector (H2). ScriptUI has no
         // native segmented control, so two mutually-exclusive radio buttons in
         // one group give the same one-glance "pick a technology" affordance
         // without the extra click a dropdown costs.
-        var grpMode = pSystem.add("group");
+        var grpMode = pOutput.add("group");
         grpMode.orientation   = "row";
         grpMode.alignChildren = ["left", "center"];
         grpMode.spacing       = 8;
         var stMode = grpMode.add("statictext", undefined, l.LBL_MODE);
-        stMode.preferredSize.width = 60;
+        stMode.preferredSize.width = LABEL_COL_W;
         stMode.helpTip = l.TIP_MODE;
         var rbZund  = grpMode.add("radiobutton", undefined, l.MODE_ZUND);
         var rbSumma = grpMode.add("radiobutton", undefined, l.MODE_SUMMA);
@@ -2665,9 +2674,14 @@ ZSM.UI = {
         // --- ZUND only: source radio buttons ---
         var grpSrc, rbAuto, rbFixed;
         if (isZ) {
-            grpSrc = pSystem.add("group");
+            grpSrc = pOutput.add("group");
             grpSrc.orientation   = "row";
-            grpSrc.alignChildren = "left";
+            grpSrc.alignChildren = ["left", "center"];
+            grpSrc.spacing       = 8;
+            // Leading "Zdroj:" label (72px) under "Režim:" — the unlabelled
+            // second radio row was ambiguous about what it selected.
+            var stSource = grpSrc.add("statictext", undefined, l.LBL_SOURCE);
+            stSource.preferredSize.width = LABEL_COL_W;
             rbAuto  = grpSrc.add("radiobutton", undefined, l.SRC_AUTO);
             rbFixed = grpSrc.add("radiobutton", undefined, l.SRC_FIXED);
             if (sData.useArtboardBounds) rbFixed.value = true;
@@ -2676,24 +2690,20 @@ ZSM.UI = {
             rbFixed.helpTip = l.TIP_SRC_FIXED;
         }
 
-        // =================================================================
-        // Panel: Document (H3) — scale is a property of the DOCUMENT, not of the
-        // cutting technology, so the 1:N control lives in its own block rather
-        // than under "Technology Selection".
-        // =================================================================
-        var pDoc = w.add("panel", undefined, l.PANEL_DOC);
-        pDoc.alignChildren = ["left", "top"];
-        pDoc.margins = 12;
-        pDoc.spacing = 8;
-
-        // --- Scale row (Phase 2): checkbox + 1:N field ---
+        // --- Scale row (Phase 2): 72px spacer + checkbox + 1:N field ---
+        // Scale describes the document, but lives in the merged Output panel now.
         // Derived state: scaleN > 1 → checkbox checked, field enabled.
         // scaleN === 1 → checkbox unchecked, field disabled at "1".
         // Single source of truth: scaleN value (no extra checkbox state stored).
-        var grpScale = pDoc.add("group");
+        var grpScale = pOutput.add("group");
         grpScale.orientation   = "row";
         grpScale.alignChildren = ["left", "center"];
         grpScale.spacing       = 10;   // breathing room between checkbox and the ratio
+
+        // Leading spacer (LABEL_COL_W) aligns the checkbox's left edge with the
+        // radios above. A statictext carries the width reliably (groups ignore it).
+        var stScaleSpacer = grpScale.add("statictext", undefined, "");
+        stScaleSpacer.preferredSize.width = LABEL_COL_W;
 
         var cbScale = grpScale.add("checkbox", undefined, l.SCALE_CHECKBOX);
         cbScale.helpTip = l.TIP_SCALE_CHECKBOX;
@@ -2863,7 +2873,7 @@ ZSM.UI = {
         grpHeaders.alignment = "fill";
         grpHeaders.spacing   = 5;
         var hdrLayer = grpHeaders.add("statictext", undefined, l.COL_LAYER);
-        hdrLayer.preferredSize.width = 150;
+        hdrLayer.preferredSize.width = 178;
         var hdrColor = grpHeaders.add("statictext", undefined, l.COL_COLOR);
         hdrColor.preferredSize.width = 120;
         var hdrSpacer = grpHeaders.add("statictext", undefined, "");
@@ -2897,16 +2907,19 @@ ZSM.UI = {
             var stack = grp.add("group");
             stack.orientation   = "stack";
             stack.alignChildren = ["left", "center"];
-            stack.preferredSize.width = 150;
+            // Stack width follows its widest child — ScriptUI ignores
+            // preferredSize on GROUP containers, so the column width (178, the
+            // same left edge as the spot swatch and numeric fields) is set on
+            // ddLayer directly, not on the stack.
 
             var ddLayer = stack.add("dropdownlist", undefined, docData.layers);
-            ddLayer.preferredSize.width = 150;
+            ddLayer.preferredSize.width = 178;
             ddLayer.helpTip = l.TIP_LAY_NAME;
 
             var etLayer = stack.add("edittext", undefined, def.name || "");
-            // Narrower than the dropdown behind it (150) so a long custom layer
+            // Narrower than the dropdown behind it (178) so a long custom layer
             // name never runs under the dropdown's expand arrow (N6).
-            etLayer.preferredSize.width = 124;
+            etLayer.preferredSize.width = 152;
             etLayer.helpTip = l.TIP_LAY_NAME;
 
             ddLayer.onChange = function () {
@@ -2918,13 +2931,14 @@ ZSM.UI = {
 
             var swColor = ZSM.UI.makeSwatch(grp);
             var ddColor = grp.add("dropdownlist", undefined, docData.swatches);
-            ddColor.preferredSize.width = 104;
+            ddColor.preferredSize.width = 112;
             ddColor.helpTip = l.TIP_LAY_COLOR;
             ZSM.UI.selectDDL(ddColor, def.color || (docData.swatches.length > 0 ? docData.swatches[0] : ""));
             ZSM.UI.setSwatch(swColor, ZSM.UI.ddlValue(ddColor), docData.swatchRGB);
 
             var btnRemove = grp.add("button", undefined, "\u2212");
-            btnRemove.preferredSize = [30, 25];
+            btnRemove.preferredSize = [24, 22];
+            btnRemove.alignment = ["right", "center"];
             btnRemove.helpTip = l.TIP_BTN_REMOVE;
 
             btnRemove.onClick = function () {
@@ -3639,7 +3653,7 @@ ZSM.UI = {
                             ? stStatus._zsmDefPen
                             : sg.newPen(sg.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
                     } else {
-                        sg.foregroundColor = sg.newPen(sg.PenType.SOLID_COLOR, [0.93, 0.45, 0.20, 1.0], 1);
+                        sg.foregroundColor = sg.newPen(sg.PenType.SOLID_COLOR, [0.96, 0.60, 0.38, 1.0], 1);
                     }
                 }
             } catch (e) {}
@@ -3765,7 +3779,7 @@ ZSM.UI = {
         var g  = parent.add("group");
         g.alignment = "fill";
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 150;
+        st.preferredSize.width = 178;
         if (tip) st.helpTip = tip;
         // Value sub-group with a FIXED width so its right edge lines up with the
         // colour dropdown below it (N5 — consistent right edges in the geometry
@@ -3887,8 +3901,11 @@ ZSM.UI = {
     addColorRow: function (parent, label, value, swatchNames, tip, rgbMap) {
         var g  = parent.add("group");
         g.alignment = "fill";
+        // Match the layer-table row rhythm (grp.spacing = 5) so the swatch hugs
+        // its dropdown identically in both places — one consistent colour-picker.
+        g.spacing = 5;
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 150;
+        st.preferredSize.width = 178;
         if (tip) st.helpTip = tip;
         var sw = rgbMap ? this.makeSwatch(g) : null;
         var ddl = g.add("dropdownlist", undefined, swatchNames);
