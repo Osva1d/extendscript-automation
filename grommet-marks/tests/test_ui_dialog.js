@@ -143,7 +143,9 @@ console.log("--- UI: applyAll/gatherAll preserves spacing mode ---");
     done();
 })();
 
-// ===== TEST: mirror reads through getMirror =====
+// ===== TEST: mirror flags via gatherAll =====
+// Mirror state now lives on the Mirror-group checkboxes (above the edge rows);
+// gatherAll reads them into bottomMirror/rightMirror.
 console.log("--- UI: mirror flags via gatherAll ---");
 (function () {
     var ui = buildUI();

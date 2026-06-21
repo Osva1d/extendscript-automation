@@ -231,8 +231,9 @@ GM.L = (function () {
             EDGE_COUNT_HDR: "Count",
             EDGE_SPACING_HDR: "Spacing",
             OFFSET_LABEL: "Edge offset:",
-            MIRROR_TOP: "= Top",
-            MIRROR_LEFT: "= Left",
+            MIRROR_GROUP_LABEL: "Mirror:",
+            MIRROR_TOP: "top ↓ bottom",
+            MIRROR_LEFT: "left → right",
             MIRROR_TOP_ACTIVE: "mirrors top",
             MIRROR_LEFT_ACTIVE: "mirrors left",
 
@@ -358,8 +359,9 @@ GM.L = (function () {
             EDGE_COUNT_HDR: "Počet ok",
             EDGE_SPACING_HDR: "Rozestup",
             OFFSET_LABEL: "Odsazení od kraje:",
-            MIRROR_TOP: "= Horní",
-            MIRROR_LEFT: "= Levá",
+            MIRROR_GROUP_LABEL: "Zrcadlit:",
+            MIRROR_TOP: "horní ↓ dolní",
+            MIRROR_LEFT: "levou → pravou",
             MIRROR_TOP_ACTIVE: "zrcadlí horní",
             MIRROR_LEFT_ACTIVE: "zrcadlí levou",
 
@@ -1777,21 +1779,20 @@ GM.UI = {
      * @param {string} [mirrorTip] - Mirror checkbox helpTip.
      * @returns {Object} Edge panel API.
      */
-    buildEdgePanel: function (parent, label, defaultCfg, mirrorLabel, mirrorTip, mirrorActiveText) {
-        // One grid row of the Edges panel. Columns are fixed-width so all four
-        // edge rows (and the header above them) line up:
-        //   col1 = edge enable checkbox  | col2 = mirror cell (checkbox or empty)
-        //   col3 = Count radio + field   | col4 = Spacing radio + field
+    buildEdgePanel: function (parent, label, defaultCfg) {
+        // One uniform grid row of the Edges panel — identical for all four edges.
+        // Fixed column widths keep the value columns aligned with the header:
+        //   c1 = edge enable checkbox | c2 = Count radio + field | c3 = Spacing radio + field
         // Radios are textless — the "Count"/"Spacing" captions live once in the
-        // header row built by buildDialog. When an edge is mirrored, its value
-        // cells collapse and a "mirrors top/left" note shows instead.
-        var COL1_W = 72, COL2_W = 72;
+        // header row built by buildDialog. Mirroring is handled in buildDialog by
+        // hiding the opposite row, so this row carries no mirror controls.
+        var COL1_W = 118, COL_NUM = 84;
         var row = parent.add("group");
         row.orientation = "row";
         row.alignChildren = ["left", "center"];
         row.spacing = 6;
 
-        var api = { onChange: function () {}, onMirrorToggle: function () {} };
+        var api = { onChange: function () {} };
 
         var c1 = row.add("group");
         c1.orientation = "row"; c1.alignChildren = ["left", "center"];
@@ -1800,41 +1801,24 @@ GM.UI = {
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
 
-        // Mirror cell exists on every row (empty on Top/Left) to keep the
-        // value columns aligned across all four rows.
         var c2 = row.add("group");
-        c2.orientation = "row"; c2.alignChildren = ["left", "center"];
-        c2.preferredSize.width = COL2_W;
-        var mirrorCB = null;
-        if (mirrorLabel) {
-            mirrorCB = c2.add("checkbox", undefined, mirrorLabel);
-            mirrorCB.value = false;
-            mirrorCB.helpTip = mirrorTip || "";
-        }
+        c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = 4;
+        c2.preferredSize.width = COL_NUM;
+        var numRB = c2.add("radiobutton", undefined, "");
+        numRB.value = defaultCfg.useNumber;
+        numRB.helpTip = GM.L.TIP_COUNT;
+        var numIn = c2.add("edittext", undefined, String(defaultCfg.number));
+        numIn.preferredSize.width = 46;
+        numIn.helpTip = GM.L.TIP_COUNT;
 
         var c3 = row.add("group");
         c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = 4;
-        var numRB = c3.add("radiobutton", undefined, "");
-        numRB.value = defaultCfg.useNumber;
-        numRB.helpTip = GM.L.TIP_COUNT;
-        var numIn = c3.add("edittext", undefined, String(defaultCfg.number));
-        numIn.preferredSize.width = 44;
-        numIn.helpTip = GM.L.TIP_COUNT;
-
-        var c4 = row.add("group");
-        c4.orientation = "row"; c4.alignChildren = ["left", "center"]; c4.spacing = 4;
-        var spcRB = c4.add("radiobutton", undefined, "");
+        var spcRB = c3.add("radiobutton", undefined, "");
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
-        var spcIn = c4.add("edittext", undefined, String(defaultCfg.spacing));
+        var spcIn = c3.add("edittext", undefined, String(defaultCfg.spacing));
         spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
-
-        // Shown in place of the value cells while mirrored ("mirrors top/left").
-        var mirrorText = row.add("statictext", undefined, mirrorActiveText || "");
-        mirrorText.enabled = false;
-
-        var _prevEnabled = defaultCfg.enabled;
 
         function setModeEnabled(state) {
             numRB.enabled = state;
@@ -1843,29 +1827,16 @@ GM.UI = {
             spcIn.enabled = state && spcRB.value;
         }
 
-        // Collapse the value cells to zero width when mirrored — a hidden cell
-        // otherwise keeps its horizontal slot and shoves the note to the right
-        // (same ScriptUI quirk as the mode-panel gap fix).
-        function showValueCells(shown) {
-            c3.visible = shown; c4.visible = shown;
-            c3.maximumSize.width = shown ? 10000 : 0;
-            c4.maximumSize.width = shown ? 10000 : 0;
-            mirrorText.visible = !shown && !!mirrorText.text;
-        }
-
-        // Gate the whole row by mirror state; cb itself disabled when mirrored.
+        // Gate the value controls by the edge enable checkbox.
         function refresh() {
-            var mirrored = !!(mirrorCB && mirrorCB.value);
-            cb.enabled = !mirrored;
-            setModeEnabled(!mirrored && cb.value);
-            showValueCells(!mirrored);
+            setModeEnabled(cb.value);
         }
 
         // Explicit radio exclusivity. ScriptUI only auto-groups radio buttons
-        // that are CONSECUTIVE within the same container; here numIn sits
-        // between numRB and spcRB (separate cells), which breaks the implicit
-        // group — without this, clicking "Spacing" leaves numRB.value === true
-        // and gather() always reports count mode.
+        // that are CONSECUTIVE in one container; numIn sits between numRB and
+        // spcRB (separate cells), breaking the implicit group — without this,
+        // clicking "Spacing" leaves numRB.value === true and gather() reports
+        // count mode.
         numRB.onClick = function () {
             numRB.value = true; spcRB.value = false;
             numIn.enabled = true; spcIn.enabled = false;
@@ -1882,21 +1853,10 @@ GM.UI = {
         spcIn.onChanging = function () { api.onChange(); };
         spcIn.onChange   = function () { api.onChange(); };
 
-        if (mirrorCB) {
-            mirrorCB.onClick = function () {
-                if (mirrorCB.value) { _prevEnabled = cb.value; cb.value = false; }
-                else { cb.value = _prevEnabled; }
-                refresh();
-                api.onMirrorToggle();   // relayout — value cells collapsed/restored
-                api.onChange();
-            };
-        }
-
         refresh();
 
         api.panel = row;
         api.cb = cb;
-        api.mirrorCB = mirrorCB;
         api.numRB = numRB; api.numIn = numIn; api.spcRB = spcRB; api.spcIn = spcIn;
         api.setAllEnabled = function (state) { setModeEnabled(state); };
         api.refresh = refresh;
@@ -1913,15 +1873,12 @@ GM.UI = {
         };
         api.apply = function (e) {
             cb.value = e.enabled;
-            _prevEnabled = e.enabled;
             numRB.value = e.useNumber;
             spcRB.value = !e.useNumber;
             numIn.text = e.number;
             spcIn.text = e.spacing;
             refresh();
         };
-        api.setMirror = function (v) { if (mirrorCB) mirrorCB.value = v; };
-        api.getMirror = function () { return mirrorCB ? mirrorCB.value : false; };
         api.getConvertFields = function () { return [spcIn]; };
         return api;
     },
@@ -2038,24 +1995,52 @@ GM.UI = {
         offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
+        // Mirror controls — above the rows, not inside them. Each hides the
+        // opposite edge row (Bottom mirrors Top, Right mirrors Left). Both on by
+        // default, matching the default bottomMirror/rightMirror.
+        var mirrorGrp = edgesPanel.add("group");
+        mirrorGrp.orientation = "row";
+        mirrorGrp.alignChildren = ["left", "center"];
+        mirrorGrp.spacing = 16;
+        mirrorGrp.add("statictext", undefined, GM.L.MIRROR_GROUP_LABEL);
+        var mirrorTopCB = mirrorGrp.add("checkbox", undefined, GM.L.MIRROR_TOP);
+        mirrorTopCB.value = defCfg.bottomMirror;
+        mirrorTopCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
+        var mirrorLeftCB = mirrorGrp.add("checkbox", undefined, GM.L.MIRROR_LEFT);
+        mirrorLeftCB.value = defCfg.rightMirror;
+        mirrorLeftCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
+
         GM.UI.addSeparator(edgesPanel);
 
         // Column header — "Count"/"Spacing" captions sit once over the value
-        // columns. Spacer width = buildEdgePanel col1 (72) + col2 (72) + spacing.
+        // columns. Spacer width = buildEdgePanel c1 (118) + row spacing (6).
         var hdrRow = edgesPanel.add("group");
         hdrRow.orientation = "row";
         hdrRow.alignChildren = ["left", "center"];
         hdrRow.spacing = 6;
         var hdrSpace = hdrRow.add("group");
-        hdrSpace.preferredSize.width = 72 + 72 + 6;
+        hdrSpace.preferredSize.width = 118 + 6;
         var hdrCount = hdrRow.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
-        hdrCount.preferredSize.width = 90;
+        hdrCount.preferredSize.width = 84;
         hdrRow.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
 
+        // Row order: top, bottom, left, right — pairs adjacent so the mirror
+        // relationship reads top-to-bottom.
         var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
+        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom);
         var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
-        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.MIRROR_TOP,  GM.L.TIP_MIRROR_BOTTOM, GM.L.MIRROR_TOP_ACTIVE);
-        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.MIRROR_LEFT, GM.L.TIP_MIRROR_RIGHT,  GM.L.MIRROR_LEFT_ACTIVE);
+        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right);
+
+        // Mirror toggles hide the opposite row (collapse to zero height) and
+        // relayout. Hiding keeps the row's values — gatherAll still reads them,
+        // and main.js overrides them from the source edge anyway.
+        function refreshMirrorRows() {
+            showPanel(bottomUI.panel, !mirrorTopCB.value);
+            showPanel(rightUI.panel, !mirrorLeftCB.value);
+        }
+        mirrorTopCB.onClick  = function () { refreshMirrorRows(); dlg.layout.layout(true); onUserChange(); };
+        mirrorLeftCB.onClick = function () { refreshMirrorRows(); dlg.layout.layout(true); onUserChange(); };
+        refreshMirrorRows();
 
         // =================================================================
         // Path Panel (replaces Edges in path mode)
@@ -2244,8 +2229,8 @@ GM.UI = {
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
                 right: rightUI.gather(),
-                bottomMirror: bottomUI.getMirror(),
-                rightMirror: rightUI.getMirror(),
+                bottomMirror: mirrorTopCB.value,
+                rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
                 markCircle: circleCB.value,
@@ -2278,8 +2263,9 @@ GM.UI = {
             bottomUI.apply(s.bottom);
             rightUI.apply(s.right);
 
-            bottomUI.setMirror(s.bottomMirror); bottomUI.refresh();
-            rightUI.setMirror(s.rightMirror);   rightUI.refresh();
+            mirrorTopCB.value = !!s.bottomMirror;
+            mirrorLeftCB.value = !!s.rightMirror;
+            refreshMirrorRows();
 
             sizeInput.text = s.markSize;
             circleCB.value = !!s.markCircle;
@@ -2400,8 +2386,8 @@ GM.UI = {
             if (!pathRB.value) {
                 var topOn = topUI.cb.value;
                 var leftOn = leftUI.cb.value;
-                var bottomOn = bottomUI.getMirror() ? topOn : bottomUI.cb.value;
-                var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
+                var bottomOn = mirrorTopCB.value ? topOn : bottomUI.cb.value;
+                var rightOn = mirrorLeftCB.value ? leftOn : rightUI.cb.value;
                 if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
             }
             // 2) Marks must have at least one shape (circle and/or cross).
@@ -2425,9 +2411,6 @@ GM.UI = {
         bottomUI.onChange = onUserChange;
         rightUI.onChange  = onUserChange;
 
-        // Mirror toggle collapses/restores the value cells → needs a relayout.
-        bottomUI.onMirrorToggle = function () { dlg.layout.layout(true); };
-        rightUI.onMirrorToggle  = function () { dlg.layout.layout(true); };
 
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)

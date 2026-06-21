@@ -43,8 +43,9 @@ GM.L = (function () {
             EDGE_COUNT_HDR: "Count",
             EDGE_SPACING_HDR: "Spacing",
             OFFSET_LABEL: "Edge offset:",
-            MIRROR_TOP: "= Top",
-            MIRROR_LEFT: "= Left",
+            MIRROR_GROUP_LABEL: "Mirror:",
+            MIRROR_TOP: "top ↓ bottom",
+            MIRROR_LEFT: "left → right",
             MIRROR_TOP_ACTIVE: "mirrors top",
             MIRROR_LEFT_ACTIVE: "mirrors left",
 
@@ -170,8 +171,9 @@ GM.L = (function () {
             EDGE_COUNT_HDR: "Počet ok",
             EDGE_SPACING_HDR: "Rozestup",
             OFFSET_LABEL: "Odsazení od kraje:",
-            MIRROR_TOP: "= Horní",
-            MIRROR_LEFT: "= Levá",
+            MIRROR_GROUP_LABEL: "Zrcadlit:",
+            MIRROR_TOP: "horní ↓ dolní",
+            MIRROR_LEFT: "levou → pravou",
             MIRROR_TOP_ACTIVE: "zrcadlí horní",
             MIRROR_LEFT_ACTIVE: "zrcadlí levou",
 
