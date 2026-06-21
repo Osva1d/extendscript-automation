@@ -6,12 +6,12 @@
  * resulting tree against Adobe ScriptUI conventions and our internal style:
  *
  *   - Window: margins, spacing, title with version
- *   - Panels: margins (15px), spacing (8-10px)
+ *   - Panels: margins (12px), spacing (8-10px)
  *   - Buttons: helpTip on every interactive button, OK/Cancel naming
- *   - Footer: Reset left, Cancel/Generate right (destructive vs primary)
- *   - Numeric edit texts: 60px width
+ *   - Footer: Cancel/Generate right (factory Defaults lives in Document panel)
+ *   - Numeric edit texts: 56px width (addRow value subgroup)
  *   - Dropdowns: reasonable widths (130-200px)
- *   - Mode-specific layouts: ZUND has gapInner+orient; SUMMA has feedTop/Bottom + drawRed
+ *   - Mode selector: two radios (Zünd/Summa); ZUND adds gapInner+orient; SUMMA adds feedTop/Bottom + drawRed
  *   - Layer mapping: rows have Layer / Color / Remove; +Add button below
  *   - Modified indicator: asterisk appears when UI diverges from active preset
  *   - Save button enabled state: off when unmodified, on when modified
@@ -51,7 +51,7 @@ ZSM.L = {
     ERR_WRITE_SETTINGS: "write fail", ERR_LAY_COLOR: "lay %s", ERR_SWATCH: "swatch %s",
     PRESET_DEFAULT: "[Default]", PRESET_LABEL: "Preset:",
     PROMPT_NEW_PRESET: "Name?", PROMPT_SAVE_AS: "Save as?",
-    BTN_SAVE: "Save", BTN_SAVE_AS: "Save As…", BTN_DEL: "Delete", BTN_RESET: "Reset",
+    BTN_SAVE: "Save", BTN_SAVE_AS: "Save As…", BTN_DEL: "Delete", BTN_RESET: "Defaults",
     BTN_OK: "Generate", BTN_CANCEL: "Cancel", BTN_ADD_LAYER: "+ Add",
     PANEL_PRESET: "Presets", PANEL_TECH: "Technology", PANEL_GEO: "Gaps",
     PANEL_FEED: "Feed", PANEL_LAYERS: "Layers",
@@ -70,6 +70,15 @@ ZSM.L = {
     TIP_SAVE: "tip", TIP_SAVE_AS: "tip", TIP_DEL: "tip", TIP_RESET: "tip",
     TIP_OK: "tip", TIP_CANCEL: "tip", TIP_PRESET: "tip", TIP_REVERT: "tip",
     DEF_CUT: "Cut", DEF_KISS: "Kiss-cut",
+    // v26.6.0 audit additions
+    PANEL_DOC: "Document",
+    SCALE_CHECKBOX: "Work at scale", TIP_SCALE_CHECKBOX: "tip",
+    SCALE_FIELD_LABEL: "1:", TIP_SCALE_FIELD: "tip",
+    MARKS_ONLY: "Marks only", TIP_MARKS_ONLY: "tip",
+    CONFIRM_DEL_PRESET: "del %s?",
+    STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
+    STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
+    STATUS_OK: "%s · layers: %s", STATUS_OK_MARKS: "%s · marks only",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
         var idx = 0;
@@ -108,6 +117,9 @@ eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "ui_state.js"), "u
 // Stub ZSM.Draw with deterministic test data (no Illustrator DOM needed)
 ZSM.Draw = {
     getSwatchNames: function () { return ["[Registration]", "Cut", "Thru-cut", "Kiss-cut"]; },
+    getSwatchRGBMap: function () {
+        return { "[Registration]": "REG", "Cut": [1, 0, 0, 1], "Thru-cut": [0, 1, 0, 1], "Kiss-cut": [0, 0, 1, 1] };
+    },
     getLayerNames: function () { return ["Cut", "Thru-cut", "Kiss-cut", "Score", "White"]; },
     detectCutColor: function () { return "Cut"; }
 };
@@ -123,6 +135,7 @@ function buildAndCapture(mode, pData) {
     };
     var docData = {
         swatches: ZSM.Draw.getSwatchNames(),
+        swatchRGB: ZSM.Draw.getSwatchRGBMap(),
         layers: ZSM.Draw.getLayerNames(),
         detectedColor: ZSM.Draw.detectCutColor()
     };
@@ -142,9 +155,18 @@ assert(/v\d+\.\d+/.test(w.text), "Window title contains version (matches /v\\d\\
 assert(w.text.indexOf("Zünd") >= 0 && w.text.indexOf("Summa") >= 0,
     "Window title contains both 'Zünd' and 'Summa'");
 
-// HIG: Window margins recommended 16-20px
-assert(w.margins >= 16 && w.margins <= 20,
-    "Window margins in HIG range 16-20 (got " + w.margins + ")");
+// HIG: Window margins recommended 16-20px. Margins are an explicit
+// [left, top, right, bottom] array (v26.6.0 §2.9) — check each side is sane:
+// horizontal 16-20, vertical 12-16 (slightly tighter top/bottom).
+var m = w.margins;
+assert(Object.prototype.toString.call(m) === "[object Array]" && m.length === 4,
+    "Window margins is a 4-tuple [l,t,r,b] (got " + JSON.stringify(m) + ")");
+if (m && m.length === 4) {
+    assert(m[0] >= 16 && m[0] <= 20 && m[2] >= 16 && m[2] <= 20,
+        "Window horizontal margins 16-20 (got l=" + m[0] + ", r=" + m[2] + ")");
+    assert(m[1] >= 12 && m[1] <= 16 && m[3] >= 12 && m[3] <= 16,
+        "Window vertical margins 12-16 (got t=" + m[1] + ", b=" + m[3] + ")");
+}
 // HIG: Window spacing recommended 12-15px
 assert(w.spacing >= 8 && w.spacing <= 15,
     "Window spacing in HIG range 8-15 (got " + w.spacing + ")");
@@ -162,8 +184,8 @@ var panels = w.find(function (c) { return c.type === "panel"; });
 assert(panels.length >= 4, "Dialog has at least 4 panels (got " + panels.length + ")");
 for (var i = 0; i < panels.length; i++) {
     var p = panels[i];
-    assertEq(p.margins, 15,
-        "Panel '" + p.text + "' has margins=15");
+    assertEq(p.margins, 12,
+        "Panel '" + p.text + "' has margins=12");
 }
 
 
@@ -177,9 +199,15 @@ var cancelBtn= w.findOne(function (c) { return c.type === "button" && c.name ===
 assert(okBtn    !== null, "OK button exists with name='ok'");
 assert(cancelBtn!== null, "Cancel button exists with name='cancel'");
 
-// Reset was removed (factory defaults = pick [Default]; revert edits = ↺).
-var resetBtn = w.findOne(function (c) { return c.type === "button" && c.text === "Reset"; });
-assert(resetBtn === null, "Reset button removed (no longer in footer)");
+// "Defaults" (factory reset) lives in the Document panel, NOT the footer.
+var resetBtn = w.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_RESET; });
+assert(resetBtn !== null, "Defaults (factory reset) button exists");
+if (okBtn) {
+    var footerHasReset = okBtn.parent.children.filter(function (c) {
+        return c.type === "button" && c.text === ZSM.L.BTN_RESET;
+    }).length > 0;
+    assertEq(footerHasReset, false, "Defaults button is NOT in the footer group");
+}
 
 // Cancel/OK are siblings within the same group, OK after Cancel
 if (okBtn && cancelBtn) {
@@ -221,13 +249,14 @@ assert(ddMissingTip === 0, "All dropdowns have helpTip (missing: " + ddMissingTi
 // =====================================================
 console.log("\n=== TEST 5: Numeric edit text widths ===");
 var allEdits = w.find(function (c) { return c.type === "edittext"; });
-// Numeric edit-texts in panels (gap, maxDist, markSize, etc.) should be 60.
-// Layer-name edit text (in stack) is wider (180); not tested here.
+// Numeric edit-texts built via addRow live in a 130px value subgroup and are
+// 56px wide (gap, maxDist, markSize, orientDist, etc.). The scale field (etScale,
+// 60px) and the layer-name field (124px) are sized separately and excluded here.
 var numericEdits = allEdits.filter(function (e) {
-    return e.preferredSize.width === 60;
+    return e.preferredSize.width === 56;
 });
 assert(numericEdits.length >= 4,
-    "At least 4 numeric edit texts have width=60 (got " + numericEdits.length + ")");
+    "At least 4 numeric edit texts have width=56 (got " + numericEdits.length + ")");
 
 
 // =====================================================
@@ -299,29 +328,32 @@ hasGapInner = w.findOne(function (c) {
     return c.type === "statictext" && c.text === ZSM.L.GAP_GZ;
 }) !== null;
 assertEq(hasGapInner, false, "SUMMA: no GAP_GZ row");
+// Mode is now a 2-radio selector (Zünd/Summa) present in both modes; SUMMA has
+// only those two (no Auto-fit/Fixed source radios — those are ZUND-only).
 radios = w.find(function (c) { return c.type === "radiobutton"; });
-assertEq(radios.length, 0, "SUMMA: no radio buttons");
+assertEq(radios.length, 2, "SUMMA: exactly 2 radio buttons (mode selector only)");
+var radioTexts = radios.map(function (r) { return r.text; });
+assert(radioTexts.indexOf(ZSM.L.MODE_ZUND) !== -1 && radioTexts.indexOf(ZSM.L.MODE_SUMMA) !== -1,
+    "SUMMA: the 2 radios are the Zünd/Summa mode selector");
 
 
 // =====================================================
-// TEST 9: Mode dropdown — both options
+// TEST 9: Mode selector — two radio buttons in Technology panel
 // =====================================================
-console.log("\n=== TEST 9: Mode dropdown ===");
+console.log("\n=== TEST 9: Mode radio selector ===");
 w = buildAndCapture("ZUND");
-// First dropdown after Tech panel header is the mode selector
 var techPanel = w.findOne(function (c) {
     return c.type === "panel" && c.text === ZSM.L.PANEL_TECH;
 });
 assert(techPanel !== null, "Technology panel exists");
-var modeDD = techPanel ? techPanel.findOne(function (c) {
-    return c.type === "dropdownlist";
-}) : null;
-assert(modeDD !== null, "Mode dropdown exists in Technology panel");
-if (modeDD) {
-    var modeTexts = modeDD.items.map(function (it) { return it.text; });
-    assert(modeTexts.indexOf(ZSM.L.MODE_ZUND) !== -1, "Mode dropdown has 'ZUND' option");
-    assert(modeTexts.indexOf(ZSM.L.MODE_SUMMA) !== -1, "Mode dropdown has 'SUMMA' option");
-}
+var modeRadios = techPanel ? techPanel.find(function (c) {
+    return c.type === "radiobutton" &&
+        (c.text === ZSM.L.MODE_ZUND || c.text === ZSM.L.MODE_SUMMA);
+}) : [];
+assertEq(modeRadios.length, 2, "Mode selector has 2 radios (Zünd/Summa) in Technology panel");
+var modeRadioTexts = modeRadios.map(function (r) { return r.text; });
+assert(modeRadioTexts.indexOf(ZSM.L.MODE_ZUND) !== -1, "Mode selector has 'ZUND' radio");
+assert(modeRadioTexts.indexOf(ZSM.L.MODE_SUMMA) !== -1, "Mode selector has 'SUMMA' radio");
 
 
 // =====================================================
@@ -392,19 +424,22 @@ if (saveBtn) {
 
 
 // =====================================================
-// TEST 13: Mode dropdown selection matches built mode
+// TEST 13: Mode radio reflects built mode (SUMMA radio checked)
 // =====================================================
-console.log("\n=== TEST 13: Mode dropdown reflects current mode ===");
+console.log("\n=== TEST 13: Mode radio reflects current mode ===");
 w = buildAndCapture("SUMMA");
 techPanel = w.findOne(function (c) {
     return c.type === "panel" && c.text === ZSM.L.PANEL_TECH;
 });
-modeDD = techPanel ? techPanel.findOne(function (c) {
-    return c.type === "dropdownlist";
+var rbSummaSel = techPanel ? techPanel.findOne(function (c) {
+    return c.type === "radiobutton" && c.text === ZSM.L.MODE_SUMMA;
 }) : null;
-if (modeDD && modeDD.selection) {
-    assertEq(modeDD.selection.text, ZSM.L.MODE_SUMMA,
-        "SUMMA dialog: mode dropdown selection = SUMMA");
+var rbZundSel = techPanel ? techPanel.findOne(function (c) {
+    return c.type === "radiobutton" && c.text === ZSM.L.MODE_ZUND;
+}) : null;
+if (rbSummaSel && rbZundSel) {
+    assertEq(rbSummaSel.value, true, "SUMMA dialog: Summa radio is checked");
+    assertEq(rbZundSel.value, false, "SUMMA dialog: Zünd radio is unchecked");
 }
 
 
@@ -435,15 +470,13 @@ w = buildAndCapture("ZUND", pData);
 var gapLabel = w.findOne(function (c) {
     return c.type === "statictext" && c.text === ZSM.L.GAP_GZ;
 });
-// The edittext is a sibling in the same group
+// addRow nests the edittext inside a value subgroup, so search the whole row
+// group (label + value subgroup) rather than only direct siblings.
 var gapEdit = null;
 if (gapLabel) {
-    var siblings = gapLabel.parent.children;
-    for (var s = 0; s < siblings.length; s++) {
-        if (siblings[s].type === "edittext") { gapEdit = siblings[s]; break; }
-    }
+    gapEdit = gapLabel.parent.findOne(function (c) { return c.type === "edittext"; });
 }
-assert(gapEdit !== null, "Found gapInner edit text via label sibling");
+assert(gapEdit !== null, "Found gapInner edit text in its row group");
 
 if (gapEdit && gapEdit.onChanging) {
     // Modify and fire onChanging (which invokes refreshModifiedIndicator)

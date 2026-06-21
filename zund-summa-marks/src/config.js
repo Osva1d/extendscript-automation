@@ -5,7 +5,7 @@ ZSM.Config = {
     // KEEP IN SYNC with package.json "version" — build.sh reads package.json
     // for the dist header; this constant is the runtime source of truth
     // for the dialog title, footer copyright, and any in-script "About" UI.
-    version:    "26.5.1",
+    version:    "26.6.0",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 

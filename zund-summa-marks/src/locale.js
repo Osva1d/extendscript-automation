@@ -32,7 +32,7 @@ ZSM.L = (function () {
             // --- UI: Panels ---
             PANEL_PRESET: "Presets",
             PANEL_TECH:   "Technology Selection",
-            PANEL_GEO:    "Gap Settings",
+            PANEL_GEO:    "Mark Geometry & Gaps",
             PANEL_FEED:   "Feed Settings",
             PANEL_LAYERS: "Layer to Color Mapping",
 
@@ -78,7 +78,7 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Zünd mark diameter.",
             MARK_SIZE_S:  "Summa size:",
             TIP_SIZE_S:   "Summa mark side length.",
-            ORIENT_DIST:    "Orient mark offset:",
+            ORIENT_DIST:    "Orientation mark offset:",
             TIP_ORIENT_DIST: "Distance from corner mark to orientation mark.",
             MARK_COLOR:   "Mark color (Spot):",
             TIP_MARK_COLOR: "Spot color for marks. '[Registration]' = all separations.",
@@ -111,7 +111,18 @@ ZSM.L = (function () {
             TIP_CANCEL: "Close without changes.",
             BTN_OK:     "Generate",
             TIP_OK:     "Calculate and generate marks.",
-            PRESET_PLACEHOLDER: "My Preset"
+            PRESET_PLACEHOLDER: "My Preset",
+            BTN_REVERT:        "Revert",
+            STATUS_INVALID:    "Fix the highlighted fields.",
+            STATUS_RANGE:      "%s — allowed range %s–%s.",
+            STATUS_LAYER_NAME: "Enter a name for every layer row.",
+            STATUS_RANGE_MULTI: "%s fields out of range — fix the highlighted ones.",
+            STATUS_OK:         "%s · layers: %s",
+            STATUS_OK_MARKS:   "%s · marks only",
+            PANEL_DOC:         "Document",
+            BTN_RESET:         "Defaults",
+            TIP_RESET:         "Load factory default settings into the dialog (does not overwrite any saved preset).",
+            DEC_SEP:           "."
         },
 
         cs: {
@@ -136,7 +147,7 @@ ZSM.L = (function () {
             // --- UI: Panels ---
             PANEL_PRESET: "Předvolby",
             PANEL_TECH:   "Výběr technologie",
-            PANEL_GEO:    "Nastavení mezer",
+            PANEL_GEO:    "Značky a mezery",
             PANEL_FEED:   "Nastavení role (Feed)",
             PANEL_LAYERS: "Přiřazení vrstev k barvám",
 
@@ -182,7 +193,7 @@ ZSM.L = (function () {
             TIP_SIZE_Z:   "Průměr značky Zünd.",
             MARK_SIZE_S:  "Velikost Summa:",
             TIP_SIZE_S:   "Délka strany značky Summa.",
-            ORIENT_DIST:    "Vzdálenost orient. značky:",
+            ORIENT_DIST:    "Odsazení orientační značky:",
             TIP_ORIENT_DIST: "Vzdálenost od rohové značky k orientační značce.",
             MARK_COLOR:   "Barva značek (Spot):",
             TIP_MARK_COLOR: "Přímá barva značek. ‘[Registration]’ = výchozí pro všechny separace.",
@@ -215,7 +226,18 @@ ZSM.L = (function () {
             TIP_CANCEL: "Zavřít bez změn.",
             BTN_OK:     "Generovat",
             TIP_OK:     "Spustit výpočet a vygenerovat značky.",
-            PRESET_PLACEHOLDER: "Moje předvolba"
+            PRESET_PLACEHOLDER: "Moje předvolba",
+            BTN_REVERT:        "Vrátit",
+            STATUS_INVALID:    "Opravte zvýrazněná pole.",
+            STATUS_RANGE:      "%s — povolený rozsah %s–%s.",
+            STATUS_LAYER_NAME: "Zadejte název u každého řádku vrstvy.",
+            STATUS_RANGE_MULTI: "%s pole mimo rozsah — opravte zvýrazněná.",
+            STATUS_OK:         "%s · vrstvy: %s",
+            STATUS_OK_MARKS:   "%s · pouze značky",
+            PANEL_DOC:         "Dokument",
+            BTN_RESET:         "Výchozí",
+            TIP_RESET:         "Načte tovární výchozí nastavení do dialogu (uloženou předvolbu nepřepíše).",
+            DEC_SEP:           ","
         }
     };
 

@@ -33,6 +33,7 @@ ZSM.UI = {
         // the DOM. Runs in front of any UI construction.
         var docData = {
             swatches:      ZSM.Draw.getSwatchNames(),
+            swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
             detectedColor: ZSM.Draw.detectCutColor()
         };
@@ -84,8 +85,8 @@ ZSM.UI = {
         var w = new Window("dialog", c.ui.title);
         w.orientation    = "column";
         w.alignChildren  = ["fill", "top"];
-        w.margins        = 20;
-        w.spacing        = 15;
+        w.margins        = [20, 14, 20, 12];
+        w.spacing        = 10;
         w.preferredSize.width = 390;
 
         // =================================================================
@@ -93,7 +94,7 @@ ZSM.UI = {
         // =================================================================
         var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
-        pPreset.margins = 15;
+        pPreset.margins = 12;
         pPreset.spacing = 8;
 
         // Row 1: label + dropdown (full width)
@@ -107,31 +108,44 @@ ZSM.UI = {
         ddPreset.helpTip = l.TIP_PRESET;
 
         // Revert (↺) — reload the active preset as saved, discarding unsaved
-        // edits. Sits right next to the preset it reverts; enabled only when the
-        // preset has unsaved changes (gated in refreshModifiedIndicator). Distinct
-        // from Reset (which loads factory defaults).
+        // edits. Compact icon-only button (N7) so it no longer crowds the preset
+        // dropdown; the helpTip carries the meaning. Enabled only when the preset
+        // has unsaved changes (gated in refreshModifiedIndicator). Distinct from
+        // Reset/Defaults (which loads factory defaults).
         var btnRevert = grpPresetTop.add("button", undefined, "↺");
         btnRevert.preferredSize = [30, 24];
         btnRevert.alignment = ["right", "center"];
         btnRevert.helpTip = l.TIP_REVERT;
 
-        // Row 2: action buttons (right-aligned)
+        // Row 2: action buttons. "Defaults" (factory reset, N8) sits on the left
+        // — it's a different class of action from the per-preset Save/Save As/
+        // Delete cluster on the right, so it gets its own visual slot instead of
+        // being hidden behind a [Default] dropdown pick (low discoverability).
         var grpPresetBtns = pPreset.add("group");
-        grpPresetBtns.alignment = ["right", "top"];
-        grpPresetBtns.spacing = 6;
+        grpPresetBtns.alignment = ["fill", "top"];
+        grpPresetBtns.spacing = 8;
+
+        var btnReset = grpPresetBtns.add("button", undefined, l.BTN_RESET);
+        btnReset.preferredSize.width = 80;
+        btnReset.alignment = ["left", "center"];
+        btnReset.helpTip = l.TIP_RESET;
+
+        var grpPresetBtnsR = grpPresetBtns.add("group");
+        grpPresetBtnsR.alignment = ["right", "center"];
+        grpPresetBtnsR.spacing = 8;
 
         // Uniform width so the three buttons line up evenly (text-based widths
         // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
         var PRESET_BTN_W = 92;
-        var btnSave = grpPresetBtns.add("button", undefined, l.BTN_SAVE);
+        var btnSave = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE);
         btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
 
-        var btnSaveAs = grpPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        var btnSaveAs = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE_AS);
         btnSaveAs.preferredSize.width = PRESET_BTN_W;
         btnSaveAs.helpTip = l.TIP_SAVE_AS;
 
-        var btnDel = grpPresetBtns.add("button", undefined, l.BTN_DEL);
+        var btnDel = grpPresetBtnsR.add("button", undefined, l.BTN_DEL);
         btnDel.preferredSize.width = PRESET_BTN_W;
         btnDel.helpTip = l.TIP_DEL;
 
@@ -140,10 +154,12 @@ ZSM.UI = {
         // =================================================================
         var pSystem = w.add("panel", undefined, l.PANEL_TECH);
         pSystem.alignChildren = ["fill", "top"];
-        pSystem.margins = 15;
+        pSystem.margins = 12;
 
-        // Mode row: label + dropdown (matches addRow pattern used elsewhere
-        // for visual consistency per building-adobe-ui §4.4)
+        // Mode row: label + segmented-style selector (H2). ScriptUI has no
+        // native segmented control, so two mutually-exclusive radio buttons in
+        // one group give the same one-glance "pick a technology" affordance
+        // without the extra click a dropdown costs.
         var grpMode = pSystem.add("group");
         grpMode.orientation   = "row";
         grpMode.alignChildren = ["left", "center"];
@@ -151,10 +167,14 @@ ZSM.UI = {
         var stMode = grpMode.add("statictext", undefined, l.LBL_MODE);
         stMode.preferredSize.width = 60;
         stMode.helpTip = l.TIP_MODE;
-        var dMode = grpMode.add("dropdownlist", undefined, [l.MODE_ZUND, l.MODE_SUMMA]);
-        dMode.preferredSize.width = 130;
-        dMode.selection = isS ? 1 : 0;
-        dMode.helpTip   = l.TIP_MODE;
+        var rbZund  = grpMode.add("radiobutton", undefined, l.MODE_ZUND);
+        var rbSumma = grpMode.add("radiobutton", undefined, l.MODE_SUMMA);
+        rbZund.preferredSize.width  = 70;
+        rbSumma.preferredSize.width = 70;
+        rbZund.value  = isZ;
+        rbSumma.value = isS;
+        rbZund.helpTip  = l.TIP_MODE;
+        rbSumma.helpTip = l.TIP_MODE;
 
         // --- ZUND only: source radio buttons ---
         var grpSrc, rbAuto, rbFixed;
@@ -170,11 +190,21 @@ ZSM.UI = {
             rbFixed.helpTip = l.TIP_SRC_FIXED;
         }
 
+        // =================================================================
+        // Panel: Document (H3) — scale is a property of the DOCUMENT, not of the
+        // cutting technology, so the 1:N control lives in its own block rather
+        // than under "Technology Selection".
+        // =================================================================
+        var pDoc = w.add("panel", undefined, l.PANEL_DOC);
+        pDoc.alignChildren = ["left", "top"];
+        pDoc.margins = 12;
+        pDoc.spacing = 8;
+
         // --- Scale row (Phase 2): checkbox + 1:N field ---
         // Derived state: scaleN > 1 → checkbox checked, field enabled.
         // scaleN === 1 → checkbox unchecked, field disabled at "1".
         // Single source of truth: scaleN value (no extra checkbox state stored).
-        var grpScale = pSystem.add("group");
+        var grpScale = pDoc.add("group");
         grpScale.orientation   = "row";
         grpScale.alignChildren = ["left", "center"];
         grpScale.spacing       = 10;   // breathing room between checkbox and the ratio
@@ -278,7 +308,7 @@ ZSM.UI = {
         // =================================================================
         var pGeo = w.add("panel", undefined, l.PANEL_GEO);
         pGeo.alignChildren = ["fill", "top"];
-        pGeo.margins = 15;
+        pGeo.margins = 12;
         pGeo.spacing = 10;
 
         // ZUND only: gap from graphic
@@ -308,7 +338,7 @@ ZSM.UI = {
         }
 
         // Shared: mark color
-        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR);
+        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR, docData.swatchRGB);
 
         // =================================================================
         // Panel: Feed (SUMMA only — not created for ZUND)
@@ -317,7 +347,7 @@ ZSM.UI = {
         if (isS) {
             var pFeed = w.add("panel", undefined, l.PANEL_FEED);
             pFeed.alignChildren = ["fill", "top"];
-            pFeed.margins = 15;
+            pFeed.margins = 12;
             pFeed.spacing = 10;
 
             rFT   = self.addRow(pFeed, l.FEED_TOP, sData.feedTop,    l.TIP_FEED_TOP);
@@ -332,7 +362,7 @@ ZSM.UI = {
         // =================================================================
         var pLay = w.add("panel", undefined, l.PANEL_LAYERS);
         pLay.alignChildren = ["fill", "top"];
-        pLay.margins = 15;
+        pLay.margins = 12;
         pLay.spacing = 10;
 
         // "Marks only" toggle — sits atop the mapping table it controls. When on,
@@ -347,9 +377,9 @@ ZSM.UI = {
         grpHeaders.alignment = "fill";
         grpHeaders.spacing   = 5;
         var hdrLayer = grpHeaders.add("statictext", undefined, l.COL_LAYER);
-        hdrLayer.preferredSize.width = 200;
+        hdrLayer.preferredSize.width = 150;
         var hdrColor = grpHeaders.add("statictext", undefined, l.COL_COLOR);
-        hdrColor.preferredSize.width = 150;
+        hdrColor.preferredSize.width = 120;
         var hdrSpacer = grpHeaders.add("statictext", undefined, "");
         hdrSpacer.preferredSize.width = 30;
 
@@ -381,14 +411,16 @@ ZSM.UI = {
             var stack = grp.add("group");
             stack.orientation   = "stack";
             stack.alignChildren = ["left", "center"];
-            stack.preferredSize.width = 200;
+            stack.preferredSize.width = 150;
 
             var ddLayer = stack.add("dropdownlist", undefined, docData.layers);
-            ddLayer.preferredSize.width = 200;
+            ddLayer.preferredSize.width = 150;
             ddLayer.helpTip = l.TIP_LAY_NAME;
 
             var etLayer = stack.add("edittext", undefined, def.name || "");
-            etLayer.preferredSize.width = 180;
+            // Narrower than the dropdown behind it (150) so a long custom layer
+            // name never runs under the dropdown's expand arrow (N6).
+            etLayer.preferredSize.width = 124;
             etLayer.helpTip = l.TIP_LAY_NAME;
 
             ddLayer.onChange = function () {
@@ -398,10 +430,12 @@ ZSM.UI = {
             };
             ZSM.UI.selectDDL(ddLayer, def.name || "");
 
+            var swColor = ZSM.UI.makeSwatch(grp);
             var ddColor = grp.add("dropdownlist", undefined, docData.swatches);
-            ddColor.preferredSize.width = 150;
+            ddColor.preferredSize.width = 104;
             ddColor.helpTip = l.TIP_LAY_COLOR;
             ZSM.UI.selectDDL(ddColor, def.color || (docData.swatches.length > 0 ? docData.swatches[0] : ""));
+            ZSM.UI.setSwatch(swColor, ZSM.UI.ddlValue(ddColor), docData.swatchRGB);
 
             var btnRemove = grp.add("button", undefined, "\u2212");
             btnRemove.preferredSize = [30, 25];
@@ -422,7 +456,7 @@ ZSM.UI = {
                 w.size.height = w.preferredSize.height + 10;
             };
 
-            return { grp: grp, ddColor: ddColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
+            return { grp: grp, ddColor: ddColor, swColor: swColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
         }
 
         // Populate initial layer rows
@@ -462,6 +496,7 @@ ZSM.UI = {
         cbMarksOnly.onClick = function () {
             applyMarksOnlyState();
             refreshModifiedIndicator();
+            liveValidateAll();   // marks-only toggles whether layer names are required
         };
         applyMarksOnlyState();   // initial state from sData.marksOnly
 
@@ -471,15 +506,25 @@ ZSM.UI = {
         // Copyright footer per extendscript-ui-standards §5: dynamic string
         // composed from constants (never hardcoded), enabled=false greys it
         // intentionally to visually distinguish from active controls.
+        // Status line (V2) — explains *why* Generate is disabled and names the
+        // offending field + its valid range. Sits directly above the footer so
+        // the cause and the greyed button are seen together. Updated by
+        // liveValidateAll; empty (reserved space) while everything is valid.
+        var grpStatus = w.add("group");
+        grpStatus.alignment = ["fill", "top"];
+        var stStatus = grpStatus.add("statictext", undefined, "", { truncate: "end" });
+        stStatus.preferredSize.width = 340;
+        stStatus.alignment = ["fill", "center"];
+
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
         var stCopy = grpFooterCopy.add("statictext", undefined,
             "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
         stCopy.enabled = false;
 
-        // Cancel (left) | Generate (right), right-aligned. Factory defaults are
-        // reachable by selecting [Default] in the preset dropdown; reverting a
-        // preset's edits is the ↺ button — so no separate Reset button.
+        // Cancel (left) | Generate (right), right-aligned. Factory defaults load
+        // via the "Defaults" button in the preset panel (N8); reverting a preset's
+        // unsaved edits is the ↺ button next to the preset dropdown.
         var grpButtons = w.add("group");
         grpButtons.alignment = ["right", "center"];
         grpButtons.spacing   = 8;
@@ -558,13 +603,16 @@ ZSM.UI = {
         function setUIValues(obj) {
             if (!obj) return;
 
-            // Mode dropdown (visual only — actual mode is fixed for this dialog)
-            dMode.selection = (obj.mode === "SUMMA") ? 1 : 0;
+            // Mode selector (visual only — actual mode is fixed for this dialog;
+            // reflect the dialog's own mode so the radios never desync from it).
+            rbZund.value  = isZ;
+            rbSumma.value = isS;
 
             // Shared controls
             rGapZO.inp.text = String(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
             rMaxD.inp.text  = String(obj.maxDist   !== undefined ? obj.maxDist   : 500);
             ZSM.UI.selectDDL(rColor.ddl, obj.markColor || "[Registration]");
+            if (rColor.refresh) rColor.refresh();
 
             // ZUND-specific
             if (isZ) {
@@ -803,13 +851,27 @@ ZSM.UI = {
             refreshModifiedIndicator();
         };
 
+        /**
+         * Reset = load factory defaults into the dialog (N8). Keeps the current
+         * mode (switching modes is a separate control) and does NOT persist or
+         * alter any named preset; the change simply shows as unsaved edits ("*")
+         * until the user explicitly saves.
+         */
+        btnReset.onClick = function () {
+            var d = c.getDefaults();
+            d.mode = mode;
+            setUIValues(d);
+            wireLayerRows();
+            refreshModifiedIndicator();
+            liveValidateAll();
+        };
+
         // =================================================================
         // Mode switch handler
         // =================================================================
         var switchTarget = null;
 
-        dMode.onChange = function () {
-            var newMode = dMode.selection ? dMode.selection.text : mode;
+        function requestModeSwitch(newMode) {
             if (newMode === mode) return;
 
             // Snapshot current UI state into [Last Settings] so nothing is lost
@@ -822,7 +884,12 @@ ZSM.UI = {
 
             switchTarget = newMode;
             w.close(2); // code 2 = mode switch (not OK, not Cancel)
-        };
+        }
+
+        // Segmented selector (H2): each radio requests the switch; the guard in
+        // requestModeSwitch makes re-clicking the active mode a no-op.
+        rbZund.onClick  = function () { requestModeSwitch("ZUND"); };
+        rbSumma.onClick = function () { requestModeSwitch("SUMMA"); };
 
         // ZUND: source radio buttons update gapGZ enabled state
         if (isZ) {
@@ -998,6 +1065,8 @@ ZSM.UI = {
             // so guard against the not-yet-wired state — it re-runs after init.
             if (!numericRows) return true;
             var allValid = true;
+            var invalidCount = 0;
+            var firstMsg = "";
             for (var i = 0; i < numericRows.length; i++) {
                 var nr = numericRows[i];
                 if (!nr.row || !nr.row.inp) continue;
@@ -1008,9 +1077,87 @@ ZSM.UI = {
                 }
                 var ok = isValueInRange(nr.row.inp, nr.rule);
                 markFieldValidity(nr.row.inp, ok);
-                if (!ok) allValid = false;
+                if (!ok) {
+                    allValid = false;
+                    invalidCount++;
+                    if (!firstMsg) {
+                        // scaleN's rule label is the bare "1:" ratio prefix — swap
+                        // it for the checkbox caption so the message reads sensibly.
+                        var lblKey = nr.rule && nr.rule.label;
+                        if (lblKey === "SCALE_FIELD_LABEL") lblKey = "SCALE_CHECKBOX";
+                        var lbl = (lblKey && l[lblKey]) ? l[lblKey] : "";
+                        lbl = String(lbl).replace(/:\s*$/, "");
+                        firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl, nr.rule.min, nr.rule.max);
+                    }
+                }
             }
+
+            // Layer-name live validation (V4): a mapping row with a colour but a
+            // blank name is incomplete and render would silently drop it. Flag it
+            // live (red) and gate Generate, mirroring the numeric fields — instead
+            // of only catching it via a modal alert on Generate. Skipped in
+            // marks-only mode, where the mapping table is ignored entirely.
+            var marksOnlyOn = false;
+            try { marksOnlyOn = cbMarksOnly.value; } catch (em) {}
+            for (var li = 0; li < layRows.length; li++) {
+                var etL = layRows[li].etLayer;
+                if (!etL) continue;
+                if (marksOnlyOn) { markFieldValidity(etL, true); continue; }
+                var nameOk = String(etL.text || "").replace(/^\s+|\s+$/g, "") !== "";
+                markFieldValidity(etL, nameOk);
+                if (!nameOk) {
+                    allValid = false;
+                    invalidCount++;
+                    if (!firstMsg) firstMsg = l.STATUS_LAYER_NAME;
+                }
+            }
+
             try { btnOk.enabled = allValid; } catch (e) {}
+
+            // Status line. When everything is valid it no longer sits empty (N1) —
+            // it shows a subtle, default-coloured context summary (mode · scale ·
+            // layer count) so the reserved row carries meaning. When invalid it
+            // turns amber; with more than one bad field it aggregates the count
+            // (N3) instead of naming only the first. Graphics access is wrapped —
+            // Adobe's API can throw before the control is realised.
+            try {
+                var msg, amber;
+                if (allValid) {
+                    amber = false;
+                    var ctx = mode;
+                    var sN  = readScaleN();
+                    if (sN > 1) ctx += " · 1:" + sN;
+                    var marksOnlyCtx = false;
+                    try { marksOnlyCtx = cbMarksOnly.value; } catch (emc) {}
+                    msg = marksOnlyCtx
+                        ? ZSM.L.format(l.STATUS_OK_MARKS, ctx)
+                        : ZSM.L.format(l.STATUS_OK, ctx, layRows.length);
+                } else {
+                    amber = true;
+                    msg = (invalidCount > 1)
+                        ? ("\u26A0 " + ZSM.L.format(l.STATUS_RANGE_MULTI, invalidCount))
+                        : ("\u26A0 " + (firstMsg || l.STATUS_INVALID));
+                }
+                stStatus.text = msg;
+                var sg = stStatus.graphics;
+                if (sg && sg.newPen) {
+                    // Capture the realised default pen once. It is often null on
+                    // first read, so the valid branch must NOT gate on it — it has
+                    // to set an explicit pen every time, otherwise the amber pen
+                    // from a previous error state is never overwritten and the
+                    // status text stays orange after the error clears (matches the
+                    // per-field fallback at the geometry rows).
+                    if (stStatus._zsmDefPen === undefined) stStatus._zsmDefPen = sg.foregroundColor || null;
+                    if (!amber) {
+                        sg.foregroundColor = stStatus._zsmDefPen
+                            ? stStatus._zsmDefPen
+                            : sg.newPen(sg.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
+                    } else {
+                        sg.foregroundColor = sg.newPen(sg.PenType.SOLID_COLOR, [0.93, 0.45, 0.20, 1.0], 1);
+                    }
+                }
+            } catch (e) {}
+
             return allValid;
         }
 
@@ -1042,7 +1189,7 @@ ZSM.UI = {
             }
             if (rColor && rColor.ddl) {
                 rColor.ddl.onChange = (function (orig) {
-                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                    return function () { if (orig) orig(); if (rColor.refresh) rColor.refresh(); refreshModifiedIndicator(); };
                 })(rColor.ddl.onChange);
             }
             // Layer rows: hook into existing handlers via wrapper.
@@ -1052,6 +1199,7 @@ ZSM.UI = {
                 if (origAdd) origAdd();
                 wireLayerRows();
                 refreshModifiedIndicator();
+                liveValidateAll();   // recompute footer count after a row is added
             };
         };
 
@@ -1066,17 +1214,22 @@ ZSM.UI = {
                 // existing ones are skipped.
                 if (row._zsmWired) continue;
                 row._zsmWired = true;
-                row.etLayer.onChange   = refreshModifiedIndicator;
-                row.etLayer.onChanging = refreshModifiedIndicator;
+                row.etLayer.onChange   = function () { refreshModifiedIndicator(); liveValidateAll(); };
+                row.etLayer.onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
                 // ddLayer's onChange already updates etLayer; chain refresh after
                 var origDD = row.ddLayer.onChange;
                 row.ddLayer.onChange = (function (orig) {
                     return function () { if (orig) orig(); refreshModifiedIndicator(); };
                 })(origDD);
-                row.ddColor.onChange = refreshModifiedIndicator;
+                row.ddColor.onChange = (function (rw) {
+                    return function () {
+                        ZSM.UI.setSwatch(rw.swColor, ZSM.UI.ddlValue(rw.ddColor), docData.swatchRGB);
+                        refreshModifiedIndicator();
+                    };
+                })(row);
                 var origRm = row.btnRemove.onClick;
                 row.btnRemove.onClick = (function (orig) {
-                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); liveValidateAll(); };
                 })(origRm);
             }
         };
@@ -1097,6 +1250,11 @@ ZSM.UI = {
             w.layout.layout(true);
             w.location = [docData._lastBounds.x, docData._lastBounds.y];
         }
+
+        // Initial keyboard focus on the first editable geometry field so Tab
+        // walks the dialog in creation order (N9: explicit, predictable focus
+        // start instead of relying on the platform default).
+        try { (isZ ? rGapGZ : rGapZO).inp.active = true; } catch (e) {}
 
         w.show();
 
@@ -1121,13 +1279,112 @@ ZSM.UI = {
         var g  = parent.add("group");
         g.alignment = "fill";
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 160;
+        st.preferredSize.width = 150;
         if (tip) st.helpTip = tip;
-        var et = g.add("edittext", undefined, String(value));
-        et.preferredSize.width = 60;
+        // Value sub-group with a FIXED width so its right edge lines up with the
+        // colour dropdown below it (N5 — consistent right edges in the geometry
+        // panel). Holds the input, the "mm" unit and the greyed range hint.
+        var vg = g.add("group");
+        vg.orientation   = "row";
+        vg.alignChildren = ["left", "center"];
+        vg.spacing       = 6;
+        vg.preferredSize.width = 130;
+        var et = vg.add("edittext", undefined, String(value));
+        et.preferredSize.width = 56;
         if (tip) et.helpTip = tip;
-        g.add("statictext", undefined, "mm");
+        vg.add("statictext", undefined, "mm");
         return { inp: et, group: g };
+    },
+
+    /**
+     * Converts an Illustrator colour object to an [r,g,b] triple (0–255).
+     * Best-effort across CMYK / RGB / Gray / Spot. Returns null if unreadable.
+     * Powers the colour-swatch previews next to the colour dropdowns (M1).
+     * @param {Object} col - Illustrator Color object.
+     * @returns {Array|null} [r,g,b] 0–255, or null.
+     */
+    colorToRGB: function (col) {
+        try {
+            if (!col) return null;
+            var t = col.typename;
+            if (t === "RGBColor")  return [col.red, col.green, col.blue];
+            if (t === "GrayColor") { var v = Math.round(255 * (1 - col.gray / 100)); return [v, v, v]; }
+            if (t === "CMYKColor") {
+                var c = col.cyan / 100, m = col.magenta / 100, y = col.yellow / 100, k = col.black / 100;
+                return [
+                    Math.round(255 * (1 - c) * (1 - k)),
+                    Math.round(255 * (1 - m) * (1 - k)),
+                    Math.round(255 * (1 - y) * (1 - k))
+                ];
+            }
+            if (t === "SpotColor") return ZSM.UI.colorToRGB(col.spot.color);
+        } catch (e) {}
+        return null;
+    },
+
+    /**
+     * Creates a 16×16 colour-swatch preview control (M1). Uses an iconbutton
+     * with a custom onDraw so no temp image files are needed. The painted value
+     * lives in `._rgb`:
+     *   • [r,g,b] (0–255) → solid fill
+     *   • "REG"           → white tile + black crosshair (the [Registration] colour)
+     *   • null / other    → grey tile + red slash (missing / unresolved)
+     * All drawing is wrapped — a graphics failure must never break the dialog.
+     * @param {Object} parent - ScriptUI container.
+     * @returns {Object} the swatch control.
+     */
+    makeSwatch: function (parent) {
+        var sw;
+        try {
+            sw = parent.add("iconbutton", undefined, undefined, { style: "toolbutton", toggle: false });
+        } catch (e) {
+            sw = parent.add("iconbutton", undefined, undefined);
+        }
+        sw.preferredSize = [16, 16];
+        sw.minimumSize   = [16, 16];
+        sw.maximumSize   = [16, 16];
+        sw._rgb = null;
+        sw.onDraw = function () {
+            try {
+                var g = this.graphics;
+                var w = this.size[0], h = this.size[1];
+                var border = g.newPen(g.PenType.SOLID_COLOR, [0.45, 0.45, 0.45, 1], 1);
+                var val = this._rgb;
+                if (val === "REG") {
+                    var wb = g.newBrush(g.BrushType.SOLID_COLOR, [1, 1, 1, 1]);
+                    g.newPath(); g.rectPath(0, 0, w, h); g.fillPath(wb);
+                    var cp = g.newPen(g.PenType.SOLID_COLOR, [0, 0, 0, 1], 1);
+                    g.newPath(); g.moveTo(w / 2, 2); g.lineTo(w / 2, h - 2); g.strokePath(cp);
+                    g.newPath(); g.moveTo(2, h / 2); g.lineTo(w - 2, h / 2); g.strokePath(cp);
+                } else if (val && val.length === 3) {
+                    var b = g.newBrush(g.BrushType.SOLID_COLOR, [val[0] / 255, val[1] / 255, val[2] / 255, 1]);
+                    g.newPath(); g.rectPath(0, 0, w, h); g.fillPath(b);
+                } else {
+                    var gb = g.newBrush(g.BrushType.SOLID_COLOR, [0.82, 0.82, 0.82, 1]);
+                    g.newPath(); g.rectPath(0, 0, w, h); g.fillPath(gb);
+                    var rp = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.25, 0.2, 1], 1);
+                    g.newPath(); g.moveTo(2, h - 2); g.lineTo(w - 2, 2); g.strokePath(rp);
+                }
+                g.newPath(); g.rectPath(0, 0, w - 1, h - 1); g.strokePath(border);
+            } catch (e) {}
+        };
+        return sw;
+    },
+
+    /**
+     * Repaints a swatch (from makeSwatch) to show colour `name`, resolved through
+     * `rgbMap` (name → [r,g,b] | "REG"). Toggling visibility forces onDraw to
+     * re-run — ScriptUI has no direct "invalidate" call.
+     * @param {Object} sw     - Swatch control.
+     * @param {string} name   - Colour name to display.
+     * @param {Object} rgbMap - name → colour map.
+     */
+    setSwatch: function (sw, name, rgbMap) {
+        if (!sw) return;
+        var val = null;
+        if (name && rgbMap && rgbMap[name] !== undefined) val = rgbMap[name];
+        sw._rgb = val;
+        try { sw.hide(); sw.show(); } catch (e) {}
     },
 
     /**
@@ -1137,19 +1394,25 @@ ZSM.UI = {
      * @param {string} value       - Initial swatch name.
      * @param {Array}  swatchNames - List from ZSM.Draw.getSwatchNames().
      * @param {string} tip         - HelpTip string.
-     * @returns {Object} {ddl: DropDownList, group: Group}
+     * @param {Object} rgbMap      - Optional name→RGB map; when present a colour
+     *                               swatch preview is drawn before the dropdown (M1).
+     * @returns {Object} {ddl, group, sw, refresh}
      */
-    addColorRow: function (parent, label, value, swatchNames, tip) {
+    addColorRow: function (parent, label, value, swatchNames, tip, rgbMap) {
         var g  = parent.add("group");
         g.alignment = "fill";
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 160;
+        st.preferredSize.width = 150;
         if (tip) st.helpTip = tip;
+        var sw = rgbMap ? this.makeSwatch(g) : null;
         var ddl = g.add("dropdownlist", undefined, swatchNames);
-        ddl.preferredSize.width = 130;
+        ddl.preferredSize.width = sw ? 112 : 130;   // swatch+gap+ddl keeps the right edge aligned
         if (tip) ddl.helpTip = tip;
         this.selectDDL(ddl, value || "[Registration]");
-        return { ddl: ddl, group: g };
+        var self = this;
+        var refresh = function () { if (sw) self.setSwatch(sw, self.ddlValue(ddl), rgbMap); };
+        refresh();
+        return { ddl: ddl, group: g, sw: sw, refresh: refresh };
     },
 
     /**

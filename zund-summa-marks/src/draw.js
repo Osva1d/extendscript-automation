@@ -712,6 +712,33 @@ ZSM.Draw = {
     },
 
     /**
+     * Returns a map of spot-color name → [r,g,b,1] (0–1 floats) for swatch
+     * preview chips in the layer-mapping UI. Registration maps to the sentinel
+     * "REG" so the UI can render it with a distinct (e.g. ring) treatment.
+     * RGB conversion is delegated to ZSM.UI.colorToRGB.
+     *
+     * @returns {Object} name → "REG" | [r,g,b,1].
+     */
+    getSwatchRGBMap: function () {
+        var map = {};
+        var regName = this.getRegistrationName();
+        map[regName] = "REG";
+        map["[Registration]"] = "REG";
+        try {
+            var spots = app.activeDocument.spots;
+            for (var i = 0; i < spots.length; i++) {
+                try {
+                    var n = spots[i].name;
+                    if (n.charAt(0) === "[") continue;
+                    var rgb = ZSM.UI.colorToRGB(spots[i].color);
+                    if (rgb) map[n] = rgb;
+                } catch (e2) {}
+            }
+        } catch (e) {}
+        return map;
+    },
+
+    /**
      * Returns all non-system swatch names from the active document,
      * prepended with [Registration].
      * Used to populate the spot color dropdown in layer mapping UI.
