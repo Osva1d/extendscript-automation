@@ -228,12 +228,20 @@ GM.L = (function () {
             // Edge fields
             COUNT: "Count:",
             SPACING: "Spacing:",
+            EDGE_COUNT_HDR: "Count",
+            EDGE_SPACING_HDR: "Spacing",
+            OFFSET_LABEL: "Edge offset:",
+            MIRROR_TOP: "= Top",
+            MIRROR_LEFT: "= Left",
+            MIRROR_TOP_ACTIVE: "mirrors top",
+            MIRROR_LEFT_ACTIVE: "mirrors left",
 
             // Mark panel
             MARK_PANEL: "Mark",
             UNIT_LABEL: "Units:",
             TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
+            MARK_SHAPE_LABEL: "Shape:",
             MARK_CIRCLE: "Circle",
             MARK_CROSS: "Cross",
             REG_WEIGHT: "Reg. stroke:",
@@ -263,6 +271,8 @@ GM.L = (function () {
             ZONES_ENABLE: "Densify at corners",
             ZONES_COUNT: "Count:",
             ZONES_PITCH: "Pitch:",
+            ZONES_FIRST: "— first",
+            ZONES_MARKS_PITCH: "marks, pitch",
             TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
             TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
 
@@ -345,12 +355,20 @@ GM.L = (function () {
             // Edge fields
             COUNT: "Počet ok:",
             SPACING: "Rozestup:",
+            EDGE_COUNT_HDR: "Počet ok",
+            EDGE_SPACING_HDR: "Rozestup",
+            OFFSET_LABEL: "Odsazení od kraje:",
+            MIRROR_TOP: "= Horní",
+            MIRROR_LEFT: "= Levá",
+            MIRROR_TOP_ACTIVE: "zrcadlí horní",
+            MIRROR_LEFT_ACTIVE: "zrcadlí levou",
 
             // Mark panel
             MARK_PANEL: "Značka",
-            UNIT_LABEL: "Měrné jednotky:",
+            UNIT_LABEL: "Jednotky:",
             TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
+            MARK_SHAPE_LABEL: "Tvar:",
             MARK_CIRCLE: "Kruh",
             MARK_CROSS: "Kříž",
             REG_WEIGHT: "Reg. tah:",
@@ -380,6 +398,8 @@ GM.L = (function () {
             ZONES_ENABLE: "Zhustit u rohů",
             ZONES_COUNT: "Počet:",
             ZONES_PITCH: "Rozteč:",
+            ZONES_FIRST: "— prvních",
+            ZONES_MARKS_PITCH: "značek, rozteč",
             TIP_ZONES: "Prvních N značek od každého rohu použije tuto rozteč; zbytek jede podle rozteče hrany/cesty.",
             TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
 
@@ -1757,44 +1777,62 @@ GM.UI = {
      * @param {string} [mirrorTip] - Mirror checkbox helpTip.
      * @returns {Object} Edge panel API.
      */
-    buildEdgePanel: function (parent, label, defaultCfg, mirrorLabel, mirrorTip) {
-        var grp = parent.add("group");
-        grp.orientation = "column";
-        grp.alignChildren = ["left", "top"];
-        grp.spacing = 6;
+    buildEdgePanel: function (parent, label, defaultCfg, mirrorLabel, mirrorTip, mirrorActiveText) {
+        // One grid row of the Edges panel. Columns are fixed-width so all four
+        // edge rows (and the header above them) line up:
+        //   col1 = edge enable checkbox  | col2 = mirror cell (checkbox or empty)
+        //   col3 = Count radio + field   | col4 = Spacing radio + field
+        // Radios are textless — the "Count"/"Spacing" captions live once in the
+        // header row built by buildDialog. When an edge is mirrored, its value
+        // cells collapse and a "mirrors top/left" note shows instead.
+        var COL1_W = 72, COL2_W = 72;
+        var row = parent.add("group");
+        row.orientation = "row";
+        row.alignChildren = ["left", "center"];
+        row.spacing = 6;
 
-        var api = { onChange: function () {} };
+        var api = { onChange: function () {}, onMirrorToggle: function () {} };
 
+        var c1 = row.add("group");
+        c1.orientation = "row"; c1.alignChildren = ["left", "center"];
+        c1.preferredSize.width = COL1_W;
+        var cb = c1.add("checkbox", undefined, label);
+        cb.value = defaultCfg.enabled;
+        cb.helpTip = GM.L.TIP_EDGE_ENABLE;
+
+        // Mirror cell exists on every row (empty on Top/Left) to keep the
+        // value columns aligned across all four rows.
+        var c2 = row.add("group");
+        c2.orientation = "row"; c2.alignChildren = ["left", "center"];
+        c2.preferredSize.width = COL2_W;
         var mirrorCB = null;
         if (mirrorLabel) {
-            mirrorCB = grp.add("checkbox", undefined, mirrorLabel);
+            mirrorCB = c2.add("checkbox", undefined, mirrorLabel);
             mirrorCB.value = false;
             mirrorCB.helpTip = mirrorTip || "";
         }
 
-        var row = grp.add("group");
-        row.orientation = "row";
-        row.alignChildren = ["left", "center"];
-        row.spacing = 8;
-
-        var cb = row.add("checkbox", undefined, label);
-        cb.value = defaultCfg.enabled;
-        cb.helpTip = GM.L.TIP_EDGE_ENABLE;
-        cb.preferredSize.width = 64;
-
-        var numRB = row.add("radiobutton", undefined, GM.L.COUNT);
+        var c3 = row.add("group");
+        c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = 4;
+        var numRB = c3.add("radiobutton", undefined, "");
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
-        var numIn = row.add("edittext", undefined, String(defaultCfg.number));
-        numIn.preferredSize.width = 50;
+        var numIn = c3.add("edittext", undefined, String(defaultCfg.number));
+        numIn.preferredSize.width = 44;
         numIn.helpTip = GM.L.TIP_COUNT;
 
-        var spcRB = row.add("radiobutton", undefined, GM.L.SPACING);
+        var c4 = row.add("group");
+        c4.orientation = "row"; c4.alignChildren = ["left", "center"]; c4.spacing = 4;
+        var spcRB = c4.add("radiobutton", undefined, "");
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
-        var spcIn = row.add("edittext", undefined, String(defaultCfg.spacing));
+        var spcIn = c4.add("edittext", undefined, String(defaultCfg.spacing));
         spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
+
+        // Shown in place of the value cells while mirrored ("mirrors top/left").
+        var mirrorText = row.add("statictext", undefined, mirrorActiveText || "");
+        mirrorText.enabled = false;
 
         var _prevEnabled = defaultCfg.enabled;
 
@@ -1805,18 +1843,29 @@ GM.UI = {
             spcIn.enabled = state && spcRB.value;
         }
 
+        // Collapse the value cells to zero width when mirrored — a hidden cell
+        // otherwise keeps its horizontal slot and shoves the note to the right
+        // (same ScriptUI quirk as the mode-panel gap fix).
+        function showValueCells(shown) {
+            c3.visible = shown; c4.visible = shown;
+            c3.maximumSize.width = shown ? 10000 : 0;
+            c4.maximumSize.width = shown ? 10000 : 0;
+            mirrorText.visible = !shown && !!mirrorText.text;
+        }
+
         // Gate the whole row by mirror state; cb itself disabled when mirrored.
         function refresh() {
             var mirrored = !!(mirrorCB && mirrorCB.value);
             cb.enabled = !mirrored;
             setModeEnabled(!mirrored && cb.value);
+            showValueCells(!mirrored);
         }
 
         // Explicit radio exclusivity. ScriptUI only auto-groups radio buttons
         // that are CONSECUTIVE within the same container; here numIn sits
-        // between numRB and spcRB, which breaks the implicit group — without
-        // this, clicking "Spacing" leaves numRB.value === true and gather()
-        // always reports count mode (regression from the cycle-2 compact row).
+        // between numRB and spcRB (separate cells), which breaks the implicit
+        // group — without this, clicking "Spacing" leaves numRB.value === true
+        // and gather() always reports count mode.
         numRB.onClick = function () {
             numRB.value = true; spcRB.value = false;
             numIn.enabled = true; spcIn.enabled = false;
@@ -1838,13 +1887,14 @@ GM.UI = {
                 if (mirrorCB.value) { _prevEnabled = cb.value; cb.value = false; }
                 else { cb.value = _prevEnabled; }
                 refresh();
+                api.onMirrorToggle();   // relayout — value cells collapsed/restored
                 api.onChange();
             };
         }
 
         refresh();
 
-        api.panel = grp;
+        api.panel = row;
         api.cb = cb;
         api.mirrorCB = mirrorCB;
         api.numRB = numRB; api.numIn = numIn; api.spcRB = spcRB; api.spcIn = spcIn;
@@ -1956,6 +2006,15 @@ GM.UI = {
         pathRB.enabled = pathOk;
         pathRB.helpTip = pathOk ? "" : GM.L.TIP_MODE_PATH_DISABLED;
 
+        // Units — global switch lives at the top. Fill spacer pushes it right.
+        var modeSpacer = modePanel.add("group");
+        modeSpacer.alignment = ["fill", "center"];
+        modePanel.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = modePanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        unitsDDL.preferredSize.width = 110;
+        unitsDDL.selection = 0;
+        unitsDDL.helpTip = GM.L.TIP_UNITS;
+
         // =================================================================
         // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
@@ -1968,25 +2027,35 @@ GM.UI = {
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
         offGrp.alignChildren = ["left", "center"];
-        offGrp.spacing = 8;
-        offGrp.add("statictext", undefined, GM.L.OFFSET_X);
+        offGrp.spacing = 6;
+        offGrp.add("statictext", undefined, GM.L.OFFSET_LABEL);
+        offGrp.add("statictext", undefined, "↔");
         var offsetXIn = offGrp.add("edittext", undefined, String(defCfg.offsetX));
-        offsetXIn.preferredSize.width = 50;
+        offsetXIn.preferredSize.width = 44;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
-        offGrp.add("statictext", undefined, GM.L.OFFSET_Y);
+        offGrp.add("statictext", undefined, "↕");
         var offsetYIn = offGrp.add("edittext", undefined, String(defCfg.offsetY));
-        offsetYIn.preferredSize.width = 50;
+        offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
         GM.UI.addSeparator(edgesPanel);
 
+        // Column header — "Count"/"Spacing" captions sit once over the value
+        // columns. Spacer width = buildEdgePanel col1 (72) + col2 (72) + spacing.
+        var hdrRow = edgesPanel.add("group");
+        hdrRow.orientation = "row";
+        hdrRow.alignChildren = ["left", "center"];
+        hdrRow.spacing = 6;
+        var hdrSpace = hdrRow.add("group");
+        hdrSpace.preferredSize.width = 72 + 72 + 6;
+        var hdrCount = hdrRow.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
+        hdrCount.preferredSize.width = 90;
+        hdrRow.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
+
         var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
         var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
-
-        GM.UI.addSeparator(edgesPanel);
-
-        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
-        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
+        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.MIRROR_TOP,  GM.L.TIP_MIRROR_BOTTOM, GM.L.MIRROR_TOP_ACTIVE);
+        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.MIRROR_LEFT, GM.L.TIP_MIRROR_RIGHT,  GM.L.MIRROR_LEFT_ACTIVE);
 
         // =================================================================
         // Path Panel (replaces Edges in path mode)
@@ -2062,11 +2131,11 @@ GM.UI = {
         var zoneCB = zonesPanel.add("checkbox", undefined, GM.L.ZONES_ENABLE);
         zoneCB.value = defCfg.cornerZone.enabled;
         zoneCB.helpTip = GM.L.TIP_ZONES;
-        zonesPanel.add("statictext", undefined, GM.L.ZONES_COUNT);
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_FIRST);
         var zoneCountIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.count));
-        zoneCountIn.preferredSize.width = 50;
+        zoneCountIn.preferredSize.width = 44;
         zoneCountIn.helpTip = GM.L.TIP_ZONES;
-        zonesPanel.add("statictext", undefined, GM.L.ZONES_PITCH);
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_MARKS_PITCH);
         var zonePitchIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.pitch));
         zonePitchIn.preferredSize.width = 50;
         zonePitchIn.helpTip = GM.L.TIP_ZONES;
@@ -2117,11 +2186,15 @@ GM.UI = {
         mRow1.orientation = "row";
         mRow1.alignChildren = ["left", "center"];
         mRow1.spacing = 8;
-        mRow1.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = mRow1.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
-        unitsDDL.preferredSize.width = 130;
-        unitsDDL.selection = 0;
-        unitsDDL.helpTip = GM.L.TIP_UNITS;
+        mRow1.add("statictext", undefined, GM.L.MARK_SHAPE_LABEL);
+        var circleCB = mRow1.add("checkbox", undefined, GM.L.MARK_CIRCLE);
+        circleCB.value = defCfg.markCircle;
+        circleCB.helpTip = GM.L.TIP_MARK_SHAPE;
+        var crossCB = mRow1.add("checkbox", undefined, GM.L.MARK_CROSS);
+        crossCB.value = defCfg.markCross;
+        crossCB.helpTip = GM.L.TIP_MARK_SHAPE;
+        var mShapeSpacer = mRow1.add("group");
+        mShapeSpacer.alignment = ["fill", "center"];
         mRow1.add("statictext", undefined, GM.L.SIZE_LABEL);
         var sizeInput = mRow1.add("edittext", undefined, String(defCfg.markSize));
         sizeInput.preferredSize.width = 60;
@@ -2130,24 +2203,13 @@ GM.UI = {
         var mRow2 = markPanel.add("group");
         mRow2.orientation = "row";
         mRow2.alignChildren = ["left", "center"];
-        mRow2.spacing = 12;
-        var circleCB = mRow2.add("checkbox", undefined, GM.L.MARK_CIRCLE);
-        circleCB.value = defCfg.markCircle;
-        circleCB.helpTip = GM.L.TIP_MARK_SHAPE;
-        var crossCB = mRow2.add("checkbox", undefined, GM.L.MARK_CROSS);
-        crossCB.value = defCfg.markCross;
-        crossCB.helpTip = GM.L.TIP_MARK_SHAPE;
-
-        var mRow3 = markPanel.add("group");
-        mRow3.orientation = "row";
-        mRow3.alignChildren = ["left", "center"];
-        mRow3.spacing = 8;
-        mRow3.add("statictext", undefined, GM.L.REG_WEIGHT);
-        var regWIn = mRow3.add("edittext", undefined, String(defCfg.regWeight));
+        mRow2.spacing = 8;
+        mRow2.add("statictext", undefined, GM.L.REG_WEIGHT);
+        var regWIn = mRow2.add("edittext", undefined, String(defCfg.regWeight));
         regWIn.preferredSize.width = 50;
         regWIn.helpTip = GM.L.TIP_REG_WEIGHT;
-        mRow3.add("statictext", undefined, GM.L.HALO_WEIGHT);
-        var haloWIn = mRow3.add("edittext", undefined, String(defCfg.haloWeight));
+        mRow2.add("statictext", undefined, GM.L.HALO_WEIGHT);
+        var haloWIn = mRow2.add("edittext", undefined, String(defCfg.haloWeight));
         haloWIn.preferredSize.width = 50;
         haloWIn.helpTip = GM.L.TIP_HALO_WEIGHT;
 
@@ -2363,6 +2425,10 @@ GM.UI = {
         bottomUI.onChange = onUserChange;
         rightUI.onChange  = onUserChange;
 
+        // Mirror toggle collapses/restores the value cells → needs a relayout.
+        bottomUI.onMirrorToggle = function () { dlg.layout.layout(true); };
+        rightUI.onMirrorToggle  = function () { dlg.layout.layout(true); };
+
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)
         // =================================================================
@@ -2487,6 +2553,7 @@ GM.UI = {
             window: dlg,
             gatherAll: gatherAll,
             modeUI: { artboardRB: artboardRB, pathRB: pathRB },
+            edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
             pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn },
             zonesUI: { enableCB: zoneCB, countIn: zoneCountIn, pitchIn: zonePitchIn }
         };
