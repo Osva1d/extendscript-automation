@@ -65,7 +65,7 @@ GM.UI = {
         // Radios are textless — the "Count"/"Spacing" captions live once in the
         // header row built by buildDialog. Mirroring is handled in buildDialog by
         // hiding the opposite row, so this row carries no mirror controls.
-        var COL1_W = 118, COL_NUM = 84;
+        var COL1_W = 118, COL_NUM = 84, COL_SPC = 90;
         var row = parent.add("group");
         row.orientation = "row";
         row.alignChildren = ["left", "center"];
@@ -73,21 +73,18 @@ GM.UI = {
 
         var api = { onChange: function () {} };
 
+        // Every cell is hard-locked to a shared width (same values used by the
+        // header) so columns 2/3 start at the same x on all four rows.
         var c1 = row.add("group");
         c1.orientation = "row"; c1.alignChildren = ["left", "center"];
-        // Pin width: a checkbox stretches its cell to the label text, so without
-        // a hard cap the differing edge names (Horní/Dolní/Levá/Pravá) shift the
-        // value columns. preferredSize + maximumSize together lock it.
-        c1.preferredSize.width = COL1_W;
-        c1.maximumSize.width = COL1_W;
+        GM.UI.lockW(c1, COL1_W);
         var cb = c1.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
 
         var c2 = row.add("group");
         c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = 4;
-        c2.preferredSize.width = COL_NUM;
-        c2.maximumSize.width = COL_NUM;
+        GM.UI.lockW(c2, COL_NUM);
         var numRB = c2.add("radiobutton", undefined, "");
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
@@ -97,6 +94,7 @@ GM.UI = {
 
         var c3 = row.add("group");
         c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = 4;
+        GM.UI.lockW(c3, COL_SPC);
         var spcRB = c3.add("radiobutton", undefined, "");
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
@@ -165,6 +163,20 @@ GM.UI = {
         };
         api.getConvertFields = function () { return [spcIn]; };
         return api;
+    },
+
+    /**
+     * Hard-locks a control's width. ScriptUI does not keep sibling groups in
+     * columns on its own — only identical, fully-pinned cell widths do. All
+     * three dimensions are needed: without minimumSize the cell collapses below
+     * preferredSize; without maximumSize a checkbox stretches it to its label.
+     * @param {Object} ctrl - ScriptUI control/group.
+     * @param {number} w - Locked width in px.
+     */
+    lockW: function (ctrl, w) {
+        ctrl.preferredSize.width = w;
+        ctrl.minimumSize.width = w;
+        ctrl.maximumSize.width = w;
     },
 
     /**
@@ -298,17 +310,20 @@ GM.UI = {
 
         // Column header — "Count"/"Spacing" captions sit once over the value
         // columns. Spacer width = buildEdgePanel c1 (118) + row spacing (6).
+        // Header uses the SAME locked cell structure as an EdgeRow (118/84/90)
+        // so captions sit over their columns. The ~18px left margin shifts each
+        // caption off the radio dot and over the numeric field.
         var hdrRow = edgesPanel.add("group");
         hdrRow.orientation = "row";
         hdrRow.alignChildren = ["left", "center"];
         hdrRow.spacing = 6;
-        var hdrSpace = hdrRow.add("group");
-        hdrSpace.preferredSize.width = 118;   // = EdgeRow c1 width → captions line up
-        hdrSpace.maximumSize.width = 118;
-        var hdrCount = hdrRow.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
-        hdrCount.preferredSize.width = 84;     // = EdgeRow c2 width
-        hdrCount.maximumSize.width = 84;
-        hdrRow.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
+        var h1 = hdrRow.add("group"); GM.UI.lockW(h1, 118);   // empty, but locked
+        var h2 = hdrRow.add("group"); GM.UI.lockW(h2, 84);
+        h2.alignChildren = ["left", "center"]; h2.margins = [18, 0, 0, 0];
+        h2.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
+        var h3 = hdrRow.add("group"); GM.UI.lockW(h3, 90);
+        h3.alignChildren = ["left", "center"]; h3.margins = [18, 0, 0, 0];
+        h3.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
 
         // Row order: top, bottom, left, right — pairs adjacent so the mirror
         // relationship reads top-to-bottom.
@@ -458,10 +473,11 @@ GM.UI = {
         // actually shrink the window (one pass / panel-only layout leaves the
         // window at its old height with empty space).
         function relayoutDialog() {
-            edgesPanel.preferredSize.height = -1;
-            dlg.layout.layout(true);
-            dlg.layout.resize();
-            dlg.layout.layout(true);
+            edgesPanel.preferredSize.height = -1;   // release panel height
+            dlg.preferredSize.height = -1;          // release window height
+            dlg.layout.layout(true);                // recompute preferred
+            dlg.size = dlg.preferredSize;           // shrink the window itself
+            dlg.layout.layout(true);                // second pass settles it
         }
 
         function refreshModeUI() {
