@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     6.0.0
  * Author:      Osva1d
- * Updated:     2026-06-21
+ * Updated:     2026-06-22
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -1796,7 +1796,11 @@ GM.UI = {
 
         var c1 = row.add("group");
         c1.orientation = "row"; c1.alignChildren = ["left", "center"];
+        // Pin width: a checkbox stretches its cell to the label text, so without
+        // a hard cap the differing edge names (Horní/Dolní/Levá/Pravá) shift the
+        // value columns. preferredSize + maximumSize together lock it.
         c1.preferredSize.width = COL1_W;
+        c1.maximumSize.width = COL1_W;
         var cb = c1.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
@@ -1804,6 +1808,7 @@ GM.UI = {
         var c2 = row.add("group");
         c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = 4;
         c2.preferredSize.width = COL_NUM;
+        c2.maximumSize.width = COL_NUM;
         var numRB = c2.add("radiobutton", undefined, "");
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
@@ -2019,9 +2024,11 @@ GM.UI = {
         hdrRow.alignChildren = ["left", "center"];
         hdrRow.spacing = 6;
         var hdrSpace = hdrRow.add("group");
-        hdrSpace.preferredSize.width = 118 + 6;
+        hdrSpace.preferredSize.width = 118;   // = EdgeRow c1 width → captions line up
+        hdrSpace.maximumSize.width = 118;
         var hdrCount = hdrRow.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
-        hdrCount.preferredSize.width = 84;
+        hdrCount.preferredSize.width = 84;     // = EdgeRow c2 width
+        hdrCount.maximumSize.width = 84;
         hdrRow.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
 
         // Row order: top, bottom, left, right — pairs adjacent so the mirror
@@ -2038,8 +2045,28 @@ GM.UI = {
             showPanel(bottomUI.panel, !mirrorTopCB.value);
             showPanel(rightUI.panel, !mirrorLeftCB.value);
         }
-        mirrorTopCB.onClick  = function () { refreshMirrorRows(); dlg.layout.layout(true); onUserChange(); };
-        mirrorLeftCB.onClick = function () { refreshMirrorRows(); dlg.layout.layout(true); onUserChange(); };
+        // Seed the revealed edge from its source so un-mirroring isn't a jump
+        // from stale defaults. Only seeds values; the user can overwrite. (When
+        // mirror is on, main.js overrides the target from the source anyway.)
+        function seedFrom(srcUI, dstUI) {
+            dstUI.numIn.text = srcUI.numIn.text;
+            dstUI.spcIn.text = srcUI.spcIn.text;
+            dstUI.numRB.value = srcUI.numRB.value;
+            dstUI.spcRB.value = srcUI.spcRB.value;
+            dstUI.refresh();
+        }
+        mirrorTopCB.onClick = function () {
+            if (!mirrorTopCB.value) seedFrom(topUI, bottomUI);   // revealing Bottom
+            refreshMirrorRows();
+            relayoutDialog();
+            onUserChange();
+        };
+        mirrorLeftCB.onClick = function () {
+            if (!mirrorLeftCB.value) seedFrom(leftUI, rightUI);  // revealing Right
+            refreshMirrorRows();
+            relayoutDialog();
+            onUserChange();
+        };
         refreshMirrorRows();
 
         // =================================================================
@@ -2147,12 +2174,23 @@ GM.UI = {
             panel.preferredSize.height = shown ? -1 : 0;
         }
 
+        // Full window relayout after show/hide of panels or rows. Releasing the
+        // edges-panel height + a resize + a second layout pass makes ScriptUI
+        // actually shrink the window (one pass / panel-only layout leaves the
+        // window at its old height with empty space).
+        function relayoutDialog() {
+            edgesPanel.preferredSize.height = -1;
+            dlg.layout.layout(true);
+            dlg.layout.resize();
+            dlg.layout.layout(true);
+        }
+
         function refreshModeUI() {
             var pathMode = pathRB.value;
             showPanel(edgesPanel, !pathMode);
             showPanel(pathPanel, pathMode);
             refreshZonesEnabled();
-            dlg.layout.layout(true);
+            relayoutDialog();
             onUserChange();
         }
         artboardRB.onClick = function () { pathRB.value = false; artboardRB.value = true; refreshModeUI(); };
