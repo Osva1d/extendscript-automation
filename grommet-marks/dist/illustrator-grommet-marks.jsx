@@ -1786,11 +1786,12 @@ GM.UI = {
         // Radios are textless — the "Count"/"Spacing" captions live once in the
         // header row built by buildDialog. Mirroring is handled in buildDialog by
         // hiding the opposite row, so this row carries no mirror controls.
-        var COL1_W = 118, COL_NUM = 84, COL_SPC = 90;
+        var COL1_W = 72, COL_NUM = 78, COL_SPC = 90;
         var row = parent.add("group");
         row.orientation = "row";
         row.alignChildren = ["left", "center"];
         row.spacing = 6;
+        row.margins = 0;
 
         var api = { onChange: function () {} };
 
@@ -1996,7 +1997,7 @@ GM.UI = {
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
         edgesPanel.margins = 15;
-        edgesPanel.spacing = 10;
+        edgesPanel.spacing = 8;
 
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
@@ -2038,20 +2039,28 @@ GM.UI = {
         hdrRow.orientation = "row";
         hdrRow.alignChildren = ["left", "center"];
         hdrRow.spacing = 6;
-        var h1 = hdrRow.add("group"); GM.UI.lockW(h1, 118);   // empty, but locked
-        var h2 = hdrRow.add("group"); GM.UI.lockW(h2, 84);
-        h2.alignChildren = ["left", "center"]; h2.margins = [18, 0, 0, 0];
+        var h1 = hdrRow.add("group"); GM.UI.lockW(h1, 72);   // empty, but locked (= c1)
+        var h2 = hdrRow.add("group"); GM.UI.lockW(h2, 78);
+        h2.alignChildren = ["left", "center"]; h2.margins = [20, 0, 0, 0];
         h2.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
         var h3 = hdrRow.add("group"); GM.UI.lockW(h3, 90);
-        h3.alignChildren = ["left", "center"]; h3.margins = [18, 0, 0, 0];
+        h3.alignChildren = ["left", "center"]; h3.margins = [20, 0, 0, 0];
         h3.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
+
+        // Rows live in one tight column group (regular spacing, no inherited
+        // panel gaps) so vertical rhythm stays even as rows hide/show.
+        var edgeRowsGroup = edgesPanel.add("group");
+        edgeRowsGroup.orientation = "column";
+        edgeRowsGroup.alignChildren = ["left", "top"];
+        edgeRowsGroup.spacing = 7;
+        edgeRowsGroup.margins = 0;
 
         // Row order: top, bottom, left, right — pairs adjacent so the mirror
         // relationship reads top-to-bottom.
-        var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
-        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom);
-        var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
-        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right);
+        var topUI    = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_TOP,    defCfg.top);
+        var bottomUI = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_BOTTOM, defCfg.bottom);
+        var leftUI   = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_LEFT,   defCfg.left);
+        var rightUI  = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_RIGHT,  defCfg.right);
 
         // Mirror toggles hide the opposite row (collapse to zero height) and
         // relayout. Hiding keeps the row's values — gatherAll still reads them,
