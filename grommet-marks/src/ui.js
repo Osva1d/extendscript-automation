@@ -207,6 +207,11 @@ GM.UI = {
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
 
+        // Spacing scale — use these three tokens, not ad-hoc numbers.
+        var SP_TIGHT = 4;    // elements that belong together (icon ↔ its field)
+        var SP_GROUP = 8;    // items in a row, label → content, panel rows
+        var SP_SECT  = 16;   // independent choices, sections
+
         // =================================================================
         // Presets Panel
         // =================================================================
@@ -281,14 +286,18 @@ GM.UI = {
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
         offGrp.alignChildren = ["left", "center"];
-        offGrp.spacing = 6;
+        offGrp.spacing = SP_GROUP;
         offGrp.add("statictext", undefined, GM.L.OFFSET_LABEL);
-        offGrp.add("statictext", undefined, "↔");
-        var offsetXIn = offGrp.add("edittext", undefined, String(defCfg.offsetX));
+        var gX = offGrp.add("group");
+        gX.orientation = "row"; gX.alignChildren = ["left", "center"]; gX.spacing = SP_TIGHT;
+        gX.add("statictext", undefined, "↔");
+        var offsetXIn = gX.add("edittext", undefined, String(defCfg.offsetX));
         offsetXIn.preferredSize.width = 44;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
-        offGrp.add("statictext", undefined, "↕");
-        var offsetYIn = offGrp.add("edittext", undefined, String(defCfg.offsetY));
+        var gY = offGrp.add("group");
+        gY.orientation = "row"; gY.alignChildren = ["left", "center"]; gY.spacing = SP_TIGHT;
+        gY.add("statictext", undefined, "↕");
+        var offsetYIn = gY.add("edittext", undefined, String(defCfg.offsetY));
         offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
@@ -298,12 +307,14 @@ GM.UI = {
         var mirrorGrp = edgesPanel.add("group");
         mirrorGrp.orientation = "row";
         mirrorGrp.alignChildren = ["left", "center"];
-        mirrorGrp.spacing = 16;
+        mirrorGrp.spacing = SP_GROUP;
         mirrorGrp.add("statictext", undefined, GM.L.MIRROR_GROUP_LABEL);
-        var mirrorTopCB = mirrorGrp.add("checkbox", undefined, GM.L.MIRROR_TOP);
+        var mPair = mirrorGrp.add("group");
+        mPair.orientation = "row"; mPair.alignChildren = ["left", "center"]; mPair.spacing = SP_SECT;
+        var mirrorTopCB = mPair.add("checkbox", undefined, GM.L.MIRROR_TOP);
         mirrorTopCB.value = defCfg.bottomMirror;
         mirrorTopCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
-        var mirrorLeftCB = mirrorGrp.add("checkbox", undefined, GM.L.MIRROR_LEFT);
+        var mirrorLeftCB = mPair.add("checkbox", undefined, GM.L.MIRROR_LEFT);
         mirrorLeftCB.value = defCfg.rightMirror;
         mirrorLeftCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
 
