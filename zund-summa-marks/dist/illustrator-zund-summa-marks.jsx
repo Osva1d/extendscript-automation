@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.6.0
  * Author:      Osva1d
- * Updated:     2026-06-21
+ * Updated:     2026-06-23
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -292,6 +292,7 @@ ZSM.L = (function () {
             STATUS_INVALID:    "Fix the highlighted fields.",
             STATUS_RANGE:      "%s — allowed range %s–%s.",
             STATUS_LAYER_NAME: "Enter a name for every layer row.",
+            STATUS_DUP_COLOR:  "Colour %s is mapped to more than one layer — remove the duplicate.",
             STATUS_RANGE_MULTI: "%s fields out of range — fix the highlighted ones.",
             STATUS_OK:         "%s · layers: %s",
             STATUS_OK_MARKS:   "%s · marks only",
@@ -407,6 +408,7 @@ ZSM.L = (function () {
             STATUS_INVALID:    "Opravte zvýrazněná pole.",
             STATUS_RANGE:      "%s — povolený rozsah %s–%s.",
             STATUS_LAYER_NAME: "Zadejte název u každého řádku vrstvy.",
+            STATUS_DUP_COLOR:  "Barva %s je přiřazena více vrstvám — odeberte duplicitu.",
             STATUS_RANGE_MULTI: "%s pole mimo rozsah — opravte zvýrazněná.",
             STATUS_OK:         "%s · vrstvy: %s",
             STATUS_OK_MARKS:   "%s · pouze značky",
@@ -2161,6 +2163,31 @@ ZSM.Draw = {
     },
 
     /**
+     * True if the item lives on (or under) a reserved output layer — Regmarks
+     * (marks + their mode sublayers) or Trim. movePaths must never route FROM
+     * these: the marks and trim lines legitimately share the user's spot colours
+     * by design (e.g. white marks drawn in "Spot 1" alongside a "White" cut layer
+     * also mapped to "Spot 1"). A colour match alone must not pull them onto a
+     * cut layer, or a re-run would cannibalise the other mode's existing marks.
+     * Walks the ancestor layer chain because marks sit on a SUBLAYER, so
+     * item.layer is the sublayer (e.g. "Zünd"), not the top-level Regmarks.
+     *
+     * @param {PageItem} item - Path/compound to test.
+     * @returns {boolean} True if on Regmarks/Trim (or a sublayer of them).
+     * @private
+     */
+    _isOnReservedLayer: function (item) {
+        try {
+            var lay = item.layer;
+            while (lay && lay.typename === "Layer") {
+                if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
+                lay = lay.parent;
+            }
+        } catch (e) {}
+        return false;
+    },
+
+    /**
      * Moves all paths whose fill or stroke matches any of the given spot color
      * names (case-insensitive) to the target layer.
      * Uses a snapshot to avoid live-collection issues during iteration.
@@ -2190,6 +2217,7 @@ ZSM.Draw = {
                 // rather than risked — the safe default for a mutating op.
                 if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
                 if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
+                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
                 if (cp.pathItems.length === 0) continue;
 
                 // Match by first sub-path color (all sub-paths share the same color)
@@ -2222,6 +2250,10 @@ ZSM.Draw = {
                 // Skip items nested inside clipped groups — moving them out
                 // would break the group structure and trigger MRAP errors.
                 if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
+
+                // Never route FROM the marks (Regmarks) or Trim layers — they
+                // legitimately share the user's spot colours (see _isOnReservedLayer).
+                if (this._isOnReservedLayer(item)) continue;
 
                 // Skip items already moved as part of a CompoundPathItem
                 var alreadyMoved = false;
@@ -3612,6 +3644,31 @@ ZSM.UI = {
                 }
             }
 
+            // Duplicate-colour validation: the same spot colour mapped to two
+            // rows is a contradiction — movePaths routes ALL paths of that colour
+            // to whichever row renders last, silently emptying the other layer.
+            // No safe auto-resolution exists, so block Generate until the user
+            // removes the duplicate. canonColor normalises localized [Registration]
+            // aliases so the comparison is reliable across locales.
+            if (!marksOnlyOn) {
+                var seenColors = {};
+                var dupColorName = null;
+                for (var di = 0; di < layRows.length; di++) {
+                    var ddc = layRows[di].ddColor;
+                    if (!ddc) continue;
+                    var rawC = ZSM.UI.ddlValue(ddc);
+                    var canC = canonColor(rawC);
+                    if (!canC) continue;
+                    if (seenColors[canC]) { dupColorName = rawC; break; }
+                    seenColors[canC] = true;
+                }
+                if (dupColorName) {
+                    allValid = false;
+                    invalidCount++;
+                    if (!firstMsg) firstMsg = ZSM.L.format(l.STATUS_DUP_COLOR, dupColorName);
+                }
+            }
+
             try { btnOk.enabled = allValid; } catch (e) {}
 
             // Status line. When everything is valid it no longer sits empty (N1) —
@@ -3725,6 +3782,7 @@ ZSM.UI = {
                     return function () {
                         ZSM.UI.setSwatch(rw.swColor, ZSM.UI.ddlValue(rw.ddColor), docData.swatchRGB);
                         refreshModifiedIndicator();
+                        liveValidateAll();   // a colour change can create/clear a duplicate
                     };
                 })(row);
                 var origRm = row.btnRemove.onClick;

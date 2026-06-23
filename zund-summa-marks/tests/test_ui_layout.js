@@ -80,6 +80,7 @@ ZSM.L = {
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
     STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
     STATUS_OK: "%s · layers: %s", STATUS_OK_MARKS: "%s · marks only",
+    STATUS_DUP_COLOR: "dup %s",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
         var idx = 0;
@@ -502,6 +503,43 @@ if (gapEdit && gapEdit.onChanging) {
         assertEq(saveBtn.enabled, true, "Save button enabled after UI change");
     }
 }
+
+
+// =====================================================
+// TEST 16: Duplicate colour mapping blocks Generate
+// =====================================================
+// Two layer rows mapped to the SAME spot colour is a contradiction — movePaths
+// routes all paths of that colour to the last row, silently emptying the other.
+// liveValidateAll must detect it (canonical compare) and gate Generate.
+console.log("\n=== TEST 16: Duplicate colour blocks Generate ===");
+
+function presetWithLayers(layers) {
+    var d = ZSM.Config.getDefaults();
+    d.layers = layers;
+    return { activePreset: "[Default]", presets: { "[Default]": d } };
+}
+
+// Duplicate: two rows both mapped to "Cut" → blocked.
+w = buildAndCapture("ZUND", presetWithLayers([
+    { name: "Cut",      color: "Cut" },
+    { name: "Kiss-cut", color: "Cut" }
+]));
+var okDup = w.findOne(function (c) { return c.type === "button" && c.name === "ok"; });
+assert(okDup !== null && okDup.enabled === false,
+    "Duplicate colour: Generate is disabled");
+var dupStatus = w.findOne(function (c) {
+    return c.type === "statictext" && /dup/.test(c.text || "");
+});
+assert(dupStatus !== null, "Duplicate colour: status names the duplicate");
+
+// Distinct colours: no false positive → Generate enabled.
+w = buildAndCapture("ZUND", presetWithLayers([
+    { name: "Cut",      color: "Cut" },
+    { name: "Kiss-cut", color: "Kiss-cut" }
+]));
+var okDistinct = w.findOne(function (c) { return c.type === "button" && c.name === "ok"; });
+assert(okDistinct !== null && okDistinct.enabled === true,
+    "Distinct colours: Generate stays enabled (no false positive)");
 
 
 // =====================================================

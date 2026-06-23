@@ -691,6 +691,40 @@ assert(findLayer(docZT, "Trim") !== null,
 
 
 // =====================================================
+// TEST 22 (bug): movePaths must never route FROM Regmarks / Trim layers
+// =====================================================
+// A spot colour shared between the marks and a cut layer (e.g. a white "Spot 1"
+// used both for the marks and a "White" cut layer) is a valid workflow. On a
+// re-run the other mode's marks sit on Regmarks/<mode> in that spot and trim
+// lines sit on Trim; movePaths must skip items on those reserved layers so it
+// routes the user's artwork but leaves the marks/trim in place (no cannibalism).
+console.log("\n=== TEST 22 (bug): movePaths never routes FROM Regmarks/Trim ===");
+var docCan = setupDoc({
+    layers: [
+        { name: "White", items: [] },                                               // routing target
+        { name: "Art",   items: [{ type: "path", spot: "Spot 1", bounds: [0, 10, 10, 0] }] }, // user artwork
+        { name: "Regmarks", sublayers: [
+            { name: "Zünd", items: [{ type: "path", spot: "Spot 1", bounds: [0, 5, 5, 0] }] }  // mark from a prior run
+        ] },
+        { name: "Trim", items: [{ type: "path", spot: "Spot 1", bounds: [0, 3, 3, 0] }] }      // a trim line
+    ]
+});
+var whiteLay = findLayer(docCan, "White");
+var regCan   = findLayer(docCan, "Regmarks");
+var zundCan  = regCan ? findSublayer(regCan, "Zünd") : null;
+var trimCan  = findLayer(docCan, "Trim");
+
+ZSM.Draw.movePaths(whiteLay, ["Spot 1"]);
+
+assert(countItems(whiteLay, "PathItem") === 1,
+    "movePaths: user artwork (Spot 1) routed to White");
+assert(countItems(zundCan, "PathItem") === 1,
+    "movePaths: mark on Regmarks/Zünd NOT cannibalised (stays put)");
+assert(countItems(trimCan, "PathItem") === 1,
+    "movePaths: trim line on Trim layer NOT moved");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

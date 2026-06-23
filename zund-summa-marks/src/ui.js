@@ -1126,6 +1126,31 @@ ZSM.UI = {
                 }
             }
 
+            // Duplicate-colour validation: the same spot colour mapped to two
+            // rows is a contradiction — movePaths routes ALL paths of that colour
+            // to whichever row renders last, silently emptying the other layer.
+            // No safe auto-resolution exists, so block Generate until the user
+            // removes the duplicate. canonColor normalises localized [Registration]
+            // aliases so the comparison is reliable across locales.
+            if (!marksOnlyOn) {
+                var seenColors = {};
+                var dupColorName = null;
+                for (var di = 0; di < layRows.length; di++) {
+                    var ddc = layRows[di].ddColor;
+                    if (!ddc) continue;
+                    var rawC = ZSM.UI.ddlValue(ddc);
+                    var canC = canonColor(rawC);
+                    if (!canC) continue;
+                    if (seenColors[canC]) { dupColorName = rawC; break; }
+                    seenColors[canC] = true;
+                }
+                if (dupColorName) {
+                    allValid = false;
+                    invalidCount++;
+                    if (!firstMsg) firstMsg = ZSM.L.format(l.STATUS_DUP_COLOR, dupColorName);
+                }
+            }
+
             try { btnOk.enabled = allValid; } catch (e) {}
 
             // Status line. When everything is valid it no longer sits empty (N1) —
@@ -1239,6 +1264,7 @@ ZSM.UI = {
                     return function () {
                         ZSM.UI.setSwatch(rw.swColor, ZSM.UI.ddlValue(rw.ddColor), docData.swatchRGB);
                         refreshModifiedIndicator();
+                        liveValidateAll();   // a colour change can create/clear a duplicate
                     };
                 })(row);
                 var origRm = row.btnRemove.onClick;

@@ -104,8 +104,20 @@
     function MockDropDownList(parent, opts) {
         MockControl.call(this, "dropdownlist", parent, opts);
         this.items = [];        // ListItem array
-        this.selection = null;  // selected ListItem
         var self = this;
+        // Real ScriptUI resolves `selection = <index>` to the ListItem object
+        // (and accepts a ListItem directly, or null). Mirror that so ddlValue()
+        // reads the selected item's text / _zsmRawValue, not a bare index number.
+        var _sel = null;
+        Object.defineProperty(this, "selection", {
+            configurable: true, enumerable: true,
+            get: function () { return _sel; },
+            set: function (v) {
+                if (v === null || v === undefined) { _sel = null; }
+                else if (typeof v === "number") { _sel = self.items[v] || null; }
+                else { _sel = v; }
+            }
+        });
         this.add = function (kind, label) {
             if (kind === "item") {
                 var item = { type: "listitem", text: label, index: self.items.length };
