@@ -2163,6 +2163,31 @@ ZSM.Draw = {
     },
 
     /**
+     * True if the item lives on (or under) a reserved output layer — Regmarks
+     * (marks + their mode sublayers) or Trim. movePaths must never route FROM
+     * these: the marks and trim lines legitimately share the user's spot colours
+     * by design (e.g. white marks drawn in "Spot 1" alongside a "White" cut layer
+     * also mapped to "Spot 1"). A colour match alone must not pull them onto a
+     * cut layer, or a re-run would cannibalise the other mode's existing marks.
+     * Walks the ancestor layer chain because marks sit on a SUBLAYER, so
+     * item.layer is the sublayer (e.g. "Zünd"), not the top-level Regmarks.
+     *
+     * @param {PageItem} item - Path/compound to test.
+     * @returns {boolean} True if on Regmarks/Trim (or a sublayer of them).
+     * @private
+     */
+    _isOnReservedLayer: function (item) {
+        try {
+            var lay = item.layer;
+            while (lay && lay.typename === "Layer") {
+                if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
+                lay = lay.parent;
+            }
+        } catch (e) {}
+        return false;
+    },
+
+    /**
      * Moves all paths whose fill or stroke matches any of the given spot color
      * names (case-insensitive) to the target layer.
      * Uses a snapshot to avoid live-collection issues during iteration.
@@ -2192,6 +2217,7 @@ ZSM.Draw = {
                 // rather than risked — the safe default for a mutating op.
                 if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
                 if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
+                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
                 if (cp.pathItems.length === 0) continue;
 
                 // Match by first sub-path color (all sub-paths share the same color)
@@ -2224,6 +2250,10 @@ ZSM.Draw = {
                 // Skip items nested inside clipped groups — moving them out
                 // would break the group structure and trigger MRAP errors.
                 if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
+
+                // Never route FROM the marks (Regmarks) or Trim layers — they
+                // legitimately share the user's spot colours (see _isOnReservedLayer).
+                if (this._isOnReservedLayer(item)) continue;
 
                 // Skip items already moved as part of a CompoundPathItem
                 var alreadyMoved = false;
