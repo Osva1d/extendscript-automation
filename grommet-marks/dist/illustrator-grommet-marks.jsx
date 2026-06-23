@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     6.0.0
  * Author:      Osva1d
- * Updated:     2026-06-22
+ * Updated:     2026-06-23
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -232,8 +232,8 @@ GM.L = (function () {
             EDGE_SPACING_HDR: "Spacing",
             OFFSET_LABEL: "Edge offset:",
             MIRROR_GROUP_LABEL: "Mirror:",
-            MIRROR_TOP: "top ↓ bottom",
-            MIRROR_LEFT: "left → right",
+            MIRROR_TOP: "top ↓ bottom",
+            MIRROR_LEFT: "left → right",
             MIRROR_TOP_ACTIVE: "mirrors top",
             MIRROR_LEFT_ACTIVE: "mirrors left",
 
