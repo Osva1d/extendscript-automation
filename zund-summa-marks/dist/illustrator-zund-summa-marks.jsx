@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.6.0
  * Author:      Osva1d
- * Updated:     2026-06-23
+ * Updated:     2026-06-24
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -2520,6 +2520,28 @@ var ZSM = ZSM || {};
 
 ZSM.UI = {
 
+    // Shared metrics — the dialog's alignment grid in one place. buildDialog and
+    // the addRow/addColorRow/makeSwatch helpers all read these, so each grid value
+    // lives once. Audit "Audit UI vrstvy" froze the VALUES — do not change them:
+    //  • ET_LAYER must stay < LABEL_COL (N6: long name never runs under the arrow)
+    //  • COLOR_DD (spot-dropdown right-edge axis, N5) stays separate from VALUE_GROUP
+    //  • LABEL_COL and COLOR_DD are two DIFFERENT axes — never unify them
+    M: {
+        LABEL_COL:    178,   // label column (hdrLayer, ddLayer, addRow.st, addColorRow.st)
+        COLOR_DD:     112,   // colour dropdown width (ddColor, addColorRow.ddl-with-swatch)
+        VALUE_GROUP:  130,   // value sub-group (addRow.vg, addColorRow.ddl-no-swatch)
+        NUM_FIELD:    56,    // numeric edittext (addRow.et)
+        ET_LAYER:     152,   // layer-name edittext (< LABEL_COL, N6)
+        SWATCH:       16,    // colour swatch square
+        LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj/scale spacer)
+        PRESET_BTN:   92,    // preset action buttons
+        RADIO:        70,    // mode radios
+        SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
+        SP_GROUP:     8,     // group spacing (preset, mode, source, buttons …)
+        SP_TIGHT:     5,     // colour-picker row rhythm (headers, layer row, addColorRow)
+        RELAYOUT_PAD: 10     // height fudge after a relayout
+    },
+
     // =====================================================================
     // Public entry point
     // =====================================================================
@@ -2588,6 +2610,7 @@ ZSM.UI = {
     buildDialog: function (mode, pData, docData) {
         var c = ZSM.Config;
         var l = ZSM.L;
+        var M = ZSM.UI.M;   // shared metrics (alignment grid)
         var self = this;
         var isZ = (mode === "ZUND");
         var isS = (mode === "SUMMA");
@@ -2604,8 +2627,17 @@ ZSM.UI = {
         w.orientation    = "column";
         w.alignChildren  = ["fill", "top"];
         w.margins        = [20, 14, 20, 12];
-        w.spacing        = 10;
+        w.spacing        = M.SP_PANEL;
         w.preferredSize.width = 390;
+
+        // S2 — single relayout helper. The +RELAYOUT_PAD nudge counters the
+        // engine under-measuring the window height after rows are added/removed;
+        // keeping it in one place means the fudge can never drift between the
+        // Add, Remove and setUIValues call sites.
+        function relayout() {
+            w.layout.layout(true);
+            w.size.height = w.preferredSize.height + M.RELAYOUT_PAD;
+        }
 
         // =================================================================
         // Panel: Presets
@@ -2613,12 +2645,12 @@ ZSM.UI = {
         var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
         pPreset.margins = 12;
-        pPreset.spacing = 8;
+        pPreset.spacing = M.SP_GROUP;
 
         // Row 1: label + dropdown (full width)
         var grpPresetTop = pPreset.add("group");
         grpPresetTop.alignment = ["fill", "top"];
-        grpPresetTop.spacing   = 8;
+        grpPresetTop.spacing   = M.SP_GROUP;
         grpPresetTop.add("statictext", undefined, l.PRESET_LABEL);
 
         var ddPreset = grpPresetTop.add("dropdownlist", undefined, []);
@@ -2641,7 +2673,7 @@ ZSM.UI = {
         // being hidden behind a [Default] dropdown pick (low discoverability).
         var grpPresetBtns = pPreset.add("group");
         grpPresetBtns.alignment = ["fill", "top"];
-        grpPresetBtns.spacing = 8;
+        grpPresetBtns.spacing = M.SP_GROUP;
 
         var btnReset = grpPresetBtns.add("button", undefined, l.BTN_RESET);
         btnReset.preferredSize.width = 80;
@@ -2650,11 +2682,11 @@ ZSM.UI = {
 
         var grpPresetBtnsR = grpPresetBtns.add("group");
         grpPresetBtnsR.alignment = ["right", "center"];
-        grpPresetBtnsR.spacing = 8;
+        grpPresetBtnsR.spacing = M.SP_GROUP;
 
         // Uniform width so the three buttons line up evenly (text-based widths
         // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
-        var PRESET_BTN_W = 92;
+        var PRESET_BTN_W = M.PRESET_BTN;
         var btnSave = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE);
         btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
@@ -2675,13 +2707,13 @@ ZSM.UI = {
         var pOutput = w.add("panel", undefined, l.PANEL_OUTPUT);
         pOutput.alignChildren = ["left", "top"];
         pOutput.margins = 12;
-        pOutput.spacing = 8;
+        pOutput.spacing = M.SP_GROUP;
 
         // Shared left-column width: "Režim:", "Zdroj:" and the scale spacer all
         // reserve this, so the controls after them share one left edge. A
         // statictext (not a group) carries the width — ScriptUI honours
         // preferredSize on leaf controls but ignores it on groups.
-        var LABEL_COL_W = 72;
+        var LABEL_COL_W = M.LABEL_COL_W;
 
         // Mode row: label + segmented-style selector (H2). ScriptUI has no
         // native segmented control, so two mutually-exclusive radio buttons in
@@ -2690,14 +2722,14 @@ ZSM.UI = {
         var grpMode = pOutput.add("group");
         grpMode.orientation   = "row";
         grpMode.alignChildren = ["left", "center"];
-        grpMode.spacing       = 8;
+        grpMode.spacing       = M.SP_GROUP;
         var stMode = grpMode.add("statictext", undefined, l.LBL_MODE);
         stMode.preferredSize.width = LABEL_COL_W;
         stMode.helpTip = l.TIP_MODE;
         var rbZund  = grpMode.add("radiobutton", undefined, l.MODE_ZUND);
         var rbSumma = grpMode.add("radiobutton", undefined, l.MODE_SUMMA);
-        rbZund.preferredSize.width  = 70;
-        rbSumma.preferredSize.width = 70;
+        rbZund.preferredSize.width  = M.RADIO;
+        rbSumma.preferredSize.width = M.RADIO;
         rbZund.value  = isZ;
         rbSumma.value = isS;
         rbZund.helpTip  = l.TIP_MODE;
@@ -2709,7 +2741,7 @@ ZSM.UI = {
             grpSrc = pOutput.add("group");
             grpSrc.orientation   = "row";
             grpSrc.alignChildren = ["left", "center"];
-            grpSrc.spacing       = 8;
+            grpSrc.spacing       = M.SP_GROUP;
             // Leading "Zdroj:" label (72px) under "Režim:" — the unlabelled
             // second radio row was ambiguous about what it selected.
             var stSource = grpSrc.add("statictext", undefined, l.LBL_SOURCE);
@@ -2837,15 +2869,25 @@ ZSM.UI = {
         var pGeo = w.add("panel", undefined, l.PANEL_GEO);
         pGeo.alignChildren = ["fill", "top"];
         pGeo.margins = 12;
-        pGeo.spacing = 10;
+        pGeo.spacing = M.SP_PANEL;
 
         // ZUND only: gap from graphic
         var rGapGZ;
         if (isZ) {
             rGapGZ = self.addRow(pGeo, l.GAP_GZ, sData.gapInner, l.TIP_GAP_GZ);
-            // Gap from graphic is irrelevant in Fixed mode
-            rGapGZ.inp.enabled = !(sData.useArtboardBounds);
         }
+
+        // S1 — single source for the Auto-fit/Fixed → "gap from graphics" enable
+        // rule (gap from graphics is irrelevant in Fixed mode). ZUND-only; a no-op
+        // in SUMMA (no source radios / gap row). Called from init, the source
+        // radios' onClick, and setUIValues, so the three former inline copies can
+        // never drift apart.
+        function applySourceState() {
+            if (isZ && rGapGZ && rGapGZ.inp && rbFixed) {
+                rGapGZ.inp.enabled = !rbFixed.value;
+            }
+        }
+        applySourceState();   // initial
 
         // Shared rows
         var rGapZO = self.addRow(pGeo, l.GAP_ZO,  sData.gapOuter, l.TIP_GAP_ZO);
@@ -2876,7 +2918,7 @@ ZSM.UI = {
             var pFeed = w.add("panel", undefined, l.PANEL_FEED);
             pFeed.alignChildren = ["fill", "top"];
             pFeed.margins = 12;
-            pFeed.spacing = 10;
+            pFeed.spacing = M.SP_PANEL;
 
             rFT   = self.addRow(pFeed, l.FEED_TOP, sData.feedTop,    l.TIP_FEED_TOP);
             rFB   = self.addRow(pFeed, l.FEED_BOT, sData.feedBottom, l.TIP_FEED_BOT);
@@ -2891,7 +2933,7 @@ ZSM.UI = {
         var pLay = w.add("panel", undefined, l.PANEL_LAYERS);
         pLay.alignChildren = ["fill", "top"];
         pLay.margins = 12;
-        pLay.spacing = 10;
+        pLay.spacing = M.SP_PANEL;
 
         // "Marks only" toggle — sits atop the mapping table it controls. When on,
         // the script draws only marks and never touches layers, so the mapping
@@ -2903,9 +2945,9 @@ ZSM.UI = {
         // Column headers
         var grpHeaders = pLay.add("group");
         grpHeaders.alignment = "fill";
-        grpHeaders.spacing   = 5;
+        grpHeaders.spacing   = M.SP_TIGHT;
         var hdrLayer = grpHeaders.add("statictext", undefined, l.COL_LAYER);
-        hdrLayer.preferredSize.width = 178;
+        hdrLayer.preferredSize.width = M.LABEL_COL;
         var hdrColor = grpHeaders.add("statictext", undefined, l.COL_COLOR);
         hdrColor.preferredSize.width = 120;
         var hdrSpacer = grpHeaders.add("statictext", undefined, "");
@@ -2934,7 +2976,7 @@ ZSM.UI = {
         function buildLayerRow(def) {
             var grp = layContainer.add("group");
             grp.alignment = "fill";
-            grp.spacing   = 5;
+            grp.spacing   = M.SP_TIGHT;
 
             var stack = grp.add("group");
             stack.orientation   = "stack";
@@ -2945,13 +2987,13 @@ ZSM.UI = {
             // ddLayer directly, not on the stack.
 
             var ddLayer = stack.add("dropdownlist", undefined, docData.layers);
-            ddLayer.preferredSize.width = 178;
+            ddLayer.preferredSize.width = M.LABEL_COL;
             ddLayer.helpTip = l.TIP_LAY_NAME;
 
             var etLayer = stack.add("edittext", undefined, def.name || "");
             // Narrower than the dropdown behind it (178) so a long custom layer
             // name never runs under the dropdown's expand arrow (N6).
-            etLayer.preferredSize.width = 152;
+            etLayer.preferredSize.width = M.ET_LAYER;
             etLayer.helpTip = l.TIP_LAY_NAME;
 
             ddLayer.onChange = function () {
@@ -2963,7 +3005,7 @@ ZSM.UI = {
 
             var swColor = ZSM.UI.makeSwatch(grp);
             var ddColor = grp.add("dropdownlist", undefined, docData.swatches);
-            ddColor.preferredSize.width = 112;
+            ddColor.preferredSize.width = M.COLOR_DD;
             ddColor.helpTip = l.TIP_LAY_COLOR;
             ZSM.UI.selectDDL(ddColor, def.color || (docData.swatches.length > 0 ? docData.swatches[0] : ""));
             ZSM.UI.setSwatch(swColor, ZSM.UI.ddlValue(ddColor), docData.swatchRGB);
@@ -2984,8 +3026,7 @@ ZSM.UI = {
                 }
                 btnAddLayer.enabled = (layRows.length < MAX_LAYERS);
                 updateRemoveButtons();
-                w.layout.layout(true);
-                w.size.height = w.preferredSize.height + 10;
+                relayout();
             };
 
             return { grp: grp, ddColor: ddColor, swColor: swColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
@@ -3012,8 +3053,7 @@ ZSM.UI = {
             layRows.push(newRow);
             if (layRows.length >= MAX_LAYERS) btnAddLayer.enabled = false;
             updateRemoveButtons();
-            w.layout.layout(true);
-            w.size.height = w.preferredSize.height + 10;
+            relayout();
         };
 
         /** Grey out the mapping table when "marks only" is active (it has no
@@ -3059,7 +3099,7 @@ ZSM.UI = {
         // unsaved edits is the ↺ button next to the preset dropdown.
         var grpButtons = w.add("group");
         grpButtons.alignment = ["right", "center"];
-        grpButtons.spacing   = 8;
+        grpButtons.spacing   = M.SP_GROUP;
 
         var btnCan = grpButtons.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         btnCan.helpTip = l.TIP_CANCEL;
@@ -3151,7 +3191,7 @@ ZSM.UI = {
                 rbFixed.value   = !!obj.useArtboardBounds;
                 rbAuto.value    = !obj.useArtboardBounds;
                 rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
-                rGapGZ.inp.enabled = !rbFixed.value;
+                applySourceState();
                 rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
                 rOrientDist.inp.text = String(obj.orientDist !== undefined ? obj.orientDist : 100);
             }
@@ -3209,9 +3249,16 @@ ZSM.UI = {
             // Pre-show (initial load) this is a harmless no-op that w.show()
             // re-layouts anyway. Wrapped in try/catch defensively.
             try {
-                w.layout.layout(true);
-                w.size.height = w.preferredSize.height + 10;
+                relayout();
             } catch (e) {}
+
+            // S3 — always (re)wire the freshly rebuilt layer rows. Runtime callers
+            // (preset switch / Reset / Revert / Delete) used to call wireLayerRows()
+            // themselves; centralising it here means setUIValues can never leave a
+            // row unwired. Guarded: the var-expression form of wireLayerRows is not
+            // yet assigned during the initial build call — initial wiring still runs
+            // once after the first row build. The _zsmWired guard keeps it idempotent.
+            if (typeof wireLayerRows === "function") wireLayerRows();
 
             // Re-run live validation after a programmatic value change. setUIValues
             // sets .text directly, which does NOT fire the edittext onChange that
@@ -3291,10 +3338,6 @@ ZSM.UI = {
             if (!r.ok) return;
             btnDel.enabled = (key !== c.PRESET_KEY_DEFAULT);
             setUIValues(r.settings);
-            // setUIValues rebuilds the dynamic layer rows with only their base
-            // handlers — re-attach the modified-indicator wrappers, else editing
-            // a layer row after a preset switch wouldn't flag changes / enable Save.
-            wireLayerRows();
             refreshModifiedIndicator();
         };
 
@@ -3360,10 +3403,6 @@ ZSM.UI = {
             }
             updatePresetList();
             setUIValues(pData.presets[c.PRESET_KEY_DEFAULT]);
-            // Re-attach layer-row modified-indicator wrappers after the rebuild
-            // (see ddPreset.onChange) — otherwise post-delete layer edits silently
-            // wouldn't flag as modified.
-            wireLayerRows();
             refreshModifiedIndicator();
             persistSettings();
         };
@@ -3379,7 +3418,6 @@ ZSM.UI = {
             var preset = pData.presets[pData.activePreset];
             if (!preset) return;
             setUIValues(preset);
-            wireLayerRows();
             refreshModifiedIndicator();
         };
 
@@ -3393,7 +3431,6 @@ ZSM.UI = {
             var d = c.getDefaults();
             d.mode = mode;
             setUIValues(d);
-            wireLayerRows();
             refreshModifiedIndicator();
             liveValidateAll();
         };
@@ -3425,8 +3462,8 @@ ZSM.UI = {
 
         // ZUND: source radio buttons update gapGZ enabled state
         if (isZ) {
-            rbAuto.onClick  = function () { rGapGZ.inp.enabled = true; };
-            rbFixed.onClick = function () { rGapGZ.inp.enabled = false; };
+            rbAuto.onClick  = function () { applySourceState(); };
+            rbFixed.onClick = function () { applySourceState(); };
         }
 
         // =================================================================
@@ -3834,10 +3871,11 @@ ZSM.UI = {
      * @returns {Object} {inp: EditText, group: Group}
      */
     addRow: function (parent, label, value, tip) {
+        var M = ZSM.UI.M;
         var g  = parent.add("group");
         g.alignment = "fill";
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 178;
+        st.preferredSize.width = M.LABEL_COL;
         if (tip) st.helpTip = tip;
         // Value sub-group with a FIXED width so its right edge lines up with the
         // colour dropdown below it (N5 — consistent right edges in the geometry
@@ -3846,9 +3884,9 @@ ZSM.UI = {
         vg.orientation   = "row";
         vg.alignChildren = ["left", "center"];
         vg.spacing       = 6;
-        vg.preferredSize.width = 130;
+        vg.preferredSize.width = M.VALUE_GROUP;
         var et = vg.add("edittext", undefined, String(value));
-        et.preferredSize.width = 56;
+        et.preferredSize.width = M.NUM_FIELD;
         if (tip) et.helpTip = tip;
         vg.add("statictext", undefined, "mm");
         return { inp: et, group: g };
@@ -3898,9 +3936,10 @@ ZSM.UI = {
         } catch (e) {
             sw = parent.add("iconbutton", undefined, undefined);
         }
-        sw.preferredSize = [16, 16];
-        sw.minimumSize   = [16, 16];
-        sw.maximumSize   = [16, 16];
+        var sz = ZSM.UI.M.SWATCH;
+        sw.preferredSize = [sz, sz];
+        sw.minimumSize   = [sz, sz];
+        sw.maximumSize   = [sz, sz];
         sw._rgb = null;
         sw.onDraw = function () {
             try {
@@ -3957,17 +3996,18 @@ ZSM.UI = {
      * @returns {Object} {ddl, group, sw, refresh}
      */
     addColorRow: function (parent, label, value, swatchNames, tip, rgbMap) {
+        var M = ZSM.UI.M;
         var g  = parent.add("group");
         g.alignment = "fill";
         // Match the layer-table row rhythm (grp.spacing = 5) so the swatch hugs
         // its dropdown identically in both places — one consistent colour-picker.
-        g.spacing = 5;
+        g.spacing = M.SP_TIGHT;
         var st = g.add("statictext", undefined, label);
-        st.preferredSize.width = 178;
+        st.preferredSize.width = M.LABEL_COL;
         if (tip) st.helpTip = tip;
         var sw = rgbMap ? this.makeSwatch(g) : null;
         var ddl = g.add("dropdownlist", undefined, swatchNames);
-        ddl.preferredSize.width = sw ? 112 : 130;   // swatch+gap+ddl keeps the right edge aligned
+        ddl.preferredSize.width = sw ? M.COLOR_DD : M.VALUE_GROUP;   // swatch+gap+ddl keeps the right edge aligned
         if (tip) ddl.helpTip = tip;
         this.selectDDL(ddl, value || "[Registration]");
         var self = this;
