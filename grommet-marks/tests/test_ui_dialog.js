@@ -92,38 +92,24 @@ console.log("--- UI.buildDialog: builds ---");
 })();
 
 // ===== TEST: Count/Spacing radio exclusivity (THE regression) =====
+// Edge radios are now textless (captions live in the column header), so target
+// them via the exposed edgeUI API instead of by label text.
 console.log("--- UI: Count/Spacing radio exclusivity (regression) ---");
 (function () {
     var ui = buildUI();
-    var cfg = ui.gatherAll();
-    // Default is count mode on top edge.
-    assert(cfg.top.useNumber === true, "default top edge is count mode");
+    assert(ui.gatherAll().top.useNumber === true, "default top edge is count mode");
 
-    // Click the top edge's "Spacing" radio. There are 4 edges; the top edge is
-    // the first SPACING radio in tree order.
-    var w = SUI.lastWindow();
-    var spacingRadios = w.find(function (c) {
-        return c.type === "radiobutton" && c.text === GM.L.SPACING;
-    });
-    var countRadios = w.find(function (c) {
-        return c.type === "radiobutton" && c.text === GM.L.COUNT;
-    });
-    assert(spacingRadios.length === 5, "five Spacing radios (four edges + path panel)");
-    assert(countRadios.length === 5, "five Count radios (four edges + path panel)");
-
-    // Fire the top edge's Spacing onClick.
-    spacingRadios[0].onClick();
-    var after = ui.gatherAll();
-    assert(after.top.useNumber === false,
+    var top = ui.edgeUI.top;
+    // Choose Spacing on the top edge.
+    top.spcRB.onClick();
+    assert(ui.gatherAll().top.useNumber === false,
         "clicking Spacing flips top edge to spacing mode (useNumber:false)");
-    // And the count radio must have been turned off (explicit exclusivity).
-    assert(countRadios[0].value === false,
-        "Count radio is deselected after choosing Spacing");
+    assert(top.numRB.value === false, "Count radio deselected after choosing Spacing");
 
     // Flip back to Count.
-    countRadios[0].onClick();
+    top.numRB.onClick();
     assert(ui.gatherAll().top.useNumber === true, "clicking Count flips back to count mode");
-    assert(spacingRadios[0].value === false, "Spacing radio deselected after choosing Count");
+    assert(top.spcRB.value === false, "Spacing radio deselected after choosing Count");
     done();
 })();
 
@@ -157,7 +143,9 @@ console.log("--- UI: applyAll/gatherAll preserves spacing mode ---");
     done();
 })();
 
-// ===== TEST: mirror reads through getMirror =====
+// ===== TEST: mirror flags via gatherAll =====
+// Mirror state now lives on the Mirror-group checkboxes (above the edge rows);
+// gatherAll reads them into bottomMirror/rightMirror.
 console.log("--- UI: mirror flags via gatherAll ---");
 (function () {
     var ui = buildUI();

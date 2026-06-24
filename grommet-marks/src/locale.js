@@ -40,12 +40,21 @@ GM.L = (function () {
             // Edge fields
             COUNT: "Count:",
             SPACING: "Spacing:",
+            EDGE_COUNT_HDR: "Count",
+            EDGE_SPACING_HDR: "Spacing",
+            OFFSET_LABEL: "Edge offset:",
+            MIRROR_GROUP_LABEL: "Mirror:",
+            MIRROR_TOP: "top ↓ bottom",
+            MIRROR_LEFT: "left → right",
+            MIRROR_TOP_ACTIVE: "mirrors top",
+            MIRROR_LEFT_ACTIVE: "mirrors left",
 
             // Mark panel
             MARK_PANEL: "Mark",
             UNIT_LABEL: "Units:",
             TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
+            MARK_SHAPE_LABEL: "Shape:",
             MARK_CIRCLE: "Circle",
             MARK_CROSS: "Cross",
             REG_WEIGHT: "Reg. stroke:",
@@ -75,6 +84,8 @@ GM.L = (function () {
             ZONES_ENABLE: "Densify at corners",
             ZONES_COUNT: "Count:",
             ZONES_PITCH: "Pitch:",
+            ZONES_FIRST: "— first",
+            ZONES_MARKS_PITCH: "marks, pitch",
             TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
             TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
 
@@ -157,12 +168,21 @@ GM.L = (function () {
             // Edge fields
             COUNT: "Počet ok:",
             SPACING: "Rozestup:",
+            EDGE_COUNT_HDR: "Počet ok",
+            EDGE_SPACING_HDR: "Rozestup",
+            OFFSET_LABEL: "Odsazení od kraje:",
+            MIRROR_GROUP_LABEL: "Zrcadlit:",
+            MIRROR_TOP: "horní ↓ dolní",
+            MIRROR_LEFT: "levou → pravou",
+            MIRROR_TOP_ACTIVE: "zrcadlí horní",
+            MIRROR_LEFT_ACTIVE: "zrcadlí levou",
 
             // Mark panel
             MARK_PANEL: "Značka",
-            UNIT_LABEL: "Měrné jednotky:",
+            UNIT_LABEL: "Jednotky:",
             TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
+            MARK_SHAPE_LABEL: "Tvar:",
             MARK_CIRCLE: "Kruh",
             MARK_CROSS: "Kříž",
             REG_WEIGHT: "Reg. tah:",
@@ -192,6 +212,8 @@ GM.L = (function () {
             ZONES_ENABLE: "Zhustit u rohů",
             ZONES_COUNT: "Počet:",
             ZONES_PITCH: "Rozteč:",
+            ZONES_FIRST: "— prvních",
+            ZONES_MARKS_PITCH: "značek, rozteč",
             TIP_ZONES: "Prvních N značek od každého rohu použije tuto rozteč; zbytek jede podle rozteče hrany/cesty.",
             TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
 

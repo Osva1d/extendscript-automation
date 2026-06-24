@@ -54,6 +54,7 @@
         this.alignment = undefined;
         this.alignChildren = undefined;
         this.preferredSize = { width: -1, height: -1 };
+        this.minimumSize = { width: 0, height: 0 };
         this.maximumSize = { width: 10000, height: 10000 };
         this.size = { width: -1, height: -1 };
         this.location = [0, 0];
