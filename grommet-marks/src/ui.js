@@ -273,9 +273,21 @@ GM.UI = {
         unitsDDL.helpTip = GM.L.TIP_UNITS;
 
         // =================================================================
+        // Placement stack — Edges and Path are two modes of the SAME slot, so
+        // they share one stacked container. This way the hidden panel adds no
+        // extra dlg.spacing (the phantom gap above Corner zones), and it occupies
+        // exactly one section gap regardless of which mode is visible.
+        // =================================================================
+        var placementStack = dlg.add("group");
+        placementStack.orientation = "stack";
+        placementStack.alignChildren = ["fill", "top"];
+        placementStack.spacing = 0;
+        placementStack.margins = 0;
+
+        // =================================================================
         // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
-        var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
+        var edgesPanel = placementStack.add("panel", undefined, GM.L.EDGES_PANEL);
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
         edgesPanel.margins = LO.MARGIN;
@@ -384,7 +396,7 @@ GM.UI = {
         // =================================================================
         // Path Panel (replaces Edges in path mode)
         // =================================================================
-        var pathPanel = dlg.add("panel", undefined, GM.L.PATH_PANEL);
+        var pathPanel = placementStack.add("panel", undefined, GM.L.PATH_PANEL);
         pathPanel.orientation = "column";
         pathPanel.alignChildren = ["left", "top"];
         pathPanel.margins = LO.MARGIN;
@@ -491,11 +503,13 @@ GM.UI = {
         // actually shrink the window (one pass / panel-only layout leaves the
         // window at its old height with empty space).
         function relayoutDialog() {
-            edgesPanel.preferredSize.height = -1;   // release panel height
-            dlg.preferredSize.height = -1;          // release window height
-            dlg.layout.layout(true);                // recompute preferred
-            dlg.size = dlg.preferredSize;           // shrink the window itself
-            dlg.layout.layout(true);                // second pass settles it
+            edgeRowsGroup.preferredSize.height = -1; // release the rows group (hidden mirror rows)
+            edgesPanel.preferredSize.height = -1;    // release edges panel
+            placementStack.preferredSize.height = -1; // release the shared mode slot
+            dlg.preferredSize.height = -1;           // release window height
+            dlg.layout.layout(true);                 // recompute preferred
+            dlg.size = dlg.preferredSize;            // shrink the window itself
+            dlg.layout.layout(true);                 // second pass settles it
         }
 
         function refreshModeUI() {
