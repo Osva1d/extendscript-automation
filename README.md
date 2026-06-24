@@ -1,6 +1,5 @@
 # ExtendScript Automation for Adobe Illustrator
 
-[![Version](https://img.shields.io/gitea/v/release/Osva1d/extendscript-automation?gitea_url=https%3A%2F%2Fcodeberg.org&label=version&color=blue)](https://codeberg.org/Osva1d/extendscript-automation/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 > A professional toolkit of JavaScript (`.jsx`) scripts that automate prepress preparation and speed up production work in Adobe Illustrator.
@@ -293,7 +292,7 @@ This project is licensed under the **GNU General Public License v3.0** — see [
 If the suite saves you time in daily work and you want to fund further development:
 
 - **[Buy Me a Coffee](https://buymeacoffee.com/osva1d)** — one-off tip, localised currency (USD / EUR / CZK / …).
-- **Issues and Pull Requests** — bug reports, ideas, and improvements are welcome in [Issues](https://codeberg.org/Osva1d/extendscript-automation/issues).
+- **Issues and Pull Requests** — bug reports, ideas, and improvements are welcome in the project's issue tracker.
 - **Sharing** — a mention in your community (printshop forums, LinkedIn) is the cheapest form of support.
 
 ---
@@ -302,4 +301,4 @@ If the suite saves you time in daily work and you want to fund further developme
 
 - **Concept & development:** Ladislav Osvald (Osva1d)
 - **Year:** 2025–2026
-- **Contact:** via [Issues](https://codeberg.org/Osva1d/extendscript-automation/issues) or direct message
+- **Contact:** via the project's issue tracker or direct message
