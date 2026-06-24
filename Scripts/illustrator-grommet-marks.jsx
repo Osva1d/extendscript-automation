@@ -1,9 +1,9 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     4.2.0
+ * Version:     6.0.0
  * Author:      Osva1d
- * Updated:     2026-06-09
+ * Updated:     2026-06-24
  *
  * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
  * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
@@ -159,14 +159,22 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "4.2.0",
+    VERSION: "6.0.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
-    SWATCH_NAME: "Grommet Marks",
 
-    // Layer/swatch auto-creation sentinel — never displayed, used in logic only
+    // Layer auto-creation sentinel — never displayed, used in storage migration only
     SENTINEL_CREATE: "__create__",
+
+    // Placement modes
+    MODE_ARTBOARD: "artboard",
+    MODE_PATH: "path",
+
+    // Path geometry
+    CORNER_ANGLE_MIN: 15,      // deg — tangent deviation above this = corner
+    SAMPLES_PER_SEGMENT: 64,   // arc-length table resolution per Bézier
+    MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
@@ -175,6 +183,16 @@ GM.CONSTANTS = {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,
         "in": 72
+    },
+
+    // Layout rhythm — the ONLY source of spacing. Scale in steps of 4 px.
+    // Never write a spacing/margin literal in the UI; always reference this.
+    LAYOUT: {
+        TIGHT:   4,    // elements that belong together: icon ↔ field, radio ↔ field
+        GROUP:   8,    // items in a row, rows within a panel, label → content
+        SECTION: 16,   // independent choices; gap between panels
+        MARGIN:  16,   // panel inner padding (panel.margins)
+        DIALOG:  20    // window outer margin (dlg.margins)
     }
 };
 
@@ -195,9 +213,7 @@ GM.L = (function () {
     var strings = {
         en: {
             // Sentinel display strings
-            CREATE_LABEL: "[Create 'Grommet Marks']",
             DEFAULT_PRESET: "[Default]",
-            DDL_MISSING_SUFFIX: "(missing)",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -217,28 +233,59 @@ GM.L = (function () {
             TOP: "Top",
             LEFT: "Left",
             BOTTOM_MIRROR: "Mirror top",
-            BOTTOM_CUSTOM: "Bottom — custom",
             RIGHT_MIRROR: "Mirror left",
-            RIGHT_CUSTOM: "Right — custom",
 
             // Edge fields
             COUNT: "Count:",
             SPACING: "Spacing:",
+            EDGE_COUNT_HDR: "Count",
+            EDGE_SPACING_HDR: "Spacing",
+            OFFSET_LABEL: "Edge offset:",
+            MIRROR_GROUP_LABEL: "Mirror:",
+            MIRROR_TOP: "top ↓ bottom",
+            MIRROR_LEFT: "left → right",
+            MIRROR_TOP_ACTIVE: "mirrors top",
+            MIRROR_LEFT_ACTIVE: "mirrors left",
 
             // Mark panel
             MARK_PANEL: "Mark",
             UNIT_LABEL: "Units:",
             TIP_UNITS: "Measurement units for all dimensions.",
             SIZE_LABEL: "Size:",
+            MARK_SHAPE_LABEL: "Shape:",
+            MARK_CIRCLE: "Circle",
+            MARK_CROSS: "Cross",
+            REG_WEIGHT: "Reg. stroke:",
+            HALO_WEIGHT: "White halo:",
+            TIP_MARK_SHAPE: "Mark shape — circle, cross, or both (registration over a white halo).",
+            TIP_REG_WEIGHT: "Registration stroke weight in points (overprints).",
+            TIP_HALO_WEIGHT: "White halo (knockout) stroke weight in points — keeps the mark legible on artwork.",
 
-            // Appearance panel
-            APPEARANCE_PANEL: "Appearance",
-            LAYER: "Layer:",
-            FILL: "Fill:",
-            STROKE: "Stroke:",
-            OVERPRINT: "Overprint",
-            WEIGHT: "Weight:",
-            POINTS: "pt",
+            // Placement panel
+            PLACEMENT_PANEL: "Placement",
+            MODE_ARTBOARD: "Artboard edges",
+            MODE_PATH: "Selected path",
+            TIP_MODE_PATH_DISABLED: "Select a path in the document first, then run the script again.",
+
+            // Path panel
+            PATH_PANEL: "Path",
+            PATH_INFO_CLOSED: "Closed path",
+            PATH_INFO_OPEN: "Open path",
+            PATH_INFO_CORNERS: "%s corners",
+            PATH_INFO_NO_CORNERS: "no corners",
+            PATH_INFO_LENGTH: "perimeter ≈ %s %s",
+            PATH_OFFSET_NOTE: "Marks sit centred on the path. For an inset from the material edge, offset the path first (Object ▸ Path ▸ Offset Path…).",
+            TIP_PATH_COUNT_DISABLED: "A path with corners follows the spacing — the mark count emerges from the span lengths.",
+
+            // Corner zones panel
+            ZONES_PANEL: "Corner zones",
+            ZONES_ENABLE: "Densify at corners",
+            ZONES_COUNT: "Count:",
+            ZONES_PITCH: "Pitch:",
+            ZONES_FIRST: "— first",
+            ZONES_MARKS_PITCH: "marks, pitch",
+            TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
+            TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
 
             // Settings panel
             SETTINGS_PANEL: "Presets",
@@ -262,12 +309,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferred distance between mark centers (count is calculated)",
             TIP_MIRROR_BOTTOM: "Use same settings as top edge",
             TIP_MIRROR_RIGHT: "Use same settings as left edge",
-            TIP_OVERPRINT: "Mark will print over other colors (overprint)",
             TIP_SIZE: "Circle diameter or square side length in selected units",
-            TIP_FILL: "Mark fill color",
-            TIP_STROKE: "Mark stroke color",
-            TIP_LAYER: "Target layer for mark placement",
-            TIP_WEIGHT: "Stroke weight in points",
             TIP_EDGE_ENABLE: "Enable/disable mark placement on this edge",
             TIP_PRESET_LOAD: "Select saved preset",
             TIP_SAVE: "Save settings to the active preset.",
@@ -275,26 +317,22 @@ GM.L = (function () {
             // Errors
             ERR_NO_DOC: "Open a document before running the script.",
             ERR_NO_EDGE: "At least one edge must be enabled.",
-            ERR_NO_APPEARANCE: "Marks must have fill and/or stroke.",
-            ERR_MARK_SIZE: "Mark size must be a positive number.",
-            ERR_NEGATIVE_OFFSET: "Offset X and Y must not be negative.",
-            ERR_INVALID_OFFSET: "Offset X and Y must be valid non-negative numbers.",
-            ERR_INVALID_WEIGHT: "Stroke weight must be a positive number.",
-            ERR_EDGE_COUNT: "Mark count must be a whole number ≥ 1.",
-            ERR_EDGE_SPACING: "Mark spacing must be a positive number.",
+            ERR_NO_APPEARANCE: "Marks must have at least one shape — circle and/or cross.",
             ERR_UNEXPECTED: "Unexpected error",
             ERR_WRITE_SETTINGS: "Cannot write settings file.",
-            WARN_SWATCH_FALLBACK: "Swatch '%s' is not in the document — marks drawn in [Registration].",
-            WARN_LAYER_CREATED: "Layer '%s' was not in the document — it has been created.",
+            WARN_MARKS_FAILED: "%s mark(s) could not be placed — check the target layer.",
             WARN_PREFIX: "WARNING: ",
             ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
             ERR_ENTER_NAME: "Enter a name.",
             ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
-            ERR_PRESET_EXISTS: "Preset already exists. Overwrite?",
             ERR_MUST_BE_NUMBER: "%s must be a number!",
             ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
-            PRESET_PLACEHOLDER: "My Preset",
+            ERR_PATH_NO_SELECTION: "Nothing is selected. Select one path and run the script again.",
+            ERR_PATH_NOT_A_PATH: "The selection is not a simple path. Release compound paths first: Object ▸ Compound Path ▸ Release.",
+            ERR_PATH_TOO_SHORT: "The selected path has fewer than 2 points.",
+            ERR_PATH_GONE: "The selected path is no longer available — select it again and rerun.",
+            WARN_MODE_FALLBACK: "The preset uses Selected path mode, but no path is selected — switched to Artboard edges.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -303,9 +341,7 @@ GM.L = (function () {
 
         cs: {
             // Sentinel display strings
-            CREATE_LABEL: "[Vytvořit 'Grommet Marks']",
             DEFAULT_PRESET: "[Výchozí]",
-            DDL_MISSING_SUFFIX: "(chybí)",
 
             // Units
             UNIT_MM: "Milimetry",
@@ -325,28 +361,59 @@ GM.L = (function () {
             TOP: "Horní",
             LEFT: "Levá",
             BOTTOM_MIRROR: "Zrcadlit horní",
-            BOTTOM_CUSTOM: "Dolní — vlastní",
             RIGHT_MIRROR: "Zrcadlit levou",
-            RIGHT_CUSTOM: "Pravá — vlastní",
 
             // Edge fields
             COUNT: "Počet ok:",
             SPACING: "Rozestup:",
+            EDGE_COUNT_HDR: "Počet ok",
+            EDGE_SPACING_HDR: "Rozestup",
+            OFFSET_LABEL: "Odsazení od kraje:",
+            MIRROR_GROUP_LABEL: "Zrcadlit:",
+            MIRROR_TOP: "horní ↓ dolní",
+            MIRROR_LEFT: "levou → pravou",
+            MIRROR_TOP_ACTIVE: "zrcadlí horní",
+            MIRROR_LEFT_ACTIVE: "zrcadlí levou",
 
             // Mark panel
             MARK_PANEL: "Značka",
-            UNIT_LABEL: "Měrné jednotky:",
+            UNIT_LABEL: "Jednotky:",
             TIP_UNITS: "Měrné jednotky pro všechny rozměry.",
             SIZE_LABEL: "Velikost:",
+            MARK_SHAPE_LABEL: "Tvar:",
+            MARK_CIRCLE: "Kruh",
+            MARK_CROSS: "Kříž",
+            REG_WEIGHT: "Reg. tah:",
+            HALO_WEIGHT: "Bílé halo:",
+            TIP_MARK_SHAPE: "Tvar značky — kruh, kříž, nebo oba (registrace přes bílé halo).",
+            TIP_REG_WEIGHT: "Tloušťka registračního tahu v bodech (přetiskuje).",
+            TIP_HALO_WEIGHT: "Tloušťka bílého podkladu (knockout) v bodech — udrží značku čitelnou na motivu.",
 
-            // Appearance panel
-            APPEARANCE_PANEL: "Vzhled",
-            LAYER: "Vrstva:",
-            FILL: "Výplň:",
-            STROKE: "Obrys:",
-            OVERPRINT: "Přetisk",
-            WEIGHT: "Tloušťka:",
-            POINTS: "pt",
+            // Placement panel
+            PLACEMENT_PANEL: "Umístění",
+            MODE_ARTBOARD: "Hrany artboardu",
+            MODE_PATH: "Vybraná cesta",
+            TIP_MODE_PATH_DISABLED: "Nejdřív vyberte cestu v dokumentu a spusťte skript znovu.",
+
+            // Path panel
+            PATH_PANEL: "Cesta",
+            PATH_INFO_CLOSED: "Uzavřená cesta",
+            PATH_INFO_OPEN: "Otevřená cesta",
+            PATH_INFO_CORNERS: "%s rohů",
+            PATH_INFO_NO_CORNERS: "bez rohů",
+            PATH_INFO_LENGTH: "obvod ≈ %s %s",
+            PATH_OFFSET_NOTE: "Značky leží středem na cestě. Potřebujete-li odsazení od kraje, posuňte si cestu předem (Objekt ▸ Cesta ▸ Posunout cestu…).",
+            TIP_PATH_COUNT_DISABLED: "Cesta s rohy se řídí roztečí — počet značek vyplyne z délek úseků.",
+
+            // Corner zones panel
+            ZONES_PANEL: "Rohové zóny",
+            ZONES_ENABLE: "Zhustit u rohů",
+            ZONES_COUNT: "Počet:",
+            ZONES_PITCH: "Rozteč:",
+            ZONES_FIRST: "— prvních",
+            ZONES_MARKS_PITCH: "značek, rozteč",
+            TIP_ZONES: "Prvních N značek od každého rohu použije tuto rozteč; zbytek jede podle rozteče hrany/cesty.",
+            TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
 
             // Settings panel
             SETTINGS_PANEL: "Předvolby",
@@ -370,12 +437,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)",
             TIP_MIRROR_BOTTOM: "Použije stejné nastavení jako horní strana",
             TIP_MIRROR_RIGHT: "Použije stejné nastavení jako levá strana",
-            TIP_OVERPRINT: "Značka bude tištěna přes ostatní barvy (overprint)",
             TIP_SIZE: "Průměr kruhu nebo délka strany čtverce v měrných jednotkách",
-            TIP_FILL: "Barevná výplň značky",
-            TIP_STROKE: "Obrysová linka značky",
-            TIP_LAYER: "Cílová vrstva pro umístění značek",
-            TIP_WEIGHT: "Tloušťka obrysové linky v bodech (points)",
             TIP_EDGE_ENABLE: "Zapne/vypne umístění značek na tuto hranu",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
             TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
@@ -383,26 +445,22 @@ GM.L = (function () {
             // Errors
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
             ERR_NO_EDGE: "Musí být zapnutá alespoň jedna hrana.",
-            ERR_NO_APPEARANCE: "Značky musí mít výplň a/nebo obrys.",
-            ERR_MARK_SIZE: "Velikost značky musí být kladné číslo.",
-            ERR_NEGATIVE_OFFSET: "Odsazení X a Y nesmí být záporné.",
-            ERR_INVALID_OFFSET: "Odsazení X a Y: zadejte platné nezáporné číslo.",
-            ERR_INVALID_WEIGHT: "Tloušťka obrysu musí být kladné číslo.",
-            ERR_EDGE_COUNT: "Počet značek musí být celé číslo ≥ 1.",
-            ERR_EDGE_SPACING: "Rozestup značek musí být kladné číslo.",
+            ERR_NO_APPEARANCE: "Značka musí mít aspoň jeden tvar — kruh a/nebo kříž.",
             ERR_UNEXPECTED: "Neočekávaná chyba",
             ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
-            WARN_SWATCH_FALLBACK: "Vzorník ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
-            WARN_LAYER_CREATED: "Vrstva ‘%s’ nebyla v dokumentu — byla vytvořena.",
+            WARN_MARKS_FAILED: "%s značek se nepodařilo umístit — zkontrolujte cílovou vrstvu.",
             WARN_PREFIX: "UPOZORNĚNÍ: ",
             ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
             ERR_ENTER_NAME: "Zadejte název.",
             ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
-            ERR_PRESET_EXISTS: "Předvolba již existuje. Přepsat?",
             ERR_MUST_BE_NUMBER: "%s musí být číslo!",
             ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
-            PRESET_PLACEHOLDER: "Moje předvolba",
+            ERR_PATH_NO_SELECTION: "Nic není vybráno. Vyberte jednu cestu a spusťte skript znovu.",
+            ERR_PATH_NOT_A_PATH: "Výběr není jednoduchá cesta. Složenou cestu nejdřív rozdělte: Objekt ▸ Složená cesta ▸ Uvolnit.",
+            ERR_PATH_TOO_SHORT: "Vybraná cesta má méně než 2 body.",
+            ERR_PATH_GONE: "Vybraná cesta už není dostupná — vyberte ji znovu a spusťte skript.",
+            WARN_MODE_FALLBACK: "Předvolba používá režim Vybraná cesta, ale žádná cesta není vybraná — přepnuto na Hrany artboardu.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
@@ -412,7 +470,7 @@ GM.L = (function () {
 
     var active = strings[lang] || strings["en"];
 
-    // Simple string formatter: GM.L.format(GM.L.WARN_SWATCH_FALLBACK, swatchName)
+    // Simple string formatter: GM.L.format(GM.L.WARN_MARKS_FAILED, count)
     active.format = function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) {
@@ -475,12 +533,18 @@ GM.Utils = {
         if (!a || !b) return false;
         var keys = [
             "offsetX", "offsetY", "bottomMirror", "rightMirror",
-            "units", "markSize", "isRound",
-            "markLayerName", "fillEnabled", "fillSwatchName", "fillOverprint",
-            "strokeEnabled", "strokeSwatchName", "strokeOverprint", "strokeWeight"
+            "units", "markSize"
         ];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
+        }
+        // Presence-guard the v5 fields: pre-v5 presets lack them. Storage.load()
+        // forward-fills from getDefaults() after load, so at runtime both sides
+        // always carry them; the guard only protects hand-built presets in tests
+        // and the brief pre-forward-fill window.
+        // Compare placementMode only when both sides carry the field
+        if (a.placementMode !== undefined && b.placementMode !== undefined) {
+            if (String(a.placementMode) !== String(b.placementMode)) return false;
         }
         // Compare edge sub-objects
         var edgeNames = ["top", "left", "bottom", "right"];
@@ -490,6 +554,28 @@ GM.Utils = {
             var bE = b[edgeNames[ei]] || {};
             for (var ek = 0; ek < edgeKeys.length; ek++) {
                 if (String(aE[edgeKeys[ek]]) !== String(bE[edgeKeys[ek]])) return false;
+            }
+        }
+        // Compare v5 sub-objects only when both sides carry the field
+        if (a.cornerZone !== undefined && b.cornerZone !== undefined) {
+            var zA = a.cornerZone, zB = b.cornerZone;
+            var zoneKeys = ["enabled", "count", "pitch"];
+            for (var zk = 0; zk < zoneKeys.length; zk++) {
+                if (String(zA[zoneKeys[zk]]) !== String(zB[zoneKeys[zk]])) return false;
+            }
+        }
+        if (a.pathDist !== undefined && b.pathDist !== undefined) {
+            var pA = a.pathDist, pB = b.pathDist;
+            var pdKeys = ["useNumber", "number", "spacing"];
+            for (var pk = 0; pk < pdKeys.length; pk++) {
+                if (String(pA[pdKeys[pk]]) !== String(pB[pdKeys[pk]])) return false;
+            }
+        }
+        // Compare v6 fields only when both sides carry them (presence-guard mirrors v5).
+        var v6Keys = ["markCircle", "markCross", "regWeight", "haloWeight"];
+        if (a.markCircle !== undefined && b.markCircle !== undefined) {
+            for (var vi = 0; vi < v6Keys.length; vi++) {
+                if (String(a[v6Keys[vi]]) !== String(b[v6Keys[vi]])) return false;
             }
         }
         return true;
@@ -529,7 +615,6 @@ GM.Config = {
      */
     getDefaults: function () {
         var c = GM.Config.createEdgeDef;
-        var S = GM.CONSTANTS.SENTINEL_CREATE;
         return {
             offsetX: 7,
             offsetY: 7,
@@ -541,15 +626,14 @@ GM.Config = {
             rightMirror: true,
             units: GM.CONSTANTS.UNIT.MM,
             markSize: 3,
-            isRound: true,
-            markLayerName: S,
-            fillEnabled: true,
-            fillSwatchName: S,
-            fillOverprint: true,
-            strokeEnabled: false,
-            strokeSwatchName: S,
-            strokeOverprint: true,
-            strokeWeight: 1
+            // v6 — uniform Esko mark (circle/cross, white halo + registration)
+            markCircle: true,
+            markCross: false,
+            regWeight: 1.0,
+            haloWeight: 3.0,
+            placementMode: GM.CONSTANTS.MODE_ARTBOARD,
+            cornerZone: { enabled: false, count: 5, pitch: 100 },
+            pathDist: { useNumber: false, number: 24, spacing: 105 }
         };
     }
 };
@@ -580,7 +664,11 @@ GM.Storage = {
 
     /**
      * Serializes and saves the full preset wrapper to disk.
+     * Reports write failures to the user itself (single source of truth for
+     * all call-sites) — a stale on-disk state that "resurrects" a deleted
+     * preset after restart is a data-integrity bug, never swallow it.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
+     * @returns {boolean} True if the file was written.
      */
     save: function (data) {
         try {
@@ -588,12 +676,15 @@ GM.Storage = {
             f.encoding = "UTF-8";
             if (!f.open("w")) {
                 GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
-                return;
+                return false;
             }
             f.write(JSON.stringify(data));
             f.close();
+            return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
+            GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+            return false;
         }
     },
 
@@ -756,9 +847,14 @@ GM.Validation = {
         offsetX:      { min: 0,    max: 9999, integer: false },
         offsetY:      { min: 0,    max: 9999, integer: false },
         markSize:     { min: 0.01, max: 9999, integer: false },
-        strokeWeight: { min: 0.01, max: 100,  integer: false },
+        regWeight:    { min: 0.1,  max: 50,   integer: false },
+        haloWeight:   { min: 0.1,  max: 50,   integer: false },
         edgeCount:    { min: 1,    max: 9999, integer: true  },
-        edgeSpacing:  { min: 0.01, max: 9999, integer: false }
+        edgeSpacing:  { min: 0.01, max: 9999, integer: false },
+        cornerCount:  { min: 1,    max: 999,  integer: true  },
+        cornerPitch:  { min: 0.01, max: 9999, integer: false },
+        pathNumber:   { min: 1,    max: 9999, integer: true  },
+        pathSpacing:  { min: 0.01, max: 9999, integer: false }
     },
 
     /**
@@ -810,42 +906,64 @@ GM.Validation = {
         var markSize = vn(cfg.markSize, rules.markSize, L.SIZE_LABEL || "Mark size", L);
         if (markSize === null) return { valid: false, settings: null };
 
-        var strokeWeight = cfg.strokeWeight;
-        if (cfg.strokeEnabled) {
-            strokeWeight = vn(cfg.strokeWeight, rules.strokeWeight, L.WEIGHT || "Stroke weight", L);
-            if (strokeWeight === null) return { valid: false, settings: null };
+        // Corner zones (both modes; skipped when disabled)
+        var zone = cfg.cornerZone || { enabled: false };
+        var zoneCount = zone.count, zonePitch = zone.pitch;
+        if (zone.enabled) {
+            zoneCount = vn(zone.count, rules.cornerCount, L.ZONES_COUNT || "Count", L);
+            if (zoneCount === null) return { valid: false, settings: null };
+            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Pitch", L);
+            if (zonePitch === null) return { valid: false, settings: null };
         }
 
-        // Appearance check
-        if (!cfg.fillEnabled && !cfg.strokeEnabled) {
+        // Appearance: validate weights (always relevant), require a shape.
+        var regWeight = vn(cfg.regWeight, rules.regWeight, L.REG_WEIGHT || "Reg stroke", L);
+        if (regWeight === null) return { valid: false, settings: null };
+        var haloWeight = vn(cfg.haloWeight, rules.haloWeight, L.HALO_WEIGHT || "Halo", L);
+        if (haloWeight === null) return { valid: false, settings: null };
+        if (!cfg.markCircle && !cfg.markCross) {
             alert(L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
 
-        // Edge enabled check (accounting for mirrors)
-        var topOn = cfg.top.enabled;
-        var leftOn = cfg.left.enabled;
-        var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
-        var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
-        if (!topOn && !leftOn && !bottomOn && !rightOn) {
-            alert(L.ERR_NO_EDGE);
-            return { valid: false, settings: null };
-        }
-
-        // Validate non-mirrored enabled edges
-        var edgeKeys = ["top", "left"];
-        if (!cfg.bottomMirror) edgeKeys.push("bottom");
-        if (!cfg.rightMirror) edgeKeys.push("right");
-
-        for (var i = 0; i < edgeKeys.length; i++) {
-            var e = cfg[edgeKeys[i]];
-            if (!e.enabled) continue;
-            if (e.useNumber) {
-                var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
-                if (cnt === null) return { valid: false, settings: null };
+        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
+        var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
+        var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
+        if (isPathMode) {
+            if (!cfg.pathDist) return { valid: false, settings: null };
+            if (cfg.pathDist.useNumber) {
+                pathNumber = vn(cfg.pathDist.number, rules.pathNumber, L.COUNT || "Count", L);
+                if (pathNumber === null) return { valid: false, settings: null };
             } else {
-                var spc = vn(e.spacing, rules.edgeSpacing, L.SPACING || "Spacing", L);
-                if (spc === null) return { valid: false, settings: null };
+                pathSpacing = vn(cfg.pathDist.spacing, rules.pathSpacing, L.SPACING || "Spacing", L);
+                if (pathSpacing === null) return { valid: false, settings: null };
+            }
+        } else {
+            // Edge enabled check (accounting for mirrors)
+            var topOn = cfg.top.enabled;
+            var leftOn = cfg.left.enabled;
+            var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
+            var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
+            if (!topOn && !leftOn && !bottomOn && !rightOn) {
+                alert(L.ERR_NO_EDGE);
+                return { valid: false, settings: null };
+            }
+
+            // Validate non-mirrored enabled edges
+            var edgeKeys = ["top", "left"];
+            if (!cfg.bottomMirror) edgeKeys.push("bottom");
+            if (!cfg.rightMirror) edgeKeys.push("right");
+
+            for (var i = 0; i < edgeKeys.length; i++) {
+                var e = cfg[edgeKeys[i]];
+                if (!e.enabled) continue;
+                if (e.useNumber) {
+                    var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
+                    if (cnt === null) return { valid: false, settings: null };
+                } else {
+                    var spc = vn(e.spacing, rules.edgeSpacing, L.SPACING || "Spacing", L);
+                    if (spc === null) return { valid: false, settings: null };
+                }
             }
         }
 
@@ -854,7 +972,16 @@ GM.Validation = {
         settings.offsetX = offsetX;
         settings.offsetY = offsetY;
         settings.markSize = markSize;
-        if (cfg.strokeEnabled) settings.strokeWeight = strokeWeight;
+        settings.regWeight = regWeight;
+        settings.haloWeight = haloWeight;
+        if (zone.enabled) {
+            settings.cornerZone.count = zoneCount;
+            settings.cornerZone.pitch = zonePitch;
+        }
+        if (isPathMode) {
+            if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
+            else settings.pathDist.spacing = pathSpacing;
+        }
 
         return { valid: true, settings: settings };
     }
@@ -1093,7 +1220,7 @@ GM.Core = {
                     spc = sCeil;
                 }
                 // Safety cap — prevent freeze from very small spacing values
-                if (count > 9999) { count = 9999; spc = count > 1 ? available / (count - 1) : 0; }
+                if (count > GM.CONSTANTS.MAX_MARKS) { count = GM.CONSTANTS.MAX_MARKS; spc = count > 1 ? available / (count - 1) : 0; }
             }
         }
 
@@ -1102,6 +1229,329 @@ GM.Core = {
             positions.push(startOff + i * spc);
         }
         return positions;
+    },
+
+    /**
+     * Evaluates a cubic Bezier at parameter t.
+     * Segment: {p0,p1,p2,p3} — each [x, y]. Straight lines are encoded as
+     * p1 === p0 and p2 === p3 (Illustrator anchors without handles).
+     * @param {Object} seg - Segment.
+     * @param {number} t - Parameter 0..1.
+     * @returns {Array<number>} [x, y]
+     */
+    bezierPoint: function (seg, t) {
+        var u = 1 - t;
+        var a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+        return [
+            a * seg.p0[0] + b * seg.p1[0] + c * seg.p2[0] + d * seg.p3[0],
+            a * seg.p0[1] + b * seg.p1[1] + c * seg.p2[1] + d * seg.p3[1]
+        ];
+    },
+
+    /**
+     * Builds a circuit: samples every segment into a cumulative arc-length
+     * table so positions along the circuit can be resolved by distance.
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...] in draw order.
+     * @param {boolean} closed - True for a closed path (wraps around).
+     * @returns {Object} {segments:[{seg, len, pts}], totalLen, closed}
+     */
+    buildCircuit: function (segments, closed) {
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT;
+        var out = [];
+        var total = 0;
+        for (var i = 0; i < segments.length; i++) {
+            var seg = segments[i];
+            var pts = [];
+            var len = 0;
+            var prev = GM.Core.bezierPoint(seg, 0);
+            pts.push({ s: 0, p: prev });
+            for (var j = 1; j <= n; j++) {
+                var cur = GM.Core.bezierPoint(seg, j / n);
+                var dx = cur[0] - prev[0], dy = cur[1] - prev[1];
+                len += Math.sqrt(dx * dx + dy * dy);
+                pts.push({ s: len, p: cur });
+                prev = cur;
+            }
+            out.push({ seg: seg, len: len, pts: pts });
+            total += len;
+        }
+        return { segments: out, totalLen: total, closed: closed };
+    },
+
+    /**
+     * Resolves the point at arc distance s along the circuit (linear
+     * interpolation between samples; closed circuits wrap, open clamp).
+     * @param {Object} circuit - From buildCircuit.
+     * @param {number} s - Distance along the circuit. Closed: any value
+     *   (wraps); open: clamped to [0, totalLen].
+     * @returns {Array<number>} [x, y]
+     */
+    pointAtDistance: function (circuit, s) {
+        if (!circuit.segments || circuit.segments.length === 0) return [0, 0];
+        if (circuit.closed) {
+            s = s % circuit.totalLen;
+            if (s < 0) s += circuit.totalLen;
+        } else {
+            if (s < 0) s = 0;
+            if (s > circuit.totalLen) s = circuit.totalLen;
+        }
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var sg = circuit.segments[i];
+            if (s > sg.len) { s -= sg.len; continue; }
+            // Binary search in the sample table
+            var pts = sg.pts, lo = 0, hi = pts.length - 1;
+            while (hi - lo > 1) {
+                var midI = (lo + hi) >> 1;
+                if (pts[midI].s < s) lo = midI; else hi = midI;
+            }
+            var a = pts[lo], b = pts[hi];
+            var span = b.s - a.s;
+            var f = span > 0 ? (s - a.s) / span : 0;
+            return [a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f];
+        }
+        var last = circuit.segments[circuit.segments.length - 1];
+        return last.pts[last.pts.length - 1].p;
+    },
+
+    /**
+     * Distributes mark positions over one corner-to-corner span.
+     * Returns sorted distances 0..L from the span start; endpoints (corner
+     * marks) are always included. The caller deduplicates shared corners.
+     *
+     * Corner zone: zone.count marks INCLUDING the corner mark at zone.pitch,
+     * mirrored from both ends ((count-1)*pitch from each end). Middle region
+     * is filled with the preferred pitch using the same count selection as
+     * the legacy calcPositions (floor/ceil pick) so that zones-off output is
+     * positionally identical to v4 behaviour. Equivalence is a regression
+     * contract: existing presets store spacing values users calibrated by eye
+     * against v4 output, so zones-off must reproduce v4 positions exactly. Do
+     * not replace legacyCount with a Math.round shortcut — the floor/ceil
+     * tie-break differs. Count mode (mid.useNumber) applies to the whole span
+     * and is only used with zones disabled.
+     *
+     * All lengths share one unit — the caller pre-converts to points.
+     *
+     * @param {number} L - Span length (>= 0).
+     * @param {Object} zone - {enabled, count, pitch}.
+     * @param {Object} mid - {useNumber, number, spacing}.
+     * @returns {Array<number>} Sorted distances from span start.
+     */
+    distributeOnSpan: function (L, zone, mid) {
+        var positions = [];
+        var seen = {};
+        function push(d) {
+            if (d < 0) d = 0;
+            if (d > L) d = L;
+            var key = String(Math.round(d * 1e6));
+            if (seen[key]) return;
+            seen[key] = true;
+            positions.push(d);
+        }
+        // Legacy count selection over a region of length M with already-placed
+        // boundary marks: returns {count, spc} where count includes both
+        // boundary marks (mirrors calcPositions' spacing mode exactly).
+        function legacyCount(M, preferred) {
+            if (preferred <= 0) return { count: 1, spc: 0 };
+            var raw = (M / preferred) + 1;
+            var floor = Math.max(Math.floor(raw), 1);
+            var ceil = Math.max(Math.ceil(raw), 1);
+            var sFloor = floor > 1 ? M / (floor - 1) : 0;
+            var sCeil = ceil > 1 ? M / (ceil - 1) : 0;
+            var count, spc;
+            if (floor <= 1) { count = ceil; spc = sCeil; }
+            else if (Math.abs(sFloor - preferred) <= Math.abs(sCeil - preferred)) { count = floor; spc = sFloor; }
+            else { count = ceil; spc = sCeil; }
+            if (count > GM.CONSTANTS.MAX_MARKS) {
+                count = GM.CONSTANTS.MAX_MARKS;
+                spc = count > 1 ? M / (count - 1) : 0;
+            }
+            return { count: count, spc: spc };
+        }
+
+        // !(L > 0) also catches NaN (a degenerate zero-length Bezier span)
+        // so the circuit loop never propagates NaN coordinates downstream.
+        if (!(L > 0)) { push(0); return positions; }
+
+        var zoneActive = !!(zone && zone.enabled);
+        var zc = zoneActive ? Math.max(zone.count || 1, 1) : 0;
+        var zp = zoneActive ? Math.max(zone.pitch || 0, 0) : 0;
+        var zoneLen = zoneActive ? (zc - 1) * zp : 0;
+
+        if (zoneActive && zp > 0 && zc > 1 && 2 * zoneLen >= L) {
+            // Degradation: zones meet or overlap — mirror from both ends, dedup.
+            for (var di = 0; di < zc; di++) {
+                var d = di * zp;
+                if (d > L) break;
+                push(d); push(L - d);
+            }
+            positions.sort(function (a, b) { return a - b; });
+            return positions;
+        }
+
+        push(0); push(L);
+        if (zoneActive && zp > 0) {
+            for (var zi = 1; zi < zc; zi++) { push(zi * zp); push(L - zi * zp); }
+        } else {
+            zoneLen = 0;
+        }
+
+        if (mid.useNumber && !zoneActive) {
+            var num = Math.max(mid.number || 1, 1);
+            if (num > GM.CONSTANTS.MAX_MARKS) num = GM.CONSTANTS.MAX_MARKS;
+            if (num === 1) {
+                // Legacy parity: N=1 places a single mark at the span start.
+                // Undo the initial push(0)/push(L) above (push closes over the
+                // `positions` variable binding, so reassigning it is safe).
+                positions = [];
+                seen = {};
+                push(0);
+            } else {
+                var cspc = L / (num - 1);
+                for (var ci = 0; ci < num; ci++) push(ci * cspc);
+            }
+        } else {
+            var m0 = zoneLen;
+            var M = (L - zoneLen) - m0;
+            var preferred = Math.max(mid.spacing || 0, 0);
+            if (M > 0 && preferred > 0) {
+                var sel = legacyCount(M, preferred);
+                for (var gi = 1; gi < sel.count - 1; gi++) push(m0 + gi * sel.spc);
+            }
+        }
+
+        positions.sort(function (a, b) { return a - b; });
+        return positions;
+    },
+
+    /**
+     * Distributes marks over a whole circuit.
+     * - With corners: every corner gets a mandatory mark; each corner-to-corner
+     *   span is filled by distributeOnSpan (zones + preferred middle). Count
+     *   mode is not applicable here (the UI disables it) — spacing rules.
+     * - Without corners + closed: even ring — count mode places exactly N,
+     *   spacing mode places round(totalLen/spacing), starting at distance 0.
+     * Marks are deduplicated by rounded coordinate (spans share corner anchors)
+     * and capped at GM.CONSTANTS.MAX_MARKS.
+     *
+     * @param {Object} circuit - From buildCircuit.
+     * @param {Array<number>} corners - Corner anchor indices (detectCorners).
+     * @param {Object} zone - {enabled, count, pitch} (already unit-converted).
+     * @param {Object} dist - {useNumber, number, spacing} (unit-converted).
+     * @returns {Array<Array<number>>} [[x, y], ...]
+     */
+    distributeOnCircuit: function (circuit, corners, zone, dist) {
+        var marks = [];
+        var seen = {};
+        function place(p) {
+            var key = Math.round(p[0] * 10) / 10 + "|" + Math.round(p[1] * 10) / 10;
+            if (seen[key]) return;
+            seen[key] = true;
+            marks.push(p);
+        }
+
+        var total = circuit.totalLen;
+        if (total <= 0) return marks;
+
+        if (corners.length === 0) {
+            // Smooth ring (any cornerless path, not just circles).
+            var count;
+            if (dist.useNumber) {
+                count = Math.max(dist.number || 1, 1);
+            } else {
+                var sp = Math.max(dist.spacing || 0, 0);
+                // round() yields 0 when spacing > 2*perimeter — clamp to 1 mark.
+                count = sp > 0 ? Math.round(total / sp) : 1;
+                if (count < 1) count = 1;
+            }
+            if (count > GM.CONSTANTS.MAX_MARKS) count = GM.CONSTANTS.MAX_MARKS;
+            var step = total / count;
+            for (var i = 0; i < count; i++) place(GM.Core.pointAtDistance(circuit, i * step));
+            return marks;
+        }
+
+        // Corner anchor index -> arc distance from circuit start.
+        var anchorDist = [0];
+        for (var a = 0; a < circuit.segments.length; a++) {
+            anchorDist.push(anchorDist[a] + circuit.segments[a].len);
+        }
+
+        var spans = [];
+        for (var ci = 0; ci < corners.length; ci++) {
+            var from = anchorDist[corners[ci]];
+            var to;
+            if (ci + 1 < corners.length) {
+                to = anchorDist[corners[ci + 1]];
+            } else if (circuit.closed) {
+                to = total + anchorDist[corners[0]]; // wrap to first corner
+            } else {
+                break; // open: last corner is the path end, no further span
+            }
+            spans.push({ from: from, len: to - from });
+        }
+
+        for (var si = 0; si < spans.length; si++) {
+            var span = spans[si];
+            var pos = GM.Core.distributeOnSpan(span.len, zone,
+                { useNumber: false, number: 1, spacing: dist.spacing });
+            for (var pi = 0; pi < pos.length; pi++) {
+                if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
+                place(GM.Core.pointAtDistance(circuit, span.from + pos[pi]));
+            }
+        }
+        return marks;
+    },
+
+    /**
+     * Detects corner anchors by tangent deviation. An anchor is a corner when
+     * the angle between the incoming and outgoing tangents exceeds
+     * minAngleDeg. Geometric truth — independent of Illustrator PointType
+     * (which does not guarantee visual sharpness).
+     *
+     * Returns anchor indices: anchor i joins segments[i-1] -> segments[i]
+     * (anchor 0 = start of segments[0]). Open circuits: both endpoints are
+     * corners by definition; the last anchor index equals segments.length.
+     *
+     * Note: for highly curved segments the chord approximation may over- or
+     * under-estimate the tangent angle at a degenerate handle by up to ~30°.
+     *
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...]
+     * @param {boolean} closed - Closed path flag.
+     * @param {number} minAngleDeg - Threshold (GM.CONSTANTS.CORNER_ANGLE_MIN).
+     * @returns {Array<number>} Sorted corner anchor indices.
+     */
+    detectCorners: function (segments, closed, minAngleDeg) {
+        var n = segments.length;
+        var corners = [];
+        var minRad = minAngleDeg * Math.PI / 180;
+
+        // Outgoing tangent at segment start; falls back to the chord when the
+        // handle collapses onto the anchor (degenerate handle).
+        function outTangent(seg) {
+            var dx = seg.p1[0] - seg.p0[0], dy = seg.p1[1] - seg.p0[1];
+            if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+            return [dx, dy];
+        }
+        function inTangent(seg) {
+            var dx = seg.p3[0] - seg.p2[0], dy = seg.p3[1] - seg.p2[1];
+            if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+            return [dx, dy];
+        }
+        function deviation(a, b) {
+            var cross = a[0] * b[1] - a[1] * b[0];
+            var dot = a[0] * b[0] + a[1] * b[1];
+            return Math.abs(Math.atan2(cross, dot));
+        }
+
+        for (var i = 0; i < n; i++) {
+            var isEndpoint = !closed && i === 0;
+            if (isEndpoint) { corners.push(i); continue; }
+            var prev = segments[(i - 1 + n) % n];
+            if (deviation(inTangent(prev), outTangent(segments[i])) > minRad) {
+                corners.push(i);
+            }
+        }
+        if (!closed) corners.push(n); // last anchor of an open path
+        return corners;
     }
 };
 
@@ -1128,178 +1578,155 @@ GM.Illustrator = {
     },
 
     /**
-     * Checks if swatch name is a system swatch (e.g. [None], [Registration]).
-     * Works across all AI localizations by detecting the bracket pattern.
-     * @param {string} name - Swatch name
-     * @returns {boolean} True if system swatch
+     * Returns the fixed "Grommet Marks" layer, creating it if absent.
+     * @returns {Layer} Target layer.
      */
-    isSystemSwatch: function (name) {
-        return name.charAt(0) === "[" && name.charAt(name.length - 1) === "]";
-    },
-
-    getLayerNames: function () {
-        var names = [GM.L.CREATE_LABEL];
-        var has = false;
-        var layers = GM.Illustrator.doc.layers;
-        for (var i = 0; i < layers.length; i++) {
-            try {
-                var n = layers[i].name;
-                names.push(n);
-                if (n === GM.CONSTANTS.LAYER_NAME) has = true;
-            } catch (e) {}
-        }
-        return { names: names, has: has };
-    },
-
-    getSwatchNames: function () {
-        var names = [GM.L.CREATE_LABEL];
-        var has = false;
-        var swatches = GM.Illustrator.doc.swatches;
-        for (var i = 0; i < swatches.length; i++) {
-            try {
-                var n = swatches[i].name;
-                // Skip system swatches: [None]/[Zadna], [Registration]/[Registracni], etc.
-                if (GM.Illustrator.isSystemSwatch(n)) continue;
-                names.push(n);
-                if (n === GM.CONSTANTS.SWATCH_NAME) has = true;
-            } catch (e) {}
-        }
-        return { names: names, has: has };
-    },
-
-    /**
-     * Resolves a layer config value to the actual layer name.
-     * The SENTINEL_CREATE sentinel maps to the default "Grommet Marks" name;
-     * any other value is an explicit layer name.
-     * @param {string} layerName - Layer name or SENTINEL_CREATE.
-     * @returns {string} Resolved layer name.
-     */
-    resolveLayerName: function (layerName) {
-        return (layerName === GM.CONSTANTS.SENTINEL_CREATE)
-            ? GM.CONSTANTS.LAYER_NAME : layerName;
-    },
-
-    /**
-     * Returns true if a layer with the given name exists in the document.
-     * @param {string} name - Resolved layer name.
-     * @returns {boolean}
-     */
-    layerExists: function (name) {
-        try {
-            GM.Illustrator.doc.layers.getByName(name);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    },
-
-    /**
-     * Resolves the target layer by name, creating it if absent.
-     *
-     * A layer is a low-risk container (unlike a colour, it cannot mis-separate
-     * on output), so a missing target is created and drawn into rather than
-     * aborting — matching the SENTINEL_CREATE default and ZSM's getLay. The
-     * sentinel resolves to the default "Grommet Marks" name; any other value is
-     * taken as an explicit layer name.
-     *
-     * @param {string} layerName - Layer name or SENTINEL_CREATE.
-     * @returns {Layer} Target layer (created if it didn't exist).
-     */
-    getOrCreateLayer: function (layerName) {
+    getOrCreateLayer: function () {
         var doc = GM.Illustrator.doc;
-        var name = GM.Illustrator.resolveLayerName(layerName);
         try {
-            return doc.layers.getByName(name);
+            return doc.layers.getByName(GM.CONSTANTS.LAYER_NAME);
         } catch (e) {
             var l = doc.layers.add();
-            l.name = name;
+            l.name = GM.CONSTANTS.LAYER_NAME;
             return l;
         }
     },
 
     /**
-     * Resolves swatch by name or creates the default "Grommet Marks" spot color.
-     * @param {string} swatchName - Swatch name or SENTINEL_CREATE
-     * @returns {Color|null} Swatch color or null on failure
+     * Inspects the current selection for path-mode placement.
+     * Pure read — never mutates the selection. Everything computable is
+     * delegated to GM.Core so this stays a thin DOM extraction layer.
+     *
+     * @returns {Object} {ok:true, circuit, corners, closed, cornerCount,
+     *                    totalLen, pathRef}
+     *                   or {ok:false, reason:"no-selection"|"not-a-path"|"too-short"}
      */
-    getOrCreateSwatch: function (swatchName) {
-        var doc = GM.Illustrator.doc;
-        if (swatchName === GM.CONSTANTS.SENTINEL_CREATE) {
-            try {
-                return doc.swatches.getByName(GM.CONSTANTS.SWATCH_NAME).color;
-            } catch (e) {
-                var sp = doc.spots.add();
-                sp.name = GM.CONSTANTS.SWATCH_NAME;
-                sp.colorType = ColorModel.SPOT;
-                var c = new CMYKColor();
-                c.cyan = 0; c.magenta = 100; c.yellow = 0; c.black = 0;
-                sp.color = c;
-                var sc = new SpotColor();
-                sc.spot = sp; sc.tint = 100;
-                return sc;
-            }
-        } else {
-            try {
-                return doc.swatches.getByName(swatchName).color;
-            } catch (e) {
-                // Named swatch missing → null signals the caller, which degrades
-                // to registrationColor() + a warning (never silently auto-create
-                // a surprise spot — unsafe for prepress output).
-                return null;
-            }
+    getSelectedPathInfo: function () {
+        var sel, item;
+        // Whole selection probe in one try — typename on a stale/deleted ref
+        // can throw ("no such element"); treat any such failure as not-a-path.
+        try {
+            sel = GM.Illustrator.doc.selection;
+            if (!sel || sel.length === 0) return { ok: false, reason: "no-selection" };
+            if (sel.length !== 1) return { ok: false, reason: "not-a-path" };
+            item = sel[0];
+            if (item.typename !== "PathItem") return { ok: false, reason: "not-a-path" };
+        } catch (eSel) {
+            return { ok: false, reason: "not-a-path" };
         }
+        var pts;
+        try { pts = item.pathPoints; } catch (ePts) { return { ok: false, reason: "not-a-path" }; }
+        if (!pts || pts.length < 2) return { ok: false, reason: "too-short" };
+
+        // Extract anchors/handles into plain arrays — core stays DOM-free.
+        var segments = [];
+        var n = pts.length;
+        var segCount = item.closed ? n : n - 1;
+        for (var i = 0; i < segCount; i++) {
+            var aP = pts[i], bP = pts[(i + 1) % n];
+            segments.push({
+                p0: [aP.anchor[0], aP.anchor[1]],
+                p1: [aP.rightDirection[0], aP.rightDirection[1]],
+                p2: [bP.leftDirection[0], bP.leftDirection[1]],
+                p3: [bP.anchor[0], bP.anchor[1]]
+            });
+        }
+
+        var circuit = GM.Core.buildCircuit(segments, !!item.closed);
+        var corners = GM.Core.detectCorners(segments, !!item.closed,
+            GM.CONSTANTS.CORNER_ANGLE_MIN);
+        return {
+            ok: true,
+            circuit: circuit,
+            corners: corners,
+            closed: !!item.closed,
+            cornerCount: corners.length,
+            totalLen: circuit.totalLen,
+            pathRef: item
+        };
     },
 
     /**
-     * Returns the document's [Registration] swatch colour (always swatches[1]
-     * in any AI locale; index 0 is [None]), or 100% K CMYK as a last-resort
-     * fallback. Used when a named fill/stroke swatch is missing — marks degrade
-     * to a safe, cutter-readable colour instead of being dropped or aborted.
+     * Returns the document's [Registration] swatch colour (swatches[1] in any
+     * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
+     * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
+     * the user can delete [Registration] from the Swatches panel, and then
+     * swatches[1] is an arbitrary swatch that would silently mis-colour the
+     * fallback marks. Used when a named fill/stroke swatch is missing — marks
+     * degrade to a safe, cutter-readable colour instead of being dropped.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
         try {
-            return GM.Illustrator.doc.swatches[1].color;
-        } catch (e) {
-            var k = new CMYKColor();
-            k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
-            return k;
-        }
+            var c = GM.Illustrator.doc.swatches[1].color;
+            if (c && c.typename === "SpotColor" && c.spot &&
+                c.spot.colorType === ColorModel.REGISTRATION) {
+                return c;
+            }
+        } catch (e) {}
+        var k = new CMYKColor();
+        k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
+        return k;
     },
 
     /**
-     * Places a single mark on the target layer.
-     * x, y are the CENTER coordinates of the mark in document space.
+     * Places one Esko-style registration eyelet mark as a GroupItem centred at
+     * (x, y) in document space. White halo strokes (knockout) sit BELOW the
+     * registration strokes (overprint) so the mark stays legible on any
+     * artwork. Draws a circle and/or a cross per opts flags.
+     *
+     * @param {Layer} targetLayer - Destination layer.
+     * @param {number} x - Centre X (document space, points).
+     * @param {number} y - Centre Y (document space, points).
+     * @param {number} size - Diameter / cross arm span (points).
+     * @param {Object} opts - {circle, cross, regWeight, haloWeight} (weights in pt).
+     * @returns {boolean} True on success — caller counts failures.
      */
-    placeMark: function (targetLayer, x, y, radius, size, isRound, fillCol, strokeCol, cfg) {
+    placeMarkGroup: function (targetLayer, x, y, size, opts) {
         try {
-            var m;
-            if (isRound) {
-                m = targetLayer.pathItems.ellipse(y + radius, x - radius, size, size);
-            } else {
-                m = targetLayer.pathItems.rectangle(y + radius, x - radius, size, size);
-            }
-
-            if (cfg.fillEnabled && fillCol) {
-                m.filled = true;
-                m.fillColor = fillCol;
-                m.fillOverprint = cfg.fillOverprint;
-            } else {
-                m.filled = false;
-            }
-
-            if (cfg.strokeEnabled && strokeCol) {
-                m.stroked = true;
-                m.strokeColor = strokeCol;
-                m.strokeWidth = cfg.strokeWeight;
-                m.strokeOverprint = cfg.strokeOverprint;
-            } else {
-                m.stroked = false;
-            }
+            var grp = targetLayer.groupItems.add();
+            var regCol = GM.Illustrator.registrationColor();
+            var white = new CMYKColor();
+            white.cyan = 0; white.magenta = 0; white.yellow = 0; white.black = 0;
+            // bottom -> top: white halo (knockout), then registration (overprint)
+            if (opts.circle) GM.Illustrator._strokeEllipse(grp, x, y, size, white,  opts.haloWeight, false);
+            if (opts.cross)  GM.Illustrator._strokeCross(grp,   x, y, size, white,  opts.haloWeight, false);
+            if (opts.circle) GM.Illustrator._strokeEllipse(grp, x, y, size, regCol, opts.regWeight,  true);
+            if (opts.cross)  GM.Illustrator._strokeCross(grp,   x, y, size, regCol, opts.regWeight,  true);
+            return true;
         } catch (e) {
-            $.writeln("placeMark [" + x + ", " + y + "]: " + e.message);
+            $.writeln("placeMarkGroup [" + x + ", " + y + "]: " + e.message);
+            return false;
         }
-    }
+    },
+
+    /** Stroked (unfilled) circle centred at (x,y); size = diameter. */
+    _strokeEllipse: function (grp, x, y, size, color, weight, overprint) {
+        var r = size / 2;
+        var el = grp.pathItems.ellipse(y + r, x - r, size, size); // top, left, w, h
+        el.filled = false;
+        el.stroked = true;
+        el.strokeColor = color;
+        el.strokeWidth = weight;
+        el.strokeOverprint = overprint;
+        return el;
+    },
+
+    /** Crosshair centred at (x,y); arm span = size (radius each direction). */
+    _strokeCross: function (grp, x, y, size, color, weight, overprint) {
+        var r = size / 2;
+        var hLine = grp.pathItems.add();
+        hLine.setEntirePath([[x - r, y], [x + r, y]]);
+        hLine.filled = false; hLine.stroked = true;
+        hLine.strokeColor = color; hLine.strokeWidth = weight;
+        hLine.strokeOverprint = overprint;
+        var vLine = grp.pathItems.add();
+        vLine.setEntirePath([[x, y - r], [x, y + r]]);
+        vLine.filled = false; vLine.stroked = true;
+        vLine.strokeColor = color; vLine.strokeWidth = weight;
+        vLine.strokeOverprint = overprint;
+    },
+
 };
 
 // ------------------------------------------------------------------------
@@ -1347,26 +1774,6 @@ GM.UI = {
     },
 
     /**
-     * Maps a stored value to its display string for dropdowns.
-     * @param {string} value - Stored value
-     * @returns {string} Display string
-     */
-    toDisplay: function (value) {
-        if (value === GM.CONSTANTS.SENTINEL_CREATE) return GM.L.CREATE_LABEL;
-        return value;
-    },
-
-    /**
-     * Maps a dropdown display string back to its storage value.
-     * @param {string} displayText - Dropdown selection text
-     * @returns {string} Value for storage
-     */
-    toStorage: function (displayText) {
-        if (displayText === GM.L.CREATE_LABEL) return GM.CONSTANTS.SENTINEL_CREATE;
-        return displayText;
-    },
-
-    /**
      * Builds a compact edge row: enable checkbox + count/spacing radios.
      * When mirrorLabel is supplied (bottom/right edges), a mirror checkbox is
      * rendered ABOVE the row inside the same container (TD-001 — the control
@@ -1382,46 +1789,51 @@ GM.UI = {
      * @param {string} [mirrorTip] - Mirror checkbox helpTip.
      * @returns {Object} Edge panel API.
      */
-    buildEdgePanel: function (parent, label, defaultCfg, mirrorLabel, mirrorTip) {
-        var grp = parent.add("group");
-        grp.orientation = "column";
-        grp.alignChildren = ["left", "top"];
-        grp.spacing = 6;
+    buildEdgePanel: function (parent, label, defaultCfg) {
+        // One uniform grid row of the Edges panel — identical for all four edges.
+        // Fixed column widths keep the value columns aligned with the header:
+        //   c1 = edge enable checkbox | c2 = Count radio + field | c3 = Spacing radio + field
+        // Radios are textless — the "Count"/"Spacing" captions live once in the
+        // header row built by buildDialog. Mirroring is handled in buildDialog by
+        // hiding the opposite row, so this row carries no mirror controls.
+        var LO = GM.CONSTANTS.LAYOUT;
+        var COL1_W = 72, COL_NUM = 78, COL_SPC = 90;
+        var row = parent.add("group");
+        row.orientation = "row";
+        row.alignChildren = ["left", "center"];
+        row.spacing = LO.GROUP;   // must equal hdrRow.spacing (column alignment)
+        row.margins = 0;
 
         var api = { onChange: function () {} };
 
-        var mirrorCB = null;
-        if (mirrorLabel) {
-            mirrorCB = grp.add("checkbox", undefined, mirrorLabel);
-            mirrorCB.value = false;
-            mirrorCB.helpTip = mirrorTip || "";
-        }
-
-        var row = grp.add("group");
-        row.orientation = "row";
-        row.alignChildren = ["left", "center"];
-        row.spacing = 8;
-
-        var cb = row.add("checkbox", undefined, label);
+        // Every cell is hard-locked to a shared width (same values used by the
+        // header) so columns 2/3 start at the same x on all four rows.
+        var c1 = row.add("group");
+        c1.orientation = "row"; c1.alignChildren = ["left", "center"];
+        GM.UI.lockW(c1, COL1_W);
+        var cb = c1.add("checkbox", undefined, label);
         cb.value = defaultCfg.enabled;
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
-        cb.preferredSize.width = 64;
 
-        var numRB = row.add("radiobutton", undefined, GM.L.COUNT);
+        var c2 = row.add("group");
+        c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = LO.TIGHT;
+        GM.UI.lockW(c2, COL_NUM);
+        var numRB = c2.add("radiobutton", undefined, "");
         numRB.value = defaultCfg.useNumber;
         numRB.helpTip = GM.L.TIP_COUNT;
-        var numIn = row.add("edittext", undefined, String(defaultCfg.number));
-        numIn.preferredSize.width = 50;
+        var numIn = c2.add("edittext", undefined, String(defaultCfg.number));
+        numIn.preferredSize.width = 46;
         numIn.helpTip = GM.L.TIP_COUNT;
 
-        var spcRB = row.add("radiobutton", undefined, GM.L.SPACING);
+        var c3 = row.add("group");
+        c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = LO.TIGHT;
+        GM.UI.lockW(c3, COL_SPC);
+        var spcRB = c3.add("radiobutton", undefined, "");
         spcRB.value = !defaultCfg.useNumber;
         spcRB.helpTip = GM.L.TIP_SPACING;
-        var spcIn = row.add("edittext", undefined, String(defaultCfg.spacing));
+        var spcIn = c3.add("edittext", undefined, String(defaultCfg.spacing));
         spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
-
-        var _prevEnabled = defaultCfg.enabled;
 
         function setModeEnabled(state) {
             numRB.enabled = state;
@@ -1430,18 +1842,16 @@ GM.UI = {
             spcIn.enabled = state && spcRB.value;
         }
 
-        // Gate the whole row by mirror state; cb itself disabled when mirrored.
+        // Gate the value controls by the edge enable checkbox.
         function refresh() {
-            var mirrored = !!(mirrorCB && mirrorCB.value);
-            cb.enabled = !mirrored;
-            setModeEnabled(!mirrored && cb.value);
+            setModeEnabled(cb.value);
         }
 
         // Explicit radio exclusivity. ScriptUI only auto-groups radio buttons
-        // that are CONSECUTIVE within the same container; here numIn sits
-        // between numRB and spcRB, which breaks the implicit group — without
-        // this, clicking "Spacing" leaves numRB.value === true and gather()
-        // always reports count mode (regression from the cycle-2 compact row).
+        // that are CONSECUTIVE in one container; numIn sits between numRB and
+        // spcRB (separate cells), breaking the implicit group — without this,
+        // clicking "Spacing" leaves numRB.value === true and gather() reports
+        // count mode.
         numRB.onClick = function () {
             numRB.value = true; spcRB.value = false;
             numIn.enabled = true; spcIn.enabled = false;
@@ -1458,20 +1868,10 @@ GM.UI = {
         spcIn.onChanging = function () { api.onChange(); };
         spcIn.onChange   = function () { api.onChange(); };
 
-        if (mirrorCB) {
-            mirrorCB.onClick = function () {
-                if (mirrorCB.value) { _prevEnabled = cb.value; cb.value = false; }
-                else { cb.value = _prevEnabled; }
-                refresh();
-                api.onChange();
-            };
-        }
-
         refresh();
 
-        api.panel = grp;
+        api.panel = row;
         api.cb = cb;
-        api.mirrorCB = mirrorCB;
         api.numRB = numRB; api.numIn = numIn; api.spcRB = spcRB; api.spcIn = spcIn;
         api.setAllEnabled = function (state) { setModeEnabled(state); };
         api.refresh = refresh;
@@ -1479,23 +1879,37 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                number: parseInt(numIn.text.replace(/,/g, "."), 10),
+                // parseFloat (not parseInt) — parseInt would silently truncate
+                // "10.5" to 10 before GM.Validation ever sees it, making the
+                // edgeCount integer rule unenforceable on the submit path.
+                number: parseFloat(numIn.text.replace(/,/g, ".")),
                 spacing: parseFloat(spcIn.text.replace(/,/g, "."))
             };
         };
         api.apply = function (e) {
             cb.value = e.enabled;
-            _prevEnabled = e.enabled;
             numRB.value = e.useNumber;
             spcRB.value = !e.useNumber;
             numIn.text = e.number;
             spcIn.text = e.spacing;
             refresh();
         };
-        api.setMirror = function (v) { if (mirrorCB) mirrorCB.value = v; };
-        api.getMirror = function () { return mirrorCB ? mirrorCB.value : false; };
         api.getConvertFields = function () { return [spcIn]; };
         return api;
+    },
+
+    /**
+     * Hard-locks a control's width. ScriptUI does not keep sibling groups in
+     * columns on its own — only identical, fully-pinned cell widths do. All
+     * three dimensions are needed: without minimumSize the cell collapses below
+     * preferredSize; without maximumSize a checkbox stretches it to its label.
+     * @param {Object} ctrl - ScriptUI control/group.
+     * @param {number} w - Locked width in px.
+     */
+    lockW: function (ctrl, w) {
+        ctrl.preferredSize.width = w;
+        ctrl.minimumSize.width = w;
+        ctrl.maximumSize.width = w;
     },
 
     /**
@@ -1512,17 +1926,18 @@ GM.UI = {
     /**
      * Builds the main ScriptUI dialog (canonical single column).
      * @param {Object} pData - Preset wrapper {activePreset, presets}
-     * @param {Object} layerInfo - Layer names and existence flags
-     * @param {Object} swatchInfo - Swatch names and existence flags
-     * @returns {Object} Dialog object with window and gatherAll methods
+     * @param {Object} pathInfo - {ok, cornerCount, closed, totalLen} or {ok:false, reason}
+     * @returns {Object} Dialog object with window, gatherAll, modeUI, pathUI, zonesUI
      */
-    buildDialog: function (pData, layerInfo, swatchInfo) {
+    buildDialog: function (pData, pathInfo) {
+        // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
+        var LO = GM.CONSTANTS.LAYOUT;
         var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 20;
-        dlg.spacing = 15;   // matches ZSM / BRE / extendscript-ui-standards §2
-        dlg.preferredSize.width = 400;   // baseline floor; content grows if needed
+        dlg.margins = LO.DIALOG;
+        dlg.spacing = LO.SECTION;   // gap between panels
+        dlg.preferredSize.width = 390;   // match ZSM/BRE; content grows if needed
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
 
@@ -1531,13 +1946,13 @@ GM.UI = {
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
         setPanel.alignChildren = ["fill", "top"];
-        setPanel.margins = 15;
-        setPanel.spacing = 8;
+        setPanel.margins = LO.MARGIN;
+        setPanel.spacing = LO.GROUP;
 
         // Row 1: label + dropdown (fills) + revert (↺), ZSM layout.
         var presetTop = setPanel.add("group");
         presetTop.alignment = ["fill", "top"];
-        presetTop.spacing = 8;
+        presetTop.spacing = LO.GROUP;
         presetTop.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = presetTop.add("dropdownlist", undefined, []);
         loadDDL.alignment = ["fill", "center"];
@@ -1552,7 +1967,7 @@ GM.UI = {
         var PRESET_BTN_W = 92;
         var presetBtns = setPanel.add("group");
         presetBtns.alignment = ["right", "top"];
-        presetBtns.spacing = 6;
+        presetBtns.spacing = LO.GROUP;
         var saveBtn = presetBtns.add("button", undefined, GM.L.SAVE);
         saveBtn.preferredSize.width = PRESET_BTN_W;
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
@@ -1565,111 +1980,320 @@ GM.UI = {
         deleteBtn.enabled = false;
 
         // =================================================================
+        // Placement Panel (artboard edges vs selected path)
+        // =================================================================
+        var pathOk = !!(pathInfo && pathInfo.ok);
+        var modePanel = dlg.add("panel", undefined, GM.L.PLACEMENT_PANEL);
+        modePanel.orientation = "row";
+        modePanel.alignChildren = ["left", "center"];
+        modePanel.margins = LO.MARGIN;
+        modePanel.spacing = LO.SECTION;
+        var artboardRB = modePanel.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
+        artboardRB.value = true;
+        var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
+        pathRB.enabled = pathOk;
+        pathRB.helpTip = pathOk ? "" : GM.L.TIP_MODE_PATH_DISABLED;
+
+        // Units — global switch lives at the top. Fill spacer pushes it right.
+        var modeSpacer = modePanel.add("group");
+        modeSpacer.alignment = ["fill", "center"];
+        modePanel.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = modePanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        unitsDDL.preferredSize.width = 110;
+        unitsDDL.selection = 0;
+        unitsDDL.helpTip = GM.L.TIP_UNITS;
+
+        // =================================================================
+        // Placement stack — Edges and Path are two modes of the SAME slot, so
+        // they share one stacked container. This way the hidden panel adds no
+        // extra dlg.spacing (the phantom gap above Corner zones), and it occupies
+        // exactly one section gap regardless of which mode is visible.
+        // =================================================================
+        var placementStack = dlg.add("group");
+        placementStack.orientation = "stack";
+        placementStack.alignChildren = ["fill", "top"];
+        placementStack.spacing = 0;
+        placementStack.margins = 0;
+
+        // =================================================================
         // Edges Panel (offsets + 4 compact edge rows, mirror inline)
         // =================================================================
-        var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
+        var edgesPanel = placementStack.add("panel", undefined, GM.L.EDGES_PANEL);
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
-        edgesPanel.margins = 15;
-        edgesPanel.spacing = 10;
+        edgesPanel.margins = LO.MARGIN;
+        edgesPanel.spacing = LO.GROUP;
 
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
         offGrp.alignChildren = ["left", "center"];
-        offGrp.spacing = 8;
-        offGrp.add("statictext", undefined, GM.L.OFFSET_X);
-        var offsetXIn = offGrp.add("edittext", undefined, String(defCfg.offsetX));
-        offsetXIn.preferredSize.width = 50;
+        offGrp.spacing = LO.GROUP;
+        offGrp.add("statictext", undefined, GM.L.OFFSET_LABEL);
+        var gX = offGrp.add("group");
+        gX.orientation = "row"; gX.alignChildren = ["left", "center"]; gX.spacing = LO.TIGHT;
+        gX.add("statictext", undefined, "↔");
+        var offsetXIn = gX.add("edittext", undefined, String(defCfg.offsetX));
+        offsetXIn.preferredSize.width = 44;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
-        offGrp.add("statictext", undefined, GM.L.OFFSET_Y);
-        var offsetYIn = offGrp.add("edittext", undefined, String(defCfg.offsetY));
-        offsetYIn.preferredSize.width = 50;
+        var gY = offGrp.add("group");
+        gY.orientation = "row"; gY.alignChildren = ["left", "center"]; gY.spacing = LO.TIGHT;
+        gY.add("statictext", undefined, "↕");
+        var offsetYIn = gY.add("edittext", undefined, String(defCfg.offsetY));
+        offsetYIn.preferredSize.width = 44;
         offsetYIn.helpTip = GM.L.TIP_OFFSET_Y;
 
+        // Mirror controls — above the rows, not inside them. Each hides the
+        // opposite edge row (Bottom mirrors Top, Right mirrors Left). Both on by
+        // default, matching the default bottomMirror/rightMirror.
+        var mirrorGrp = edgesPanel.add("group");
+        mirrorGrp.orientation = "row";
+        mirrorGrp.alignChildren = ["left", "center"];
+        mirrorGrp.spacing = LO.GROUP;
+        mirrorGrp.add("statictext", undefined, GM.L.MIRROR_GROUP_LABEL);
+        var mPair = mirrorGrp.add("group");
+        mPair.orientation = "row"; mPair.alignChildren = ["left", "center"]; mPair.spacing = LO.SECTION;
+        var mirrorTopCB = mPair.add("checkbox", undefined, GM.L.MIRROR_TOP);
+        mirrorTopCB.value = defCfg.bottomMirror;
+        mirrorTopCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
+        var mirrorLeftCB = mPair.add("checkbox", undefined, GM.L.MIRROR_LEFT);
+        mirrorLeftCB.value = defCfg.rightMirror;
+        mirrorLeftCB.helpTip = GM.L.TIP_MIRROR_RIGHT;
+
         GM.UI.addSeparator(edgesPanel);
 
-        var topUI    = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_TOP,    defCfg.top);
-        var leftUI   = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_LEFT,   defCfg.left);
+        // Column header — "Count"/"Spacing" captions sit once over the value
+        // columns. Spacer width = buildEdgePanel c1 (118) + row spacing (6).
+        // Header uses the SAME locked cell structure as an EdgeRow (118/84/90)
+        // so captions sit over their columns. The ~18px left margin shifts each
+        // caption off the radio dot and over the numeric field.
+        var hdrRow = edgesPanel.add("group");
+        hdrRow.orientation = "row";
+        hdrRow.alignChildren = ["left", "center"];
+        hdrRow.spacing = LO.GROUP;
+        var h1 = hdrRow.add("group"); GM.UI.lockW(h1, 72);   // empty, but locked (= c1)
+        var h2 = hdrRow.add("group"); GM.UI.lockW(h2, 78);
+        h2.alignChildren = ["left", "center"]; h2.margins = [20, 0, 0, 0];
+        h2.add("statictext", undefined, GM.L.EDGE_COUNT_HDR);
+        var h3 = hdrRow.add("group"); GM.UI.lockW(h3, 90);
+        h3.alignChildren = ["left", "center"]; h3.margins = [20, 0, 0, 0];
+        h3.add("statictext", undefined, GM.L.EDGE_SPACING_HDR);
 
-        GM.UI.addSeparator(edgesPanel);
+        // Rows live in one tight column group (regular spacing, no inherited
+        // panel gaps) so vertical rhythm stays even as rows hide/show.
+        var edgeRowsGroup = edgesPanel.add("group");
+        edgeRowsGroup.orientation = "column";
+        edgeRowsGroup.alignChildren = ["left", "top"];
+        edgeRowsGroup.spacing = LO.GROUP;
+        edgeRowsGroup.margins = 0;
 
-        var bottomUI = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_BOTTOM, defCfg.bottom, GM.L.BOTTOM_MIRROR, GM.L.TIP_MIRROR_BOTTOM);
-        var rightUI  = GM.UI.buildEdgePanel(edgesPanel, GM.L.EDGE_RIGHT,  defCfg.right,  GM.L.RIGHT_MIRROR,  GM.L.TIP_MIRROR_RIGHT);
+        // Row order: top, bottom, left, right — pairs adjacent so the mirror
+        // relationship reads top-to-bottom.
+        var topUI    = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_TOP,    defCfg.top);
+        var bottomUI = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_BOTTOM, defCfg.bottom);
+        var leftUI   = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_LEFT,   defCfg.left);
+        var rightUI  = GM.UI.buildEdgePanel(edgeRowsGroup, GM.L.EDGE_RIGHT,  defCfg.right);
+
+        // Mirror toggles hide the opposite row (collapse to zero height) and
+        // relayout. Hiding keeps the row's values — gatherAll still reads them,
+        // and main.js overrides them from the source edge anyway.
+        function refreshMirrorRows() {
+            showPanel(bottomUI.panel, !mirrorTopCB.value);
+            showPanel(rightUI.panel, !mirrorLeftCB.value);
+        }
+        // Seed the revealed edge from its source so un-mirroring isn't a jump
+        // from stale defaults. Only seeds values; the user can overwrite. (When
+        // mirror is on, main.js overrides the target from the source anyway.)
+        function seedFrom(srcUI, dstUI) {
+            dstUI.numIn.text = srcUI.numIn.text;
+            dstUI.spcIn.text = srcUI.spcIn.text;
+            dstUI.numRB.value = srcUI.numRB.value;
+            dstUI.spcRB.value = srcUI.spcRB.value;
+            dstUI.refresh();
+        }
+        mirrorTopCB.onClick = function () {
+            if (!mirrorTopCB.value) seedFrom(topUI, bottomUI);   // revealing Bottom
+            refreshMirrorRows();
+            relayoutDialog();
+            onUserChange();
+        };
+        mirrorLeftCB.onClick = function () {
+            if (!mirrorLeftCB.value) seedFrom(leftUI, rightUI);  // revealing Right
+            refreshMirrorRows();
+            relayoutDialog();
+            onUserChange();
+        };
+        refreshMirrorRows();
 
         // =================================================================
-        // Mark Panel (units, size, shape)
+        // Path Panel (replaces Edges in path mode)
+        // =================================================================
+        var pathPanel = placementStack.add("panel", undefined, GM.L.PATH_PANEL);
+        pathPanel.orientation = "column";
+        pathPanel.alignChildren = ["left", "top"];
+        pathPanel.margins = LO.MARGIN;
+        pathPanel.spacing = LO.GROUP;
+        // Start collapsed (artboard is the default mode). refreshModeUI() flips
+        // this; the zero maximumSize keeps the hidden panel from reserving a slot.
+        pathPanel.visible = false;
+        pathPanel.maximumSize.height = 0;
+        pathPanel.preferredSize.height = 0;
+
+        var infoText = "";
+        if (pathOk) {
+            infoText = (pathInfo.closed ? GM.L.PATH_INFO_CLOSED : GM.L.PATH_INFO_OPEN)
+                + " · "
+                + (pathInfo.cornerCount > 0
+                    ? GM.L.format(GM.L.PATH_INFO_CORNERS, pathInfo.cornerCount)
+                    : GM.L.PATH_INFO_NO_CORNERS);
+        }
+        var pathInfoLbl = pathPanel.add("statictext", undefined, infoText);
+        pathInfoLbl.enabled = false;
+
+        var pathRow = pathPanel.add("group");
+        pathRow.orientation = "row";
+        pathRow.alignChildren = ["left", "center"];
+        pathRow.spacing = LO.GROUP;
+        var pathNumRB = pathRow.add("radiobutton", undefined, GM.L.COUNT);
+        pathNumRB.helpTip = GM.L.TIP_COUNT;
+        var pathNumIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.number));
+        pathNumIn.preferredSize.width = 50;
+        pathNumIn.helpTip = GM.L.TIP_COUNT;
+        var pathSpcRB = pathRow.add("radiobutton", undefined, GM.L.SPACING);
+        pathSpcRB.helpTip = GM.L.TIP_SPACING;
+        var pathSpcIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.spacing));
+        pathSpcIn.preferredSize.width = 50;
+        pathSpcIn.helpTip = GM.L.TIP_SPACING;
+        pathSpcRB.value = true;
+
+        var hasCorners = pathOk && pathInfo.cornerCount > 0;
+        if (hasCorners) {
+            pathNumRB.enabled = false;
+            pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+        }
+        pathNumRB.onClick = function () {
+            pathNumRB.value = true; pathSpcRB.value = false;
+            pathNumIn.enabled = true; pathSpcIn.enabled = false;
+            onUserChange();
+        };
+        pathSpcRB.onClick = function () {
+            pathSpcRB.value = true; pathNumRB.value = false;
+            pathNumIn.enabled = false; pathSpcIn.enabled = true;
+            onUserChange();
+        };
+        pathNumIn.enabled = false;
+
+        var offsetNote = pathPanel.add("statictext", undefined, GM.L.PATH_OFFSET_NOTE,
+            { multiline: true });
+        offsetNote.enabled = false;
+        offsetNote.preferredSize.width = 330;
+
+        // =================================================================
+        // Corner Zones Panel (shared by both modes)
+        // =================================================================
+        var zonesPanel = dlg.add("panel", undefined, GM.L.ZONES_PANEL);
+        zonesPanel.orientation = "row";
+        zonesPanel.alignChildren = ["left", "center"];
+        zonesPanel.margins = LO.MARGIN;
+        zonesPanel.spacing = LO.GROUP;
+        var zoneCB = zonesPanel.add("checkbox", undefined, GM.L.ZONES_ENABLE);
+        zoneCB.value = defCfg.cornerZone.enabled;
+        zoneCB.helpTip = GM.L.TIP_ZONES;
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_FIRST);
+        var zoneCountIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.count));
+        zoneCountIn.preferredSize.width = 44;
+        zoneCountIn.helpTip = GM.L.TIP_ZONES;
+        zonesPanel.add("statictext", undefined, GM.L.ZONES_MARKS_PITCH);
+        var zonePitchIn = zonesPanel.add("edittext", undefined, String(defCfg.cornerZone.pitch));
+        zonePitchIn.preferredSize.width = 50;
+        zonePitchIn.helpTip = GM.L.TIP_ZONES;
+
+        function refreshZonesEnabled() {
+            var pathMode = pathRB.value;
+            var zonesPossible = !pathMode || hasCorners;
+            zoneCB.enabled = zonesPossible;
+            zoneCB.helpTip = zonesPossible ? GM.L.TIP_ZONES : GM.L.TIP_ZONES_NO_CORNERS;
+            var fieldsOn = zonesPossible && zoneCB.value;
+            zoneCountIn.enabled = fieldsOn;
+            zonePitchIn.enabled = fieldsOn;
+        }
+        zoneCB.onClick = function () { refreshZonesEnabled(); onUserChange(); };
+
+        // (d) Mode switching
+        // A hidden panel keeps its layout slot on some Illustrator/ScriptUI
+        // builds, leaving a vertical gap in the single column. Collapse the
+        // hidden panel to zero height (maximumSize + preferredSize) so the
+        // column reclaims the space; restore auto-height when shown.
+        function showPanel(panel, shown) {
+            panel.visible = shown;
+            panel.maximumSize.height = shown ? 10000 : 0;
+            panel.preferredSize.height = shown ? -1 : 0;
+        }
+
+        // Full window relayout after show/hide of panels or rows. Releasing the
+        // edges-panel height + a resize + a second layout pass makes ScriptUI
+        // actually shrink the window (one pass / panel-only layout leaves the
+        // window at its old height with empty space).
+        function relayoutDialog() {
+            edgeRowsGroup.preferredSize.height = -1; // release the rows group (hidden mirror rows)
+            edgesPanel.preferredSize.height = -1;    // release edges panel
+            placementStack.preferredSize.height = -1; // release the shared mode slot
+            dlg.preferredSize.height = -1;           // release window height
+            dlg.layout.layout(true);                 // recompute preferred
+            dlg.size = dlg.preferredSize;            // shrink the window itself
+            dlg.layout.layout(true);                 // second pass settles it
+        }
+
+        function refreshModeUI() {
+            var pathMode = pathRB.value;
+            showPanel(edgesPanel, !pathMode);
+            showPanel(pathPanel, pathMode);
+            refreshZonesEnabled();
+            relayoutDialog();
+            onUserChange();
+        }
+        artboardRB.onClick = function () { pathRB.value = false; artboardRB.value = true; refreshModeUI(); };
+        pathRB.onClick = function () { artboardRB.value = false; pathRB.value = true; refreshModeUI(); };
+
+        // =================================================================
+        // Mark Panel (units, size, shape, weights)
         // =================================================================
         var markPanel = dlg.add("panel", undefined, GM.L.MARK_PANEL);
-        markPanel.orientation = "row";
-        markPanel.alignChildren = ["left", "center"];
-        markPanel.margins = 15;
-        markPanel.spacing = 8;
+        markPanel.orientation = "column";
+        markPanel.alignChildren = ["left", "top"];
+        markPanel.margins = LO.MARGIN;
+        markPanel.spacing = LO.GROUP;
 
-        markPanel.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = markPanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
-        unitsDDL.preferredSize.width = 130;
-        unitsDDL.selection = 0;
-        unitsDDL.helpTip = GM.L.TIP_UNITS;
-
-        markPanel.add("statictext", undefined, GM.L.SIZE_LABEL);
-        var sizeInput = markPanel.add("edittext", undefined, String(defCfg.markSize));
-        sizeInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
+        var mRow1 = markPanel.add("group");
+        mRow1.orientation = "row";
+        mRow1.alignChildren = ["left", "center"];
+        mRow1.spacing = LO.GROUP;
+        mRow1.add("statictext", undefined, GM.L.MARK_SHAPE_LABEL);
+        var circleCB = mRow1.add("checkbox", undefined, GM.L.MARK_CIRCLE);
+        circleCB.value = defCfg.markCircle;
+        circleCB.helpTip = GM.L.TIP_MARK_SHAPE;
+        var crossCB = mRow1.add("checkbox", undefined, GM.L.MARK_CROSS);
+        crossCB.value = defCfg.markCross;
+        crossCB.helpTip = GM.L.TIP_MARK_SHAPE;
+        var mShapeSpacer = mRow1.add("group");
+        mShapeSpacer.alignment = ["fill", "center"];
+        mRow1.add("statictext", undefined, GM.L.SIZE_LABEL);
+        var sizeInput = mRow1.add("edittext", undefined, String(defCfg.markSize));
+        sizeInput.preferredSize.width = 60;
         sizeInput.helpTip = GM.L.TIP_SIZE;
 
+        var mRow2 = markPanel.add("group");
+        mRow2.orientation = "row";
+        mRow2.alignChildren = ["left", "center"];
+        mRow2.spacing = LO.GROUP;
+        mRow2.add("statictext", undefined, GM.L.REG_WEIGHT);
+        var regWIn = mRow2.add("edittext", undefined, String(defCfg.regWeight));
+        regWIn.preferredSize.width = 50;
+        regWIn.helpTip = GM.L.TIP_REG_WEIGHT;
+        mRow2.add("statictext", undefined, GM.L.HALO_WEIGHT);
+        var haloWIn = mRow2.add("edittext", undefined, String(defCfg.haloWeight));
+        haloWIn.preferredSize.width = 50;
+        haloWIn.helpTip = GM.L.TIP_HALO_WEIGHT;
 
-        // =================================================================
-        // Appearance Panel (layer, fill, stroke)
-        // =================================================================
-        var appPanel = dlg.add("panel", undefined, GM.L.APPEARANCE_PANEL);
-        appPanel.orientation = "column";
-        appPanel.alignChildren = ["left", "top"];
-        appPanel.margins = [15, 10, 15, 15];
-        appPanel.spacing = 10;
-
-        var layerGrp = appPanel.add("group");
-        var layerLbl = layerGrp.add("statictext", undefined, GM.L.LAYER);
-        layerLbl.preferredSize.width = 75;
-        var layerDDL = layerGrp.add("dropdownlist", undefined, layerInfo.names);
-        layerDDL.preferredSize.width = 170;
-        layerDDL.helpTip = GM.L.TIP_LAYER;
-        GM.UI.selectDDL(layerDDL, GM.L.CREATE_LABEL);
-
-        var fillGrp = appPanel.add("group");
-        var fillCB = fillGrp.add("checkbox", undefined, GM.L.FILL);
-        fillCB.value = defCfg.fillEnabled;
-        fillCB.helpTip = GM.L.TIP_FILL;
-        fillCB.preferredSize.width = 75;
-        var fillDDL = fillGrp.add("dropdownlist", undefined, swatchInfo.names);
-        fillDDL.preferredSize.width = 170;
-        fillDDL.helpTip = GM.L.TIP_FILL;
-        GM.UI.selectDDL(fillDDL, GM.L.CREATE_LABEL);
-        var fillOPCB = fillGrp.add("checkbox", undefined, GM.L.OVERPRINT);
-        fillOPCB.value = defCfg.fillOverprint;
-        fillOPCB.helpTip = GM.L.TIP_OVERPRINT;
-
-        var strokeGrp = appPanel.add("group");
-        var strokeCB = strokeGrp.add("checkbox", undefined, GM.L.STROKE);
-        strokeCB.value = defCfg.strokeEnabled;
-        strokeCB.helpTip = GM.L.TIP_STROKE;
-        strokeCB.preferredSize.width = 75;
-        var strokeDDL = strokeGrp.add("dropdownlist", undefined, swatchInfo.names);
-        strokeDDL.preferredSize.width = 170;
-        strokeDDL.enabled = defCfg.strokeEnabled;
-        strokeDDL.helpTip = GM.L.TIP_STROKE;
-        GM.UI.selectDDL(strokeDDL, GM.L.CREATE_LABEL);
-        var strokeOPCB = strokeGrp.add("checkbox", undefined, GM.L.OVERPRINT);
-        strokeOPCB.value = defCfg.strokeOverprint;
-        strokeOPCB.helpTip = GM.L.TIP_OVERPRINT;
-        strokeOPCB.enabled = defCfg.strokeEnabled;
-
-        var wGrp = appPanel.add("group");
-        var weightLbl = wGrp.add("statictext", undefined, GM.L.WEIGHT);
-        weightLbl.preferredSize.width = 75;
-        var weightInput = wGrp.add("edittext", undefined, String(defCfg.strokeWeight));
-        weightInput.preferredSize.width = 60;   // standalone numeric field — house standard (ZSM/§2)
-        weightInput.enabled = defCfg.strokeEnabled;
-        weightInput.helpTip = GM.L.TIP_WEIGHT;
-        wGrp.add("statictext", undefined, GM.L.POINTS);
 
         // =================================================================
         // Copyright footer
@@ -1685,7 +2309,7 @@ GM.UI = {
         // =================================================================
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = LO.GROUP;
 
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
         var okBtn = footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
@@ -1701,19 +2325,25 @@ GM.UI = {
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
                 right: rightUI.gather(),
-                bottomMirror: bottomUI.getMirror(),
-                rightMirror: rightUI.getMirror(),
+                bottomMirror: mirrorTopCB.value,
+                rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
                 markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
-                isRound: true,   // shape locked to circle (square removed v4.2.0)
-                markLayerName: GM.UI.toStorage(GM.UI.ddlValue(layerDDL) || GM.L.CREATE_LABEL),
-                fillEnabled: fillCB.value,
-                fillSwatchName: GM.UI.toStorage(GM.UI.ddlValue(fillDDL) || GM.L.CREATE_LABEL),
-                fillOverprint: fillOPCB.value,
-                strokeEnabled: strokeCB.value,
-                strokeSwatchName: GM.UI.toStorage(GM.UI.ddlValue(strokeDDL) || GM.L.CREATE_LABEL),
-                strokeOverprint: strokeOPCB.value,
-                strokeWeight: parseFloat(weightInput.text.replace(/,/g, "."))
+                markCircle: circleCB.value,
+                markCross: crossCB.value,
+                regWeight: parseFloat(regWIn.text.replace(/,/g, ".")),
+                haloWeight: parseFloat(haloWIn.text.replace(/,/g, ".")),
+                placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
+                cornerZone: {
+                    enabled: zoneCB.value,
+                    count: parseFloat(zoneCountIn.text.replace(/,/g, ".")),
+                    pitch: parseFloat(zonePitchIn.text.replace(/,/g, "."))
+                },
+                pathDist: {
+                    useNumber: pathNumRB.value,
+                    number: parseFloat(pathNumIn.text.replace(/,/g, ".")),
+                    spacing: parseFloat(pathSpcIn.text.replace(/,/g, "."))
+                }
             };
         }
 
@@ -1729,26 +2359,34 @@ GM.UI = {
             bottomUI.apply(s.bottom);
             rightUI.apply(s.right);
 
-            bottomUI.setMirror(s.bottomMirror); bottomUI.refresh();
-            rightUI.setMirror(s.rightMirror);   rightUI.refresh();
+            mirrorTopCB.value = !!s.bottomMirror;
+            mirrorLeftCB.value = !!s.rightMirror;
+            refreshMirrorRows();
 
             sizeInput.text = s.markSize;
+            circleCB.value = !!s.markCircle;
+            crossCB.value = !!s.markCross;
+            regWIn.text = s.regWeight;
+            haloWIn.text = s.haloWeight;
 
-            GM.UI.selectDDL(layerDDL, GM.UI.toDisplay(s.markLayerName));
+            var wantPath = (s.placementMode === GM.CONSTANTS.MODE_PATH);
+            if (wantPath && !pathOk) {
+                wantPath = false;
+            }
+            pathRB.value = wantPath; artboardRB.value = !wantPath;
 
-            fillCB.value = s.fillEnabled;
-            GM.UI.selectDDL(fillDDL, GM.UI.toDisplay(s.fillSwatchName));
-            fillOPCB.value = s.fillOverprint;
-            fillDDL.enabled = s.fillEnabled;
-            fillOPCB.enabled = s.fillEnabled;
+            var z = s.cornerZone || defCfg.cornerZone;
+            zoneCB.value = !!z.enabled;
+            zoneCountIn.text = z.count;
+            zonePitchIn.text = z.pitch;
 
-            strokeCB.value = s.strokeEnabled;
-            GM.UI.selectDDL(strokeDDL, GM.UI.toDisplay(s.strokeSwatchName));
-            strokeOPCB.value = s.strokeOverprint;
-            weightInput.text = s.strokeWeight;
-            strokeDDL.enabled = s.strokeEnabled;
-            strokeOPCB.enabled = s.strokeEnabled;
-            weightInput.enabled = s.strokeEnabled;
+            var pd = s.pathDist || defCfg.pathDist;
+            var pdUseNum = !!pd.useNumber && !hasCorners;
+            pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
+            pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
+            pathNumIn.enabled = pdUseNum; pathSpcIn.enabled = !pdUseNum;
+
+            refreshModeUI();
         }
 
         // =================================================================
@@ -1758,7 +2396,7 @@ GM.UI = {
         unitsDDL.onChange = function () {
             var newUnit = GM.UI.getUnitKey(unitsDDL);
             if (newUnit === currentUnit) return;
-            var fields = [offsetXIn, offsetYIn, sizeInput]
+            var fields = [offsetXIn, offsetYIn, sizeInput, zonePitchIn, pathSpcIn]
                 .concat(topUI.getConvertFields())
                 .concat(leftUI.getConvertFields())
                 .concat(bottomUI.getConvertFields())
@@ -1785,7 +2423,12 @@ GM.UI = {
             { et: offsetXIn,   rule: R.offsetX },
             { et: offsetYIn,   rule: R.offsetY },
             { et: sizeInput,   rule: R.markSize },
-            { et: weightInput, rule: R.strokeWeight }
+            { et: regWIn,      rule: R.regWeight },
+            { et: haloWIn,     rule: R.haloWeight },
+            { et: zoneCountIn, rule: R.cornerCount },
+            { et: zonePitchIn, rule: R.cornerPitch },
+            { et: pathNumIn,   rule: R.pathNumber },
+            { et: pathSpcIn,   rule: R.pathSpacing }
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
@@ -1835,14 +2478,16 @@ GM.UI = {
             // Structural checks (mirror GM.Validation.validate) so OK greys out
             // for these too, not just numeric ranges. These have no single field
             // to paint, so they only gate the button.
-            // 1) At least one effective edge enabled (mirror copies the opposite).
-            var topOn = topUI.cb.value;
-            var leftOn = leftUI.cb.value;
-            var bottomOn = bottomUI.getMirror() ? topOn : bottomUI.cb.value;
-            var rightOn = rightUI.getMirror() ? leftOn : rightUI.cb.value;
-            if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
-            // 2) Marks must have a fill and/or a stroke.
-            if (!fillCB.value && !strokeCB.value) allValid = false;
+            // 1) At least one effective edge enabled (artboard mode only).
+            if (!pathRB.value) {
+                var topOn = topUI.cb.value;
+                var leftOn = leftUI.cb.value;
+                var bottomOn = mirrorTopCB.value ? topOn : bottomUI.cb.value;
+                var rightOn = mirrorLeftCB.value ? leftOn : rightUI.cb.value;
+                if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+            }
+            // 2) Marks must have at least one shape (circle and/or cross).
+            if (!circleCB.value && !crossCB.value) allValid = false;
 
             try { okBtn.enabled = allValid; } catch (e) {}
             return allValid;
@@ -1856,33 +2501,12 @@ GM.UI = {
             liveValidateAll();
         }
 
-        // =================================================================
-        // Appearance handlers
-        // =================================================================
-        fillCB.onClick = function () {
-            fillDDL.enabled = fillCB.value;
-            fillOPCB.enabled = fillCB.value;
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
-        strokeCB.onClick = function () {
-            strokeDDL.enabled = strokeCB.value;
-            strokeOPCB.enabled = strokeCB.value;
-            weightInput.enabled = strokeCB.value;
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
-        fillOPCB.onClick = refreshModifiedIndicator;
-        strokeOPCB.onClick = refreshModifiedIndicator;
-        layerDDL.onChange = refreshModifiedIndicator;
-        fillDDL.onChange = refreshModifiedIndicator;
-        strokeDDL.onChange = refreshModifiedIndicator;
-
         // Edge panels notify on any internal change.
         topUI.onChange    = onUserChange;
         leftUI.onChange   = onUserChange;
         bottomUI.onChange = onUserChange;
         rightUI.onChange  = onUserChange;
+
 
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)
@@ -1921,23 +2545,8 @@ GM.UI = {
         // Load initial values from [Last Settings] or active preset
         var initPreset = pData.presets[GM.Storage.PRESET_KEY_LAST] || pData.presets[pData.activePreset];
         if (initPreset) applyAll(initPreset);
+        else refreshModeUI();
         updatePresetList();
-
-        /**
-         * Persist the preset wrapper to disk with consistent error reporting.
-         * Single source of truth for all save call-sites (Save / Save As /
-         * Delete) so a failed write is never silently swallowed — a stale
-         * on-disk state that "resurrects" a deleted preset after restart is a
-         * data-integrity bug, not a cosmetic one.
-         */
-        function persistSettings() {
-            try {
-                GM.Storage.save(pData);
-            } catch (e) {
-                GM.Utils.log("Storage.save failed: " + e.message);
-                alert(GM.L.ERR_WRITE_SETTINGS + "\n\n" + e.message);
-            }
-        }
 
         loadDDL.onChange = function () {
             if (!loadDDL.selection) return;
@@ -1954,7 +2563,7 @@ GM.UI = {
             var r = GM.UIState.save(pData, gatherAll());
             if (r.ok) {
                 updatePresetList();
-                persistSettings();
+                GM.Storage.save(pData);   // reports failure itself
                 return;
             }
             if (r.reason === "needs-name") saveAsBtn.onClick();
@@ -1962,16 +2571,22 @@ GM.UI = {
 
         saveAsBtn.onClick = function () {
             var raw = prompt(GM.L.PROMPT_SAVE_AS, "");
-            if (raw === null || raw === "") return;
+            if (raw === null) return;   // cancelled
             var clean = GM.UIState.validatePresetName(raw);
-            if (!clean) { alert(GM.L.ERR_RESERVED_NAME); return; }
-            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function () {
-                return confirm(GM.L.ERR_PRESET_EXISTS);
+            if (!clean) {
+                // Distinguish empty/whitespace-only (needs a name) from a
+                // reserved key — "name is reserved" for "" is misleading.
+                var isEmpty = String(raw).replace(/^\s+|\s+$/g, "") === "";
+                alert(isEmpty ? GM.L.ERR_ENTER_NAME : GM.L.ERR_RESERVED_NAME);
+                return;
+            }
+            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function (name) {
+                return confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!r.ok) return;
             updatePresetList();
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         deleteBtn.onClick = function () {
@@ -1986,7 +2601,7 @@ GM.UI = {
             updatePresetList();
             applyAll(pData.presets[GM.Config.PRESET_KEY_DEFAULT]);
             refreshModifiedIndicator();
-            persistSettings();
+            GM.Storage.save(pData);   // reports failure itself
         };
 
         revertBtn.onClick = function () {
@@ -1998,12 +2613,15 @@ GM.UI = {
         };
 
         // Wire numeric edits to the shared change hook.
-        var allEdits = [offsetXIn, offsetYIn, sizeInput, weightInput];
+        var allEdits = [offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
+                        zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
             allEdits[ei].onChange = onUserChange;
             allEdits[ei].onChanging = onUserChange;
         }
+        circleCB.onClick = onUserChange;
+        crossCB.onClick = onUserChange;
 
         // Initial pass: modified indicator (Save disabled when UI matches the
         // active preset) + live validation (paints fields, sets OK initial state).
@@ -2012,54 +2630,12 @@ GM.UI = {
 
         return {
             window: dlg,
-            gatherAll: gatherAll
+            gatherAll: gatherAll,
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB },
+            edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
+            pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn },
+            zonesUI: { enableCB: zoneCB, countIn: zoneCountIn, pitchIn: zonePitchIn }
         };
-    },
-
-    /**
-     * Selects a dropdown item by display text.
-     *
-     * When the requested value is NOT present in the current document (e.g. a
-     * preset references swatch "MyOrange" but this document has no such spot),
-     * we do NOT silently fall back to item 0 (= the "[Create …]" sentinel),
-     * which would discard the user's saved choice and create a fresh default
-     * swatch/layer on OK. Instead we insert a synthetic item that preserves the
-     * saved name with a "(missing)" marker and select it. The marker is
-     * display-only; GM.UI.ddlValue() reads back the raw name, so toStorage()
-     * and isModified() both see the original value — no silent swap, no false
-     * "modified" asterisk. Downstream getOrCreate{Layer,Swatch} then recreates
-     * the named layer/spot.
-     */
-    selectDDL: function (ddl, name) {
-        // Purge any stale synthetic "missing" item so they don't accumulate
-        // across preset switches on a persistent dropdown.
-        for (var k = ddl.items.length - 1; k >= 0; k--) {
-            if (ddl.items[k]._gmMissing) ddl.remove(k);
-        }
-        for (var i = 0; i < ddl.items.length; i++) {
-            if (ddl.items[i].text === name) {
-                ddl.selection = i;
-                return;
-            }
-        }
-        // Not in the document — preserve the saved name as a flagged item.
-        var suffix = (GM.L && GM.L.DDL_MISSING_SUFFIX) ? GM.L.DDL_MISSING_SUFFIX : "(missing)";
-        var missing = ddl.add("item", name + "  " + suffix);
-        missing._gmRawValue = name;
-        missing._gmMissing  = true;
-        ddl.selection = missing;
-    },
-
-    /**
-     * Reads the resolved value of a dropdown selection. For a synthetic
-     * "missing" item (added by selectDDL when a saved value wasn't in the
-     * document), returns the raw saved name without the display marker;
-     * otherwise returns the selection text. Empty string when nothing selected.
-     */
-    ddlValue: function (ddl) {
-        var sel = ddl.selection;
-        if (!sel) return "";
-        return (sel._gmRawValue != null) ? sel._gmRawValue : sel.text;
     }
 };
 
@@ -2082,7 +2658,7 @@ GM.Main = {
 
             // Pin Y-up document coordinate system. A per-document
             // "Y origin from artboard top-left" preference can flip the axis
-            // and mis-place marks; placeMark() and the artboard math assume
+            // and mis-place marks; placeMarkGroup() and the artboard math assume
             // Y-up. CS6 lacks the enum, so the swallow is safe (CS6 is Y-up).
             try {
                 app.coordinateSystem = CoordinateSystem.DOCUMENTCOORDINATESYSTEM;
@@ -2099,10 +2675,9 @@ GM.Main = {
                 pData.presets[GM.Config.PRESET_KEY_DEFAULT] = GM.Config.getDefaults();
             }
 
-            var layerInfo = GM.Illustrator.getLayerNames();
-            var swatchInfo = GM.Illustrator.getSwatchNames();
+            var pathInfo = GM.Illustrator.getSelectedPathInfo();
 
-            var ui = GM.UI.buildDialog(pData, layerInfo, swatchInfo);
+            var ui = GM.UI.buildDialog(pData, pathInfo);
 
             if (ui.window.show() !== 1) return;
 
@@ -2127,22 +2702,8 @@ GM.Main = {
     process: function (cfg) {
         try {
             var doc = GM.Illustrator.doc;
-
-            var topCfg = cfg.top;
-            var leftCfg = cfg.left;
-            var bottomCfg = cfg.bottomMirror ? topCfg : cfg.bottom;
-            var rightCfg = cfg.rightMirror ? leftCfg : cfg.right;
-
-            var topOn = topCfg.enabled;
-            var leftOn = leftCfg.enabled;
-            var bottomOn = cfg.bottomMirror ? topOn : bottomCfg.enabled;
-            var rightOn = cfg.rightMirror ? leftOn : rightCfg.enabled;
-
             var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
 
-            // Non-blocking warnings — collected, de-duplicated, shown once at
-            // the end. (e.g. fill and stroke referencing the same missing
-            // swatch must not produce two identical lines.)
             var warnings = [];
             function addWarning(msg) {
                 for (var w = 0; w < warnings.length; w++) {
@@ -2151,109 +2712,134 @@ GM.Main = {
                 warnings.push(msg);
             }
 
-            // A named (non-sentinel) target layer that doesn't exist will be
-            // created by getOrCreateLayer — warn so the user knows a new layer
-            // appeared. The SENTINEL_CREATE default means "create it", so that
-            // case is intentional and silent (symmetric with swatch handling).
-            var resolvedLayerName = GM.Illustrator.resolveLayerName(cfg.markLayerName);
-            if (cfg.markLayerName !== GM.CONSTANTS.SENTINEL_CREATE &&
-                !GM.Illustrator.layerExists(resolvedLayerName)) {
-                addWarning(GM.L.format(GM.L.WARN_LAYER_CREATED, resolvedLayerName));
-            }
-            // getOrCreateLayer always returns a layer (creates it if missing),
-            // so no not-found guard is needed; a genuine create failure throws
-            // up to the outer try/catch as an unexpected error.
-            var targetLayer = GM.Illustrator.getOrCreateLayer(cfg.markLayerName);
-
-            // Missing named fill/stroke swatch → degrade to [Registration] +
-            // a non-blocking warning. Never hard-abort and never silently
-            // auto-create a surprise spot.
-            var fillColor = cfg.fillEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.fillSwatchName) : null;
-            if (cfg.fillEnabled && !fillColor) {
-                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.fillSwatchName));
-                fillColor = GM.Illustrator.registrationColor();
-            }
-
-            var strokeColor = cfg.strokeEnabled ? GM.Illustrator.getOrCreateSwatch(cfg.strokeSwatchName) : null;
-            if (cfg.strokeEnabled && !strokeColor) {
-                addWarning(GM.L.format(GM.L.WARN_SWATCH_FALLBACK, cfg.strokeSwatchName));
-                strokeColor = GM.Illustrator.registrationColor();
-            }
+            // Fixed target layer "Grommet Marks" (created if missing, silently).
+            var targetLayer = GM.Illustrator.getOrCreateLayer();
 
             var markSizePoints = cfg.markSize * unitFactor;
-            var radius = markSizePoints / 2;
+            var markOpts = {
+                circle: !!cfg.markCircle,
+                cross: !!cfg.markCross,
+                regWeight: cfg.regWeight,
+                haloWeight: cfg.haloWeight
+            };
 
-            var offX = cfg.offsetX;
-            var offY = cfg.offsetY;
-
-            // Layer session — unlock/show the target layer so placeMark can
-            // write to it (a locked layer would silently swallow every mark).
-            // The user's lock/visibility state is restored afterwards.
             var prevLocked = false, prevVisible = true, sessionOpen = false;
             try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
 
             var placed = {};
+            var failedMarks = 0;
             function place(x, y) {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
-                GM.Illustrator.placeMark(
-                    targetLayer, x, y, radius, markSizePoints,
-                    cfg.isRound, fillColor, strokeColor, cfg
-                );
+                var ok = GM.Illustrator.placeMarkGroup(targetLayer, x, y, markSizePoints, markOpts);
+                if (!ok) failedMarks++;
             }
 
-            for (var i = 0; i < doc.artboards.length; i++) {
-                var ab = doc.artboards[i];
-                var r = ab.artboardRect;
-                var abLeft = r[0], abTop = r[1], abRight = r[2], abBottom = r[3];
-                var abWidth = abRight - abLeft;
-                var abHeight = abTop - abBottom;
+            // Zone config (pitch unit-converted once; shared by both modes).
+            var cz = cfg.cornerZone || {};
+            var zoneCfg = {
+                enabled: !!(cz.enabled),
+                count:   Math.max(cz.count  || 1, 1),
+                pitch:   (cz.pitch  || 0) * unitFactor
+            };
 
-                if (topOn) {
-                    var tPositions = GM.Core.calcPositions(topCfg, abWidth, offX, unitFactor);
-                    var tY = abTop - (offY * unitFactor);
-                    for (var ti = 0; ti < tPositions.length; ti++) {
-                        place(abLeft + tPositions[ti], tY);
-                    }
-                }
+            var doArtboard = true;
 
-                if (bottomOn) {
-                    var bPositions = GM.Core.calcPositions(bottomCfg, abWidth, offX, unitFactor);
-                    var bY = abBottom + (offY * unitFactor);
-                    for (var bi = 0; bi < bPositions.length; bi++) {
-                        place(abLeft + bPositions[bi], bY);
-                    }
-                }
-
-                if (leftOn) {
-                    var lPositions = GM.Core.calcPositions(leftCfg, abHeight, offY, unitFactor);
-                    var lX = abLeft + (offX * unitFactor);
-                    for (var li = 0; li < lPositions.length; li++) {
-                        place(lX, abTop - lPositions[li]);
-                    }
-                }
-
-                if (rightOn) {
-                    var rPositions = GM.Core.calcPositions(rightCfg, abHeight, offY, unitFactor);
-                    var rX = abRight - (offX * unitFactor);
-                    for (var ri = 0; ri < rPositions.length; ri++) {
-                        place(rX, abTop - rPositions[ri]);
+            if (cfg.placementMode === GM.CONSTANTS.MODE_PATH) {
+                // Re-fetch selection: the user may have deselected between
+                // dialog OK and process() — treat as a non-fatal fallback.
+                var pathInfo = GM.Illustrator.getSelectedPathInfo();
+                if (!pathInfo.ok) {
+                    addWarning(GM.L.WARN_MODE_FALLBACK);
+                } else {
+                    doArtboard = false;
+                    var pd = cfg.pathDist || {};
+                    var distCfg = {
+                        useNumber: !!(pd.useNumber),
+                        number:    Math.max(pd.number  || 1, 1),
+                        spacing:   (pd.spacing || 0) * unitFactor
+                    };
+                    var pathMarks = GM.Core.distributeOnCircuit(
+                        pathInfo.circuit, pathInfo.corners, zoneCfg, distCfg
+                    );
+                    for (var pi = 0; pi < pathMarks.length; pi++) {
+                        place(pathMarks[pi][0], pathMarks[pi][1]);
                     }
                 }
             }
 
-            // Restore layer lock/visibility (normal path).
+            if (doArtboard) {
+                var topCfg    = cfg.top;
+                var leftCfg   = cfg.left;
+                var bottomCfg = cfg.bottomMirror ? topCfg    : cfg.bottom;
+                var rightCfg  = cfg.rightMirror  ? leftCfg   : cfg.right;
+
+                var topOn    = topCfg.enabled;
+                var leftOn   = leftCfg.enabled;
+                var bottomOn = cfg.bottomMirror ? topOn  : bottomCfg.enabled;
+                var rightOn  = cfg.rightMirror  ? leftOn : rightCfg.enabled;
+
+                // Offsets pre-converted to points so artboard math is uniform.
+                var offX = cfg.offsetX * unitFactor;
+                var offY = cfg.offsetY * unitFactor;
+
+                function edgeMid(edgeCfg) {
+                    return {
+                        useNumber: !!(edgeCfg.useNumber),
+                        number:    Math.max(edgeCfg.number  || 1, 1),
+                        spacing:   (edgeCfg.spacing || 0) * unitFactor
+                    };
+                }
+
+                for (var i = 0; i < doc.artboards.length; i++) {
+                    var ab = doc.artboards[i];
+                    var r = ab.artboardRect;
+                    var abLeft = r[0], abTop = r[1], abRight = r[2], abBottom = r[3];
+                    var abWidth  = abRight  - abLeft;
+                    var abHeight = abTop    - abBottom;
+
+                    if (topOn) {
+                        var tL   = Math.max(abWidth  - 2 * offX, 0);
+                        var tPos = GM.Core.distributeOnSpan(tL, zoneCfg, edgeMid(topCfg));
+                        var tY   = abTop - offY;
+                        for (var ti = 0; ti < tPos.length; ti++) place(abLeft + offX + tPos[ti], tY);
+                    }
+
+                    if (bottomOn) {
+                        var bL   = Math.max(abWidth  - 2 * offX, 0);
+                        var bPos = GM.Core.distributeOnSpan(bL, zoneCfg, edgeMid(bottomCfg));
+                        var bY   = abBottom + offY;
+                        for (var bi = 0; bi < bPos.length; bi++) place(abLeft + offX + bPos[bi], bY);
+                    }
+
+                    if (leftOn) {
+                        var lL   = Math.max(abHeight - 2 * offY, 0);
+                        var lPos = GM.Core.distributeOnSpan(lL, zoneCfg, edgeMid(leftCfg));
+                        var lX   = abLeft + offX;
+                        for (var li = 0; li < lPos.length; li++) place(lX, abTop - offY - lPos[li]);
+                    }
+
+                    if (rightOn) {
+                        var rL   = Math.max(abHeight - 2 * offY, 0);
+                        var rPos = GM.Core.distributeOnSpan(rL, zoneCfg, edgeMid(rightCfg));
+                        var rX   = abRight - offX;
+                        for (var ri = 0; ri < rPos.length; ri++) place(rX, abTop - offY - rPos[ri]);
+                    }
+                }
+            }
+
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
             }
 
-            // Surface any non-blocking colour-fallback warnings once, after the
-            // marks are placed (the operation still succeeded).
+            if (failedMarks > 0) {
+                addWarning(GM.L.format(GM.L.WARN_MARKS_FAILED, failedMarks));
+            }
+
             if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
-            // Restore on error too — never leave the layer unlocked.
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst2) {}
             }

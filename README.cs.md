@@ -69,7 +69,7 @@ Detailní návod pro macOS: [`docs/INSTALL_MAC.cs.txt`](./docs/INSTALL_MAC.cs.tx
 | # | Skript | Verze | Účel |
 |---|--------|-------|------|
 | 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
-| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | 4.2.0 | Značky pro oka (banner grommets) |
+| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Značky pro oka — hrany nebo cesta, rohové zóny, Esko značky |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Hromadný relink PDF do `.ai` vyřazovacích šablon a export tiskových PDF |
 
 ---
@@ -113,12 +113,13 @@ Pro skutečný Adobe **Large Canvas** režim (artboard > 5765 mm, `scaleFactor =
 
 Generátor **značek pro oka** (grommets / průchodky / banner ringy) pro velkoformátový tisk a banner workflow.
 
-- Kruhové značky s presety velikostí
-- Nezávislá konfigurace každé hrany (top / bottom / left / right)
-- Globální X/Y offset pro přesné polohování
-- Persistentní nastavení mezi spuštěními
+- **Dva režimy umístění** — po **hranách artboardu** (počet nebo rozestup per hrana, zrcadlení horní↓dolní / levou→pravou) nebo po **vybrané cestě** (otevřené i uzavřené; rohy vždy ukotvené)
+- **Rohové zóny** — zhuští prvních N značek u každého rohu vlastní roztečí
+- **Jednotná značka** — Esko-styl terč: bílé halo (knockout) pod registračním tahem; kruh a/nebo kříž, jedna velikost; vždy na samostatnou vrstvu „Grommet Marks"
+- Globální X/Y offset; jednotky mm / cm / in
+- Presety (uložit / uložit jako / smazat) s automatickou pamětí posledního běhu; živá validace
 
-**Použití:** Otevřete grafiku → spusťte skript → nastavte parametry per-edge → **OK**.
+**Použití:** Otevřete grafiku (případně vyberte cestu) → spusťte skript → zvolte režim a parametry → **Generovat**.
 
 ---
 
@@ -202,12 +203,23 @@ Od v26.3.x jsou pojmenované presety <strong>immutable</strong>. Generate je nem
 
 Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
 
-### v1.5.0 (2026-06) — Grommet Marks v4.2.0
+### v1.6.0 (2026-06) — Grommet Marks v6.0.0
+- **Added:** Režim umístění na cestu — značky po vybrané otevřené/uzavřené cestě (rohy vždy ukotvené; hladké cesty podporují počet i rozestup).
+- **Added:** Rohové zóny — zhuštění prvních N značek u každého rohu vlastní roztečí (hrany i cesta).
+- **Added:** Jednotná Esko značka — bílé halo (knockout) + registrační tah, kruh a/nebo kříž, jedna velikost; vždy na pevné vrstvě „Grommet Marks".
+- **Changed:** Kompletní redesign dialogu — volba režimu umístění, zarovnaná mřížka hran se zrcadlením ve vlastním řádku, jednotky nahoře, jednotná 4px škála mezer.
+- **Removed:** Volba výplně / tahu / cílové vrstvy a per-mark vzorník (nahrazeno jednotnou značkou).
+
+### v1.5.0 (2026-06) — Grommet Marks v4.2.1
 - **Added:** Tlačítko ↺ Revert vedle dropdownu předvoleb (návrat k uloženým hodnotám předvolby).
 - **Changed:** Dvouřádkový panel předvoleb (Uložit / Uložit jako / Smazat pod dropdownem) podle layoutu Zünd & Summa Marks.
 - **Changed:** Zarovnání dropdownů vzhledu přes pevný sloupec popisků.
 - **Removed:** Tlačítko Reset (nahrazeno ↺ revert) a volba tvaru kruh/čtverec — značky jsou nyní vždy kruhové.
 - **Fixed:** Živá validace obnoví výchozí barvu textu (žádné černé pole na tmavém pozadí).
+- **Fixed:** Selhání zápisu nastavení na disk se vždy nahlásí (tiché selhání mohlo „oživit" smazanou předvolbu po restartu).
+- **Fixed:** Neumístěné značky se hlásí souhrnným varováním místo tichého chybění na tiskovém výstupu.
+- **Fixed:** Fallback na [Registration] ověřuje, že vzorník je skutečně registrační (smazaný [Registration] mohl tiše obarvit značky náhodným vzorníkem).
+- **Fixed:** Desetinný počet značek („10.5") se odmítne místo tichého oříznutí na 10.
 
 ### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
 - **Fixed:** Opakované spuštění SUMMA s ořezovými linkami zvětšovalo artboard při každém běhu — vrstva „Trim" se chybně započítávala do měření hranic (regrese z v26.5.0).

@@ -69,7 +69,7 @@ Detailed macOS guide: [`docs/INSTALL_MAC.txt`](./docs/INSTALL_MAC.txt).
 | # | Script | Version | Purpose |
 |---|--------|---------|---------|
 | 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Registration mark generator for Zünd + Summa, named presets, localisation |
-| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | 4.2.0 | Banner grommet marks |
+| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Banner grommet marks — edges or path, corner zones, Esko-style marks |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Batch-relink PDFs into `.ai` imposition templates and export print-ready PDFs |
 
 ---
@@ -113,12 +113,13 @@ For true Adobe **Large Canvas** mode (artboard > 5765 mm, `scaleFactor = 10`) th
 
 Generator of **grommet marks** (eyelets / banner rings) for large-format and banner workflows.
 
-- Circular marks with size presets
-- Independent configuration per edge (top / bottom / left / right)
-- Global X/Y offset for precise positioning
-- Persistent settings between runs
+- **Two placement modes** — along **artboard edges** (per-edge count or spacing, with top↓bottom / left→right mirroring) or along a **selected path** (open or closed; corners always anchored)
+- **Corner zones** — densify the first N marks at every corner with their own pitch
+- **Uniform registration mark** — Esko-style eyelet: a white halo (knockout) under a registration stroke; circle and/or cross, one size; always on a dedicated "Grommet Marks" layer
+- Global X/Y offset; units mm / cm / in
+- Presets (save / save as / delete) with auto-remembered last settings; live validation
 
-**Usage:** Open artwork → run the script → set per-edge parameters → **OK**.
+**Usage:** Open artwork (optionally select a path) → run the script → pick mode and parameters → **Generate**.
 
 ---
 
@@ -202,12 +203,23 @@ Since v26.3.x named presets are <strong>immutable</strong>. Generate does not mo
 
 Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
 
-### v1.5.0 (2026-06) — Grommet Marks v4.2.0
+### v1.6.0 (2026-06) — Grommet Marks v6.0.0
+- **Added:** Path placement mode — distribute marks along a selected open/closed path (corners always anchored; smooth paths support count or spacing).
+- **Added:** Corner zones — densify the first N marks at every corner with a dedicated pitch (artboard and path modes).
+- **Added:** Uniform Esko-style registration mark — white halo (knockout) + registration stroke, circle and/or cross, single size; always drawn on a fixed "Grommet Marks" layer.
+- **Changed:** Full dialog redesign — placement-mode selector, aligned edges grid with mirroring on its own row, units moved to the top, single 4px spacing scale.
+- **Removed:** Fill / stroke / target-layer selection and per-mark swatch choice (superseded by the uniform mark).
+
+### v1.5.0 (2026-06) — Grommet Marks v4.2.1
 - **Added:** ↺ Revert button next to the preset dropdown (reload a preset's saved values).
 - **Changed:** Two-row preset panel (Save / Save As / Delete below the dropdown), matching the Zünd & Summa Marks layout.
 - **Changed:** Appearance dropdowns aligned via a fixed label column.
 - **Removed:** Reset button (replaced by ↺ revert) and the Round/Square shape choice — marks are now always circular.
 - **Fixed:** Live validation restored the default text colour (no black-on-dark fields).
+- **Fixed:** Settings-file write failures are always reported (a silent failure could "resurrect" a deleted preset after restart).
+- **Fixed:** Marks that fail to place are reported in one summary warning instead of silently missing from prepress output.
+- **Fixed:** The [Registration] fallback verifies the swatch really is the registration spot (a user-deleted [Registration] could silently mis-colour marks).
+- **Fixed:** Fractional mark counts ("10.5") are rejected instead of silently truncated.
 
 ### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
 - **Fixed:** Re-running SUMMA with trim lines grew the artboard on every run — the "Trim" layer was incorrectly included in the bounds measurement (regression in v26.5.0).
