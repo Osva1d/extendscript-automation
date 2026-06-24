@@ -31,5 +31,15 @@ GM.CONSTANTS = {
         "mm": 2.834645669291339,
         "cm": 28.34645669291339,
         "in": 72
+    },
+
+    // Layout rhythm — the ONLY source of spacing. Scale in steps of 4 px.
+    // Never write a spacing/margin literal in the UI; always reference this.
+    LAYOUT: {
+        TIGHT:   4,    // elements that belong together: icon ↔ field, radio ↔ field
+        GROUP:   8,    // items in a row, rows within a panel, label → content
+        SECTION: 16,   // independent choices; gap between panels
+        MARGIN:  16,   // panel inner padding (panel.margins)
+        DIALOG:  20    // window outer margin (dlg.margins)
     }
 };

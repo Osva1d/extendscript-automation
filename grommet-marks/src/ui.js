@@ -65,11 +65,12 @@ GM.UI = {
         // Radios are textless — the "Count"/"Spacing" captions live once in the
         // header row built by buildDialog. Mirroring is handled in buildDialog by
         // hiding the opposite row, so this row carries no mirror controls.
+        var LO = GM.CONSTANTS.LAYOUT;
         var COL1_W = 72, COL_NUM = 78, COL_SPC = 90;
         var row = parent.add("group");
         row.orientation = "row";
         row.alignChildren = ["left", "center"];
-        row.spacing = 6;
+        row.spacing = LO.GROUP;   // must equal hdrRow.spacing (column alignment)
         row.margins = 0;
 
         var api = { onChange: function () {} };
@@ -84,7 +85,7 @@ GM.UI = {
         cb.helpTip = GM.L.TIP_EDGE_ENABLE;
 
         var c2 = row.add("group");
-        c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = 4;
+        c2.orientation = "row"; c2.alignChildren = ["left", "center"]; c2.spacing = LO.TIGHT;
         GM.UI.lockW(c2, COL_NUM);
         var numRB = c2.add("radiobutton", undefined, "");
         numRB.value = defaultCfg.useNumber;
@@ -94,7 +95,7 @@ GM.UI = {
         numIn.helpTip = GM.L.TIP_COUNT;
 
         var c3 = row.add("group");
-        c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = 4;
+        c3.orientation = "row"; c3.alignChildren = ["left", "center"]; c3.spacing = LO.TIGHT;
         GM.UI.lockW(c3, COL_SPC);
         var spcRB = c3.add("radiobutton", undefined, "");
         spcRB.value = !defaultCfg.useNumber;
@@ -198,32 +199,29 @@ GM.UI = {
      * @returns {Object} Dialog object with window, gatherAll, modeUI, pathUI, zonesUI
      */
     buildDialog: function (pData, pathInfo) {
+        // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
+        var LO = GM.CONSTANTS.LAYOUT;
         var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 20;
-        dlg.spacing = 15;   // matches ZSM / BRE / extendscript-ui-standards §2
+        dlg.margins = LO.DIALOG;
+        dlg.spacing = LO.SECTION;   // gap between panels
         dlg.preferredSize.width = 390;   // match ZSM/BRE; content grows if needed
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
-
-        // Spacing scale — use these three tokens, not ad-hoc numbers.
-        var SP_TIGHT = 4;    // elements that belong together (icon ↔ its field)
-        var SP_GROUP = 8;    // items in a row, label → content, panel rows
-        var SP_SECT  = 16;   // independent choices, sections
 
         // =================================================================
         // Presets Panel
         // =================================================================
         var setPanel = dlg.add("panel", undefined, GM.L.SETTINGS_PANEL);
         setPanel.alignChildren = ["fill", "top"];
-        setPanel.margins = 15;
-        setPanel.spacing = 8;
+        setPanel.margins = LO.MARGIN;
+        setPanel.spacing = LO.GROUP;
 
         // Row 1: label + dropdown (fills) + revert (↺), ZSM layout.
         var presetTop = setPanel.add("group");
         presetTop.alignment = ["fill", "top"];
-        presetTop.spacing = 8;
+        presetTop.spacing = LO.GROUP;
         presetTop.add("statictext", undefined, GM.L.LOAD);
         var loadDDL = presetTop.add("dropdownlist", undefined, []);
         loadDDL.alignment = ["fill", "center"];
@@ -238,7 +236,7 @@ GM.UI = {
         var PRESET_BTN_W = 92;
         var presetBtns = setPanel.add("group");
         presetBtns.alignment = ["right", "top"];
-        presetBtns.spacing = 6;
+        presetBtns.spacing = LO.GROUP;
         var saveBtn = presetBtns.add("button", undefined, GM.L.SAVE);
         saveBtn.preferredSize.width = PRESET_BTN_W;
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
@@ -257,8 +255,8 @@ GM.UI = {
         var modePanel = dlg.add("panel", undefined, GM.L.PLACEMENT_PANEL);
         modePanel.orientation = "row";
         modePanel.alignChildren = ["left", "center"];
-        modePanel.margins = 15;
-        modePanel.spacing = 15;
+        modePanel.margins = LO.MARGIN;
+        modePanel.spacing = LO.SECTION;
         var artboardRB = modePanel.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
         artboardRB.value = true;
         var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
@@ -280,22 +278,22 @@ GM.UI = {
         var edgesPanel = dlg.add("panel", undefined, GM.L.EDGES_PANEL);
         edgesPanel.orientation = "column";
         edgesPanel.alignChildren = ["left", "top"];
-        edgesPanel.margins = 15;
-        edgesPanel.spacing = 8;
+        edgesPanel.margins = LO.MARGIN;
+        edgesPanel.spacing = LO.GROUP;
 
         var offGrp = edgesPanel.add("group");
         offGrp.orientation = "row";
         offGrp.alignChildren = ["left", "center"];
-        offGrp.spacing = SP_GROUP;
+        offGrp.spacing = LO.GROUP;
         offGrp.add("statictext", undefined, GM.L.OFFSET_LABEL);
         var gX = offGrp.add("group");
-        gX.orientation = "row"; gX.alignChildren = ["left", "center"]; gX.spacing = SP_TIGHT;
+        gX.orientation = "row"; gX.alignChildren = ["left", "center"]; gX.spacing = LO.TIGHT;
         gX.add("statictext", undefined, "↔");
         var offsetXIn = gX.add("edittext", undefined, String(defCfg.offsetX));
         offsetXIn.preferredSize.width = 44;
         offsetXIn.helpTip = GM.L.TIP_OFFSET_X;
         var gY = offGrp.add("group");
-        gY.orientation = "row"; gY.alignChildren = ["left", "center"]; gY.spacing = SP_TIGHT;
+        gY.orientation = "row"; gY.alignChildren = ["left", "center"]; gY.spacing = LO.TIGHT;
         gY.add("statictext", undefined, "↕");
         var offsetYIn = gY.add("edittext", undefined, String(defCfg.offsetY));
         offsetYIn.preferredSize.width = 44;
@@ -307,10 +305,10 @@ GM.UI = {
         var mirrorGrp = edgesPanel.add("group");
         mirrorGrp.orientation = "row";
         mirrorGrp.alignChildren = ["left", "center"];
-        mirrorGrp.spacing = SP_GROUP;
+        mirrorGrp.spacing = LO.GROUP;
         mirrorGrp.add("statictext", undefined, GM.L.MIRROR_GROUP_LABEL);
         var mPair = mirrorGrp.add("group");
-        mPair.orientation = "row"; mPair.alignChildren = ["left", "center"]; mPair.spacing = SP_SECT;
+        mPair.orientation = "row"; mPair.alignChildren = ["left", "center"]; mPair.spacing = LO.SECTION;
         var mirrorTopCB = mPair.add("checkbox", undefined, GM.L.MIRROR_TOP);
         mirrorTopCB.value = defCfg.bottomMirror;
         mirrorTopCB.helpTip = GM.L.TIP_MIRROR_BOTTOM;
@@ -328,7 +326,7 @@ GM.UI = {
         var hdrRow = edgesPanel.add("group");
         hdrRow.orientation = "row";
         hdrRow.alignChildren = ["left", "center"];
-        hdrRow.spacing = 6;
+        hdrRow.spacing = LO.GROUP;
         var h1 = hdrRow.add("group"); GM.UI.lockW(h1, 72);   // empty, but locked (= c1)
         var h2 = hdrRow.add("group"); GM.UI.lockW(h2, 78);
         h2.alignChildren = ["left", "center"]; h2.margins = [20, 0, 0, 0];
@@ -342,7 +340,7 @@ GM.UI = {
         var edgeRowsGroup = edgesPanel.add("group");
         edgeRowsGroup.orientation = "column";
         edgeRowsGroup.alignChildren = ["left", "top"];
-        edgeRowsGroup.spacing = 7;
+        edgeRowsGroup.spacing = LO.GROUP;
         edgeRowsGroup.margins = 0;
 
         // Row order: top, bottom, left, right — pairs adjacent so the mirror
@@ -389,8 +387,8 @@ GM.UI = {
         var pathPanel = dlg.add("panel", undefined, GM.L.PATH_PANEL);
         pathPanel.orientation = "column";
         pathPanel.alignChildren = ["left", "top"];
-        pathPanel.margins = 15;
-        pathPanel.spacing = 10;
+        pathPanel.margins = LO.MARGIN;
+        pathPanel.spacing = LO.GROUP;
         // Start collapsed (artboard is the default mode). refreshModeUI() flips
         // this; the zero maximumSize keeps the hidden panel from reserving a slot.
         pathPanel.visible = false;
@@ -411,7 +409,7 @@ GM.UI = {
         var pathRow = pathPanel.add("group");
         pathRow.orientation = "row";
         pathRow.alignChildren = ["left", "center"];
-        pathRow.spacing = 8;
+        pathRow.spacing = LO.GROUP;
         var pathNumRB = pathRow.add("radiobutton", undefined, GM.L.COUNT);
         pathNumRB.helpTip = GM.L.TIP_COUNT;
         var pathNumIn = pathRow.add("edittext", undefined, String(defCfg.pathDist.number));
@@ -452,8 +450,8 @@ GM.UI = {
         var zonesPanel = dlg.add("panel", undefined, GM.L.ZONES_PANEL);
         zonesPanel.orientation = "row";
         zonesPanel.alignChildren = ["left", "center"];
-        zonesPanel.margins = 15;
-        zonesPanel.spacing = 8;
+        zonesPanel.margins = LO.MARGIN;
+        zonesPanel.spacing = LO.GROUP;
         var zoneCB = zonesPanel.add("checkbox", undefined, GM.L.ZONES_ENABLE);
         zoneCB.value = defCfg.cornerZone.enabled;
         zoneCB.helpTip = GM.L.TIP_ZONES;
@@ -517,13 +515,13 @@ GM.UI = {
         var markPanel = dlg.add("panel", undefined, GM.L.MARK_PANEL);
         markPanel.orientation = "column";
         markPanel.alignChildren = ["left", "top"];
-        markPanel.margins = 15;
-        markPanel.spacing = 8;
+        markPanel.margins = LO.MARGIN;
+        markPanel.spacing = LO.GROUP;
 
         var mRow1 = markPanel.add("group");
         mRow1.orientation = "row";
         mRow1.alignChildren = ["left", "center"];
-        mRow1.spacing = 8;
+        mRow1.spacing = LO.GROUP;
         mRow1.add("statictext", undefined, GM.L.MARK_SHAPE_LABEL);
         var circleCB = mRow1.add("checkbox", undefined, GM.L.MARK_CIRCLE);
         circleCB.value = defCfg.markCircle;
@@ -541,7 +539,7 @@ GM.UI = {
         var mRow2 = markPanel.add("group");
         mRow2.orientation = "row";
         mRow2.alignChildren = ["left", "center"];
-        mRow2.spacing = 8;
+        mRow2.spacing = LO.GROUP;
         mRow2.add("statictext", undefined, GM.L.REG_WEIGHT);
         var regWIn = mRow2.add("edittext", undefined, String(defCfg.regWeight));
         regWIn.preferredSize.width = 50;
@@ -566,7 +564,7 @@ GM.UI = {
         // =================================================================
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = LO.GROUP;
 
         footerGrp.add("button", undefined, GM.L.CANCEL, { name: "cancel" });
         var okBtn = footerGrp.add("button", undefined, GM.L.OK, { name: "ok" });
