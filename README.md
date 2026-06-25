@@ -67,7 +67,7 @@ Detailed macOS guide: [`docs/INSTALL_MAC.txt`](./docs/INSTALL_MAC.txt).
 
 | # | Script | Version | Purpose |
 |---|--------|---------|---------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Registration mark generator for Zünd + Summa, named presets, localisation |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.6.0** | Registration mark generator for Zünd + Summa, named presets, localisation |
 | 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Banner grommet marks — edges or path, corner zones, Esko-style marks |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Batch-relink PDFs into `.ai` imposition templates and export print-ready PDFs |
 
@@ -201,6 +201,13 @@ Since v26.3.x named presets are <strong>immutable</strong>. Generate does not mo
 ## Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
+
+### v1.7.0 (2026-06) — Zünd & Summa Marks v26.6.0
+- **Added:** Duplicate-colour guard — mapping two layers to the same spot colour now blocks Generate with a clear status message (previously the paths silently went to whichever row ran last).
+- **Added:** Colour-swatch previews next to every colour dropdown (mark colour and each layer row).
+- **Changed:** Dialog redesign — cutting technology is a two-radio selector; the former Technology and Document panels are merged into one "Output Settings" panel with a labelled "Source:" row; one shared label column so all fields and swatches line up; lighter, more readable status line.
+- **Fixed:** Colour routing never moves the registration marks or trim lines off their reserved layers — a layer mapped to the same spot colour as the marks (e.g. white marks + a "White" cut layer) no longer pulls the marks onto the cut layer when both modes are run.
+- **Fixed:** The longest Czech label ("Odsazení orientační značky:") is no longer truncated.
 
 ### v1.6.0 (2026-06) — Grommet Marks v6.0.0
 - **Added:** Path placement mode — distribute marks along a selected open/closed path (corners always anchored; smooth paths support count or spacing).

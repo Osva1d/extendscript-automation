@@ -67,7 +67,7 @@ Detailní návod pro macOS: [`docs/INSTALL_MAC.cs.txt`](./docs/INSTALL_MAC.cs.tx
 
 | # | Skript | Verze | Účel |
 |---|--------|-------|------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.5.1** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.6.0** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
 | 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Značky pro oka — hrany nebo cesta, rohové zóny, Esko značky |
 | 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Hromadný relink PDF do `.ai` vyřazovacích šablon a export tiskových PDF |
 
@@ -201,6 +201,13 @@ Od v26.3.x jsou pojmenované presety <strong>immutable</strong>. Generate je nem
 ## Changelog
 
 Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
+
+### v1.7.0 (2026-06) — Zünd & Summa Marks v26.6.0
+- **Added:** Kontrola duplicitní barvy — přiřazení stejné spotové barvy dvěma vrstvám nyní blokuje Generovat s jasnou zprávou (dříve cesty tiše skončily na poslední vrstvě).
+- **Added:** Náhledy barevných čtverečků u každého dropdownu barvy (barva značek i řádky vrstev).
+- **Changed:** Redesign dialogu — technologie řezu jako dvě radia; dřívější panely Technologie a Dokument sloučeny do jednoho „Nastavení výstupu" s pojmenovaným řádkem „Zdroj:"; jeden sdílený sloupec popisků (pole i čtverečky barev zarovnané); světlejší, čitelnější stavový řádek.
+- **Fixed:** Routing barev nikdy nepřesune registrační značky ani ořezové linky z jejich vyhrazených vrstev — vrstva se stejnou spotovou barvou jako značky (např. bílé značky + vrstva „White") už při spuštění obou režimů značky nestáhne na cut vrstvu.
+- **Fixed:** Nejdelší český popisek („Odsazení orientační značky:") se už neuřezává.
 
 ### v1.6.0 (2026-06) — Grommet Marks v6.0.0
 - **Added:** Režim umístění na cestu — značky po vybrané otevřené/uzavřené cestě (rohy vždy ukotvené; hladké cesty podporují počet i rozestup).
