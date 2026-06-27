@@ -39,8 +39,16 @@ cat >> "$OUTPUT" << EOF
  * ===========================================================================
  * Script:      $HUMAN_NAME
  * Version:     $VERSION
- * Author:      Osva1d
+ * Author:      Ladislav Osvald — PrePresso
  * Updated:     $(date '+%Y-%m-%d')
+ *
+ * Copyright (C) 2025-$(date '+%Y') Ladislav Osvald (PrePresso). All rights reserved.
+ * https://prepresso.lemonsqueezy.com
+ *
+ * Licensed to the original purchaser. Not for redistribution or resale.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+ * SHALL NOT BE LIABLE FOR ANY DAMAGES OR DATA LOSS ARISING FROM ITS USE.
  *
  * Description:
  *   $DESCRIPTION

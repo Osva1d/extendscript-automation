@@ -570,7 +570,7 @@ GM.UI = {
         var grpCopy = dlg.add("group");
         grpCopy.alignment = ["fill", "top"];
         var stCopy = grpCopy.add("statictext", undefined,
-            "© 2025–2026 Osva1d — " + GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
+            "© 2025–2026 PrePresso · v" + GM.CONSTANTS.VERSION);
         stCopy.enabled = false;
 
         // =================================================================

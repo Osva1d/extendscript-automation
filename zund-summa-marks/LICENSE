@@ -1,22 +1,15 @@
-Zünd & Summa Marks — Adobe Illustrator ExtendScript
-Copyright (C) 2025-2026 Ladislav Osvald (Osva1d)
+Zünd & Summa Marks — PrePresso
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). All rights reserved.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This software is licensed to the original purchaser for their own commercial
+and personal print-production work, on machines they own or control.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+It may not be redistributed, resold, sublicensed, published, or shared — in
+original or modified form.
 
-────────────────────────────────────────────────────────────────────────
-Full license text:  https://www.gnu.org/licenses/gpl-3.0.txt
-SPDX identifier:    GPL-3.0-or-later
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+SHALL NOT BE LIABLE FOR ANY DAMAGES OR DATA LOSS ARISING FROM ITS USE.
 
 ────────────────────────────────────────────────────────────────────────
 Third-party components:
@@ -26,9 +19,4 @@ Third-party components:
   Source: https://github.com/douglascrockford/JSON-js
 
 ────────────────────────────────────────────────────────────────────────
-Commercial licensing:
-
-  If GPL-3.0 terms (specifically the share-back requirement for derivative
-  works) are incompatible with your use case, a commercial license can
-  be negotiated separately. Contact the copyright holder via GitHub Issues
-  or direct message.
+Contact: https://prepresso.lemonsqueezy.com

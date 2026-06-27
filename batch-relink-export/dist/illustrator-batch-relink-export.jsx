@@ -2,8 +2,16 @@
  * ===========================================================================
  * Script:      Illustrator Batch Relink Export
  * Version:     3.0.0
- * Author:      Osva1d
+ * Author:      Ladislav Osvald — PrePresso
  * Updated:     2026-06-27
+ *
+ * Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). All rights reserved.
+ * https://prepresso.lemonsqueezy.com
+ *
+ * Licensed to the original purchaser. Not for redistribution or resale.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+ * SHALL NOT BE LIABLE FOR ANY DAMAGES OR DATA LOSS ARISING FROM ITS USE.
  *
  * Description:
  *   Batch PDF relinking and export for Illustrator templates.
@@ -1097,7 +1105,7 @@ BRE.UI = {
         footerGrp.alignment = ["fill", "center"];
         footerGrp.spacing = 8;
         var stCopy = footerGrp.add("statictext", undefined,
-            "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
+            "© 2025–2026 PrePresso · v" + c.version);
         stCopy.enabled = false;
         stCopy.alignment = ["left", "center"];
         var footerSpacer = footerGrp.add("group");
