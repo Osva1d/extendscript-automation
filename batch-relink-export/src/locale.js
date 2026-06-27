@@ -35,15 +35,21 @@ BRE.L = (function () {
 
             // --- UI: Title & Panels ---
             TITLE:              "Batch Relink Export",
-            PANEL_INPUT:        "Input Files",
-            PANEL_CONFIG:       "Export Configuration",
+            PANEL_INPUT:        "1 · Input files",
+            PANEL_CONFIG:       "2 · Naming & format",
+            PANEL_OPTIONS:      "Options",
 
-            // --- UI: Labels ---
+            // --- UI: Labels (short — narrow label column, full text in helpTip) ---
             LBL_TEMPLATE:       "Template (.ai)",
-            LBL_SOURCE:         "Source folder (PDF)",
-            LBL_OUTPUT:         "Output folder",
-            LBL_NAMING:         "Naming pattern",
+            LBL_SOURCE:         "Source (PDF)",
+            LBL_OUTPUT:         "Output",
+            LBL_NAMING:         "Pattern",
             LBL_PRESET:         "PDF Preset",
+            LBL_PREVIEW:        "Name preview:",
+            NAMING_LEGEND:      "{n} index · {template} template · {source} source",
+            SAMPLE_TEMPLATE:    "template",
+            SAMPLE_SOURCE:      "source",
+            PREVIEW_VERDICT:    "%s of %s sheets OK · %s blocked",
 
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
@@ -139,15 +145,21 @@ BRE.L = (function () {
 
             // --- UI: Nadpis a panely ---
             TITLE:              "Dávkové zpracování PDF",
-            PANEL_INPUT:        "Vstupní soubory",
-            PANEL_CONFIG:       "Konfigurace exportu",
+            PANEL_INPUT:        "1 · Vstupní soubory",
+            PANEL_CONFIG:       "2 · Pojmenování a formát",
+            PANEL_OPTIONS:      "Možnosti",
 
-            // --- UI: Popisky ---
+            // --- UI: Popisky (krátké — úzký sloupec, plný text v helpTipu) ---
             LBL_TEMPLATE:       "Šablona (.ai)",
-            LBL_SOURCE:         "Zdrojová složka (PDF)",
-            LBL_OUTPUT:         "Výstupní složka",
-            LBL_NAMING:         "Vzor pojmenování",
+            LBL_SOURCE:         "Zdroj (PDF)",
+            LBL_OUTPUT:         "Výstup",
+            LBL_NAMING:         "Vzor",
             LBL_PRESET:         "PDF Preset",
+            LBL_PREVIEW:        "Náhled názvu:",
+            NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
+            SAMPLE_TEMPLATE:    "sablona",
+            SAMPLE_SOURCE:      "zdroj",
+            PREVIEW_VERDICT:    "%s z %s archů v pořádku · %s blokováno",
 
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",

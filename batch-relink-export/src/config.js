@@ -12,12 +12,10 @@ BRE.Config = {
 
     ui: {
         title: null,
-        labelWidth: 190,
-        fieldWidth: 300,
-        dropdownWidth: 200,
-        namingWidth: 160,
+        labelWidth: 96,
+        dialogWidth: 460,
         dialogMargins: 20,
-        dialogSpacing: 15,
+        dialogSpacing: 12,
         panelMargins: 15,
         panelSpacing: 10
     },

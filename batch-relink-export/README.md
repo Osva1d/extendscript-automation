@@ -81,6 +81,7 @@ src/
 - **Added:** Přirozené (numerické) řazení zdrojů → předvídatelné číslování.
 - **Added:** Náhled před zpracováním (přeskočí se u bezchybné dávky).
 - **Added:** Lokalizace cs/en; copyright patička dle UI standardu.
+- **Changed:** Redesign hlavního dialogu — užší sloupec popisků (190 → 96 px) a pole na plnou šířku, tři číslované panely (vstupy / pojmenování a formát / možnosti), viditelná legenda tokenů a **živý náhled názvu** výstupu, copyright v patičce vlevo. Mění se jen prezentační vrstva v `ui.js`; logika i návratový objekt beze změny.
 - **Added:** Diagnostický log za `BRE.Config.debug`.
 - **Fixed:** Ignorování macOS `._*` / tečkových souborů ve zdrojové složce.
 - **Removed:** Impose skript (slepý vývoj).

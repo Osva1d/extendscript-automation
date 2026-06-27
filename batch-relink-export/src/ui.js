@@ -26,8 +26,13 @@ BRE.UI = {
         dialog.alignChildren = ["fill", "top"];
         dialog.margins = c.ui.dialogMargins;
         dialog.spacing = c.ui.dialogSpacing;
+        // Fixed width anchors the fill-width fields (they have no fixed size now).
+        dialog.preferredSize.width = c.ui.dialogWidth;
 
-        // --- Input panel ---
+        // Forward declaration — defined once previewST / namingInput exist.
+        var refreshPreview;
+
+        // --- Panel 1: input files (narrow label, fields fill the width) ---
         var inputPanel = dialog.add("panel", undefined, l.PANEL_INPUT);
         inputPanel.orientation = "column";
         inputPanel.alignChildren = ["fill", "top"];
@@ -35,35 +40,61 @@ BRE.UI = {
         inputPanel.spacing = c.ui.panelSpacing;
 
         var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
-            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN);
+            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN,
+            function () { if (refreshPreview) refreshPreview(); });
         var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE,
             true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
         var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
             true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
 
-        // --- Config panel ---
+        // --- Panel 2: naming & format ---
         var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
         configPanel.orientation = "column";
         configPanel.alignChildren = ["fill", "top"];
         configPanel.margins = c.ui.panelMargins;
         configPanel.spacing = c.ui.panelSpacing;
 
-        // Naming pattern
+        // Naming pattern (field fills the width)
         var namingGrp = configPanel.add("group");
+        namingGrp.alignment = ["fill", "center"];
         namingGrp.alignChildren = ["left", "center"];
         var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
         namingST.preferredSize.width = c.ui.labelWidth;
+        namingST.helpTip = l.TIP_NAMING;
         var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
-        namingInput.preferredSize.width = c.ui.namingWidth;
+        namingInput.alignment = ["fill", "center"];
         namingInput.helpTip = l.TIP_NAMING;
 
-        // PDF Preset
+        // Visible token legend (lifted out of the helpTip)
+        var legendGrp = configPanel.add("group");
+        legendGrp.alignChildren = ["left", "center"];
+        var legendPad = legendGrp.add("statictext", undefined, "");
+        legendPad.preferredSize.width = c.ui.labelWidth;
+        var legendST = legendGrp.add("statictext", undefined, l.NAMING_LEGEND);
+        legendST.enabled = false;
+
+        // Live output-name preview (presentation only — reads buildOutputName)
+        var previewGrp = configPanel.add("group");
+        previewGrp.alignment = ["fill", "center"];
+        previewGrp.alignChildren = ["left", "center"];
+        var previewLbl = previewGrp.add("statictext", undefined, l.LBL_PREVIEW);
+        previewLbl.preferredSize.width = c.ui.labelWidth;
+        var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
+        previewST.alignment = ["fill", "center"];
+        try {
+            var pf = previewST.graphics.font;
+            previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
+        } catch (fe) {}
+
+        // PDF Preset (dropdown fills the width)
         var presetGrp = configPanel.add("group");
+        presetGrp.alignment = ["fill", "center"];
         presetGrp.alignChildren = ["left", "center"];
         var presetST = presetGrp.add("statictext", undefined, l.LBL_PRESET);
         presetST.preferredSize.width = c.ui.labelWidth;
+        presetST.helpTip = l.TIP_PRESET;
         var presetDDL = presetGrp.add("dropdownlist", undefined, []);
-        presetDDL.preferredSize.width = c.ui.dropdownWidth;
+        presetDDL.alignment = ["fill", "center"];
         presetDDL.helpTip = l.TIP_PRESET;
 
         var pdfPresets = [];
@@ -87,27 +118,52 @@ BRE.UI = {
             presetDDL.selection = defaultIdx;
         }
 
-        // Checkboxes
-        var skipCB = configPanel.add("checkbox", undefined, l.CB_SKIP);
+        // --- Panel 3: options (optional toggles, separated from settings) ---
+        var optionsPanel = dialog.add("panel", undefined, l.PANEL_OPTIONS);
+        optionsPanel.orientation = "column";
+        optionsPanel.alignChildren = ["left", "top"];
+        optionsPanel.margins = c.ui.panelMargins;
+        optionsPanel.spacing = c.ui.panelSpacing;
+
+        var skipCB = optionsPanel.add("checkbox", undefined, l.CB_SKIP);
         skipCB.helpTip = l.TIP_SKIP;
 
-        var openCB = configPanel.add("checkbox", undefined, l.CB_OPEN_FOLDER);
+        var openCB = optionsPanel.add("checkbox", undefined, l.CB_OPEN_FOLDER);
         openCB.value = true;
         openCB.helpTip = l.TIP_OPEN;
 
-        // --- Copyright footer (greyed) — extendscript-ui-standards §5 ---
-        var copyGrp = dialog.add("group");
-        copyGrp.alignment = ["fill", "top"];
-        var stCopy = copyGrp.add("statictext", undefined,
+        // --- Footer: greyed copyright (left) + buttons (right), one row ---
+        var footerGrp = dialog.add("group");
+        footerGrp.alignment = ["fill", "center"];
+        footerGrp.spacing = 8;
+        var stCopy = footerGrp.add("statictext", undefined,
             "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
         stCopy.enabled = false;
+        stCopy.alignment = ["left", "center"];
+        var footerSpacer = footerGrp.add("group");
+        footerSpacer.alignment = ["fill", "center"];
+        var btnGrp = footerGrp.add("group");
+        btnGrp.alignment = ["right", "center"];
+        btnGrp.spacing = 8;
+        btnGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
+        btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
 
-        // --- Buttons ---
-        var footerGrp = dialog.add("group");
-        footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing = 8;
-        footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
-        footerGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
+        // Live name preview — presentation only, read-only call into the
+        // existing buildOutputName. No validation, no write, no side-effect.
+        refreshPreview = function () {
+            var tpl;
+            try {
+                tpl = templatePath.text
+                    ? BRE.Core.stripExtension(decodeURI(new File(templatePath.text).name))
+                    : l.SAMPLE_TEMPLATE;
+            } catch (te) { tpl = l.SAMPLE_TEMPLATE; }
+            try {
+                previewST.text = BRE.Core.buildOutputName(
+                    namingInput.text, 0, 1, tpl, l.SAMPLE_SOURCE);
+            } catch (pe2) { previewST.text = ""; }
+        };
+        namingInput.onChanging = refreshPreview;
+        refreshPreview();
 
         // --- Show dialog ---
         if (dialog.show() !== 1) return null;
@@ -216,6 +272,16 @@ BRE.UI = {
         dlg.margins = 20;
         dlg.spacing = 10;
 
+        // One-line verdict (bold): processable / total / blocked.
+        var total = config.pdfFiles.length;
+        var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
+            String(scan.processable), String(total), String(total - scan.processable)));
+        verdictST.preferredSize.width = 500;
+        try {
+            var vf = verdictST.graphics.font;
+            verdictST.graphics.font = ScriptUI.newFont(vf.name, "Bold", vf.size);
+        } catch (vfe) {}
+
         var infoText = l.format(l.PREVIEW_TEMPLATE, config.templateName, String(slotCount))
             + "\n" + l.format(l.PREVIEW_SOURCE, String(config.pdfFiles.length))
             + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
@@ -317,8 +383,11 @@ BRE.UI = {
         return {
             isCancelled: function () { return cancelled; },
             update: function (index, fileName) {
+                // Keep the status line from overflowing on long names.
+                var nm = fileName;
+                if (nm.length > 38) nm = nm.substr(0, 18) + "…" + nm.substr(nm.length - 17);
                 statusText.text = l.format(l.PROGRESS_FILE,
-                    fileName, String(index + 1), String(total));
+                    nm, String(index + 1), String(total));
                 bar.value = index;
                 dlg.update();
             },
@@ -395,22 +464,26 @@ BRE.UI = {
     // ---------------------------------------------------------------------
 
     /**
-     * Adds a labeled file/folder row to a panel.
-     * The field starts empty — ScriptUI has no greyed placeholder, so a
-     * descriptive default value would be mistaken for a real path by the
-     * validation. The label plus helpTip convey the field's purpose.
+     * Adds a labeled file/folder row to a panel. The narrow label shares the
+     * field's helpTip (the short label carries the full description there); the
+     * field fills the remaining width. The field starts empty — ScriptUI has no
+     * greyed placeholder, so a descriptive default would be mistaken for a real
+     * path by the validation.
+     * @param {Function} [onPick] - Optional callback fired after a path is picked.
      * @returns {EditText} The text input element.
      */
-    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn) {
+    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, onPick) {
         var l = BRE.L;
         var c = BRE.Config;
 
         var grp = parent.add("group");
+        grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
+        if (tipField) st.helpTip = tipField;
         var et = grp.add("edittext", undefined, "");
-        et.preferredSize.width = c.ui.fieldWidth;
+        et.alignment = ["fill", "center"];
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
         if (tipBtn) btn.helpTip = tipBtn;
@@ -421,7 +494,10 @@ BRE.UI = {
             } else {
                 sel = File.openDialog(l.BROWSE_FILE, ext);
             }
-            if (sel) et.text = sel.fsName;
+            if (sel) {
+                et.text = sel.fsName;
+                if (onPick) onPick();
+            }
         };
         return et;
     }
