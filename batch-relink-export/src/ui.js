@@ -289,18 +289,34 @@ BRE.UI = {
         var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
         infoST.preferredSize.width = 500;
 
-        // --- Pre-flight scan summary (counts) ---
+        // --- Pre-flight scan summary: header + one status-dot row per count ---
         var c = scan.counts;
-        var summary = l.format(l.SCAN_HEADER, String(slotCount))
-            + "\n  " + l.format(l.SCAN_OK, String(c.ok));
-        if (c.partial > 0)    summary += "\n  " + l.format(l.SCAN_PARTIAL, String(c.partial));
-        if (c.under > 0)      summary += "\n  " + l.format(l.SCAN_UNDER, String(c.under));
-        if (c.unreadable > 0) summary += "\n  " + l.format(l.SCAN_UNREADABLE, String(c.unreadable));
-        if (c.over > 0)       summary += "\n  " + l.format(l.SCAN_OVER, String(c.over));
-        if (c.uncertain > 0)  summary += "\n  " + l.format(l.SCAN_UNCERTAIN, String(c.uncertain));
+        var headerST = dlg.add("statictext", undefined, l.format(l.SCAN_HEADER, String(slotCount)));
+        headerST.preferredSize.width = 500;
 
-        var sumST = dlg.add("statictext", undefined, summary, { multiline: true });
-        sumST.preferredSize.width = 500;
+        var rowsGrp = dlg.add("group");
+        rowsGrp.orientation = "column";
+        rowsGrp.alignChildren = ["left", "center"];
+        rowsGrp.spacing = 3;
+        rowsGrp.margins = [4, 2, 0, 2];
+
+        var GREEN = [0.36, 0.60, 0.34], AMBER = [0.79, 0.64, 0.23],
+            RED = [0.76, 0.31, 0.25], GREY = [0.60, 0.60, 0.58];
+        function addCountRow(n, str, rgb, force) {
+            if (!force && n === 0) return;
+            var g = rowsGrp.add("group");
+            g.alignChildren = ["left", "center"];
+            g.spacing = 7;
+            var dot = g.add("statictext", undefined, "●");  // ●
+            BRE.UI._color(dot, rgb);
+            g.add("statictext", undefined, l.format(str, String(n)));
+        }
+        addCountRow(c.ok, l.SCAN_OK, GREEN, true);
+        addCountRow(c.partial, l.SCAN_PARTIAL, AMBER, false);
+        addCountRow(c.under, l.SCAN_UNDER, AMBER, false);
+        addCountRow(c.unreadable, l.SCAN_UNREADABLE, GREY, false);
+        addCountRow(c.over, l.SCAN_OVER, RED, false);
+        addCountRow(c.uncertain, l.SCAN_UNCERTAIN, RED, false);
 
         // --- Per-file anomaly details (everything except "ok") ---
         var details = [];
@@ -419,26 +435,36 @@ BRE.UI = {
         logWin.margins = 20;
         logWin.spacing = 15;
 
-        var summaryLine = l.LOG_SUCCESS + ": " + results.success
-            + "   |   " + l.LOG_ERRORS + ": " + results.errors
-            + "   |   " + l.LOG_SKIPPED + ": " + results.skipped;
-        if (results.blocked > 0) {
-            summaryLine += "   |   " + l.LOG_BLOCKED + ": " + results.blocked;
+        // Aligned label : value pairs (Errors red when > 0).
+        var RED = [0.76, 0.31, 0.25];
+        var pairsGrp = logWin.add("group");
+        pairsGrp.orientation = "column";
+        pairsGrp.alignChildren = ["left", "center"];
+        pairsGrp.spacing = 3;
+        function addPair(label, val, redIfPositive, force) {
+            if (!force && val === 0) return;
+            var g = pairsGrp.add("group");
+            g.alignChildren = ["left", "center"];
+            g.spacing = 8;
+            var ls = g.add("statictext", undefined, label);
+            ls.preferredSize.width = 150;
+            var vs = g.add("statictext", undefined, String(val));
+            vs.preferredSize.width = 60;
+            if (redIfPositive && val > 0) BRE.UI._color(vs, RED);
         }
-        if (results.removed > 0) {
-            summaryLine += "   |   " + l.LOG_REMOVED + ": " + results.removed;
-        }
-        if (results.manual > 0) {
-            summaryLine += "   |   " + l.LOG_MANUAL_LABEL + ": " + results.manual;
-        }
+        addPair(l.LOG_SUCCESS, results.success, false, true);
+        addPair(l.LOG_ERRORS, results.errors, true, true);
+        addPair(l.LOG_SKIPPED, results.skipped, false, true);
+        addPair(l.LOG_BLOCKED, results.blocked, false, false);
+        addPair(l.LOG_REMOVED, results.removed, false, false);
+        addPair(l.LOG_MANUAL_LABEL, results.manual, false, false);
+
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
-            summaryLine += "\n" + l.format(l.LOG_CANCELLED,
-                String(completed), String(results.total));
+            var cancST = logWin.add("statictext", undefined,
+                l.format(l.LOG_CANCELLED, String(completed), String(results.total)));
+            cancST.preferredSize.width = 500;
         }
-
-        var summST = logWin.add("statictext", undefined, summaryLine, { multiline: true });
-        summST.preferredSize.width = 500;
 
         if (results.log.length > 0) {
             var detailPanel = logWin.add("panel", undefined, l.LOG_DETAILS);
@@ -462,6 +488,19 @@ BRE.UI = {
     // ---------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------
+
+    /**
+     * Sets a control's text colour. Wrapped in try/catch — colouring is
+     * cosmetic and must never break the dialog if a host build rejects the pen.
+     * @param {Object} ctrl - A ScriptUI control (statictext).
+     * @param {number[]} rgb - [r, g, b] in 0..1.
+     */
+    _color: function (ctrl, rgb) {
+        try {
+            var g = ctrl.graphics;
+            ctrl.graphics.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, rgb, 1);
+        } catch (e) {}
+    },
 
     /**
      * Adds a labeled file/folder row to a panel. The narrow label shares the
