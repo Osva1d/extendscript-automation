@@ -134,9 +134,11 @@ Hromadný relink PDF souborů do `.ai` **vyřazovací šablony** a export tiskov
 - Automaticky odemkne a obnoví zamčené vrstvy i objekty
 - Pre-flight sken všech zdrojů vůči počtu pozic; tvrdě blokuje rizikové soubory (více stran než pozic, nebo nejednoznačný počet stran), aby tiše nezahodil stránky
 - Předvídatelné přirozené číslování archů (`part_2` před `part_10`)
-- Pojmenování výstupů přes vzor — `{n}` (číslo archu), `{template}`, `{source}`
+- Pojmenování výstupů přes vzor — `{n}` (číslo archu), `{template}`, `{source}` — se **živým náhledem názvu** a viditelnou legendou tokenů v dialogu
 - Náhled před během (přeskočí se u bezchybné dávky); přeskočení existujících pro obnovu po pádu
 - Ignoruje macOS sidecar soubory (`._*`) na flash discích; lokalizace CS / EN
+
+**Dialog:** tři číslované panely (vstupní soubory / pojmenování a formát / možnosti), živý náhled výsledného názvu při psaní vzoru a barevně odlišený pre-flight souhrn.
 
 **Použití:** spusťte skript → vyberte šablonu, zdrojovou a výstupní složku → nastavte vzor pojmenování a PDF preset → potvrďte náhled → hotovo.
 
@@ -251,7 +253,9 @@ Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` /
 - **Added:** Pre-flight sken všech zdrojů; tvrdý blok souborů s více stranami než pozic nebo s nejednoznačným počtem stran.
 - **Added:** Neúplný poslední arch hlášen k ručnímu dočištění („N pozic navíc — odeber ručně").
 - **Added:** Přirozené (numerické) řazení zdrojů pro předvídatelné číslování archů.
+- **Added:** Redesign dialogu — tři číslované panely, viditelná legenda tokenů, živý náhled názvu výstupu, barevně odlišený pre-flight i souhrn.
 - **Fixed:** macOS AppleDouble (`._*`) soubory ve zdrojové složce se ignorují.
+- **Fixed:** macOS layout dialogu — pole se roztáhnou k jedné pravé hraně (tlačítka Vybrat… zastropována).
 - **Removed:** Samostatný vyřazovací skript (slepá větev vývoje).
 
 ### v1.2.1 (2026-05) — Zünd & Summa Marks v26.3.2

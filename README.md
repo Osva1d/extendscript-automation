@@ -134,9 +134,11 @@ Batch-relinks PDF files into an `.ai` **imposition template** and exports print-
 - Automatically unlocks and restores locked layers and objects
 - Pre-flight scan of all sources against the template's position count; hard-blocks risky files (more pages than positions, or an ambiguous page count) to prevent silently dropping pages
 - Predictable, natural sheet numbering (`part_2` before `part_10`)
-- Output naming via a pattern — `{n}` (sheet number), `{template}`, `{source}`
+- Output naming via a pattern — `{n}` (sheet number), `{template}`, `{source}` — with a **live name preview** and a visible token legend in the dialog
 - Pre-run preview (skipped for a clean batch); skip-existing for crash recovery
 - Ignores macOS sidecar files (`._*`) on flash drives; localised CS / EN
+
+**Dialog:** three numbered panels (input files / naming & format / options), a live preview of the resulting filename as you edit the pattern, and a status-coloured pre-flight summary.
 
 **Usage:** run the script → pick the template, source folder, and output folder → set the naming pattern and PDF preset → confirm the preview → done.
 
@@ -251,7 +253,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` /
 - **Added:** Pre-flight scan of all sources; hard-blocks files with more pages than positions or an ambiguous page count.
 - **Added:** Short last sheet reported for manual cleanup ("N extra positions — remove manually").
 - **Added:** Natural (numeric-aware) source ordering for predictable sheet numbering.
+- **Added:** Dialog redesign — three numbered panels, visible token legend, live output-name preview, status-coloured pre-flight/summary.
 - **Fixed:** macOS AppleDouble (`._*`) sidecar files in the source folder are ignored.
+- **Fixed:** macOS dialog layout — fields fill to one shared right edge (Browse buttons capped).
 - **Removed:** Standalone imposition script (dead development branch).
 
 ### v1.2.1 (2026-05) — Zünd & Summa Marks v26.3.2
