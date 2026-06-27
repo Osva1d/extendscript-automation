@@ -62,7 +62,8 @@ BRE.UI = {
         namingST.preferredSize.width = c.ui.labelWidth;
         namingST.helpTip = l.TIP_NAMING;
         var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
-        namingInput.alignment = ["fill", "center"];
+        // Fixed width = path field, so panel-2 right edges line up with panel-1.
+        namingInput.preferredSize.width = c.ui.pathFieldWidth;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
@@ -80,7 +81,7 @@ BRE.UI = {
         var previewLbl = previewGrp.add("statictext", undefined, l.LBL_PREVIEW);
         previewLbl.preferredSize.width = c.ui.labelWidth;
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
-        previewST.alignment = ["fill", "center"];
+        previewST.preferredSize.width = c.ui.pathFieldWidth;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -94,7 +95,7 @@ BRE.UI = {
         presetST.preferredSize.width = c.ui.labelWidth;
         presetST.helpTip = l.TIP_PRESET;
         var presetDDL = presetGrp.add("dropdownlist", undefined, []);
-        presetDDL.alignment = ["fill", "center"];
+        presetDDL.preferredSize.width = c.ui.pathFieldWidth;
         presetDDL.helpTip = l.TIP_PRESET;
 
         var pdfPresets = [];
