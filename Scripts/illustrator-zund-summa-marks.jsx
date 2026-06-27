@@ -2,12 +2,16 @@
  * ===========================================================================
  * Script:      Illustrator Zund & Summa Marks
  * Version:     26.6.0
- * Author:      Osva1d
- * Updated:     2026-06-24
+ * Author:      Ladislav Osvald — PrePresso
+ * Updated:     2026-06-27
  *
- * Copyright (C) 2025-2026 Ladislav Osvald (Osva1d).
- * Licensed under GNU GPL-3.0-or-later. See LICENSE file or
- * <https://www.gnu.org/licenses/gpl-3.0.txt> for full terms.
+ * Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). All rights reserved.
+ * https://prepresso.lemonsqueezy.com
+ *
+ * Licensed to the original purchaser. Not for redistribution or resale.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+ * SHALL NOT BE LIABLE FOR ANY DAMAGES OR DATA LOSS ARISING FROM ITS USE.
  *
  * Description:
  *   Registration marks generator for Zund/Summa cutting tables.
@@ -3091,7 +3095,7 @@ ZSM.UI = {
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
         var stCopy = grpFooterCopy.add("statictext", undefined,
-            "© 2025–2026 Osva1d — " + c.scriptName + " v" + c.version);
+            "© 2025–2026 PrePresso · v" + c.version);
         stCopy.enabled = false;
 
         // Cancel (left) | Generate (right), right-aligned. Factory defaults load

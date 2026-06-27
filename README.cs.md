@@ -1,6 +1,6 @@
 # ExtendScript automatizace pro Adobe Illustrator
 
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-commercial-blue)](LICENSE)
 
 > Profesionální sada nástrojů v jazyce JavaScript (`.jsx`) pro automatizaci předtiskové přípravy a zefektivnění práce v Adobe Illustratoru.
 
@@ -283,16 +283,9 @@ Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` /
 
 ## Licence
 
-Tento projekt je licencován pod **GNU General Public License v3.0** — viz [`LICENSE`](LICENSE) (plný text) a [`COPYRIGHT`](COPYRIGHT) (shrnutí + třetí strany).
+Komerční software. Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). Všechna práva vyhrazena. Viz [`LICENSE`](LICENSE).
 
-**Co to znamená v praxi:**
-
-- Software můžete **volně používat** pro jakýkoli účel — osobní, akademický i komerční (např. v print shopu).
-- Software můžete **modifikovat** a vytvářet odvozená díla.
-- Pokud modifikovanou verzi **distribuujete** (přeprodáváte nebo zveřejňujete), musíte zachovat licenci GPL-3.0 a zpřístupnit zdrojový kód.
-- Software je poskytován „as is", bez jakýchkoli záruk.
-
-**Komerční licence:** Pokud podmínky GPL-3.0 (zejména povinnost zveřejnit modifikace) nejsou pro váš use case kompatibilní, lze sjednat komerční licenci samostatně. Kontaktujte autora.
+Licencováno původnímu kupujícímu pro vlastní komerční a osobní předtiskovou práci. Není určeno k další distribuci ani přeprodeji. Poskytováno „as is", bez jakýchkoli záruk.
 
 **Třetí strany:** `json2.js` od Douglas Crockford — public domain.
 
