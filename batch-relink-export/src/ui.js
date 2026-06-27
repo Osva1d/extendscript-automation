@@ -62,8 +62,9 @@ BRE.UI = {
         namingST.preferredSize.width = c.ui.labelWidth;
         namingST.helpTip = l.TIP_NAMING;
         var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
-        // Fixed width = path field, so panel-2 right edges line up with panel-1.
-        namingInput.preferredSize.width = c.ui.pathFieldWidth;
+        // Fill to the panel's right edge — same line as panel-1's buttons.
+        namingInput.alignment = ["fill", "center"];
+        namingInput.minimumSize.width = c.ui.fieldMinWidth;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
@@ -81,7 +82,8 @@ BRE.UI = {
         var previewLbl = previewGrp.add("statictext", undefined, l.LBL_PREVIEW);
         previewLbl.preferredSize.width = c.ui.labelWidth;
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
-        previewST.preferredSize.width = c.ui.pathFieldWidth;
+        previewST.alignment = ["fill", "center"];
+        previewST.minimumSize.width = c.ui.fieldMinWidth;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -95,7 +97,8 @@ BRE.UI = {
         presetST.preferredSize.width = c.ui.labelWidth;
         presetST.helpTip = l.TIP_PRESET;
         var presetDDL = presetGrp.add("dropdownlist", undefined, []);
-        presetDDL.preferredSize.width = c.ui.pathFieldWidth;
+        presetDDL.alignment = ["fill", "center"];
+        presetDDL.minimumSize.width = c.ui.fieldMinWidth;
         presetDDL.helpTip = l.TIP_PRESET;
 
         var pdfPresets = [];
@@ -526,12 +529,15 @@ BRE.UI = {
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
         if (tipField) st.helpTip = tipField;
-        // Fixed width — macOS ScriptUI won't grow a fill field ahead of a button.
+        // Field fills the row; the button is capped so the slack goes to the
+        // field (not the button), giving every row one shared right edge.
         var et = grp.add("edittext", undefined, "");
-        et.preferredSize.width = c.ui.pathFieldWidth;
+        et.alignment = ["fill", "center"];
+        et.minimumSize.width = c.ui.fieldMinWidth;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
         btn.preferredSize.width = c.ui.browseBtnWidth;
+        btn.maximumSize.width = c.ui.browseBtnWidth;
         if (tipBtn) btn.helpTip = tipBtn;
         btn.onClick = function () {
             var sel;

@@ -14,12 +14,12 @@ BRE.Config = {
         title: null,
         labelWidth: 96,
         dialogWidth: 460,
-        // macOS ScriptUI does not stretch a "fill" edittext that has a trailing
-        // control (the Browse button) — the slack goes to the button instead.
-        // So path rows use deterministic widths: field + button derived from
-        // dialogWidth − margins − label, keeping all three rows aligned.
         browseBtnWidth: 90,
-        pathFieldWidth: 184,
+        // Fields stretch (fill) to one shared right edge; this floor stops a
+        // field from collapsing. The Browse button is capped (maximumSize) so
+        // the row's slack flows into the field, not the button — that capping
+        // is what makes fill behave (the earlier "fat button" symptom).
+        fieldMinWidth: 180,
         dialogMargins: 20,
         dialogSpacing: 12,
         panelMargins: 15,
