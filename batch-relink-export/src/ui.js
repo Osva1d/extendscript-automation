@@ -165,6 +165,9 @@ BRE.UI = {
         namingInput.onChanging = refreshPreview;
         refreshPreview();
 
+        // Recompute the layout with the deterministic fixed widths.
+        try { dialog.layout.layout(true); } catch (le) {}
+
         // --- Show dialog ---
         if (dialog.show() !== 1) return null;
 
@@ -516,15 +519,18 @@ BRE.UI = {
         var c = BRE.Config;
 
         var grp = parent.add("group");
+        grp.orientation = "row";
         grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
         if (tipField) st.helpTip = tipField;
+        // Fixed width — macOS ScriptUI won't grow a fill field ahead of a button.
         var et = grp.add("edittext", undefined, "");
-        et.alignment = ["fill", "center"];
+        et.preferredSize.width = c.ui.pathFieldWidth;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
+        btn.preferredSize.width = c.ui.browseBtnWidth;
         if (tipBtn) btn.helpTip = tipBtn;
         btn.onClick = function () {
             var sel;
