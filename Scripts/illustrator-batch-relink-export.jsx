@@ -277,6 +277,12 @@ BRE.Config = {
         title: null,
         labelWidth: 96,
         dialogWidth: 460,
+        // macOS ScriptUI does not stretch a "fill" edittext that has a trailing
+        // control (the Browse button) — the slack goes to the button instead.
+        // So path rows use deterministic widths: field + button derived from
+        // dialogWidth − margins − label, keeping all three rows aligned.
+        browseBtnWidth: 90,
+        pathFieldWidth: 184,
         dialogMargins: 20,
         dialogSpacing: 12,
         panelMargins: 15,
@@ -1115,6 +1121,9 @@ BRE.UI = {
         namingInput.onChanging = refreshPreview;
         refreshPreview();
 
+        // Recompute the layout with the deterministic fixed widths.
+        try { dialog.layout.layout(true); } catch (le) {}
+
         // --- Show dialog ---
         if (dialog.show() !== 1) return null;
 
@@ -1466,15 +1475,18 @@ BRE.UI = {
         var c = BRE.Config;
 
         var grp = parent.add("group");
+        grp.orientation = "row";
         grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
         st.preferredSize.width = c.ui.labelWidth;
         if (tipField) st.helpTip = tipField;
+        // Fixed width — macOS ScriptUI won't grow a fill field ahead of a button.
         var et = grp.add("edittext", undefined, "");
-        et.alignment = ["fill", "center"];
+        et.preferredSize.width = c.ui.pathFieldWidth;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
+        btn.preferredSize.width = c.ui.browseBtnWidth;
         if (tipBtn) btn.helpTip = tipBtn;
         btn.onClick = function () {
             var sel;
