@@ -1,7 +1,7 @@
 # Zünd & Summa Marks
 
-> Copyright © 2025-2026 Ladislav Osvald (PrePresso). All rights reserved.
-> Commercial software — see [LICENSE](LICENSE).
+> Copyright © 2025-2026 Ladislav Osvald.
+> Licensed under the **MIT License** — see [LICENSE](LICENSE).
 
 Skript pro Adobe Illustrator, který automaticky generuje registrační značky pro řezací plotry Zünd a Summa. Určen pro tiskovou přípravu v prepress/DTP prostředí.
 
@@ -301,8 +301,8 @@ Manuální testy: viz `docs/MANUAL_TEST.md`
 
 ## Licence
 
-Komerční software. Copyright © 2025-2026 Ladislav Osvald (PrePresso). Všechna práva vyhrazena. Viz [LICENSE](LICENSE).
+Licence MIT. Copyright © 2025-2026 Ladislav Osvald. Viz [LICENSE](LICENSE).
 
-Licencováno původnímu kupujícímu pro vlastní komerční a osobní předtiskovou práci. Není určeno k další distribuci ani přeprodeji. Poskytováno „as is", bez záruk.
+Software můžete volně používat, kopírovat, upravovat a distribuovat (i komerčně), pokud zachováte copyright. Poskytováno „as is", bez záruk.
 
 Třetí strany: `json2.js` (Douglas Crockford) — public domain.

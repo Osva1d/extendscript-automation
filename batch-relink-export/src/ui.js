@@ -141,7 +141,7 @@ BRE.UI = {
         footerGrp.alignment = ["fill", "center"];
         footerGrp.spacing = 8;
         var stCopy = footerGrp.add("statictext", undefined,
-            "© 2025–2026 PrePresso · v" + c.version);
+            "© 2025–2026 Ladislav Osvald · v" + c.version);
         stCopy.enabled = false;
         stCopy.alignment = ["left", "center"];
         var footerSpacer = footerGrp.add("group");

@@ -2,16 +2,11 @@
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
  * Version:     6.0.0
- * Author:      Ladislav Osvald — PrePresso
- * Updated:     2026-06-27
+ * Author:      Ladislav Osvald
+ * Updated:     2026-06-28
  *
- * Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). All rights reserved.
- * https://prepresso.lemonsqueezy.com
- *
- * Licensed to the original purchaser. Not for redistribution or resale.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
- * SHALL NOT BE LIABLE FOR ANY DAMAGES OR DATA LOSS ARISING FROM ITS USE.
+ * Copyright (C) 2025-2026 Ladislav Osvald.
+ * MIT License — see LICENSE for full terms.
  *
  * Description:
  *   Grommet mark generator for banner production.
@@ -2305,7 +2300,7 @@ GM.UI = {
         var grpCopy = dlg.add("group");
         grpCopy.alignment = ["fill", "top"];
         var stCopy = grpCopy.add("statictext", undefined,
-            "© 2025–2026 PrePresso · v" + GM.CONSTANTS.VERSION);
+            "© 2025–2026 Ladislav Osvald · v" + GM.CONSTANTS.VERSION);
         stCopy.enabled = false;
 
         // =================================================================

@@ -1,6 +1,6 @@
 # Architecture: Zünd & Summa Marks v26.5.1
 
-> Copyright © 2025-2026 Ladislav Osvald (PrePresso). All rights reserved — commercial software.
+> Copyright © 2025-2026 Ladislav Osvald — MIT License.
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
 >

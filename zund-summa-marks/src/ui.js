@@ -573,7 +573,7 @@ ZSM.UI = {
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
         var stCopy = grpFooterCopy.add("statictext", undefined,
-            "© 2025–2026 PrePresso · v" + c.version);
+            "© 2025–2026 Ladislav Osvald · v" + c.version);
         stCopy.enabled = false;
 
         // Cancel (left) | Generate (right), right-aligned. Factory defaults load
