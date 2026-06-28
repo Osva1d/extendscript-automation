@@ -1,7 +1,7 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Batch Relink Export
- * Version:     3.0.0
+ * Version:     1.0.0
  * Author:      Ladislav Osvald
  * Updated:     2026-06-28
  *
@@ -273,7 +273,7 @@ var BRE = BRE || {};
 
 BRE.Config = {
     scriptName: "Batch Relink Export",
-    version: "3.0.0",
+    version: "1.0.0",
     debug: false,
 
     ui: {

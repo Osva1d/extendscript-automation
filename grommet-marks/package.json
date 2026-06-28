@@ -1,7 +1,9 @@
 {
     "name": "grommet-marks",
-    "version": "6.0.0",
+    "version": "1.0.0",
     "description": "Grommet mark generator for banner production (Adobe Illustrator).",
+    "author": "Ladislav Osvald",
+    "license": "MIT",
     "scripts": {
         "build": "bash tools/build.sh",
         "test": "bash tests/run_all.sh",

@@ -1,6 +1,6 @@
 {
   "name": "zund-summa-marks",
-  "version": "26.6.0",
+  "version": "1.0.0",
   "description": "Registration marks generator for Zünd/Summa cutting tables (Adobe Illustrator ExtendScript).",
   "private": true,
   "scripts": {
@@ -20,8 +20,8 @@
     "build": "bash tools/build.sh",
     "verify": "npm run build && npm test"
   },
-  "author": "Osva1d",
-  "license": "UNLICENSED",
+  "author": "Ladislav Osvald",
+  "license": "MIT",
   "engines": {
     "node": ">=14"
   },
