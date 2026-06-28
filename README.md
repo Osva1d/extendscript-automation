@@ -1,5 +1,6 @@
 # ExtendScript Automation for Adobe Illustrator
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 > A professional toolkit of JavaScript (`.jsx`) scripts that automate prepress preparation and speed up production work in Adobe Illustrator.
@@ -67,9 +68,9 @@ Detailed macOS guide: [`docs/INSTALL_MAC.txt`](./docs/INSTALL_MAC.txt).
 
 | # | Script | Version | Purpose |
 |---|--------|---------|---------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.6.0** | Registration mark generator for Zünd + Summa, named presets, localisation |
-| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Banner grommet marks — edges or path, corner zones, Esko-style marks |
-| 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Batch-relink PDFs into `.ai` imposition templates and export print-ready PDFs |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **1.0.0** | Registration mark generator for Zünd + Summa, named presets, localisation |
+| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **1.0.0** | Banner grommet marks — edges or path, corner zones, Esko-style marks |
+| 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 1.0.0 | Batch-relink PDFs into `.ai` imposition templates and export print-ready PDFs |
 
 ---
 
@@ -102,7 +103,7 @@ If you design at a reduced scale (e.g. a 500×500 mm document represents a real 
 | 5 mm gap from artwork | 0.5 mm |
 | 400 mm mark pitch | 40 mm |
 
-> **Tip:** Since v26.4.0 you can instead tick **"Work in scale"** and enter a 1:N ratio — the script converts real-world mm for you, so you no longer have to pre-divide every value by hand.
+> **Tip:** You can instead tick **"Work in scale"** and enter a 1:N ratio — the script converts real-world mm for you, so you no longer have to pre-divide every value by hand.
 
 For true Adobe **Large Canvas** mode (artboard > 5765 mm, `scaleFactor = 10`) the script **detects the scaling automatically** — enter real-world values.
 
@@ -176,7 +177,7 @@ In Auto-fit mode the script expands the artboard. In Fixed mode the artboard sta
 <summary><strong>"Generate" button does nothing</strong></summary>
 Validation failed. Check the input fields:
 <ul>
-<li>No empty fields (since v26.3.x an empty input is an error, not a silent 0).</li>
+<li>No empty fields (an empty input is an error, not a silent 0).</li>
 <li>Values within the allowed range (e.g. mark pitch 5–5000 mm).</li>
 <li>For scaled-down documents enter values in document scale — see <a href="#workflow-with-scaled-down-documents-110">1:10 workflow</a> in the Zünd & Summa Marks section.</li>
 </ul>
@@ -184,7 +185,7 @@ Validation failed. Check the input fields:
 
 <details>
 <summary><strong>Illustrator crashed</strong></summary>
-ExtendScript can trigger a C++ crash in Illustrator that try/catch cannot recover from. Known causes (all mitigated in v26.3.x):
+ExtendScript can trigger a C++ crash in Illustrator that try/catch cannot recover from. Known causes (mitigated):
 <ul>
 <li>Undo + re-running without a restart — DOM in inconsistent state.</li>
 <li>Bracket-named layers <code>&lt;Clip Group&gt;</code>, <code>&lt;Group&gt;</code> — the script now avoids mutating them.</li>
@@ -195,7 +196,7 @@ If a crash still occurs, please report it to the author with a description of th
 
 <details>
 <summary><strong>A preset "got lost" or changed unexpectedly</strong></summary>
-Since v26.3.x named presets are <strong>immutable</strong>. Generate does not modify them — only the <strong>Save</strong> button commits the current UI values into the active preset. To save as a new variant, use <strong>Save As</strong>. The modified indicator (asterisk <code>*</code> next to the name) signals unsaved changes.
+Named presets are <strong>immutable</strong>. Generate does not modify them — only the <strong>Save</strong> button commits the current UI values into the active preset. To save as a new variant, use <strong>Save As</strong>. The modified indicator (asterisk <code>*</code> next to the name) signals unsaved changes.
 </details>
 
 ---
@@ -204,80 +205,17 @@ Since v26.3.x named presets are <strong>immutable</strong>. Generate does not mo
 
 Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
 
-### v1.7.0 (2026-06) — Zünd & Summa Marks v26.6.0
-- **Added:** Duplicate-colour guard — mapping two layers to the same spot colour now blocks Generate with a clear status message (previously the paths silently went to whichever row ran last).
-- **Added:** Colour-swatch previews next to every colour dropdown (mark colour and each layer row).
-- **Changed:** Dialog redesign — cutting technology is a two-radio selector; the former Technology and Document panels are merged into one "Output Settings" panel with a labelled "Source:" row; one shared label column so all fields and swatches line up; lighter, more readable status line.
-- **Fixed:** Colour routing never moves the registration marks or trim lines off their reserved layers — a layer mapped to the same spot colour as the marks (e.g. white marks + a "White" cut layer) no longer pulls the marks onto the cut layer when both modes are run.
-- **Fixed:** The longest Czech label ("Odsazení orientační značky:") is no longer truncated.
+### v1.0.0 (2026-06) — First public release
 
-### v1.6.0 (2026-06) — Grommet Marks v6.0.0
-- **Added:** Path placement mode — distribute marks along a selected open/closed path (corners always anchored; smooth paths support count or spacing).
-- **Added:** Corner zones — densify the first N marks at every corner with a dedicated pitch (artboard and path modes).
-- **Added:** Uniform Esko-style registration mark — white halo (knockout) + registration stroke, circle and/or cross, single size; always drawn on a fixed "Grommet Marks" layer.
-- **Changed:** Full dialog redesign — placement-mode selector, aligned edges grid with mirroring on its own row, units moved to the top, single 4px spacing scale.
-- **Removed:** Fill / stroke / target-layer selection and per-mark swatch choice (superseded by the uniform mark).
+Open-source (MIT) release of three production-tested Adobe Illustrator scripts, built and refined for real print-production work.
 
-### v1.5.0 (2026-06) — Grommet Marks v4.2.1
-- **Added:** ↺ Revert button next to the preset dropdown (reload a preset's saved values).
-- **Changed:** Two-row preset panel (Save / Save As / Delete below the dropdown), matching the Zünd & Summa Marks layout.
-- **Changed:** Appearance dropdowns aligned via a fixed label column.
-- **Removed:** Reset button (replaced by ↺ revert) and the Round/Square shape choice — marks are now always circular.
-- **Fixed:** Live validation restored the default text colour (no black-on-dark fields).
-- **Fixed:** Settings-file write failures are always reported (a silent failure could "resurrect" a deleted preset after restart).
-- **Fixed:** Marks that fail to place are reported in one summary warning instead of silently missing from prepress output.
-- **Fixed:** The [Registration] fallback verifies the swatch really is the registration spot (a user-deleted [Registration] could silently mis-colour marks).
-- **Fixed:** Fractional mark counts ("10.5") are rejected instead of silently truncated.
+**Zünd & Summa Marks** — registration marks for Zünd (ECHO) and Summa (OPOS) cutters: layer → spot-colour mapping (up to 8 cut layers), "marks only" mode, trim lines on a dedicated layer, named presets with revert, Large Canvas and 1:N scaled-document support, clipping-mask detection, duplicate-colour guard.
 
-### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
-- **Fixed:** Re-running SUMMA with trim lines grew the artboard on every run — the "Trim" layer was incorrectly included in the bounds measurement (regression in v26.5.0).
-- **Fixed:** A SUMMA run with trim lines off now removes the stale "Trim" layer from a previous run.
-- **Fixed:** Settings-file write failures (full disk, permissions) are reported instead of silently ignored.
-- **Fixed:** Typing a multi-digit scale (e.g. "12") no longer disables the field after the first keystroke; an out-of-range scale paints red and blocks Generate instead of being silently clamped.
-- **Fixed:** Save/Revert buttons grey out immediately after a successful Save.
-- **Fixed:** Preset names of the form `[Text]` are reserved; minor consistency and error-message fixes.
+**Grommet Marks** — Esko-style grommet marks along edges or any selected path, corner zones, white-halo registration targets, named presets.
 
-### v1.4.0 (2026-06) — Zünd & Summa Marks v26.5.0
-- **Added:** "Marks only" mode — for documents with already-separated layers; draws only the marks and leaves user layers untouched.
-- **Added:** ↺ Revert button next to the preset dropdown (reload a preset's saved values).
-- **Changed:** Trim lines (SUMMA) now always go into a dedicated top-level "Trim" layer (out of Regmarks and cut layers).
-- **Removed:** Reset button — factory defaults via the `[Default]` preset, preset revert via ↺. Footer is now Cancel + Generate only.
-- **Fixed:** Spurious "modified" asterisk on presets using the registration colour in a localised (CS) Illustrator.
-- **Fixed:** Invalid input could leave the dialog stuck (field red, Generate disabled) even after correcting the value or reverting.
-- **Fixed:** Illustrator C++ crash when generating SUMMA marks with trim lines.
+**Batch Relink & Export** — batch-relink PDFs into an `.ai` imposition template and export print-ready PDFs: pre-flight validation, relink verification, natural sheet numbering, pattern-based output names, crash-safe skip-existing.
 
-### v1.3.0 (2026-06) — Batch Relink & Export v3.0.0
-- **Changed:** Complete rewrite of Batch Relink & Export — modular ExtendScript, robust safety, CS/EN localisation.
-- **Changed:** Output naming via a placeholder pattern (`{n}` / `{template}` / `{source}`, default `{n}_{template}`).
-- **Added:** Relink verification, automatic unlock/restore of locked layers and objects.
-- **Added:** Pre-flight scan of all sources; hard-blocks files with more pages than positions or an ambiguous page count.
-- **Added:** Short last sheet reported for manual cleanup ("N extra positions — remove manually").
-- **Added:** Natural (numeric-aware) source ordering for predictable sheet numbering.
-- **Added:** Dialog redesign — three numbered panels, visible token legend, live output-name preview, status-coloured pre-flight/summary.
-- **Fixed:** macOS AppleDouble (`._*`) sidecar files in the source folder are ignored.
-- **Fixed:** macOS dialog layout — fields fill to one shared right edge (Browse buttons capped).
-- **Removed:** Standalone imposition script (dead development branch).
-
-### v1.2.1 (2026-05) — Zünd & Summa Marks v26.3.2
-- **Fixed:** "Mark pitch" validation minimum lowered 50 → 5 mm. 1:10 scaled-down workflows no longer block the Generate button.
-- **Added:** "Scaled-down workflow" section in the Zünd & Summa Marks documentation.
-
-### v1.2.0 (2026-04) — Zünd & Summa Marks v26.3.1
-- **Added:** Stable presets (immutable named presets, modified indicator `*`).
-- **Added:** Save / Save As / Reset split.
-- **Added:** E2E test workflow + ES3 compliance linter.
-- **Fixed:** Clipping-mask boundary detection + skip Regmarks layer.
-- **Fixed:** Empty-string validation (`Number("")` quirk).
-- **Fixed:** `main.jsx` read a stale preset instead of `[Last Settings]`.
-- **Fixed:** `Array.map` in ExtendScript (ES3 compliance).
-- **Security:** Defensive measures in `render()` against C++ pipeline crashes.
-
-### v1.1.x (2026-02) — Grommet Marks v3.0.0
-- **Added:** `illustrator-grommet-marks.jsx`.
-- **Changed:** Unified script headers (`Script` / `Version` / `Author` / `Updated`).
-
-### v1.0.x (2025–2026) — Initial public release
-- **Added:** First public release of the script suite — Zünd & Summa Marks, Batch Relink, Zünd Board Workflow.
+Across the suite: bilingual UI (CS / EN), live input validation, defensive handling of Illustrator's C++ crash edge cases, and an ES3-clean modular build with a Node-based test suite.
 
 ---
 

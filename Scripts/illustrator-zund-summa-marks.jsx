@@ -1,7 +1,7 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Zund & Summa Marks
- * Version:     26.6.0
+ * Version:     1.0.0
  * Author:      Ladislav Osvald
  * Updated:     2026-06-28
  *
@@ -891,7 +891,7 @@ ZSM.Config = {
     // KEEP IN SYNC with package.json "version" — build.sh reads package.json
     // for the dist header; this constant is the runtime source of truth
     // for the dialog title, footer copyright, and any in-script "About" UI.
-    version:    "26.6.0",
+    version:    "1.0.0",
     zundSize:    5,   // mm, default Zünd mark diameter
     summaSize:   3,   // mm, default Summa mark side
 

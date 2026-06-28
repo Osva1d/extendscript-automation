@@ -1,7 +1,7 @@
 ﻿/*
  * ===========================================================================
  * Script:      Illustrator Grommet Marks
- * Version:     6.0.0
+ * Version:     1.0.0
  * Author:      Ladislav Osvald
  * Updated:     2026-06-28
  *
@@ -158,7 +158,7 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "6.0.0",
+    VERSION: "1.0.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",

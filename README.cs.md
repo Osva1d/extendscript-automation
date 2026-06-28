@@ -1,5 +1,6 @@
 # ExtendScript automatizace pro Adobe Illustrator
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](#changelog)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 > Profesionální sada nástrojů v jazyce JavaScript (`.jsx`) pro automatizaci předtiskové přípravy a zefektivnění práce v Adobe Illustratoru.
@@ -67,9 +68,9 @@ Detailní návod pro macOS: [`docs/INSTALL_MAC.cs.txt`](./docs/INSTALL_MAC.cs.tx
 
 | # | Skript | Verze | Účel |
 |---|--------|-------|------|
-| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **26.6.0** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
-| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **6.0.0** | Značky pro oka — hrany nebo cesta, rohové zóny, Esko značky |
-| 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 3.0.0 | Hromadný relink PDF do `.ai` vyřazovacích šablon a export tiskových PDF |
+| 1 | [`illustrator-zund-summa-marks.jsx`](./Scripts/illustrator-zund-summa-marks.jsx) | **1.0.0** | Generátor registračních značek pro Zünd + Summa, presety, lokalizace |
+| 2 | [`illustrator-grommet-marks.jsx`](./Scripts/illustrator-grommet-marks.jsx) | **1.0.0** | Značky pro oka — hrany nebo cesta, rohové zóny, Esko značky |
+| 3 | [`illustrator-batch-relink-export.jsx`](./Scripts/illustrator-batch-relink-export.jsx) | 1.0.0 | Hromadný relink PDF do `.ai` vyřazovacích šablon a export tiskových PDF |
 
 ---
 
@@ -102,7 +103,7 @@ Pokud pracujete na velkém formátu reprezentovaném zmenšeně (např. dokument
 | Vzdálenost od grafiky 5 mm | 0,5 mm |
 | Rozteč značek 400 mm | 40 mm |
 
-> **Tip:** Od v26.4.0 můžete místo toho zaškrtnout **„Pracovat v měřítku"** a zadat poměr 1:N — skript reálné mm přepočítá za vás, takže už nemusíte každou hodnotu dělit ručně.
+> **Tip:** Můžete místo toho zaškrtnout **„Pracovat v měřítku"** a zadat poměr 1:N — skript reálné mm přepočítá za vás, takže už nemusíte každou hodnotu dělit ručně.
 
 Pro skutečný Adobe **Large Canvas** režim (artboard > 5765 mm, `scaleFactor = 10`) skript scaling **detekuje automaticky** — zadávejte reálné hodnoty.
 
@@ -176,7 +177,7 @@ Skript v Auto-fit režimu artboard rozšiřuje. Pokud používáte Fixed režim,
 <summary><strong>Tlačítko „Generovat" nereaguje</strong></summary>
 Validace selhala. Zkontrolujte vstupní pole:
 <ul>
-<li>Žádné prázdné pole (od v26.3.x prázdný vstup = chyba, ne tichá 0).</li>
+<li>Žádné prázdné pole (prázdný vstup = chyba, ne tichá 0).</li>
 <li>Hodnoty v dovoleném rozsahu (např. Rozteč značek 5–5000 mm).</li>
 <li>Při zmenšeném dokumentu zadávejte hodnoty v měřítku dokumentu — viz <a href="#workflow-při-zmenšeném-měřítku-110">Workflow 1:10</a> v sekci Zünd & Summa Marks.</li>
 </ul>
@@ -184,7 +185,7 @@ Validace selhala. Zkontrolujte vstupní pole:
 
 <details>
 <summary><strong>Skript shodil Illustrator</strong></summary>
-ExtendScript může v Illustratoru vyvolat C++ crash, který try/catch nezachytí. Známé příčiny (všechny ošetřeny ve v26.3.x):
+ExtendScript může v Illustratoru vyvolat C++ crash, který try/catch nezachytí. Známé příčiny (ošetřeny):
 <ul>
 <li>Krok zpět (Undo) a opakované spuštění bez restartu — DOM v nekonzistentním stavu.</li>
 <li>Bracket-pojmenované vrstvy <code>&lt;Clip Group&gt;</code>, <code>&lt;Group&gt;</code> — skript se nyní vyhýbá modifikacím.</li>
@@ -195,7 +196,7 @@ Pokud crash přetrvává, prosím nahlaste autorovi s popisem dokumentu (Layers 
 
 <details>
 <summary><strong>Preset se „ztratil" / nečekaně změnil</strong></summary>
-Od v26.3.x jsou pojmenované presety <strong>immutable</strong>. Generate je nemění — pouze tlačítko <strong>Uložit</strong> commituje aktuální hodnoty UI do aktivního presetu. Pokud chcete uložit jako novou variantu, použijte <strong>Uložit jako</strong>. Modified indicator (hvězdička <code>*</code> u názvu) signalizuje neuložené změny.
+Pojmenované presety jsou <strong>immutable</strong>. Generate je nemění — pouze tlačítko <strong>Uložit</strong> commituje aktuální hodnoty UI do aktivního presetu. Pokud chcete uložit jako novou variantu, použijte <strong>Uložit jako</strong>. Modified indicator (hvězdička <code>*</code> u názvu) signalizuje neuložené změny.
 </details>
 
 ---
@@ -204,80 +205,17 @@ Od v26.3.x jsou pojmenované presety <strong>immutable</strong>. Generate je nem
 
 Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` / `Changed` / `Fixed` / `Removed` / `Security`.
 
-### v1.7.0 (2026-06) — Zünd & Summa Marks v26.6.0
-- **Added:** Kontrola duplicitní barvy — přiřazení stejné spotové barvy dvěma vrstvám nyní blokuje Generovat s jasnou zprávou (dříve cesty tiše skončily na poslední vrstvě).
-- **Added:** Náhledy barevných čtverečků u každého dropdownu barvy (barva značek i řádky vrstev).
-- **Changed:** Redesign dialogu — technologie řezu jako dvě radia; dřívější panely Technologie a Dokument sloučeny do jednoho „Nastavení výstupu" s pojmenovaným řádkem „Zdroj:"; jeden sdílený sloupec popisků (pole i čtverečky barev zarovnané); světlejší, čitelnější stavový řádek.
-- **Fixed:** Routing barev nikdy nepřesune registrační značky ani ořezové linky z jejich vyhrazených vrstev — vrstva se stejnou spotovou barvou jako značky (např. bílé značky + vrstva „White") už při spuštění obou režimů značky nestáhne na cut vrstvu.
-- **Fixed:** Nejdelší český popisek („Odsazení orientační značky:") se už neuřezává.
+### v1.0.0 (2026-06) — První veřejné vydání
 
-### v1.6.0 (2026-06) — Grommet Marks v6.0.0
-- **Added:** Režim umístění na cestu — značky po vybrané otevřené/uzavřené cestě (rohy vždy ukotvené; hladké cesty podporují počet i rozestup).
-- **Added:** Rohové zóny — zhuštění prvních N značek u každého rohu vlastní roztečí (hrany i cesta).
-- **Added:** Jednotná Esko značka — bílé halo (knockout) + registrační tah, kruh a/nebo kříž, jedna velikost; vždy na pevné vrstvě „Grommet Marks".
-- **Changed:** Kompletní redesign dialogu — volba režimu umístění, zarovnaná mřížka hran se zrcadlením ve vlastním řádku, jednotky nahoře, jednotná 4px škála mezer.
-- **Removed:** Volba výplně / tahu / cílové vrstvy a per-mark vzorník (nahrazeno jednotnou značkou).
+Open-source (MIT) vydání tří produkčně ověřených skriptů pro Adobe Illustrator, vyvinutých a vyladěných pro reálnou předtiskovou práci.
 
-### v1.5.0 (2026-06) — Grommet Marks v4.2.1
-- **Added:** Tlačítko ↺ Revert vedle dropdownu předvoleb (návrat k uloženým hodnotám předvolby).
-- **Changed:** Dvouřádkový panel předvoleb (Uložit / Uložit jako / Smazat pod dropdownem) podle layoutu Zünd & Summa Marks.
-- **Changed:** Zarovnání dropdownů vzhledu přes pevný sloupec popisků.
-- **Removed:** Tlačítko Reset (nahrazeno ↺ revert) a volba tvaru kruh/čtverec — značky jsou nyní vždy kruhové.
-- **Fixed:** Živá validace obnoví výchozí barvu textu (žádné černé pole na tmavém pozadí).
-- **Fixed:** Selhání zápisu nastavení na disk se vždy nahlásí (tiché selhání mohlo „oživit" smazanou předvolbu po restartu).
-- **Fixed:** Neumístěné značky se hlásí souhrnným varováním místo tichého chybění na tiskovém výstupu.
-- **Fixed:** Fallback na [Registration] ověřuje, že vzorník je skutečně registrační (smazaný [Registration] mohl tiše obarvit značky náhodným vzorníkem).
-- **Fixed:** Desetinný počet značek („10.5") se odmítne místo tichého oříznutí na 10.
+**Zünd & Summa Marks** — registrační značky pro plottery Zünd (ECHO) a Summa (OPOS): mapování vrstev na přímé barvy (až 8 řezacích vrstev), režim „Pouze značky", ořezové linky v samostatné vrstvě, pojmenované předvolby s návratem, podpora Large Canvas i zmenšených dokumentů 1:N, detekce ořezových masek, kontrola duplicitní barvy.
 
-### v1.4.1 (2026-06) — Zünd & Summa Marks v26.5.1 (hotfix)
-- **Fixed:** Opakované spuštění SUMMA s ořezovými linkami zvětšovalo artboard při každém běhu — vrstva „Trim" se chybně započítávala do měření hranic (regrese z v26.5.0).
-- **Fixed:** SUMMA běh s vypnutými ořezovými linkami nyní odstraní zastaralou vrstvu „Trim" z předchozího běhu.
-- **Fixed:** Selhání zápisu souboru nastavení (plný disk, oprávnění) se hlásí, místo tichého ignorování.
-- **Fixed:** Psaní víceciferného měřítka (např. „12") už nezamkne pole po první číslici; měřítko mimo rozsah zčervená a zablokuje Generovat, místo tichého oříznutí.
-- **Fixed:** Tlačítka Uložit/↺ se deaktivují ihned po úspěšném uložení.
-- **Fixed:** Názvy předvoleb tvaru `[Text]` jsou rezervované; drobné opravy konzistence a chybových hlášek.
+**Grommet Marks** — Esko značky pro oka po hranách nebo libovolné cestě, rohové zóny, registrační terče s bílým halo, pojmenované předvolby.
 
-### v1.4.0 (2026-06) — Zünd & Summa Marks v26.5.0
-- **Added:** Režim „Pouze značky" — pro dokumenty s už separovanými vrstvami; vykreslí jen značky, uživatelské vrstvy nechá beze změny.
-- **Added:** Tlačítko ↺ Revert vedle dropdownu předvoleb (návrat k uloženým hodnotám předvolby).
-- **Changed:** Ořezové linky (SUMMA) jdou nově vždy do samostatné top-level vrstvy „Trim" (mimo Regmarks i cut vrstvy).
-- **Removed:** Tlačítko Reset — tovární hodnoty přes předvolbu `[Výchozí]`, návrat k předvolbě přes ↺. Footer je nyní jen Storno + Generovat.
-- **Fixed:** Falešná hvězdička „změněno" u předvoleb s registrační barvou v lokalizovaném (CZ) Illustratoru.
-- **Fixed:** Neplatný vstup mohl zaseknout dialog (pole červené, Generovat vypnutý) i po opravě hodnoty nebo revertu.
-- **Fixed:** Pád Illustratoru (C++) při generování SUMMA značek s ořezovými linkami.
+**Batch Relink & Export** — hromadný relink PDF do `.ai` vyřazovací šablony a export tiskových PDF: pre-flight validace, ověření relinku, přirozené číslování archů, pojmenování přes vzor, obnova po pádu (skip-existing).
 
-### v1.3.0 (2026-06) — Batch Relink & Export v3.0.0
-- **Changed:** Kompletní přepis Batch Relink & Export — modulární ExtendScript, robustní pojistky, lokalizace CS/EN.
-- **Changed:** Pojmenování výstupů přes vzor s placeholdery (`{n}` / `{template}` / `{source}`, výchozí `{n}_{template}`).
-- **Added:** Ověření relinku, automatické odemčení/obnovení zamčených vrstev a objektů.
-- **Added:** Pre-flight sken všech zdrojů; tvrdý blok souborů s více stranami než pozic nebo s nejednoznačným počtem stran.
-- **Added:** Neúplný poslední arch hlášen k ručnímu dočištění („N pozic navíc — odeber ručně").
-- **Added:** Přirozené (numerické) řazení zdrojů pro předvídatelné číslování archů.
-- **Added:** Redesign dialogu — tři číslované panely, viditelná legenda tokenů, živý náhled názvu výstupu, barevně odlišený pre-flight i souhrn.
-- **Fixed:** macOS AppleDouble (`._*`) soubory ve zdrojové složce se ignorují.
-- **Fixed:** macOS layout dialogu — pole se roztáhnou k jedné pravé hraně (tlačítka Vybrat… zastropována).
-- **Removed:** Samostatný vyřazovací skript (slepá větev vývoje).
-
-### v1.2.1 (2026-05) — Zünd & Summa Marks v26.3.2
-- **Fixed:** Validace „Rozteč značek" snížila minimum 50 → 5 mm. Workflow 1:10 zmenšených dokumentů už nezasekává tlačítko Generovat.
-- **Added:** Sekce „Workflow při zmenšeném měřítku" v dokumentaci skriptu Zünd & Summa Marks.
-
-### v1.2.0 (2026-04) — Zünd & Summa Marks v26.3.1
-- **Added:** Stabilní presety (immutable named presets, modified indicator `*`).
-- **Added:** Save / Save As / Reset rozdělení.
-- **Added:** E2E test workflow + ES3 compliance linter.
-- **Fixed:** Detekce hranice clipping masky + skip vrstvy Regmarks.
-- **Fixed:** Validace prázdného řetězce (`Number("")` quirk).
-- **Fixed:** `main.jsx` četl stale preset místo `[Last Settings]`.
-- **Fixed:** `Array.map` v ExtendScriptu (ES3 compliance).
-- **Security:** Defenzivní opatření v `render()` proti C++ pipeline crashům.
-
-### v1.1.x (2026-02) — Grommet Marks v3.0.0
-- **Added:** `illustrator-grommet-marks.jsx`.
-- **Changed:** Sjednocené hlavičky skriptů (`Script` / `Version` / `Author` / `Updated`).
-
-### v1.0.x (2025–2026) — Initial public release
-- **Added:** První veřejná verze sady skriptů — Zünd & Summa Marks, Batch Relink, Zünd Board Workflow.
+Napříč sadou: dvojjazyčné UI (CS / EN), živá validace vstupů, defenzivní ošetření C++ crash edge-cases Illustratoru, a ES3-čistý modulární build s testovací suitou v Node.js.
 
 ---
 
