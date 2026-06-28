@@ -1,6 +1,6 @@
 # ExtendScript automatizace pro Adobe Illustrator
 
-[![License](https://img.shields.io/badge/license-commercial-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 > Profesionální sada nástrojů v jazyce JavaScript (`.jsx`) pro automatizaci předtiskové přípravy a zefektivnění práce v Adobe Illustratoru.
 
@@ -283,9 +283,9 @@ Formát: [Keep a Changelog](https://keepachangelog.com/) — kategorie `Added` /
 
 ## Licence
 
-Komerční software. Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). Všechna práva vyhrazena. Viz [`LICENSE`](LICENSE).
+Licence MIT. Copyright (C) 2025-2026 Ladislav Osvald. Viz [`LICENSE`](LICENSE).
 
-Licencováno původnímu kupujícímu pro vlastní komerční a osobní předtiskovou práci. Není určeno k další distribuci ani přeprodeji. Poskytováno „as is", bez jakýchkoli záruk.
+Software můžete volně používat, kopírovat, upravovat a distribuovat (i komerčně), pokud zachováte copyright. Poskytováno „as is", bez jakýchkoli záruk.
 
 **Třetí strany:** `json2.js` od Douglas Crockford — public domain.
 

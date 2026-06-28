@@ -1,6 +1,6 @@
 # ExtendScript Automation for Adobe Illustrator
 
-[![License](https://img.shields.io/badge/license-commercial-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 > A professional toolkit of JavaScript (`.jsx`) scripts that automate prepress preparation and speed up production work in Adobe Illustrator.
 
@@ -283,9 +283,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/) — categories `Added` /
 
 ## Licence
 
-Commercial software. Copyright (C) 2025-2026 Ladislav Osvald (PrePresso). All rights reserved. See [`LICENSE`](LICENSE).
+MIT License. Copyright (C) 2025-2026 Ladislav Osvald. See [`LICENSE`](LICENSE).
 
-Licensed to the original purchaser for their own commercial and personal print-production work. Not for redistribution or resale. Provided "as is", without warranty of any kind.
+Free to use, copy, modify, and distribute (including commercially), provided the copyright notice is kept. Provided "as is", without warranty of any kind.
 
 **Third parties:** `json2.js` by Douglas Crockford — public domain.
 
