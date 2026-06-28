@@ -21,7 +21,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Changelog](#changelog)
 - [Licence](#licence)
-- [Support the project](#support-the-project)
+- [Contributing](#contributing)
 - [Author](#author)
 
 ---
@@ -229,13 +229,13 @@ Free to use, copy, modify, and distribute (including commercially), provided the
 
 ---
 
-## Support the project
+## Contributing
 
-If the suite saves you time in daily work and you want to fund further development:
+This is an open-source project — feedback and contributions are welcome:
 
-- **[Buy Me a Coffee](https://buymeacoffee.com/osva1d)** — one-off tip, localised currency (USD / EUR / CZK / …).
-- **Issues and Pull Requests** — bug reports, ideas, and improvements are welcome in the project's issue tracker.
-- **Sharing** — a mention in your community (printshop forums, LinkedIn) is the cheapest form of support.
+- **Issues** — bug reports and ideas are welcome in the project's issue tracker.
+- **Pull requests** — improvements and fixes are appreciated.
+- **Sharing** — a mention in your community (print-shop forums, LinkedIn) is the easiest way to help.
 
 ---
 

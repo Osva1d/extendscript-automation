@@ -21,7 +21,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Changelog](#changelog)
 - [Licence](#licence)
-- [Podpora projektu](#podpora-projektu)
+- [Přispívání](#přispívání)
 - [Autor](#autor)
 
 ---
@@ -229,13 +229,13 @@ Software můžete volně používat, kopírovat, upravovat a distribuovat (i kom
 
 ---
 
-## Podpora projektu
+## Přispívání
 
-Pokud vám sada šetří čas v každodenní práci a chcete přispět na další vývoj:
+Tohle je open-source projekt — zpětná vazba a příspěvky jsou vítány:
 
-- **[Buy Me a Coffee](https://buymeacoffee.com/osva1d)** — jednorázový tip, lokalizovaná měna (USD / EUR / CZK / …).
-- **Issues a Pull Requests** — bug reporty, návrhy a vylepšení jsou vítány v issue trackeru projektu.
-- **Sdílení** — zmínka v komunitě (CZ/SK printshop fóra, LinkedIn) je nejlevnější forma podpory.
+- **Issues** — bug reporty a nápady jsou vítány v issue trackeru projektu.
+- **Pull requesty** — vylepšení a opravy jsou vítány.
+- **Sdílení** — zmínka v komunitě (CZ/SK tiskárenská fóra, LinkedIn) je nejjednodušší forma pomoci.
 
 ---
 
