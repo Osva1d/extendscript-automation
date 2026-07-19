@@ -331,6 +331,17 @@ GM.Core = {
             anchorDist.push(anchorDist[a] + circuit.segments[a].len);
         }
 
+        // Count mode on a cornered path: the corners dictate the count, so the
+        // marks ARE the corners — no span filling. (The UI shows the count as a
+        // computed, read-only value equal to corners.length.)
+        if (dist.useNumber) {
+            for (var kc = 0; kc < corners.length; kc++) {
+                if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
+                place(GM.Core.pointAtDistance(circuit, anchorDist[corners[kc]]));
+            }
+            return marks;
+        }
+
         var spans = [];
         for (var ci = 0; ci < corners.length; ci++) {
             var from = anchorDist[corners[ci]];

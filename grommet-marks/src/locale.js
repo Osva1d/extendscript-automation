@@ -77,7 +77,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "no corners",
             PATH_INFO_LENGTH: "perimeter ≈ %s %s",
             PATH_OFFSET_NOTE: "Marks sit centred on the path. For an inset from the material edge, offset the path first (Object ▸ Path ▸ Offset Path…).",
-            TIP_PATH_COUNT_DISABLED: "A path with corners follows the spacing — the mark count emerges from the span lengths.",
+            TIP_PATH_COUNT_DISABLED: "On a path with corners the count is dictated by the corners — marks land on the corners only.",
 
             // Corner zones panel
             ZONES_PANEL: "Corner zones",
@@ -205,7 +205,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "bez rohů",
             PATH_INFO_LENGTH: "obvod ≈ %s %s",
             PATH_OFFSET_NOTE: "Značky leží středem na cestě. Potřebujete-li odsazení od kraje, posuňte si cestu předem (Objekt ▸ Cesta ▸ Posunout cestu…).",
-            TIP_PATH_COUNT_DISABLED: "Cesta s rohy se řídí roztečí — počet značek vyplyne z délek úseků.",
+            TIP_PATH_COUNT_DISABLED: "Na cestě s rohy je počet dán rohy — značky padnou jen na rohy.",
 
             // Corner zones panel
             ZONES_PANEL: "Rohové zóny",

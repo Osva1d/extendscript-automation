@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     1.0.0
  * Author:      Ladislav Osvald
- * Updated:     2026-06-28
+ * Updated:     2026-07-19
  *
  * Copyright (C) 2025-2026 Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
@@ -274,7 +274,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "no corners",
             PATH_INFO_LENGTH: "perimeter ≈ %s %s",
             PATH_OFFSET_NOTE: "Marks sit centred on the path. For an inset from the material edge, offset the path first (Object ▸ Path ▸ Offset Path…).",
-            TIP_PATH_COUNT_DISABLED: "A path with corners follows the spacing — the mark count emerges from the span lengths.",
+            TIP_PATH_COUNT_DISABLED: "On a path with corners the count is dictated by the corners — marks land on the corners only.",
 
             // Corner zones panel
             ZONES_PANEL: "Corner zones",
@@ -402,7 +402,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "bez rohů",
             PATH_INFO_LENGTH: "obvod ≈ %s %s",
             PATH_OFFSET_NOTE: "Značky leží středem na cestě. Potřebujete-li odsazení od kraje, posuňte si cestu předem (Objekt ▸ Cesta ▸ Posunout cestu…).",
-            TIP_PATH_COUNT_DISABLED: "Cesta s rohy se řídí roztečí — počet značek vyplyne z délek úseků.",
+            TIP_PATH_COUNT_DISABLED: "Na cestě s rohy je počet dán rohy — značky padnou jen na rohy.",
 
             // Corner zones panel
             ZONES_PANEL: "Rohové zóny",
@@ -1474,6 +1474,17 @@ GM.Core = {
             anchorDist.push(anchorDist[a] + circuit.segments[a].len);
         }
 
+        // Count mode on a cornered path: the corners dictate the count, so the
+        // marks ARE the corners — no span filling. (The UI shows the count as a
+        // computed, read-only value equal to corners.length.)
+        if (dist.useNumber) {
+            for (var kc = 0; kc < corners.length; kc++) {
+                if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
+                place(GM.Core.pointAtDistance(circuit, anchorDist[corners[kc]]));
+            }
+            return marks;
+        }
+
         var spans = [];
         for (var ci = 0; ci < corners.length; ci++) {
             var from = anchorDist[corners[ci]];
@@ -2165,21 +2176,36 @@ GM.UI = {
         pathSpcRB.value = true;
 
         var hasCorners = pathOk && pathInfo.cornerCount > 0;
-        if (hasCorners) {
-            pathNumRB.enabled = false;
-            pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+        if (hasCorners) pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+
+        // "Count" means the number of marks. On a SMOOTH path the user picks it.
+        // On a CORNERED path the corners dictate it, so the field shows the
+        // computed value (= corner count, read-only) and marks land on the
+        // corners only — no span filling.
+        function refreshPathDistUI() {
+            var numMode = pathNumRB.value;
+            if (hasCorners && numMode) {
+                pathNumIn.text = pathInfo.cornerCount;
+                pathNumIn.enabled = false;      // computed, not editable
+            } else {
+                pathNumIn.enabled = numMode;
+            }
+            pathSpcIn.enabled = !numMode;
         }
+
         pathNumRB.onClick = function () {
             pathNumRB.value = true; pathSpcRB.value = false;
-            pathNumIn.enabled = true; pathSpcIn.enabled = false;
+            refreshPathDistUI();
+            refreshZonesEnabled();   // corners-only ⇒ zones make no sense
             onUserChange();
         };
         pathSpcRB.onClick = function () {
             pathSpcRB.value = true; pathNumRB.value = false;
-            pathNumIn.enabled = false; pathSpcIn.enabled = true;
+            refreshPathDistUI();
+            refreshZonesEnabled();
             onUserChange();
         };
-        pathNumIn.enabled = false;
+        refreshPathDistUI();
 
         var offsetNote = pathPanel.add("statictext", undefined, GM.L.PATH_OFFSET_NOTE,
             { multiline: true });
@@ -2208,7 +2234,10 @@ GM.UI = {
 
         function refreshZonesEnabled() {
             var pathMode = pathRB.value;
-            var zonesPossible = !pathMode || hasCorners;
+            // In path mode zones need corners; and with count mode on a cornered
+            // path the marks ARE the corners, so there is nothing to densify.
+            var cornersOnly = pathMode && hasCorners && pathNumRB.value;
+            var zonesPossible = (!pathMode || hasCorners) && !cornersOnly;
             zoneCB.enabled = zonesPossible;
             zoneCB.helpTip = zonesPossible ? GM.L.TIP_ZONES : GM.L.TIP_ZONES_NO_CORNERS;
             var fieldsOn = zonesPossible && zoneCB.value;
@@ -2380,10 +2409,13 @@ GM.UI = {
             zonePitchIn.text = z.pitch;
 
             var pd = s.pathDist || defCfg.pathDist;
-            var pdUseNum = !!pd.useNumber && !hasCorners;
+            // Count mode is valid on a cornered path too (marks = corners); the
+            // stored number is document-dependent, so refreshPathDistUI()
+            // recomputes it from the current path.
+            var pdUseNum = !!pd.useNumber;
             pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
             pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
-            pathNumIn.enabled = pdUseNum; pathSpcIn.enabled = !pdUseNum;
+            refreshPathDistUI();
 
             refreshModeUI();
         }

@@ -190,6 +190,19 @@ console.log("--- Core.distributeOnCircuit ---");
         circuit, corners, zOff, { useNumber: false, number: 1, spacing: 200 });
     // Per side: corners + 1 interior at 200 -> 4 corners + 4 interiors = 8
     assert(marks.length === 8, "square spacing 200: 8 marks (got " + marks.length + ")");
+
+    // Count mode on a cornered path = corners only, no span filling.
+    var cornersOnly = GM.Core.distributeOnCircuit(
+        circuit, corners, zOff, { useNumber: true, number: 99, spacing: 200 });
+    assert(cornersOnly.length === 4,
+        "square count mode: 4 marks = 4 corners (got " + cornersOnly.length + ")");
+    var allAtCorners = true;
+    for (var ci2 = 0; ci2 < cornersOnly.length; ci2++) {
+        var x = cornersOnly[ci2][0], y = cornersOnly[ci2][1];
+        var onCorner = (nearly(x, 0) || nearly(x, 400)) && (nearly(y, 0) || nearly(y, 400));
+        if (!onCorner) allAtCorners = false;
+    }
+    assert(allAtCorners, "count mode marks sit exactly on the corners");
     var hasCorner = false, hasMid = false;
     for (var i = 0; i < marks.length; i++) {
         if (nearly(marks[i][0], 0) && nearly(marks[i][1], 0)) hasCorner = true;
