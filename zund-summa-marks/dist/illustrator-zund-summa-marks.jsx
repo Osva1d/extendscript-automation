@@ -293,7 +293,7 @@ ZSM.L = (function () {
             STATUS_RANGE:      "%s — allowed range %s–%s.",
             STATUS_LAYER_NAME: "Enter a name for every layer row.",
             STATUS_DUP_COLOR:  "Colour %s is mapped to more than one layer — remove the duplicate.",
-            STATUS_RANGE_MULTI: "%s fields out of range — fix the highlighted ones.",
+            STATUS_RANGE_MULTI: "%s issues — see the highlighted fields.",
             STATUS_OK:         "%s · layers: %s",
             STATUS_OK_MARKS:   "%s · marks only",
             PANEL_OUTPUT:      "Output Settings",
@@ -410,7 +410,7 @@ ZSM.L = (function () {
             STATUS_RANGE:      "%s — povolený rozsah %s–%s.",
             STATUS_LAYER_NAME: "Zadejte název u každého řádku vrstvy.",
             STATUS_DUP_COLOR:  "Barva %s je přiřazena více vrstvám — odeberte duplicitu.",
-            STATUS_RANGE_MULTI: "%s pole mimo rozsah — opravte zvýrazněná.",
+            STATUS_RANGE_MULTI: "Chyb ve formuláři: %s — viz zvýrazněná pole.",
             STATUS_OK:         "%s · vrstvy: %s",
             STATUS_OK_MARKS:   "%s · pouze značky",
             PANEL_OUTPUT:      "Nastavení výstupu",
@@ -1850,8 +1850,10 @@ ZSM.Draw = {
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
-                        if (seenTargets[layDef.name]) continue; // dedupe
-                        seenTargets[layDef.name] = true;
+                        // "l_" prefix keeps user layer names like "toString"
+                        // from colliding with inherited Object.prototype members.
+                        if (seenTargets["l_" + layDef.name]) continue; // dedupe
+                        seenTargets["l_" + layDef.name] = true;
 
                         var targetLay = this.getLay(layDef.name);
                         var hit = this.movePaths(targetLay, [layDef.color]);
@@ -2242,8 +2244,14 @@ ZSM.Draw = {
                 if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
                 lay = lay.parent;
             }
-        } catch (e) {}
-        return false;
+            return false;
+        } catch (e) {
+            // Unreadable layer chain → treat as reserved (skip from routing).
+            // Fail-closed matches isArtifactLayer's safe default for mutating
+            // operations: better to leave an odd item in place than to risk
+            // pulling a mark off Regmarks because its ancestry couldn't be read.
+            return true;
+        }
     },
 
     /**
@@ -3755,8 +3763,10 @@ ZSM.UI = {
                     var rawC = ZSM.UI.ddlValue(ddc);
                     var canC = canonColor(rawC);
                     if (!canC) continue;
-                    if (seenColors[canC]) { dupColorName = rawC; break; }
-                    seenColors[canC] = true;
+                    // "c_" prefix keeps customer colour names like "toString"
+                    // from colliding with inherited Object.prototype members.
+                    if (seenColors["c_" + canC]) { dupColorName = rawC; break; }
+                    seenColors["c_" + canC] = true;
                 }
                 if (dupColorName) {
                     allValid = false;

@@ -192,8 +192,10 @@ ZSM.Draw = {
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
-                        if (seenTargets[layDef.name]) continue; // dedupe
-                        seenTargets[layDef.name] = true;
+                        // "l_" prefix keeps user layer names like "toString"
+                        // from colliding with inherited Object.prototype members.
+                        if (seenTargets["l_" + layDef.name]) continue; // dedupe
+                        seenTargets["l_" + layDef.name] = true;
 
                         var targetLay = this.getLay(layDef.name);
                         var hit = this.movePaths(targetLay, [layDef.color]);
@@ -584,8 +586,14 @@ ZSM.Draw = {
                 if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
                 lay = lay.parent;
             }
-        } catch (e) {}
-        return false;
+            return false;
+        } catch (e) {
+            // Unreadable layer chain → treat as reserved (skip from routing).
+            // Fail-closed matches isArtifactLayer's safe default for mutating
+            // operations: better to leave an odd item in place than to risk
+            // pulling a mark off Regmarks because its ancestry couldn't be read.
+            return true;
+        }
     },
 
     /**
