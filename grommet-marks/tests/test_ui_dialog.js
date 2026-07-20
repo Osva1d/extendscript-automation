@@ -232,6 +232,46 @@ console.log("--- UI v6: mark shape controls ---");
     done();
 })();
 
+// ===== TEST: validation scope follows the active placement mode =====
+// Regression: live validation used to check the hidden mode's fields, greying
+// out Generate with the offending field off-screen (and stricter than
+// GM.Validation.validate(), which skips the inactive mode on submit).
+console.log("--- UI: live validation is scoped to the active mode ---");
+(function () {
+    // Artboard mode: a bad value in the (hidden) path spacing must NOT block OK.
+    var ui = buildUI(null, mockPathInfo(4, true));
+    var w = SUI.lastWindow();
+    var okBtn = w.findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    ui.pathUI.spcIn.text = "abc";
+    ui.pathUI.spcIn.onChange();
+    assert(okBtn.enabled === true, "bad hidden path field does not block OK in artboard mode");
+    done();
+
+    // Path mode: a bad value in the (hidden) edge field must NOT block OK.
+    var ui2 = buildUI(null, mockPathInfo(4, true));
+    var w2 = SUI.lastWindow();
+    var okBtn2 = w2.findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    ui2.edgeUI.top.numIn.text = "abc";
+    ui2.edgeUI.top.numIn.onChange();
+    assert(okBtn2.enabled === true, "bad hidden edge field does not block OK in path mode");
+    done();
+})();
+
+// ===== TEST: corner zones report their EFFECTIVE state =====
+// Regression: a checked-but-disabled zone box reported enabled:true, so
+// validate() checked count/pitch that live validation had skipped.
+console.log("--- UI: cornerZone.enabled reflects availability ---");
+(function () {
+    var ui = buildUI(null, mockPathInfo(0, true));   // smooth path -> zones impossible
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    ui.zonesUI.enableCB.value = true;                // stale value from a preset
+    assert(ui.zonesUI.enableCB.enabled === false, "zones disabled on a smooth path");
+    assert(ui.gatherAll().cornerZone.enabled === false,
+        "gather reports zones off when the control is unavailable");
+    done();
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
