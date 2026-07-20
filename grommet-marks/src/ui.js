@@ -622,7 +622,11 @@ GM.UI = {
                 haloWeight: parseFloat(haloWIn.text.replace(/,/g, ".")),
                 placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
                 cornerZone: {
-                    enabled: zoneCB.value,
+                    // Effective state: a checked-but-disabled box (zones are
+                    // impossible in the current mode) must report false, or
+                    // validate() would check count/pitch fields that live
+                    // validation skipped as disabled — OK enabled, submit alerts.
+                    enabled: zoneCB.value && zoneCB.enabled,
                     count: parseFloat(zoneCountIn.text.replace(/,/g, ".")),
                     pitch: parseFloat(zonePitchIn.text.replace(/,/g, "."))
                 },
@@ -709,21 +713,25 @@ GM.UI = {
         // skipped and painted valid. OK is gated on all visible fields valid.
         // =================================================================
         var R = GM.Validation.rules;
+        // `mode` marks a field as belonging to one placement mode only; it is
+        // skipped while the other mode is active (its panel is hidden, and
+        // GM.Validation.validate() ignores it on submit too). Untagged fields
+        // (mark size, weights, corner zones) apply to both modes.
         var validationTargets = [
-            { et: offsetXIn,   rule: R.offsetX },
-            { et: offsetYIn,   rule: R.offsetY },
+            { et: offsetXIn,   rule: R.offsetX,     mode: "artboard" },
+            { et: offsetYIn,   rule: R.offsetY,     mode: "artboard" },
             { et: sizeInput,   rule: R.markSize },
             { et: regWIn,      rule: R.regWeight },
             { et: haloWIn,     rule: R.haloWeight },
             { et: zoneCountIn, rule: R.cornerCount },
             { et: zonePitchIn, rule: R.cornerPitch },
-            { et: pathNumIn,   rule: R.pathNumber },
-            { et: pathSpcIn,   rule: R.pathSpacing }
+            { et: pathNumIn,   rule: R.pathNumber,  mode: "path" },
+            { et: pathSpcIn,   rule: R.pathSpacing, mode: "path" }
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
-            validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount });
-            validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing });
+            validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount,   mode: "artboard" });
+            validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing, mode: "artboard" });
         }
 
         function paintField(et, valid) {
@@ -755,10 +763,16 @@ GM.UI = {
         }
 
         function liveValidateAll() {
+            // Only the ACTIVE placement mode's fields gate OK. The inactive
+            // mode's panel is hidden, so validating it would grey out Generate
+            // with the offending field off-screen — and validate() skips it on
+            // submit anyway, making live validation stricter than the real one.
+            var mode = pathRB.value ? "path" : "artboard";
             var allValid = true;
             for (var i = 0; i < validationTargets.length; i++) {
                 var t = validationTargets[i];
                 if (!t.et) continue;
+                if (t.mode && t.mode !== mode) { paintField(t.et, true); continue; }
                 if (!t.et.enabled) { paintField(t.et, true); continue; }
                 var ok = fieldInRange(t.et, t.rule);
                 paintField(t.et, ok);

@@ -40,15 +40,22 @@ OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 # UTF-8 BOM (required for Illustrator Unicode strings)
 printf '\xEF\xBB\xBF' > "$OUTPUT"
 
+# Deterministic build: stamp the last src commit date, not today. Using date(1)
+# made every rebuild on a new day dirty dist with zero content change, which
+# fights the dist-freshness pre-commit hook and forces empty "refresh" commits.
+UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" 2>/dev/null || true)"
+[ -n "$UPDATED" ] || UPDATED="$(date '+%Y-%m-%d')"   # fallback: no git / no history
+UPDATED_YEAR="${UPDATED%%-*}"
+
 cat >> "$OUTPUT" << EOF
 /*
  * ===========================================================================
  * Script:      $HUMAN_NAME
  * Version:     $VERSION
  * Author:      Ladislav Osvald
- * Updated:     $(date '+%Y-%m-%d')
+ * Updated:     $UPDATED
  *
- * Copyright (C) 2025-$(date '+%Y') Ladislav Osvald.
+ * Copyright (C) 2025-$UPDATED_YEAR Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
  *
  * Description:
