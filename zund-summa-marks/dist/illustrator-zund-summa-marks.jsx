@@ -3,7 +3,7 @@
  * Script:      Illustrator Zund & Summa Marks
  * Version:     1.0.0
  * Author:      Ladislav Osvald
- * Updated:     2026-06-28
+ * Updated:     2026-07-20
  *
  * Copyright (C) 2025-2026 Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
@@ -199,6 +199,7 @@ ZSM.L = (function () {
             ERR_WRITE_SETTINGS:  "Cannot write settings file.",
             ERR_COLOR_MISSING:   "Assigned color not found in document: %s",
             WARN_COLOR_FALLBACK: "Mark colour '%s' is not in the document — marks drawn in [Registration].",
+            WARN_SUMMA_REMOVED:  "Summa output was removed (marks, OPOS bar and the Trim layer): the Zünd artboard recompute would have invalidated it — OPOS marks must always be outermost. Artwork and cutting layers were not touched. When done, re-run SUMMA as the last step.",
             ERR_LAY_COLOR:       "No color selected for layer '%s'.",
             ERR_LAY_NAME:        "A layer row has a color ('%s') but no name. Enter a layer name or remove the row.",
             ERR_SWATCH:          "Swatch '%s' not found.",
@@ -315,6 +316,7 @@ ZSM.L = (function () {
             ERR_WRITE_SETTINGS:  "Nelze zapsat soubor s nastavením.",
             ERR_COLOR_MISSING:   "Přiřazená barva nebyla v dokumentu nalezena: %s",
             WARN_COLOR_FALLBACK: "Barva značek ‘%s’ není v dokumentu — značky vykresleny v [Registration].",
+            WARN_SUMMA_REMOVED:  "Výstup Summa byl odstraněn (značky, OPOS pruh a vrstva Trim): přepočet artboardu pro Zünd by jej zneplatnil — OPOS značky musí být vždy vnější. Grafika ani řezací vrstvy nebyly dotčeny. Po dokončení spusťte SUMMA znovu jako poslední krok.",
             ERR_LAY_COLOR:       "Chybí barva pro vrstvu ‘%s’. Vyberte barvu z nabídky.",
             ERR_LAY_NAME:        "Řádek vrstvy má barvu (‘%s’), ale nemá název. Zadejte název vrstvy nebo řádek odeberte.",
             ERR_SWATCH:          "Barva ‘%s’ nebyla v dokumentu nalezena.",
@@ -1793,9 +1795,21 @@ ZSM.Draw = {
             // Unlock & unhide first — `.remove()` on a locked or hidden
             // sublayer can crash AI at C++ level in some versions.
             var didRemoveSub = false;
-            if (s.mode === "ZUND" && zundSub) {
-                try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
-                try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+            if (s.mode === "ZUND") {
+                if (zundSub) {
+                    try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
+                    try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+                }
+                // A Zünd run invalidates any existing Summa output (artboard
+                // recompute + OPOS-outermost violation — see removeSummaOutput).
+                // The main flow already removed it before measuring bounds, so
+                // this is normally a no-op; it fires only for direct render()
+                // callers, and then also surfaces the operator warning.
+                if (this.removeSummaOutput()) {
+                    geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
+                    summaSub = null;
+                    didRemoveSub = true;
+                }
             } else if (s.mode === "SUMMA" && summaSub) {
                 try { summaSub.locked = false; summaSub.visible = true; } catch (e) {}
                 try { summaSub.remove(); didRemoveSub = true; } catch (e) {}
@@ -2086,6 +2100,52 @@ ZSM.Draw = {
         } catch (e4) {
             ZSM.Utils.log("trim: stale layer remove failed — " + e4.message);
         }
+    },
+
+    /**
+     * Removes the Summa output a Zünd run would invalidate: the Regmarks/Summa
+     * sublayer (marks + OPOS bar) and the top-level Trim layer. The Zünd run
+     * recomputes the artboard without feed and places its marks outside the
+     * measured content — an existing Summa set would end up INSIDE the Zünd
+     * circles (OPOS requires the Summa marks to be outermost) with trim lines
+     * stranded at the old artboard edges. Removing the stale set and telling
+     * the operator to re-run SUMMA last is the only safe resolution.
+     *
+     * Touches ONLY our own output layers (Regmarks/Summa, Trim) — never user
+     * artwork or mapped cut layers. The main flow calls this BEFORE measuring
+     * bounds so the Zünd marks land exactly where a clean run would put them;
+     * render() calls it again defensively (second call is a no-op).
+     *
+     * @returns {boolean} True if any Summa output was removed.
+     */
+    removeSummaOutput: function () {
+        var removed = false;
+        try {
+            var doc = app.activeDocument;
+            var reg = null;
+            try { reg = doc.layers.getByName(ZSM.Config.layerRegmarks); } catch (e0) {}
+            if (reg) {
+                var summaSub = null;
+                try { summaSub = reg.layers.getByName("Summa"); } catch (e1) {}
+                if (summaSub) {
+                    // Held selection refs can crash the remove at C++ level.
+                    try { doc.selection = null; } catch (ds) {}
+                    // `.remove()` on a locked/hidden sublayer can crash AI.
+                    try { summaSub.locked = false; summaSub.visible = true; } catch (e2) {}
+                    try {
+                        summaSub.remove();
+                        removed = true;
+                        try { app.redraw(); } catch (rd) {}
+                    } catch (e3) {
+                        ZSM.Utils.log("removeSummaOutput: sublayer remove failed — " + e3.message);
+                    }
+                }
+            }
+            // The Trim layer belongs to the Summa sheet layout — remove it only
+            // together with that layout, never on its own.
+            if (removed) this._removeTrimLayer();
+        } catch (e) {}
+        return removed;
     },
 
     /**
@@ -4142,6 +4202,14 @@ ZSM.UI = {
         draw.beginSession();
         app.activeDocument.rulerOrigin = [0, 0];
 
+        // A Zünd run invalidates any existing Summa output (the artboard
+        // recompute drops the feed and the Summa marks would no longer be
+        // outermost — an OPOS requirement). Remove it BEFORE measuring bounds,
+        // otherwise the stale Summa marks/bar would inflate the measurement and
+        // push the Zünd marks away from the artwork. Warning surfaces with the
+        // other render warnings after the run.
+        var summaInvalidated = (res.mode === "ZUND") && draw.removeSummaOutput();
+
         var bounds = draw.getBounds(res);
         if (!bounds) {
             alert(ZSM.L.ERR_NO_SEL);
@@ -4149,6 +4217,7 @@ ZSM.UI = {
         }
 
         var geo = ZSM.Core.calculateAll(res, bounds);
+        if (summaInvalidated) geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
         draw.render(geo, res);
 
     } catch (e) {
