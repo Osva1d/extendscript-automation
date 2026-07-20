@@ -191,9 +191,15 @@ console.log("--- UI v5: placement mode ---");
     assert(ui2.modeUI.pathRB.enabled === true, "path radio enabled with selection");
     ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
     assert(ui2.gatherAll().placementMode === "path", "gather reports path mode");
-    // Path with corners -> count radio disabled (spacing only)
-    assert(ui2.pathUI.numRB.enabled === false, "count radio disabled on cornered path");
-    assert(ui2.pathUI.spcRB.value === true, "spacing radio forced on cornered path");
+    // Cornered path: Count is selectable, but the value is COMPUTED from the
+    // corners (read-only field) and marks land on the corners only.
+    assert(ui2.pathUI.numRB.enabled === true, "count radio selectable on cornered path");
+    assert(ui2.pathUI.spcRB.value === true, "spacing is the default on a cornered path");
+    ui2.pathUI.numRB.onClick();
+    assert(String(ui2.gatherAll().pathDist.number) === "4",
+        "count on a cornered path = corner count (4)");
+    assert(ui2.pathUI.numIn.enabled === false, "computed count field is read-only");
+    assert(ui2.zonesUI.enableCB.enabled === false, "zones disabled when marks are corners-only");
     done();
 
     // Smooth path (0 corners) -> count allowed, zones panel disabled
