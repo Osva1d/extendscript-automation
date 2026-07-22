@@ -18,7 +18,7 @@ eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "ui_state.js"), "utf8"));
 
-var L = { DEFAULT_PRESET: "[Default]" };
+var L = { PRESET_DEFAULT: "[Default]" };
 
 // ===== TEST FRAMEWORK =====
 var pass = 0, fail = 0, total = 0;

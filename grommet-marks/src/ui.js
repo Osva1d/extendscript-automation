@@ -825,7 +825,7 @@ GM.UI = {
             var idx = loadDDL.selection.index;
             var key = sortedKeys[idx];
             if (key !== pData.activePreset) return;
-            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.DEFAULT_PRESET : key;
+            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.PRESET_DEFAULT : key;
             if (modified) displayText += " *";
             try { loadDDL.items[idx].text = displayText; } catch (e) {
                 updatePresetList();

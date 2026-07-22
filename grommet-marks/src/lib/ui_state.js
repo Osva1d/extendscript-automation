@@ -52,7 +52,7 @@ GM.UIState = {
      */
     formatPresetList: function (pData, currentValues, L) {
         L = L || {};
-        var defaultDisplay = L.DEFAULT_PRESET || this.PRESET_KEY_DEFAULT;
+        var defaultDisplay = L.PRESET_DEFAULT || this.PRESET_KEY_DEFAULT;
         var DEF = this.PRESET_KEY_DEFAULT;
         var keys = [];
         for (var k in pData.presets) {

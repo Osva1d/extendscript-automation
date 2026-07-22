@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     1.0.0
  * Author:      Ladislav Osvald
- * Updated:     2026-07-19
+ * Updated:     2026-07-20
  *
  * Copyright (C) 2025-2026 Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
@@ -212,7 +212,7 @@ GM.L = (function () {
     var strings = {
         en: {
             // Sentinel display strings
-            DEFAULT_PRESET: "[Default]",
+            PRESET_DEFAULT: "[Default]",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -340,7 +340,7 @@ GM.L = (function () {
 
         cs: {
             // Sentinel display strings
-            DEFAULT_PRESET: "[Výchozí]",
+            PRESET_DEFAULT: "[Výchozí]",
 
             // Units
             UNIT_MM: "Milimetry",
@@ -1040,7 +1040,7 @@ GM.UIState = {
      */
     formatPresetList: function (pData, currentValues, L) {
         L = L || {};
-        var defaultDisplay = L.DEFAULT_PRESET || this.PRESET_KEY_DEFAULT;
+        var defaultDisplay = L.PRESET_DEFAULT || this.PRESET_KEY_DEFAULT;
         var DEF = this.PRESET_KEY_DEFAULT;
         var keys = [];
         for (var k in pData.presets) {
@@ -2566,7 +2566,7 @@ GM.UI = {
             var idx = loadDDL.selection.index;
             var key = sortedKeys[idx];
             if (key !== pData.activePreset) return;
-            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.DEFAULT_PRESET : key;
+            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.PRESET_DEFAULT : key;
             if (modified) displayText += " *";
             try { loadDDL.items[idx].text = displayText; } catch (e) {
                 updatePresetList();
