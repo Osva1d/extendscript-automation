@@ -33,7 +33,21 @@ Test-loady ui_state (5 míst k přepojení při ostrém dedupu):
 GM: `tests/test_ui_state.js`, `tests/test_ui_dialog.js`;
 ZSM: `tests/test_ui_state.js`, `tests/test_e2e_workflow.js`, `tests/test_ui_layout.js`.
 
-## ui_state: 2 body-divergence (jediné reálné rozdíly, 84 kód-řádků jinak identických)
+## ui_state: 2 body-divergence — VYŘEŠENO (2026-07-22)
+
+1. Locale klíč sjednocen na `PRESET_DEFAULT` — commit
+   `refactor(locale): unify preset-default key across GM/ZSM` (58c2e16, rename
+   5 míst v GM; ZSM už kanonický tvar měl).
+2. Reserved-name: přijat ZSM regex `/^\[.+\]$/` jako kanonický.
+   **⚠ VĚDOMÁ ZMĚNA CHOVÁNÍ GM** (rozhodnutí uživatele, 2026-07-22): GM nově
+   odmítá VŠECHNA `[hranatá]` jména, dřív jen `[Default]`/`[Last Settings]`.
+   Charakterizační síť to nezachytila (GM žádné `[x]` jako validní netestoval) —
+   proto zaznamenáno zde i v commit message dedup commitu.
+3. Dedup proveden: `shared/lib/ui_state.js` (factory), lokální kopie smazány,
+   builds + 5 test-loadů přepojeny, `tools/check-dist-fresh.sh` naučen shared/
+   (temp-build mirror + --staged trigger).
+
+## Původní analýza divergencí (historie)
 
 1. **Reserved-name policy** — GM: `name === "[Default]" || name === "[Last Settings]"`;
    ZSM: `/^\[.+\]$/.test(name)` (jakékoli [hranaté] jméno). ZSM regex je **SUPERSET**

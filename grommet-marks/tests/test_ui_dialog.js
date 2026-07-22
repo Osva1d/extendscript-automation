@@ -31,7 +31,8 @@ eval(src("locale.js"));
 eval(src("lib/utils.js"));
 eval(src("config.js"));
 eval(src("lib/validation.js"));
-eval(src("lib/ui_state.js"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
+buildUIState(GM);   // shared core module — bind to GM
 eval(src("core.js"));
 eval(src("lib/storage.js"));
 eval(src("ui.js"));

@@ -8,8 +8,8 @@
 # Description:
 #   Concatenates Grommet Marks source modules into production script.
 #   Build order: polyfills -> constants -> locale -> lib/utils -> config ->
-#                lib/storage -> lib/validation -> lib/ui_state -> core ->
-#                illustrator -> ui -> main
+#                lib/storage -> lib/validation -> ../shared/lib/ui_state ->
+#                core -> illustrator -> ui -> main
 # ===========================================================================
 
 set -euo pipefail
@@ -78,7 +78,8 @@ cat "$SRC_DIR/lib/utils.js"          >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/config.js"             >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/storage.js"        >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/validation.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
-cat "$SRC_DIR/lib/ui_state.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/ui_state.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildUIState(GM);"             >> "$OUTPUT" && echo "" >> "$OUTPUT"   # bind shared module to GM namespace
 cat "$SRC_DIR/core.js"               >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/illustrator.js"        >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"                 >> "$OUTPUT" && echo "" >> "$OUTPUT"

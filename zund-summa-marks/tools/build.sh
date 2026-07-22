@@ -70,7 +70,8 @@ cat "$SRC_DIR/lib/json2.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/locale.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/utils.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/validation.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
-cat "$SRC_DIR/lib/ui_state.js"   >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/ui_state.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildUIState(ZSM);"        >> "$OUTPUT" && echo "" >> "$OUTPUT"   # bind shared module to ZSM namespace
 cat "$SRC_DIR/config.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/storage.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/core.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
