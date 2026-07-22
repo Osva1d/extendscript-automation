@@ -137,9 +137,21 @@ ZSM.Draw = {
             // Unlock & unhide first — `.remove()` on a locked or hidden
             // sublayer can crash AI at C++ level in some versions.
             var didRemoveSub = false;
-            if (s.mode === "ZUND" && zundSub) {
-                try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
-                try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+            if (s.mode === "ZUND") {
+                if (zundSub) {
+                    try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
+                    try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+                }
+                // A Zünd run invalidates any existing Summa output (artboard
+                // recompute + OPOS-outermost violation — see removeSummaOutput).
+                // The main flow already removed it before measuring bounds, so
+                // this is normally a no-op; it fires only for direct render()
+                // callers, and then also surfaces the operator warning.
+                if (this.removeSummaOutput()) {
+                    geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
+                    summaSub = null;
+                    didRemoveSub = true;
+                }
             } else if (s.mode === "SUMMA" && summaSub) {
                 try { summaSub.locked = false; summaSub.visible = true; } catch (e) {}
                 try { summaSub.remove(); didRemoveSub = true; } catch (e) {}
@@ -180,8 +192,10 @@ ZSM.Draw = {
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
-                        if (seenTargets[layDef.name]) continue; // dedupe
-                        seenTargets[layDef.name] = true;
+                        // "l_" prefix keeps user layer names like "toString"
+                        // from colliding with inherited Object.prototype members.
+                        if (seenTargets["l_" + layDef.name]) continue; // dedupe
+                        seenTargets["l_" + layDef.name] = true;
 
                         var targetLay = this.getLay(layDef.name);
                         var hit = this.movePaths(targetLay, [layDef.color]);
@@ -433,6 +447,52 @@ ZSM.Draw = {
     },
 
     /**
+     * Removes the Summa output a Zünd run would invalidate: the Regmarks/Summa
+     * sublayer (marks + OPOS bar) and the top-level Trim layer. The Zünd run
+     * recomputes the artboard without feed and places its marks outside the
+     * measured content — an existing Summa set would end up INSIDE the Zünd
+     * circles (OPOS requires the Summa marks to be outermost) with trim lines
+     * stranded at the old artboard edges. Removing the stale set and telling
+     * the operator to re-run SUMMA last is the only safe resolution.
+     *
+     * Touches ONLY our own output layers (Regmarks/Summa, Trim) — never user
+     * artwork or mapped cut layers. The main flow calls this BEFORE measuring
+     * bounds so the Zünd marks land exactly where a clean run would put them;
+     * render() calls it again defensively (second call is a no-op).
+     *
+     * @returns {boolean} True if any Summa output was removed.
+     */
+    removeSummaOutput: function () {
+        var removed = false;
+        try {
+            var doc = app.activeDocument;
+            var reg = null;
+            try { reg = doc.layers.getByName(ZSM.Config.layerRegmarks); } catch (e0) {}
+            if (reg) {
+                var summaSub = null;
+                try { summaSub = reg.layers.getByName("Summa"); } catch (e1) {}
+                if (summaSub) {
+                    // Held selection refs can crash the remove at C++ level.
+                    try { doc.selection = null; } catch (ds) {}
+                    // `.remove()` on a locked/hidden sublayer can crash AI.
+                    try { summaSub.locked = false; summaSub.visible = true; } catch (e2) {}
+                    try {
+                        summaSub.remove();
+                        removed = true;
+                        try { app.redraw(); } catch (rd) {}
+                    } catch (e3) {
+                        ZSM.Utils.log("removeSummaOutput: sublayer remove failed — " + e3.message);
+                    }
+                }
+            }
+            // The Trim layer belongs to the Summa sheet layout — remove it only
+            // together with that layout, never on its own.
+            if (removed) this._removeTrimLayer();
+        } catch (e) {}
+        return removed;
+    },
+
+    /**
      * Draws red trim lines as direct children of the given layer.
      * @param {Layer} layer    - Host layer.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
@@ -526,8 +586,14 @@ ZSM.Draw = {
                 if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
                 lay = lay.parent;
             }
-        } catch (e) {}
-        return false;
+            return false;
+        } catch (e) {
+            // Unreadable layer chain → treat as reserved (skip from routing).
+            // Fail-closed matches isArtifactLayer's safe default for mutating
+            // operations: better to leave an odd item in place than to risk
+            // pulling a mark off Regmarks because its ancestry couldn't be read.
+            return true;
+        }
     },
 
     /**

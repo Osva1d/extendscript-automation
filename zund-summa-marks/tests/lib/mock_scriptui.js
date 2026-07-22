@@ -128,6 +128,19 @@
             return MockControl.prototype.add.call(self, kind, label);
         };
         this.removeAll = function () { self.items = []; self.selection = null; };
+        // Real ScriptUI remove(index) on a dropdown removes a LIST ITEM, not a
+        // child control — override the inherited MockControl.remove (children-
+        // based) so selectDDL's synthetic-"(missing)"-item purge is testable.
+        this.remove = function (itemOrIndex) {
+            var idx = (typeof itemOrIndex === "number")
+                ? itemOrIndex
+                : self.items.indexOf(itemOrIndex);
+            if (idx >= 0 && idx < self.items.length) {
+                var removedItem = self.items.splice(idx, 1)[0];
+                if (self.selection === removedItem) self.selection = null;
+                for (var ri = 0; ri < self.items.length; ri++) self.items[ri].index = ri;
+            }
+        };
     }
     MockDropDownList.prototype = Object.create(MockControl.prototype);
 

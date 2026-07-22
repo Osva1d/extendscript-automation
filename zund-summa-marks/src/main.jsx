@@ -60,6 +60,14 @@
         draw.beginSession();
         app.activeDocument.rulerOrigin = [0, 0];
 
+        // A Zünd run invalidates any existing Summa output (the artboard
+        // recompute drops the feed and the Summa marks would no longer be
+        // outermost — an OPOS requirement). Remove it BEFORE measuring bounds,
+        // otherwise the stale Summa marks/bar would inflate the measurement and
+        // push the Zünd marks away from the artwork. Warning surfaces with the
+        // other render warnings after the run.
+        var summaInvalidated = (res.mode === "ZUND") && draw.removeSummaOutput();
+
         var bounds = draw.getBounds(res);
         if (!bounds) {
             alert(ZSM.L.ERR_NO_SEL);
@@ -67,6 +75,7 @@
         }
 
         var geo = ZSM.Core.calculateAll(res, bounds);
+        if (summaInvalidated) geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
         draw.render(geo, res);
 
     } catch (e) {

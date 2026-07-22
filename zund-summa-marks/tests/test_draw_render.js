@@ -677,7 +677,9 @@ ZSM.Draw.render(gST, sST);
 assert(findLayer(docST, "Trim") === null,
     "SUMMA drawRed=false: stale Trim layer removed");
 
-// ZUND run must NOT delete an existing Trim (belongs to the SUMMA layout)
+// A ZUND run invalidates the whole Summa sheet layout (artboard recompute
+// drops the feed; OPOS marks would no longer be outermost) — so it must
+// remove the stale Trim together with the Summa output (see TEST 23).
 var docZT = setupDoc({
     layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
 });
@@ -686,8 +688,8 @@ ZSM.Draw.render(ZSM.Core.calculateAll(sZT, ZSM.Draw.getBounds(sZT)), sZT);
 assert(findLayer(docZT, "Trim") !== null, "precondition: SUMMA created Trim");
 sZT = makeSettings({ mode: "ZUND" });
 ZSM.Draw.render(ZSM.Core.calculateAll(sZT, ZSM.Draw.getBounds(sZT)), sZT);
-assert(findLayer(docZT, "Trim") !== null,
-    "ZUND run leaves the SUMMA Trim layer alone");
+assert(findLayer(docZT, "Trim") === null,
+    "ZUND run removes the invalidated SUMMA Trim layer");
 
 
 // =====================================================
@@ -722,6 +724,79 @@ assert(countItems(zundCan, "PathItem") === 1,
     "movePaths: mark on Regmarks/Zünd NOT cannibalised (stays put)");
 assert(countItems(trimCan, "PathItem") === 1,
     "movePaths: trim line on Trim layer NOT moved");
+
+
+// =====================================================
+// TEST 23 (bug): SUMMA→ZUND — Zünd run removes the invalidated Summa output
+// =====================================================
+// OPOS requires the Summa marks to be OUTERMOST. The bounds rule "second run
+// places marks outside the first" gives the outermost spot to whichever mode
+// runs LAST — so running ZUND after SUMMA would leave the Summa set inside the
+// Zünd circles (and the Zünd artboard recompute drops the feed, stranding the
+// trim lines). The main flow calls removeSummaOutput() BEFORE measuring bounds;
+// the Zünd marks must then land exactly where a clean ZUND run would put them.
+// User artwork and mapped cut layers must never be touched.
+console.log("\n=== TEST 23 (bug): ZUND after SUMMA removes invalidated Summa output ===");
+
+// Reference: clean ZUND on a fresh doc
+var docRef = setupDoc({
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
+});
+var sRef = makeSettings({ mode: "ZUND" });
+var gRef = ZSM.Core.calculateAll(sRef, ZSM.Draw.getBounds(sRef));
+ZSM.Draw.render(gRef, sRef);
+
+// Scenario: SUMMA (with trim) first, then the main-flow ZUND sequence
+var docSZ = setupDoc({
+    layers: [
+        { name: "Cut", items: [{ type: "path", spot: "Cut", bounds: [10, 90, 90, 10] }] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sSZ = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sSZ, ZSM.Draw.getBounds(sSZ)), sSZ);
+assert(findSublayer(findLayer(docSZ, "Regmarks"), "Summa") !== null,
+    "precondition: Summa sublayer exists");
+assert(findLayer(docSZ, "Trim") !== null, "precondition: Trim exists");
+
+// Main flow: remove invalidated Summa output BEFORE measuring bounds
+var removed = ZSM.Draw.removeSummaOutput();
+assert(removed === true, "removeSummaOutput reports it removed the Summa set");
+var sZ2 = makeSettings({ mode: "ZUND" });
+var gZ2 = ZSM.Core.calculateAll(sZ2, ZSM.Draw.getBounds(sZ2));
+ZSM.Draw.render(gZ2, sZ2);
+
+var regSZ = findLayer(docSZ, "Regmarks");
+assert(findSublayer(regSZ, "Summa") === null,
+    "Summa sublayer (marks + OPOS bar) removed");
+assert(findLayer(docSZ, "Trim") === null, "stale Trim layer removed");
+assert(countItems(findSublayer(regSZ, "Zünd"), "PathItem") === 5,
+    "Zünd marks drawn (4 corners + orient)");
+
+// Geometry: identical to a clean ZUND run (bounds no longer inflated)
+assertEq(Math.round(gZ2.ab[0]), Math.round(gRef.ab[0]), "artboard L == clean ZUND");
+assertEq(Math.round(gZ2.ab[1]), Math.round(gRef.ab[1]), "artboard T == clean ZUND");
+assertEq(Math.round(gZ2.ab[2]), Math.round(gRef.ab[2]), "artboard R == clean ZUND");
+assertEq(Math.round(gZ2.ab[3]), Math.round(gRef.ab[3]), "artboard B == clean ZUND");
+
+// User layers untouched. The artwork layer is renamed Art→Graphics by the
+// standard §7b bottom-layer rename (done already by the SUMMA run — existing
+// behaviour, not part of this fix); its CONTENT must survive intact.
+var artSZ = findLayer(docSZ, "Graphics") || findLayer(docSZ, "Art");
+assert(artSZ !== null && countItems(artSZ, "PathItem") === 1,
+    "user artwork content untouched (1 path, layer renamed Graphics by design)");
+assert(findLayer(docSZ, "Cut") !== null && countItems(findLayer(docSZ, "Cut"), "PathItem") === 1,
+    "mapped cut layer untouched");
+
+// Idempotence: nothing left to remove
+assert(ZSM.Draw.removeSummaOutput() === false,
+    "second removeSummaOutput call is a no-op");
+
+// Valid direction unchanged: SUMMA after ZUND keeps the Zünd sublayer
+var sS3 = makeSettings({ mode: "SUMMA" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sS3, ZSM.Draw.getBounds(sS3)), sS3);
+assert(findSublayer(findLayer(docSZ, "Regmarks"), "Zünd") !== null,
+    "SUMMA after ZUND still preserves the Zünd sublayer");
 
 
 // =====================================================

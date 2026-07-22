@@ -1178,8 +1178,10 @@ ZSM.UI = {
                     var rawC = ZSM.UI.ddlValue(ddc);
                     var canC = canonColor(rawC);
                     if (!canC) continue;
-                    if (seenColors[canC]) { dupColorName = rawC; break; }
-                    seenColors[canC] = true;
+                    // "c_" prefix keeps customer colour names like "toString"
+                    // from colliding with inherited Object.prototype members.
+                    if (seenColors["c_" + canC]) { dupColorName = rawC; break; }
+                    seenColors["c_" + canC] = true;
                 }
                 if (dupColorName) {
                     allValid = false;
