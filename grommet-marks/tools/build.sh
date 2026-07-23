@@ -43,7 +43,7 @@ printf '\xEF\xBB\xBF' > "$OUTPUT"
 # Deterministic build: stamp the last src commit date, not today. Using date(1)
 # made every rebuild on a new day dirty dist with zero content change, which
 # fights the dist-freshness pre-commit hook and forces empty "refresh" commits.
-UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" 2>/dev/null || true)"
+UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" ../shared/lib 2>/dev/null || true)"
 [ -n "$UPDATED" ] || UPDATED="$(date '+%Y-%m-%d')"   # fallback: no git / no history
 UPDATED_YEAR="${UPDATED%%-*}"
 

@@ -3,7 +3,7 @@
  * Script:      Illustrator Grommet Marks
  * Version:     1.0.0
  * Author:      Ladislav Osvald
- * Updated:     2026-07-22
+ * Updated:     2026-07-23
  *
  * Copyright (C) 2025-2026 Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
