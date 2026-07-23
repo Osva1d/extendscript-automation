@@ -7,7 +7,7 @@
 #
 # Description:
 #   Concatenates Grommet Marks source modules into production script.
-#   Build order: polyfills -> constants -> locale -> lib/utils -> config ->
+#   Build order: ../shared/lib/json2 -> constants -> locale -> lib/utils -> config ->
 #                lib/storage -> lib/validation -> ../shared/lib/ui_state ->
 #                core -> illustrator -> ui -> main
 # ===========================================================================
@@ -70,7 +70,7 @@ cat >> "$OUTPUT" << EOF
 EOF
 
 # Modules — order matters (dependencies first)
-cat "$SRC_DIR/polyfills/json2.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/json2.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module (must stay FIRST — everything below may use JSON)
 echo "var GM = {};"                  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/constants.js"          >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/locale.js"             >> "$OUTPUT" && echo "" >> "$OUTPUT"

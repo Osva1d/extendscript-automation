@@ -66,7 +66,7 @@ cat >> "$OUTPUT" << EOF
 EOF
 
 # Modules — order matters
-cat "$SRC_DIR/lib/json2.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/json2.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module (must stay FIRST — everything below may use JSON)
 cat "$SRC_DIR/locale.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/utils.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/validation.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"

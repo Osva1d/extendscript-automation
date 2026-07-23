@@ -4,6 +4,28 @@ Poznatky z throwaway spiku NS-injektáže (kód spiku zahozen, historie čistá)
 Laťka spiku splněna: oba buildy zelené, GM 7/7, ZSM 13/13 nad jedním sdíleným
 `ui_state`. Mechanismus potvrzen — ostrý dedup staví na tomto.
 
+## Behavior changes (⚠ patří do CHANGELOGu při release — uživatel je pocítí)
+
+Průběžný seznam vědomých změn chování z dedupu. Doplňovat u každé další divergence.
+
+1. **ui_state / GM** (commit `2e995ef`): GM přijímá ZSM bracketed-name rejection —
+   jakékoli `[hranaté]` jméno presetu je nově rezervované, dřív jen
+   `[Default]`/`[Last Settings]`.
+2. **json2 / ZSM** (commit dedupu json2): ZSM přebírá GM (úplný Crockford) —
+   `JSON.stringify` nově respektuje replacer (dřív tiše ignorován, chybějící
+   plumbing) a instaluje `Date.prototype.toJSON` → Date se serializuje jako
+   ISO-8601 string (dřív `{}`). Obě změny = posun k nativní JSON sémantice.
+   Dnešní produkční kód ani jednu cestu nepoužívá.
+
+## Metodika: testování polyfillů
+
+**Polyfilly a cokoli modifikující prototypy testovat v IZOLOVANÉM procesu** —
+jinak si varianty půjčují chování a vzniká falešná shoda. Stalo se u prvního
+json2 A/B testu: GM polyfill nainstaloval `Date.prototype.toJSON` do sdíleného
+procesu, ZSM (načtený po něm) si ho půjčil a vypadal ekvivalentně. Izolace =
+jeden `node` proces na variantu (+ u ES3 simulace `delete Date.prototype.toJSON`
+před načtením).
+
 ## Mechanismus: factory s namespace parametrem (volba b)
 
 Sdílený lib soubor nedeklaruje žádný namespace — definuje factory funkci, která

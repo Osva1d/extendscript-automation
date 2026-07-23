@@ -18,6 +18,12 @@
 (function () {
 
 // ------------------------------------------------------------------------
+// Module: json2 polyfill (shared) — Douglas Crockford json2, complete
+// Part of: shared core (consumed by grommet-marks and zund-summa-marks)
+// Canonical version: GM copy (working replacer + Date.prototype.toJSON).
+// No namespace — defines global JSON when the host (ES3) lacks it.
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 // JSON Polyfill (Douglas Crockford's json2.js - Minified Logic)
 // NOTE: The eval() call inside JSON.parse below is SAFE — it executes
 // only AFTER the input string passes strict regex validation that
