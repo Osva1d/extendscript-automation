@@ -234,80 +234,12 @@ Skript automaticky migruje starší formáty:
 Jednotkové testy pro `ZSM.Core` (pure math): `tests/test_core_math.js`
 
 Manuální testy: viz `docs/MANUAL_TEST.md`
-
 ---
 
 ## Changelog
 
-### v26.5.1 (2026-06) — Hotfix: idempotence Trim vrstvy + nálezy z code review
-- **Fix (kritický, regrese v26.5.0):** Top-level vrstva „Trim" se měřila do bounds → každé další spuštění SUMMA s ořezovými linkami zvětšilo artboard (linky leží na hranách archu). `ZSM.Bounds.get` ji nyní přeskakuje; „Trim" se ani nenabízí v dropdownu vrstev.
-- **Fix:** SUMMA běh s vypnutými ořezovými linkami odstraní zastaralou vrstvu „Trim" z předchozího běhu (ZUND ji nechává — patří k SUMMA layoutu).
-- **Fix:** `Storage.save` kontroluje open/write/close a vrací úspěch — selhání zápisu (plný disk, oprávnění) už není tiché; volající zobrazí chybu.
-- **Fix (UX):** Psaní víceciferného měřítka (např. „12") už po první „1" nezamkne pole — auto-odškrtnutí běží jen při potvrzení hodnoty. Pole 1:N je nově v live-validaci (mimo rozsah → červené + vypnutý Generovat, místo tichého oříznutí na 10).
-- **Fix (UX):** Po Uložit se tlačítka Uložit/↺ správně deaktivují.
-- **Fix:** Názvy předvoleb tvaru `[Text]` jsou rezervované (kolize s migrací sentinelů); závorky uvnitř názvu zůstávají povolené.
-- **Fix:** Fixed režim neblokuje Generovat kvůli neaktivnímu (irelevantnímu) poli „Mezera od grafiky".
-- **Chore:** `ZSM.Config.layerTrim` konstanta; `scriptName` s přehláskou („Zünd") v patičce; ošetřen `e.line` v kritickém hlášení.
-- Testy: regresní test top-level Trim v bounds (6b), stale-trim removal (TEST 21), rezervace bracket-názvů.
+Viz [CHANGELOG.md](CHANGELOG.md).
 
-### v26.5.0 (2026-06) — Phase 3: pouze značky + UI polish + crash fix
-- **Feat:** Režim **„Pouze značky (neměnit vrstvy)"** — pro dokumenty s už separovanými vrstvami. Vykreslí jen značky, uživatelské vrstvy nechá beze změny (žádný přesun cest, žádné přejmenování na „Graphics").
-- **Feat:** Tlačítko **↺ Revert** vedle dropdownu předvoleb — vrátí aktivní předvolbu na uložené hodnoty (aktivní jen při neuložených změnách). Odlišné od továrních hodnot.
-- **Change:** Ořezové linky (SUMMA) jdou nově **vždy do samostatné top-level vrstvy „Trim"** (oba režimy) — mimo Regmarks i cut vrstvy, konzistentní umístění.
-- **Change:** Tlačítko **Reset odstraněno** — tovární hodnoty se načtou výběrem `[Výchozí]` v dropdownu, návrat k předvolbě řeší ↺. Footer je nyní jen `Storno` + `Generovat`.
-- **Fix (kritický, CZ locale):** Falešná `*` u každé předvolby s registrační barvou — `selectDDL` v české lokalizaci četl zpět „[Registrace]" místo kanonického „[Registration]". Nové `canonColor()` normalizuje čtení barev → `*` jen při skutečné změně.
-- **Fix (kritický):** Po zadání neplatné hodnoty zůstávalo pole červené a `Generovat` vypnutý i po opravě / Reset / Revert (zaseknutý dialog) — `setUIValues` nově spouští re-validaci; „valid" stav obnoví výchozí barvu místo černé (čitelné na tmavém theme).
-- **Fix (kritický, C++ crash):** Vytváření top-level vrstvy „Trim", když byl aktivní sublayer (z kreslení značek), shazovalo celý Illustrator. Reset `activeLayer` na top-level + commit před `doc.layers.add()`.
-- Testy: 13 suites (přidány regresní testy marks-only, marks-only SUMMA trim → top-level „Trim", trim placement).
-
-### v26.4.0 (2026-05) — Phase 2: manuální měřítko + review-round hardening
-- **Feat:** Manuální měřítko 1:N (`scaleN`, rozsah 1–10) — checkbox „Pracovat v měřítku" + pole v panelu technologie. `ZSM.Utils.getEffectiveSF()` skládá Large Canvas `scaleFactor` × `scaleN` a používá ho **core.js i draw.js** (oprava: dříve draw.js škáloval pozice, ale ne velikost značek → značky se v 1:10 nezmenšily). Titulek dialogu ukazuje „— 1:N".
-- **Fix (barva, prepress-safe):** `getCol` už NEvytváří tiše náhradní spot pro neznámou barvu (tichá mutace dokumentu, arbitrární magenta, batch pollution). Chybějící barva → fallback `[Registration]` + neblokující upozornění. Nové `registrationColor()` / `swatchExists()`.
-- **Fix (preset robustnost):** swatch/vrstva uložená v presetu, ale chybějící v dokumentu, se zachová jako položka „(chybí)" s raw názvem (`selectDDL`/`ddlValue`) — žádný tichý swap na výchozí, žádná falešná `*`. Chybějící cílová vrstva se vytvoří.
-- **Fix:** Mazání předvolby vyžaduje potvrzovací dialog; `Storno` (dříve „Zrušit").
-- **Fix:** Tři silent `catch {}` kolem `Storage.save` sjednoceny do `persistSettings()` s logem + alertem (selhání zápisu už „nevzkřísí" smazaný preset).
-- **Chore:** `build.sh` selže při rozjetí verze `package.json` ↔ `config.js`. Tři inline artifact-layer kontroly → `ZSM.Bounds.isArtifactLayer`. Varování se zobrazují jako „UPOZORNĚNÍ:" (ne „CHYBA:"). Test suite + lib moduly pod verzování.
-- Testy: 13 suites (přidán `test_ui_select_ddl`, regresní testy pro scaleN velikost značek a „getCol nevytváří swatch").
-
-### v26.3.2 (2026-05) — Phase 1 patch: 1:10 workflow unblock
-- **Fix:** Validace `maxDist` (rozteč značek) — minimum sníženo 50 → 5 mm. Workflow uživatele pracujícího se zmenšeným dokumentem (např. 500×500 mm reprezentujícím 5000×5000 mm reality) přestal být blokován validací při zadání rozteče < 50 mm. Plná scale-aware podpora (manuální `scaleN`) přišla ve v26.4.0 (Phase 2).
-- Regresní testy: `tests/test_validation.js` boundary asserts aktualizovány (5/4 místo 50/49) + 2 nové scenario testy pro 1:10 vstupy 30 mm a 40 mm.
-- Dokumentace: README sekce „Workflow při zmenšeném měřítku (1:10)" v Projects/extendscript-automation, INSTALL_MAC aktualizován s aktuálními názvy skriptů.
-
-#### Test pyramide (post-v26.3.1 milestones zachované)
-- 12 test suites, **1051 tests** + 24 properties (~2400 random cases)
-- ES3 compliance linter (`tests/test_es3_compliance.js`) — chrání proti ExtendScript runtime crashům typu `Array.map is not a function`
-- UI layout dialogu vynucený automatizovaným `tests/test_ui_layout.js`
-- E2E workflow simulace (`tests/test_e2e_workflow.js`) — zachytává integrace UI ↔ render
-
-### v26.3.1 (2026-03)
-- Oprava: `endSession()` obnovuje viditelnost dříve skrytých vrstev
-- Oprava: `getBounds()` přeskakuje skryté vrstvy a vodítka (guides)
-- Oprava: `Storage.save()` obalena try-catch
-- Oprava: přejmenování vrstvy „Graphics" se propaguje do locked/hidden trackerů
-- Oprava: prázdné catch bloky v `render()` nyní logují chybu
-- Oprava: `replace(",", ".")` → globální `replace(/,/g, ".")` pro decimální vstup
-- Migrace: locale-independent default preset key (`[Výchozí]` → `[Default]`)
-- Migrace: odstranění `layers[].active` property (row existence = active)
-- UI: přeuspořádání sloupců na Layer → Color (mentální model)
-- UI: sjednocení spacing (10px), oprava zarovnání header/data sloupců
-- Přidán copyright a proprietární licence
-- Aktualizace README.md a ARCHITECTURE.md
-
-### v26.3.0 (2026-02-22)
-- Přepis namespace `PMA` → `ZSM`
-- Nový modul `locale.js` — kompletní EN/CS lokalizace, `app.locale` detekce
-- Preset systém — pojmenované presety, `[Last Settings]`, ochrana `[Default]`
-- Dynamické vrstvy — `layers[]`, combobox s existujícími vrstvami, swatch dropdown
-- Oprava bugu: `drawRed` nefungovalo pro SUMMA mód (`isS` scope error)
-- Oprava bugu: `markSizeZ/S` fallback odkazoval na špatný objekt
-- Swatch dropdown pro barvu značek (UX-03)
-- Migrace ze starých formátů v26.0 → v26.3
-- Synchronizace `src/` a `dist/` — src jako master
-- Aktualizace `build.sh` (nový load order s `locale.js`)
-
-### v26.2.x — v26.0 (2025–2026)
-- Viz git history
 
 ---
 

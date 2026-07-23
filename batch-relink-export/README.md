@@ -8,7 +8,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Namespace:** `BRE`
 - **Build:** `npm run build` (`tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx`
 - **Min. verze AI:** CC 2018 (v22)
-- **Verze:** 3.0.0
+- **Verze:** 1.0.0
 
 ## Instalace
 
@@ -75,23 +75,8 @@ src/
 - Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`).
 - Verze je v `package.json`; `tools/build.sh` ji ověřuje proti `src/config.js` (parity guard).
 - **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do výstupní složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (pageNumber, vrstva, clip-group) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
+---
 
 ## Changelog
 
-### v3.0.0 (2026-06)
-- **BREAKING:** Modulární redesign (5 modulů, namespace `BRE`, build systém).
-- **BREAKING:** Výstupní pojmenování přes vzor s placeholdery `{n}` / `{template}` / `{source}` (výchozí `{n}_{template}`).
-- **Added:** Session management — odemčení/obnovení zamčených vrstev i objektů.
-- **Added:** Ověření relinku po každém souboru.
-- **Added:** Pre-flight sken + tvrdý blok souborů s více stranami než pozic a s nejednoznačným počtem stran.
-- **Added:** Hlášení „N pozic navíc — odeber ručně" u neúplného posledního archu (+ best-effort auto-mazání, je-li `pageNumber` čitelný).
-- **Added:** Přirozené (numerické) řazení zdrojů → předvídatelné číslování.
-- **Added:** Náhled před zpracováním (přeskočí se u bezchybné dávky).
-- **Added:** Lokalizace cs/en; copyright patička dle UI standardu.
-- **Changed:** Redesign hlavního dialogu — užší sloupec popisků (190 → 96 px) a pole na plnou šířku, tři číslované panely (vstupy / pojmenování a formát / možnosti), viditelná legenda tokenů a **živý náhled názvu** výstupu, copyright v patičce vlevo. Mění se jen prezentační vrstva v `ui.js`; logika i návratový objekt beze změny.
-- **Added:** Diagnostický log za `BRE.Config.debug`.
-- **Fixed:** Ignorování macOS `._*` / tečkových souborů ve zdrojové složce.
-- **Removed:** Impose skript (slepý vývoj).
-
-### v2.0.0 (2026-03)
-- Původní monolit — hromadné relinkování s exportem.
+Viz [CHANGELOG.md](CHANGELOG.md).
