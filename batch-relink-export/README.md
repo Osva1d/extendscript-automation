@@ -10,6 +10,13 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Min. verze AI:** CC 2018 (v22)
 - **Verze:** 3.0.0
 
+## Instalace
+
+1. Stáhni hotový `illustrator-batch-relink-export.jsx` z [GitHub Releases](https://github.com/Osva1d/extendscript-automation/releases), nebo si jej postav ze zdroje (`npm run build` → `dist/`).
+2. Spusť přes `Soubor ▸ Skripty ▸ Jiný skript…`, nebo jej vlož do složky skriptů Illustratoru pro trvalé umístění:
+   - **macOS:** `/Applications/Adobe Illustrator [verze]/Presets/[jazyk]/Scripts/`
+3. Při vložení do Presets restartuj Illustrator.
+
 ## Workflow
 
 1. Vytvoř AI šablonu s nalinkovanými PDF (pozice na archu = stránky z vícestránkového PDF).

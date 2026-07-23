@@ -16,7 +16,7 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 
 ## Instalace
 
-1. Vezmi build `dist/illustrator-grommet-marks.jsx`.
+1. Stáhni hotový `illustrator-grommet-marks.jsx` z [GitHub Releases](https://github.com/Osva1d/extendscript-automation/releases), nebo si jej postav ze zdroje (`npm run build` → `dist/`).
 2. Spusť přes `Soubor ▸ Skripty ▸ Jiný skript…`, nebo jej vlož do složky skriptů Illustratoru pro trvalé umístění:
    - **macOS:** `/Applications/Adobe Illustrator [verze]/Presets/[jazyk]/Scripts/`
 3. Při vložení do Presets restartuj Illustrator.
@@ -37,20 +37,22 @@ Zdrojový kód je v `src/`, rozdělený do modulů s namespace `GM.*`:
 
 ```
 src/
-├── polyfills/json2.js   JSON polyfill (Douglas Crockford, ES3)
 ├── constants.js         GM.CONSTANTS — verze, sentinel hodnoty, unit faktory
 ├── locale.js            GM.L — EN/CS lokalizace, format() helper
 ├── lib/
 │   ├── utils.js         GM.Utils — log, error, deepCopy, presetEquals
 │   ├── storage.js       GM.Storage — čtení/zápis JSON + migrace
-│   ├── validation.js    GM.Validation — rules-based validace vstupů
-│   └── ui_state.js      GM.UIState — pure preset state-transitions
+│   └── validation.js    GM.Validation — rules-based validace vstupů
 ├── config.js            GM.Config — getDefaults(), PRESET_KEY_DEFAULT
 ├── core.js              GM.Core — geometrie (calcPositions), bez DOM
 ├── illustrator.js       GM.Illustrator — DOM adapter (placeMark, swatch/layer)
 ├── ui.js                GM.UI — ScriptUI dialog
 └── main.js              GM.Main — vstupní bod, procesní smyčka
 ```
+
+Sdílené jádro `json2.js` (JSON polyfill) a `ui_state.js` (`GM.UIState`) žijí v
+`../shared/lib/` v kořeni repozitáře — build vkládá `json2.js` jako první a
+`ui_state.js` přes `buildUIState(GM)`. Viz [../docs/decisions.md](../docs/decisions.md).
 
 Podrobnosti (datové struktury, data flow, migrační řetěz) viz [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

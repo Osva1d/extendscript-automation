@@ -2,3 +2,6 @@
 
 # Node dependencies — installed from package.json/package-lock.json, never committed
 node_modules/
+
+# Build artifacts — shipped as release assets, not tracked (since v1.1.0)
+dist/

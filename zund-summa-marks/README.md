@@ -1,7 +1,7 @@
 # Zünd & Summa Marks
 
 > Copyright © 2025-2026 Ladislav Osvald.
-> Licensed under the **MIT License** — see [LICENSE](LICENSE).
+> Licensed under the **MIT License** — see [LICENSE](../LICENSE).
 
 Skript pro Adobe Illustrator, který automaticky generuje registrační značky pro řezací plotry Zünd a Summa. Určen pro tiskovou přípravu v prepress/DTP prostředí.
 
@@ -25,6 +25,15 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 - Adobe Illustrator CC 2024+ (v28.x) nebo CC 2025 (v29.x)
 - macOS (testováno na Monterey 12+)
 - ExtendScript engine (součást Illustratoru)
+
+---
+
+## Instalace
+
+1. Stáhni hotový `illustrator-zund-summa-marks.jsx` z [GitHub Releases](https://github.com/Osva1d/extendscript-automation/releases), nebo si jej postav ze zdroje (`bash tools/build.sh` → `dist/`).
+2. Spusť přes `Soubor ▸ Skripty ▸ Jiný skript…`, nebo jej vlož do složky skriptů Illustratoru pro trvalé umístění:
+   - **macOS:** `/Applications/Adobe Illustrator [verze]/Presets/[jazyk]/Scripts/`
+3. Při vložení do Presets restartuj Illustrator.
 
 ---
 
@@ -68,7 +77,6 @@ Nastavení se ukládají jako pojmenované presety. Speciální presety:
 zund-summa-marks/
 ├── src/
 │   ├── lib/
-│   │   ├── json2.js        # JSON polyfill (ES3 kompatibilní)
 │   │   └── utils.js        # ZSM.Utils — konverze, validace, logging
 │   ├── locale.js           # ZSM.L — lokalizace (cs/en), format helper
 │   ├── config.js           # ZSM.Config — konstanta, defaults, Storage
@@ -85,17 +93,21 @@ zund-summa-marks/
 │   └── test_core_math.js
 ├── tools/
 │   └── build.sh
-├── LICENSE
 └── README.md
 ```
 
 ### Load order
 
 ```
-json2.js → locale.js → utils.js → config.js → core.js → draw.js → ui.js → main.jsx
+../shared/lib/json2.js → locale.js → utils.js → validation.js →
+../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js →
+core.js → bounds.js → draw.js → ui.js → main.jsx
 ```
 
 `locale.js` musí být před `utils.js`, protože `ZSM.Utils` volá `ZSM.L.format()`.
+Sdílené jádro `json2.js` a `ui_state.js` žije v `../shared/lib/` v kořeni repozitáře
+(viz [../docs/decisions.md](../docs/decisions.md)); build je vkládá přímo, resp.
+přes `buildUIState(ZSM)`.
 
 ---
 
@@ -301,7 +313,7 @@ Manuální testy: viz `docs/MANUAL_TEST.md`
 
 ## Licence
 
-Licence MIT. Copyright © 2025-2026 Ladislav Osvald. Viz [LICENSE](LICENSE).
+Licence MIT. Copyright © 2025-2026 Ladislav Osvald. Viz [LICENSE](../LICENSE).
 
 Software můžete volně používat, kopírovat, upravovat a distribuovat (i komerčně), pokud zachováte copyright. Poskytováno „as is", bez záruk.
 

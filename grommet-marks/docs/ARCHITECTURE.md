@@ -19,15 +19,13 @@ Projekt používá namespace `GM.*`. Každý modul má guard `var GM = GM || {};
 
 ```
 src/
-├── polyfills/
-│   └── json2.js            JSON polyfill (Douglas Crockford, ES3)
 ├── constants.js            GM.CONSTANTS — verze, názvy vrstev/swatchů, sentinel, unit faktory
 ├── locale.js               GM.L — EN/CS stringtable, app.locale detekce, format() helper
 ├── lib/
 │   ├── utils.js            GM.Utils — log, error, deepCopy, presetEquals
 │   ├── storage.js          GM.Storage — čtení/zápis JSON, migrační řetěz
-│   ├── validation.js       GM.Validation — rules-based validace vstupů
-│   └── ui_state.js         GM.UIState — pure state-transition logika pro presety
+│   └── validation.js       GM.Validation — rules-based validace vstupů
+(../shared/lib/json2.js a ../shared/lib/ui_state.js — sdílené jádro, viz ../../docs/decisions.md)
 ├── config.js               GM.Config — getDefaults(), PRESET_KEY_DEFAULT, createEdgeDef()
 ├── core.js                 GM.Core — calcPositions, distributeOnSpan/Circuit, buildCircuit, detectCorners — PURE MATH
 ├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMarkGroup(), getOrCreateLayer(), registrationColor(), getSelectedPathInfo()
@@ -37,9 +35,9 @@ src/
 
 **Load order (dependencies first):**
 ```
-json2.js → constants.js → locale.js → lib/utils.js → config.js →
-lib/storage.js → lib/validation.js → lib/ui_state.js → core.js →
-illustrator.js → ui.js → main.js
+../shared/lib/json2.js → constants.js → locale.js → lib/utils.js → config.js →
+lib/storage.js → lib/validation.js → ../shared/lib/ui_state.js (buildUIState(GM)) →
+core.js → illustrator.js → ui.js → main.js
 ```
 
 **Build:**
@@ -206,7 +204,7 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 | Vytvoření vrstvy „Grommet Marks" | `src/illustrator.js` → `getOrCreateLayer()` |
 | Dialog a presety | `src/ui.js` → `GM.UI.buildDialog()` |
 | Edge panel + mirror inline | `src/ui.js` → `GM.UI.buildEdgePanel()` |
-| Preset state transitions | `src/lib/ui_state.js` → `GM.UIState` |
+| Preset state transitions | `../shared/lib/ui_state.js` → `GM.UIState` |
 | Validaci vstupů | `src/lib/validation.js` → `GM.Validation` |
 | Ukládání nastavení / migraci | `src/lib/storage.js` → `GM.Storage` |
 | Unit konverze v UI | `src/ui.js` → `unitsDDL.onChange` |
