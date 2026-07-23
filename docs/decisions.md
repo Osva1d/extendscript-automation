@@ -94,3 +94,11 @@ před načtením).
 - **Dev prostředí:** worktree sdílí `.git`, ale ne gitignored složky — nová
   worktree ⇒ `npm install` v `zund-summa-marks/` (jinak `test_properties` padá
   na chybějící `fast-check`).
+- **Version drift napříč soubory.** Verze žije ve víc místech (`package.json`,
+  `src/constants.js`/`config.js`, README, CHANGELOG) a driftuje, pokud ji něco
+  nehlídá. Build má parity guard `package.json` ↔ `constants.js`/`config.js`
+  (funguje — build spadne při nesouladu), ale README/CHANGELOG pod žádnou
+  kontrolou nejsou — proto drift vznikal právě tam (BRE README uvádělo 3.0.0 při
+  skutečné 1.0.0). Řešení po releasu: buď verzi v README nezmiňovat (odkaz na
+  CHANGELOG/Releases — částečně už uděláno), nebo README/CHANGELOG zahrnout do
+  parity guardu.
