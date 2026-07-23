@@ -44,6 +44,13 @@ OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 # UTF-8 BOM (required for Illustrator to correctly handle Unicode strings)
 printf '\xEF\xBB\xBF' > "$OUTPUT"
 
+# Deterministic build: stamp the last commit date of the build inputs (src/ and
+# the shared core), not today. Using date(1) made every rebuild on a new day
+# change dist with zero content change. Fallback: no git / no history.
+UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" ../shared/lib 2>/dev/null || true)"
+[ -n "$UPDATED" ] || UPDATED="$(date '+%Y-%m-%d')"
+UPDATED_YEAR="${UPDATED%%-*}"
+
 # File header
 cat >> "$OUTPUT" << EOF
 /*
@@ -51,9 +58,9 @@ cat >> "$OUTPUT" << EOF
  * Script:      $HUMAN_NAME
  * Version:     $VERSION
  * Author:      Ladislav Osvald
- * Updated:     $(date '+%Y-%m-%d')
+ * Updated:     $UPDATED
  *
- * Copyright (C) 2025-$(date '+%Y') Ladislav Osvald.
+ * Copyright (C) 2025-$UPDATED_YEAR Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
  *
  * Description:
