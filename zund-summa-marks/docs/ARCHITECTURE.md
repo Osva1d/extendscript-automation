@@ -31,12 +31,11 @@ Projekt používá namespace `ZSM.*`. Staré reference na `PMA.*` jsou chyba.
 ```
 src/
 ├── lib/                  ← pure utility modules — žádný DOM, plně testovatelné offline
-│   ├── json2.js          ZSM-independent — JSON polyfill pro ES3
 │   ├── utils.js          ZSM.Utils — mm↔pt konverze, log(), error()
 │   ├── validation.js     ZSM.Validation — schema-based validace numerických polí
-│   ├── ui_state.js       ZSM.UIState — preset save/saveAs/delete, modified detekce
 │   ├── storage.js        ZSM.Storage — load/save JSON settings + migrace v26.0→v27
 │   └── bounds.js         ZSM.Bounds — měření bounds Illustrator obsahu (clip-aware)
+(../shared/lib/json2.js a ../shared/lib/ui_state.js — sdílené jádro, viz ../../docs/decisions.md)
 ├── locale.js             ZSM.L — EN/CS stringtable, app.locale detekce, format()
 ├── config.js             ZSM.Config — konstanty, getDefaults() (Storage moved to lib/)
 ├── core.js               ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
@@ -58,7 +57,7 @@ Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt".
 
 **Load order (NELZE měnit):**
 ```
-json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.jsx
+../shared/lib/json2.js → locale.js → utils.js → validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.jsx
 ```
 
 `locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`).

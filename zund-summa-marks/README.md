@@ -77,7 +77,6 @@ Nastavení se ukládají jako pojmenované presety. Speciální presety:
 zund-summa-marks/
 ├── src/
 │   ├── lib/
-│   │   ├── json2.js        # JSON polyfill (ES3 kompatibilní)
 │   │   └── utils.js        # ZSM.Utils — konverze, validace, logging
 │   ├── locale.js           # ZSM.L — lokalizace (cs/en), format helper
 │   ├── config.js           # ZSM.Config — konstanta, defaults, Storage
@@ -100,10 +99,15 @@ zund-summa-marks/
 ### Load order
 
 ```
-json2.js → locale.js → utils.js → config.js → core.js → draw.js → ui.js → main.jsx
+../shared/lib/json2.js → locale.js → utils.js → validation.js →
+../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js →
+core.js → bounds.js → draw.js → ui.js → main.jsx
 ```
 
 `locale.js` musí být před `utils.js`, protože `ZSM.Utils` volá `ZSM.L.format()`.
+Sdílené jádro `json2.js` a `ui_state.js` žije v `../shared/lib/` v kořeni repozitáře
+(viz [../docs/decisions.md](../docs/decisions.md)); build je vkládá přímo, resp.
+přes `buildUIState(ZSM)`.
 
 ---
 
