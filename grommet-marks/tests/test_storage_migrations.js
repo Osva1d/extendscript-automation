@@ -70,7 +70,7 @@ eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 
 // JSON polyfill (in case Node version is ancient, unlikely but safe)
-eval(fs.readFileSync(path.join(__dirname, "..", "src", "polyfills", "json2.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "json2.js"), "utf8"));
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "storage.js"), "utf8"));
 

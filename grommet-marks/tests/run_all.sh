@@ -21,6 +21,7 @@ else
 fi
 
 SUITES=(
+    "tests/test_utils.js"
     "tests/test_core_math.js"
     "tests/test_core_circuit.js"
     "tests/test_storage_migrations.js"

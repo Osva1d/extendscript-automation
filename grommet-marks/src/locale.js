@@ -15,7 +15,7 @@ GM.L = (function () {
     var strings = {
         en: {
             // Sentinel display strings
-            DEFAULT_PRESET: "[Default]",
+            PRESET_DEFAULT: "[Default]",
 
             // Units
             UNIT_MM: "Millimeters",
@@ -143,7 +143,7 @@ GM.L = (function () {
 
         cs: {
             // Sentinel display strings
-            DEFAULT_PRESET: "[Výchozí]",
+            PRESET_DEFAULT: "[Výchozí]",
 
             // Units
             UNIT_MM: "Milimetry",

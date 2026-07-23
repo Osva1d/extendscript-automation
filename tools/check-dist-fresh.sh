@@ -33,6 +33,10 @@ TMPROOT="$(mktemp -d)"
 cleanup() { rm -rf "${TMPROOT:-}"; }
 trap cleanup EXIT
 
+# Shared core modules live at repo root; project builds reference ../shared/.
+# Mirror it next to the temp project copies so isolated builds resolve it.
+[[ -d "$REPO_ROOT/shared" ]] && cp -R "$REPO_ROOT/shared" "$TMPROOT/shared"
+
 # Strip the two header lines that change without a real source change, so a
 # fresh build of unchanged src compares equal to the committed dist.
 normalize() {
@@ -50,8 +54,9 @@ for build in "$REPO_ROOT"/*/tools/build.sh; do
     dist="$proj_dir/dist/illustrator-$slug.jsx"
 
     # Pre-commit mode: skip projects without staged src/ changes.
+    # shared/ feeds every project's build, so staged shared/ changes check all.
     if $STAGED_ONLY; then
-        if ! git -C "$REPO_ROOT" diff --cached --name-only -- "$slug/src/" | grep -q .; then
+        if ! git -C "$REPO_ROOT" diff --cached --name-only -- "$slug/src/" "shared/" | grep -q .; then
             continue
         fi
     fi
