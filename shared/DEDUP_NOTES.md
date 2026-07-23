@@ -17,6 +17,13 @@ Průběžný seznam vědomých změn chování z dedupu. Doplňovat u každé da
    ISO-8601 string (dřív `{}`). Obě změny = posun k nativní JSON sémantice.
    Dnešní produkční kód ani jednu cestu nepoužívá.
 
+## Samostatný nález (NEŘEŠIT během dedupu)
+
+**grommet-marks nemá žádný ES3 compliance scanner** — GM `src/` není ES3
+kontrolované vůbec (ZSM `test_es3_compliance.js` hlídá jen ZSM src/ + shared/lib/).
+Není to regrese z dedupu — dřívější díra. Kandidát na doplnění po dokončení
+dedupu (sdílené moduly už kryje ZSM scanner, jedna kontrola stačí — neduplikovat).
+
 ## Metodika: testování polyfillů
 
 **Polyfilly a cokoli modifikující prototypy testovat v IZOLOVANÉM procesu** —

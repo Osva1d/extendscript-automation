@@ -15,7 +15,7 @@
  *     repeat, trimStart, trimEnd
  *   - Object.keys, values, entries, assign, freeze (sometimes), getOwn-
  *     PropertyNames partial, fromEntries
- *   - JSON.* — POLYFILLED via src/lib/json2.js (so JSON.parse/stringify OK)
+ *   - JSON.* — POLYFILLED via shared/lib/json2.js (so JSON.parse/stringify OK)
  *   - Promise, Map, Set, WeakMap, WeakSet
  *   - let, const, arrow functions (=>), template literals (`${...}`),
  *     destructuring, spread/rest (...), default params, classes, async/await
@@ -98,8 +98,11 @@ var FORBIDDEN_PATTERNS = [
     { name: "await keyword",              re: /(^|\s|\()\s*await\s+/g }
 ];
 
-// Files to scan: all .js / .jsx in src/, except polyfill (json2.js)
-var SRC_DIR = path.join(__dirname, "..", "src");
+// Files to scan: all .js / .jsx in src/ AND the shared core (shared/lib/),
+// except json2.js — vendored third-party code (Crockford's json2); we don't
+// lint foreign code, we take it verbatim.
+var SRC_DIR    = path.join(__dirname, "..", "src");
+var SHARED_DIR = path.join(__dirname, "..", "..", "shared", "lib");
 function listJS(dir) {
     var out = [];
     var entries = fs.readdirSync(dir);
@@ -109,7 +112,6 @@ function listJS(dir) {
         if (st.isDirectory()) {
             out = out.concat(listJS(p));
         } else if (/\.(js|jsx)$/.test(entries[i])) {
-            // Skip polyfill (it's expected to use modern patterns it polyfills)
             if (entries[i] === "json2.js") continue;
             out.push(p);
         }
@@ -118,6 +120,7 @@ function listJS(dir) {
 }
 
 var files = listJS(SRC_DIR);
+if (fs.existsSync(SHARED_DIR)) files = files.concat(listJS(SHARED_DIR));
 console.log("\nScanning " + files.length + " source files for ES3 compliance...");
 
 // Strip comments (// and /* */) so patterns inside docstrings don't trigger
