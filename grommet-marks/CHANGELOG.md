@@ -36,3 +36,10 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline).
+
+---
+
+> **Poznámka k číslování.** Tagy `gm-v4.0.0` / `gm-v5.0.0` / `gm-v6.0.0` v historii
+> repozitáře patří **předchozí interní řadě** před veřejným vydáním. Veřejná řada
+> začíná na 1.0.0 a pokračuje odtud — číslo tedy nejde „dolů", jen se resetovalo
+> při přechodu na open-source.
