@@ -17,6 +17,52 @@ Průběžný seznam vědomých změn chování z dedupu. Doplňovat u každé da
    ISO-8601 string (dřív `{}`). Obě změny = posun k nativní JSON sémantice.
    Dnešní produkční kód ani jednu cestu nepoužívá.
 
+## Non-dedup decisions (vědomě NEdedupováno)
+
+**Princip:** dedup jen tam, kde platí „oprav jednou místo N-krát". Když je
+divergence doménová (oprava v jednom nástroji by se druhého stejně netýkala),
+je vynucený sdílený modul špatná abstrakce — trvale sváže nezávislé domény.
+Špatná abstrakce je dražší než duplicita.
+
+1. **storage.js** (rozhodnuto 2026-07-23): divergence je doménová, ne copy-drift.
+   Měření: 123 vs 118 kód-řádků, 153 diff řádků (~65 %). Per-tool: cesty
+   (GrommetMarks/ vs ZSM složka + legacy soubor), chybová sémantika save
+   (GM alert vs ZSM log+checked write/close), migrace = čistá doména každého
+   nástroje (GM: offsety/jednotky/sentinely; ZSM: thru/kiss→layers). Společná
+   jen ~25–30ř. kostra propletená s doménou. Pozn.: audit odhadoval
+   „sjednotitelné s malým úsilím" — měření vyvrátilo (druhý omyl auditu po
+   „GM nemá testy").
+   - Prověřený sub-kandidát **readJsonFile**: 6řádkové čtecí jádro je v obou
+     textově identické a pojmenovatelné, přesto NEextrahováno — 6 řádků
+     nepřeváží fixní režii sdíleného modulu (build wiring, testy, ES3 scanner,
+     ceremonie kolem každé změny).
+
+2. **validation.js** (rozhodnuto 2026-07-23): NEdedupováno. Měření: GM 110 vs
+   ZSM 60 kód-řádků, 148 diff řádků z ~170 (≈ 87 %). Odlišná signatura
+   (`validate(cfg, L)` vs `validate(raw, prev, L)`), odlišný návratový tvar
+   (`{valid, settings}` vs `{valid, settings, errors[]}`), odlišný algoritmus
+   (imperativní early-return vs data-driven smyčka s mode-scopingem a agregací
+   chyb). Architektonická volba per nástroj, ne drift — společné je jen jméno
+   funkce. GM navíc drží validateNumber zde, ZSM v utils.
+
+3. **utils.js** (rozhodnuto 2026-07-23): NEdedupováno — měřeno funkci po funkci,
+   žádná nesplňuje „oprav jednou platí i tam". `log`/`error` se rozešly vědomě
+   (ZSM debug gate + lokalizovaný prefix vs GM bezpodmínečný log + SCRIPT_NAME),
+   `presetEquals` je schema-doména (tělo = schema nástroje), `deepCopy` má
+   JEDINÉHO konzumenta (GM) → sdílení by byl přesun, ne dedup (kód vzdálený od
+   jediného uživatele + vazba navíc, nulový přínos). ZSM geometrie
+   (mm2pt/getSF/…) je doména.
+
+**Architektonická poznámka:** shared `ui_state` konzumuje `NS.Utils.presetEquals`
+přes injektáž = **shared závisí na tool-provided kontraktu, ne naopak**. Zdravý
+směr závislosti a důvod, proč presetEquals musí zůstat lokální.
+
+**Bilance dedupu: 2 z 5 sdíleno** (ui_state, json2), 3 lokální (storage,
+validation, utils). Klíčové poučení: **„překryv je ve jménech, ne v chování"**
+— stejné jméno signalizuje stejnou ROLI v architektuře, ne stejnou implementaci.
+Audit vyvrácen 4× (GM testy → storage → validation → utils), protože měřil
+textovou podobnost. Jediné platné kritérium pro dedup: „oprav jednou platí i tam."
+
 ## Samostatný nález (NEŘEŠIT během dedupu)
 
 **grommet-marks nemá žádný ES3 compliance scanner** — GM `src/` není ES3
