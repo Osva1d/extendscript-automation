@@ -16,7 +16,7 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 
 ## Instalace
 
-1. Vezmi build `dist/illustrator-grommet-marks.jsx`.
+1. Stáhni hotový `illustrator-grommet-marks.jsx` z [GitHub Releases](https://github.com/Osva1d/extendscript-automation/releases), nebo si jej postav ze zdroje (`npm run build` → `dist/`).
 2. Spusť přes `Soubor ▸ Skripty ▸ Jiný skript…`, nebo jej vlož do složky skriptů Illustratoru pro trvalé umístění:
    - **macOS:** `/Applications/Adobe Illustrator [verze]/Presets/[jazyk]/Scripts/`
 3. Při vložení do Presets restartuj Illustrator.

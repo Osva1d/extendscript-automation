@@ -1,7 +1,7 @@
 # Zünd & Summa Marks
 
 > Copyright © 2025-2026 Ladislav Osvald.
-> Licensed under the **MIT License** — see [LICENSE](LICENSE).
+> Licensed under the **MIT License** — see [LICENSE](../LICENSE).
 
 Skript pro Adobe Illustrator, který automaticky generuje registrační značky pro řezací plotry Zünd a Summa. Určen pro tiskovou přípravu v prepress/DTP prostředí.
 
@@ -25,6 +25,15 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 - Adobe Illustrator CC 2024+ (v28.x) nebo CC 2025 (v29.x)
 - macOS (testováno na Monterey 12+)
 - ExtendScript engine (součást Illustratoru)
+
+---
+
+## Instalace
+
+1. Stáhni hotový `illustrator-zund-summa-marks.jsx` z [GitHub Releases](https://github.com/Osva1d/extendscript-automation/releases), nebo si jej postav ze zdroje (`bash tools/build.sh` → `dist/`).
+2. Spusť přes `Soubor ▸ Skripty ▸ Jiný skript…`, nebo jej vlož do složky skriptů Illustratoru pro trvalé umístění:
+   - **macOS:** `/Applications/Adobe Illustrator [verze]/Presets/[jazyk]/Scripts/`
+3. Při vložení do Presets restartuj Illustrator.
 
 ---
 
@@ -85,7 +94,6 @@ zund-summa-marks/
 │   └── test_core_math.js
 ├── tools/
 │   └── build.sh
-├── LICENSE
 └── README.md
 ```
 
@@ -301,7 +309,7 @@ Manuální testy: viz `docs/MANUAL_TEST.md`
 
 ## Licence
 
-Licence MIT. Copyright © 2025-2026 Ladislav Osvald. Viz [LICENSE](LICENSE).
+Licence MIT. Copyright © 2025-2026 Ladislav Osvald. Viz [LICENSE](../LICENSE).
 
 Software můžete volně používat, kopírovat, upravovat a distribuovat (i komerčně), pokud zachováte copyright. Poskytováno „as is", bez záruk.
 
