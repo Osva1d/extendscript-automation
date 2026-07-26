@@ -1,7 +1,15 @@
-# Architecture: Grommet Marks v6.0.0
+# Architecture: Grommet Marks
 
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
+>
+> **Verze skriptu tady záměrně není** — byla by čtvrtou kopií vedle
+> `package.json`, `src/constants.js` a `CHANGELOG.md`, kterou nic nehlídá (a taky
+> driftla: dokument uváděl v6.0.0, zatímco veřejná řada je 1.1.0). Aktuální verzi
+> hledej v [`../CHANGELOG.md`](../CHANGELOG.md).
+>
+> Čísla `v2`–`v6` v textu jsou **historické reference** k interní řadě před
+> veřejným vydáním, ne tvrzení o aktuálním stavu.
 
 ---
 
