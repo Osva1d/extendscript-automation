@@ -7,13 +7,13 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
 
 | značka | co to znamená |
 |---|---|
-| 🔒 **vynuceno** | selže build nebo test, když to porušíš |
-| 📋 **šablona** | v `templates/` — kopíruj, nepiš znovu |
-| 📝 **prosa** | nikdo to nehlídá; drž se toho, nebo to změň vědomě |
+| **ENFORCED** | selže build nebo test, když to porušíš |
+| **TEMPLATE** | v `templates/` — kopíruj, nepiš znovu |
+| **GUIDANCE** | nikdo to nehlídá; drž se toho, nebo to změň vědomě |
 
 ---
 
-## 🔒 Vynuceno strojem
+## ENFORCED — hlídá stroj
 
 - **Parity guard verze** — build spadne, když `package.json` ≠ verzní konstanta
   v `src/constants.js` (GM) / `src/config.js` (ZSM, BRE). Běží ve všech třech buildech.
@@ -23,7 +23,7 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
   ⚠ GM a BRE zatím scanner nemají — viz `decisions.md`.
 - **Testy** — `npm test` (GM 7 suit, ZSM 13 suit); `npm run verify` = build + test.
 
-## 📋 Šablony (`templates/`)
+## TEMPLATE — kopíruj z `templates/`
 
 - `module-header.js` — hlavička modulu + JSDoc vzor + ES3 připomínka
 - `README.md` — kostra README nástroje
@@ -33,7 +33,7 @@ Soubor, který se kopíruje, nemůže driftovat od sebe sama.
 
 ---
 
-## 📝 Kód
+## GUIDANCE — Kód
 
 **Hlavička distu** (generuje build, needituj ručně): `Script / Version / Author /
 Updated` + Copyright + `Description`. `Author` je vždy **`Ladislav Osvald`** (plné
@@ -75,7 +75,7 @@ nenesla informaci.
 **ES3 only** — `var`, `function`. Žádné `let`/`const`/arrow/template literals/
 `Array.prototype.map`. JSON polyfill je v `shared/lib/json2.js`, v build orderu vždy první.
 
-## 📝 Sdílené jádro (`shared/lib/`)
+## GUIDANCE — Sdílené jádro (`shared/lib/`)
 
 Jen dva moduly: `json2.js` (prostý soubor, bez namespace) a `ui_state.js`
 (namespace-neutrální factory `buildUIState(NS)`, build za ni připojí volání).
@@ -84,7 +84,7 @@ Jen dva moduly: `json2.js` (prostý soubor, bez namespace) a `ui_state.js`
 `storage`, `validation` a `utils` zůstávají lokální, protože jejich divergence je
 doménová. Odůvodnění v [`decisions.md`](decisions.md).
 
-## 📝 Git
+## GUIDANCE — Git
 
 **Conventional Commits** — 100 % commitů. Typy dle četnosti: `feat`, `docs`, `fix`,
 `refactor`, `chore`, `test`, `build`, `style`, `revert`.
@@ -104,7 +104,7 @@ vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
 
 **Identita** — `Osva1d <143696990+Osva1d@users.noreply.github.com>`, globálně.
 
-## 📝 Dokumentace
+## GUIDANCE — Dokumentace
 
 **Root:** `README.md` + `README.cs.md` (rozcestník, plná parita), `LICENSE`,
 `docs/decisions.md` (architektonická rozhodnutí a proč).
@@ -123,7 +123,7 @@ změny chování do CHANGELOGu nepatří (patří do commit message).
 chování; major = rozbití existujících presetů/dat. Bump = `package.json` + verzní
 konstanta + nová položka v CHANGELOGu + `Updated:` na datum verze.
 
-## 📝 Distribuce
+## GUIDANCE — Distribuce
 
 `dist/` se **necommituje** (gitignored) — artefakty jsou GitHub Release assety,
 `src/` je zdroj pravdy. Jeden Release per nástroj, `.jsx` nahrán ručně navrch

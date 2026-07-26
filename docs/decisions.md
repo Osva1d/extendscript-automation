@@ -85,6 +85,26 @@ procesu, ZSM (načtený po něm) si ho půjčil a vypadal ekvivalentně. Izolace
 jeden `node` proces na variantu (+ u ES3 simulace `delete Date.prototype.toJSON`
 před načtením).
 
+## Vzorec: prosa selhává tam, kde je selhání tiché — třikrát naměřeno
+
+Tři nezávislé případy, kdy **pravidlo existovalo, bylo správné, a stejně se
+neuplatnilo**. Společné jim je, že porušení nic neohlásí:
+
+1. **Noreply identita** (2026-07) — pravidlo bylo v `CLAUDE.md`, přesto se čtyři
+   commity s osobním e-mailem dostaly do veřejného repa. Řešení: `git config
+   --global` + GitHub „Block command line pushes that expose my email".
+2. **Version drift** — verze duplikovaná v `package.json`, verzní konstantě,
+   `Updated:` hlavičce a `CHANGELOG.md`. Parity guard kryje jen první dvě, zbytek
+   driftoval (BRE README uvádělo 3.0.0 při skutečné 1.0.0).
+3. **Commit přímo na `main`** (2026-07-26) — pravidlo „main je posvátná, práce
+   začíná na větvi" se u úklidu konvencí neuplatnilo ani jednou ve dvou blocích
+   commitů, v obou repech. Nikdo si toho nevšiml, protože nic nezaprotestovalo.
+
+**Společné řešení:** pre-commit hook, který odmítne commit na `main` (a případně
+zkontroluje shodu verze v hlavičce ↔ CHANGELOGu). Zatím **neimplementováno** —
+vlastní úkol. Zásada, která z toho plyne: *když se pravidlo opakovaně poruší,
+nahraď pravidlo mechanismem.*
+
 ## Otevřené body — samostatné úkoly (z auditu konvencí 2026-07-26)
 
 Nálezy z měření napříč šesti skripty. **Vědomě neimplementováno** — každý je vlastní
