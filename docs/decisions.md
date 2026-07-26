@@ -85,6 +85,26 @@ procesu, ZSM (načtený po něm) si ho půjčil a vypadal ekvivalentně. Izolace
 jeden `node` proces na variantu (+ u ES3 simulace `delete Date.prototype.toJSON`
 před načtením).
 
+## Otevřené body — samostatné úkoly (z auditu konvencí 2026-07-26)
+
+Nálezy z měření napříč šesti skripty. **Vědomě neimplementováno** — každý je vlastní
+úkol s vlastním rozsahem, ne příloha k úklidu konvencí.
+
+1. **ES3 scanner chybí v GM a BRE** (N6) — hlídá jen ZSM
+   (`tests/test_es3_compliance.js`, kryje i `shared/lib/`). GM a BRE `src/` není
+   ES3 kontrolované. Dřívější díra, ne regrese. Řešení: rozšířit scanner na ostatní
+   `src/` stromy, nebo ho povýšit na repo-level test.
+2. **BRE nemá testy** (N7) — GM 7 suit, ZSM 13, BRE 0 (a jen `build` v npm scripts,
+   chybí `test`/`verify`). Známá mezera; BRE je nejmenší nástroj, ale bez sítě.
+3. **IIFE wrap jen v GM** (N16) — GM balí dist do `(function(){…})()`, ZSM a BRE
+   nechávají globální scope. **GM vzor je věcně lepší**: ExtendScript engine drží
+   globály mezi běhy, takže stale state z předchozího spuštění může ovlivnit další.
+   Ale je to **funkční změna** — vyžaduje testy a ověření v Illustratoru, ne
+   textovou úpravu buildu.
+4. **`zund-summa-marks/docs/ARCHITECTURE.md` nese pre-rebaseline verze** — nadpis
+   „v26.5.1" a „Aktuální verze: v26.5.0", zatímco veřejná řada je 1.0.0. Stejný
+   drift, jaký se opravil v README changelogách; ARCHITECTURE se tehdy neměřilo.
+
 ## Otevřené body
 
 - **GM nemá ES3 compliance scanner** — GM `src/` není ES3 kontrolované (ZSM
