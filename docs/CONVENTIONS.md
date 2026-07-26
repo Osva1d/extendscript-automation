@@ -15,8 +15,16 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
 
 ## ENFORCED — hlídá stroj
 
-- **Parity guard verze** — build spadne, když `package.json` ≠ verzní konstanta
-  v `src/constants.js` (GM) / `src/config.js` (ZSM, BRE). Běží ve všech třech buildech.
+- **Parity guard verze** — build spadne, když se rozejde `package.json` ↔ verzní
+  konstanta (`src/constants.js` u GM, `src/config.js` u ZSM/BRE) ↔ **nejnovější
+  položka v `CHANGELOG.md`**. Běží ve všech třech buildech. Chytá „release
+  napůl": verze bumpnutá, changelog zapomenutý (nebo naopak).
+- **Commit na `main`** — `tools/hooks/pre-commit` ho odmítne; merge do main pustí
+  (rozpozná probíhající merge přes `MERGE_HEAD`). Instaluje `tools/install-hooks.sh`.
+- **Force push na `github`** — `tools/hooks/pre-push` odmítne non-fast-forward push
+  na veřejný remote. Force detekuje **nepřímo** (`git merge-base --is-ancestor`),
+  protože hook nevidí příznaky příkazové řádky. Na `origin` (Codeberg, privátní
+  záloha) force projde — tam je legitimní.
 - **ES3 compliance** — `zund-summa-marks/tests/test_es3_compliance.js` skenuje ZSM
   `src/` **a** `shared/lib/` na zakázané konstrukce (`let`/`const`/arrow/`Array.map`…).
   Vendorovaný `json2.js` je vyloučen (cizí kód nelintujeme).
@@ -39,10 +47,21 @@ Soubor, který se kopíruje, nemůže driftovat od sebe sama.
 Updated` + Copyright + `Description`. `Author` je vždy **`Ladislav Osvald`** (plné
 jméno; `Osva1d` je git identita, ne autor produktu).
 
-**`Updated:` = datum verze**, ne datum poslední editace. Musí odpovídat datu
-poslední položky v `CHANGELOG.md`. Build ho stampuje **deterministicky** z data
-posledního commitu vstupů (`src/` + `../shared/lib`), ne z `date(1)` — jinak každý
-rebuild v jiný den mění dist bez změny obsahu.
+**`Updated:` = datum posledního commitu vstupů** (`src/` + `../shared/lib`), ne
+datum releasu. Build ho stampuje **deterministicky** z gitu, ne z `date(1)` —
+jinak každý rebuild v jiný den mění dist bez změny obsahu. Pole je **generované,
+takže nemůže driftovat → nekontroluje se**.
+
+> **Proč tady jinak než v `applescript-automation`.** Tam `Updated:` znamená
+> *datum verze* a kontroluje se (`tools/check-versions.sh`). Rozdíl není nedodělek,
+> ale důsledek mechaniky: tady pole generuje build, tam ho člověk píše ručně.
+> Navíc `dist/` se od 1.1.0 necommituje — k uživateli se dostanou jen release
+> buildy z release commitu, kde `Updated` ≈ datum releasu automaticky. Rozpor
+> vzniká jen v lokálních dev buildech, které nikdo jiný nevidí.
+>
+> Pravidlo „`Updated` = datum verze" bylo původně napsané pro oba repy — bez
+> změření, jak build reálně funguje. Měření ho vyvrátilo (viz `decisions.md`,
+> sekce o vzorcích).
 
 **Hlavička modulu v `src/`:**
 ```js

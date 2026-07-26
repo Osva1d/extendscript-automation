@@ -100,10 +100,32 @@ neuplatnilo**. Společné jim je, že porušení nic neohlásí:
    začíná na větvi" se u úklidu konvencí neuplatnilo ani jednou ve dvou blocích
    commitů, v obou repech. Nikdo si toho nevšiml, protože nic nezaprotestovalo.
 
-**Společné řešení:** pre-commit hook, který odmítne commit na `main` (a případně
-zkontroluje shodu verze v hlavičce ↔ CHANGELOGu). Zatím **neimplementováno** —
-vlastní úkol. Zásada, která z toho plyne: *když se pravidlo opakovaně poruší,
+**Vyřešeno (2026-07-26):** `tools/hooks/` + `tools/install-hooks.sh` v obou
+veřejných repech i v `cv-pipeline` — `pre-commit` odmítne commit na `main`
+(merge pustí přes `MERGE_HEAD`), `pre-push` odmítne non-fast-forward push na
+veřejný `github`. Version parity je rozšířený guard v `build.sh` (ES) resp.
+`tools/check-versions.sh` (AS). Zásada: *když se pravidlo opakovaně poruší,
 nahraď pravidlo mechanismem.*
+
+## Druhý vzorec: pravidlo napsané bez změření mechaniky
+
+Dvakrát se stalo, že pravidlo znělo rozumně, ale odporovalo tomu, jak systém
+reálně funguje — a odhalilo to až měření, ne čtení:
+
+1. **„Veřejné ES commity používají noreply"** (2026-07-25) — předpoklad převzatý
+   z `CLAUDE.md`. Měření: všech 188 commitů neslo osobní e-mail; pravidlo nikdy
+   nebylo aplikováno.
+2. **„`Updated:` = datum verze, musí odpovídat CHANGELOGu"** (2026-07-26) —
+   napsáno pro oba repy při auditu konvencí. Měření: v ES to pole **generuje
+   build** z data posledního commitu `src/`, takže po každém commitu do `src/`
+   se legitimně rozchází s datem releasu (ZSM: dist `2026-07-23` vs CHANGELOG
+   `2026-06-28`). Kontrola podle původního pravidla by build okamžitě shodila.
+   Opraveno: ES pole negeneruje drift → nekontroluje se; AS pole je ruční →
+   kontroluje se. Dvě mechaniky, dvě pravidla — zdokumentováno v obou
+   `CONVENTIONS.md`.
+
+Poučení: **konvenci vytěženou z kódu je pořád nutné ověřit proti mechanismu, který
+ji vyrábí.** „Vidím to v souborech" nestačí, když ta hodnota vzniká automaticky.
 
 ## Otevřené body — samostatné úkoly (z auditu konvencí 2026-07-26)
 

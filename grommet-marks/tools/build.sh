@@ -34,6 +34,18 @@ if [ "$SRC_VERSION" != "$VERSION" ]; then
     exit 1
 fi
 
+# CHANGELOG parity — the newest entry in CHANGELOG.md must carry the version
+# being built. Catches the release-half-done case: version bumped, changelog
+# forgotten (or the reverse). Only the VERSION is checked, never the date:
+# `Updated:` in the header is generated from the last src commit, so in a local
+# dev build it legitimately differs from the release date.
+CHANGELOG_VERSION="$(sed -n 's/^## \[\([0-9][^]]*\)\].*/\1/p' CHANGELOG.md | head -1)"
+if [ -n "$CHANGELOG_VERSION" ] && [ "$CHANGELOG_VERSION" != "$VERSION" ]; then
+    echo "ERROR: version drift — package.json=$VERSION but newest CHANGELOG.md entry=$CHANGELOG_VERSION" >&2
+    echo "       Add a CHANGELOG entry for $VERSION (or fix the version) before building." >&2
+    exit 1
+fi
+
 mkdir -p "$DIST_DIR"
 OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 
