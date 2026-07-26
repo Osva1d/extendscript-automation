@@ -9,7 +9,7 @@
 #   Concatenates Batch Relink Export source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   locale.js -> config.js -> core.js -> ui.js -> main.jsx
+#   locale.js -> config.js -> core.js -> ui.js -> main.js
 # ===========================================================================
 
 set -euo pipefail
@@ -34,15 +34,22 @@ OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 
 printf '\xEF\xBB\xBF' > "$OUTPUT"
 
+# Deterministic build: stamp the last commit date of the build inputs, not today.
+# Using date(1) made every rebuild on a new day change dist with zero content
+# change. Fallback: no git / no history.
+UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" 2>/dev/null || true)"
+[ -n "$UPDATED" ] || UPDATED="$(date '+%Y-%m-%d')"
+UPDATED_YEAR="${UPDATED%%-*}"
+
 cat >> "$OUTPUT" << EOF
 /*
  * ===========================================================================
  * Script:      $HUMAN_NAME
  * Version:     $VERSION
  * Author:      Ladislav Osvald
- * Updated:     $(date '+%Y-%m-%d')
+ * Updated:     $UPDATED
  *
- * Copyright (C) 2025-$(date '+%Y') Ladislav Osvald.
+ * Copyright (C) 2025-$UPDATED_YEAR Ladislav Osvald.
  * MIT License — see LICENSE for full terms.
  *
  * Description:
@@ -58,7 +65,7 @@ cat "$SRC_DIR/locale.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/config.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/core.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"
-cat "$SRC_DIR/main.jsx"   >> "$OUTPUT"
+cat "$SRC_DIR/main.js"   >> "$OUTPUT"
 
 LINES=$(wc -l < "$OUTPUT" | tr -d ' ')
 echo "Build complete: $OUTPUT ($LINES lines)"
