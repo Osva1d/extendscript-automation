@@ -1,14 +1,16 @@
-# Architecture: Zünd & Summa Marks v26.5.1
+# Architecture: Zünd & Summa Marks
 
 > Copyright © 2025-2026 Ladislav Osvald — MIT License.
 > Technický přehled projektu.
 > Než začneš pracovat na tomto projektu, přečti celý dokument.
 >
-> **Aktuální verze:** v26.5.0 (Phase 3 — režim „Pouze značky", ořezové linky vždy do
-> samostatné top-level vrstvy „Trim", ↺ Revert, odstraněno tlačítko Reset; opravy:
-> `canonColor` normalizace registrační barvy v CZ locale, re-validace po `setUIValues`,
-> C++ crash guard při vytváření top-level vrstvy nad aktivním sublayerem).
-> Manuální měřítko 1:N přišlo v Phase 2 (v26.4.0).
+> **Verze skriptu tady záměrně není** — žila by vedle `package.json`,
+> `src/config.js` a `CHANGELOG.md` jako čtvrtá kopie, kterou nic nehlídá (a taky
+> driftla: dokument uváděl v26.5.1, zatímco veřejná řada je 1.0.0). Aktuální verzi
+> hledej v [`../CHANGELOG.md`](../CHANGELOG.md).
+>
+> Čísla `v26.x` a dřívější v textu jsou **historické reference** k interní řadě
+> před veřejným vydáním, ne tvrzení o aktuálním stavu.
 
 ---
 
