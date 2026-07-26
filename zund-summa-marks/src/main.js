@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: Entry point — IIFE, orchestration
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Config, ZSM.Core, ZSM.Draw, ZSM.Storage, ZSM.UI, ZSM.Utils
+// ------------------------------------------------------------------------
 (function (ZSM) {
     var draw = ZSM.Draw;
     try {

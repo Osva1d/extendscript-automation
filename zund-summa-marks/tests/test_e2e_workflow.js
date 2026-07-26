@@ -2,20 +2,20 @@
 /**
  * End-to-End Workflow Tests
  *
- * Simulates the production data flow through main.jsx WITHOUT a real
+ * Simulates the production data flow through main.js WITHOUT a real
  * ScriptUI dialog. The dialog is "stubbed" by directly mutating pData
- * the way btnOk.onClick would, then we verify that main.jsx's settings
+ * the way btnOk.onClick would, then we verify that main.js's settings
  * extraction yields what render() needs.
  *
  * Why this exists: each individual module (Validation, UIState, Draw,
- * Storage) has unit tests. But the GLUE between them (main.jsx logic)
+ * Storage) has unit tests. But the GLUE between them (main.js logic)
  * was untested. A real bug slipped through:
  *
  *   - User on named preset "MyZund" (color="[Registration]")
  *   - User changes UI dropdown to "cut" — does not click Save
  *   - btnOk stores [Last Settings] with "cut"; named preset stays
  *     immutable per Tier 2 stable-preset semantics
- *   - main.jsx (PRE-FIX) reads `presets[activePreset]` → "[Registration]"
+ *   - main.js (PRE-FIX) reads `presets[activePreset]` → "[Registration]"
  *   - Render reports missing-color warning for "[Registration]"
  *
  * Tests below codify these expectations so the regression cannot recur.
@@ -79,7 +79,7 @@ function simulateBtnOk(pData, rawUI) {
 }
 
 /**
- * Simulates main.jsx's settings extraction. Must match src/main.jsx exactly:
+ * Simulates main.js's settings extraction. Must match src/main.js exactly:
  *   var res = resultWrapper.presets["[Last Settings]"]
  *          || resultWrapper.presets[resultWrapper.activePreset];
  */
@@ -134,7 +134,7 @@ function rawUI(overrides) {
 // THIS IS THE ACTUAL BUG. User had named preset "MyZund" with color
 // "[Registration]". Changed dropdown to "cut" in UI without clicking Save.
 // Hit Generate. Expected: render uses "cut". Actual (PRE-FIX): render used
-// "[Registration]" because main.jsx pulled from presets[activePreset].
+// "[Registration]" because main.js pulled from presets[activePreset].
 console.log("\n=== TEST 1: BUG REGRESSION — runtime uses [Last Settings], not stale preset ===");
 
 var pData = basePData("MyZund", {
@@ -164,7 +164,7 @@ assertEq(pData.presets["MyZund"].layers[0].color, "[Registration]",
 assertEq(pData.presets["[Last Settings]"].layers[0].color, "cut",
     "[Last Settings] reflects user's UI choice (cut)");
 
-// THE FIX — main.jsx must read from [Last Settings]
+// THE FIX — main.js must read from [Last Settings]
 var res = extractRuntimeSettings(pData);
 assertEq(res.layers[0].color, "cut",
     "BUG FIX: extractRuntimeSettings returns 'cut' (from [Last Settings]), not '[Registration]'");
@@ -287,7 +287,7 @@ pData = basePData("[Default]");
 pData.presets["[Last Settings]"].gapInner = 5;
 
 // User opens dialog, modifies, then CANCELS (no btnOk call → [Last Settings] unchanged)
-// In real ui.js, Cancel just returns null and main.jsx aborts.
+// In real ui.js, Cancel just returns null and main.js aborts.
 // We simulate by NOT calling simulateBtnOk.
 
 assertEq(pData.presets["[Last Settings]"].gapInner, 5,

@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Validation — schema-based validation of numeric fields
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Utils
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 /**

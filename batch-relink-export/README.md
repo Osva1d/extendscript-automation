@@ -69,7 +69,7 @@ src/
 ├── config.js   # BRE.Config — verze, UI konstanty, výchozí vzor pojmenování
 ├── core.js     # BRE.Core — session mgmt, relink, verifikace, sken, pojmenování
 ├── ui.js       # BRE.UI — dialog, náhled, progress, souhrn
-└── main.jsx    # Entry point — smyčka zpracování
+└── main.js    # Entry point — smyčka zpracování
 ```
 
 - Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`).

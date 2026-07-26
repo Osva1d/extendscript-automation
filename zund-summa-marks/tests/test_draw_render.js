@@ -273,7 +273,7 @@ doc = setupDoc({ layers: [{ name: "Layer 1", items: [] }] });
 settings = makeSettings({ mode: "ZUND" });
 bounds = ZSM.Draw.getBounds(settings);
 assert(bounds === null, "Empty doc: getBounds returns null");
-// In real flow, main.jsx would catch this and alert. We test that calling render
+// In real flow, main.js would catch this and alert. We test that calling render
 // with synthetic geo doesn't crash.
 
 

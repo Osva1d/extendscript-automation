@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Utils — mm/pt conversion, validateNumber, log(), error()
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Config, ZSM.L
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 ZSM.Utils = {

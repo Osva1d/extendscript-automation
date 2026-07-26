@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Config — constants, getDefaults()
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Storage
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 ZSM.Config = {

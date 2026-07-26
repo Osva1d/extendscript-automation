@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Core — calculateAll(), addSteps() — pure math, no DOM
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Config, ZSM.Utils
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 ZSM.Core = {

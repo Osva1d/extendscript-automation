@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.UI — ScriptUI dialog, preset logic, event handling
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 ZSM.UI = {

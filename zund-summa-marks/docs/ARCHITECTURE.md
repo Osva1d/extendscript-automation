@@ -42,12 +42,12 @@ src/
 ├── draw.js               ZSM.Draw — DOM mutace: render(), beginSession(), movePaths()
 │                          getBounds() je tenký wrapper přes ZSM.Bounds.get()
 ├── ui.js                 ZSM.UI — ScriptUI dialog, preset logika, event handling
-└── main.jsx              Entry point — IIFE, orchestrace
+└── main.js              Entry point — IIFE, orchestrace
 ```
 
 **`src/lib/` vs `src/` boundary:**
 - `lib/` = pure utility moduly bez DOM přístupu. Testovatelné s `eval()` + Node.js mocks (žádný Illustrator).
-- `src/` root = doménové moduly. `core.js` je čistá matematika (taky offline-testable). `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.jsx` orchestrace.
+- `src/` root = doménové moduly. `core.js` je čistá matematika (taky offline-testable). `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.js` orchestrace.
 - `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`) protože jsou sdílené mezi bounds výpočtem a render-side `movePaths()`/`beginSession()`. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
 
 **Invariant — efektivní měřítko (`ZSM.Utils.getEffectiveSF(s)`):**
@@ -57,7 +57,7 @@ Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt".
 
 **Load order (NELZE měnit):**
 ```
-../shared/lib/json2.js → locale.js → utils.js → validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.jsx
+../shared/lib/json2.js → locale.js → utils.js → validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.js
 ```
 
 `locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`).
@@ -75,9 +75,9 @@ bash tools/build.sh   # → dist/illustrator-zund-summa-marks.jsx
 
 Sjednocené pravidlo pro error handling napříč moduly:
 
-- **File I/O failures** (`ZSM.Storage.save`, `ZSM.Storage.load`, settings file write): **vždy log + user-facing alert**. Uživatel musí vědět, že se nastavení neuložilo. Příklad: `ZSM.Utils.log("Storage.save failed: " + e.message); alert(ZSM.L.ERR_WRITE_SETTINGS + ...)` v ui.js click handlerech a v main.jsx.
+- **File I/O failures** (`ZSM.Storage.save`, `ZSM.Storage.load`, settings file write): **vždy log + user-facing alert**. Uživatel musí vědět, že se nastavení neuložilo. Příklad: `ZSM.Utils.log("Storage.save failed: " + e.message); alert(ZSM.L.ERR_WRITE_SETTINGS + ...)` v ui.js click handlerech a v main.js.
 - **DOM hazards** (`doc.layers[i].locked = false`, `layer.remove()`, `app.redraw()`, mutace na artifact layers, čtení geometricBounds z corrupt items): **log + graceful fallback, žádný alert**. Uživatel netuší, co je locked layer; alert by ho jen zmátl. Použití: `try { ... } catch (e) { ZSM.Utils.log("context: " + e.message); }` nebo prázdný catch tam, kde je fallback (continue/return) zřejmý ze struktury (např. cleanup smyčky, defensive `try { redraw } catch {}`).
-- **Catastrophic failure** (uncaught error v `main.jsx` outer try/catch): user dostane `ERR_CRITICAL` alert s chybovou zprávou + řádkem.
+- **Catastrophic failure** (uncaught error v `main.js` outer try/catch): user dostane `ERR_CRITICAL` alert s chybovou zprávou + řádkem.
 
 `ZSM.Utils.log()` je gated přes `ZSM.Config.debug` — produkční dist tedy nezaplaví uživatele console output, ale developer při ladění vidí celý trace.
 
@@ -182,7 +182,7 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 1. Do `src/locale.js` — sekce `en` i `cs`
 2. Použít jako `ZSM.L.MOJ_KLIC`
 
-**Layer management** — před DOM operacemi vždy `Draw.beginSession()`, po skončení `Draw.endSession()`. Endession volá `finally` blok v main.jsx — vždy se provede i při chybě.
+**Layer management** — před DOM operacemi vždy `Draw.beginSession()`, po skončení `Draw.endSession()`. Endession volá `finally` blok v main.js — vždy se provede i při chybě.
 
 **Storage** — soubor: `~/Library/Application Support/ZSM/settings_v26_3.json`. Migrace ze starých formátů (`thruActive/kissActive` → `layers[]`, flat → wrapper, `layers[].active` → row existence, localized preset key → `[Default]`) je v `Storage.load()`.
 

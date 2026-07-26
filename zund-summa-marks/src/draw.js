@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.Draw — DOM mutations: render(), beginSession(), movePaths()
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: ZSM.Bounds, ZSM.Config, ZSM.Core, ZSM.Utils
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 ZSM.Draw = {

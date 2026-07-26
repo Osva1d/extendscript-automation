@@ -83,7 +83,7 @@ zund-summa-marks/
 │   ├── core.js             # ZSM.Core — čistá matematika (testovatelné bez DOM)
 │   ├── draw.js             # ZSM.Draw — Illustrator DOM, vrstvy, renderování
 │   ├── ui.js               # ZSM.UI — ScriptUI dialog, presety, validace
-│   └── main.jsx            # Entry point — IIFE, orchestrace
+│   └── main.js            # Entry point — IIFE, orchestrace
 ├── dist/
 │   └── illustrator-zund-summa-marks.jsx   # Build output (single file)
 ├── docs/
@@ -101,7 +101,7 @@ zund-summa-marks/
 ```
 ../shared/lib/json2.js → locale.js → utils.js → validation.js →
 ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js →
-core.js → bounds.js → draw.js → ui.js → main.jsx
+core.js → bounds.js → draw.js → ui.js → main.js
 ```
 
 `locale.js` musí být před `utils.js`, protože `ZSM.Utils` volá `ZSM.L.format()`.

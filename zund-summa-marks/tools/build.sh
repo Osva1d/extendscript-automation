@@ -9,7 +9,7 @@
 #   Concatenates Zund/Summa Marks source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.jsx
+#   json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.js
 # ===========================================================================
 
 set -euo pipefail
@@ -85,7 +85,7 @@ cat "$SRC_DIR/core.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/bounds.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/draw.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"
-cat "$SRC_DIR/main.jsx"      >> "$OUTPUT"
+cat "$SRC_DIR/main.js"      >> "$OUTPUT"
 
 LINES=$(wc -l < "$OUTPUT" | tr -d ' ')
 echo "Build complete: $OUTPUT ($LINES lines)"

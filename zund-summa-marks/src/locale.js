@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------
+// Module: ZSM.L — EN/CS stringtable, app.locale detection, format()
+// Part of: Illustrator Zund & Summa Marks
+// Depends on: —
+// ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
 // ZSM.L — Localization module (IIFE, loaded before all other modules)
