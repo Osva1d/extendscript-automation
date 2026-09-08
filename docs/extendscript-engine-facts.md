@@ -76,7 +76,7 @@ Vše `typeof`, ověřeno jednotlivě.
 | `let x = 1` | **odmítá** — „Bylo očekáváno: ;" |
 | arrow `(a) => a` | **odmítá** — „> nemá hodnotu" |
 | template literal `` `x` `` | **odmítá** — „Chyba syntaxe" |
-| `const x = 1` | **přijímá** (zákaz v CONVENTIONS.md je styl, ne prevence pádu) |
+| `const x = 1` | **přijímá** (zákaz v conventions.md je styl, ne prevence pádu) |
 | `{a: 1,}` trailing comma | **přijímá** |
 | `[1, 2,]` trailing comma | **přijímá**, `length === 2` (ne stará IE chyba) |
 | `"use strict"` | přijímá |

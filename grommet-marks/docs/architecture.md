@@ -261,5 +261,5 @@ Window("dialog")
 - Testy: 6 suitů green.
 
 **Otevřené úkoly:**
-- Manuální P0 test v Illustratoru (viz `docs/MANUAL_TEST.md` sekce G + regresní C1/C2, E1, F1)
+- Manuální P0 test v Illustratoru (viz `docs/manual-test.md` sekce G + regresní C1/C2, E1, F1)
 - TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)

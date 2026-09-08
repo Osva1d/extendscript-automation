@@ -12,7 +12,7 @@
 // grommet-marks/src/illustrator.js:172 for something that demonstrably runs.
 // ES5 parsing still rejects everything that actually breaks the engine —
 // `let` ("Bylo očekáváno: ;"), arrow functions, template literals — plus
-// `const`, which the engine tolerates but CONVENTIONS.md bans anyway.
+// `const`, which the engine tolerates but conventions.md bans anyway.
 //
 // WHY indexOf IS NOT IN THE BANNED LIST, although Array.prototype.indexOf does
 // not exist in ExtendScript (measured: typeof [].indexOf === "undefined", and

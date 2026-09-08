@@ -157,7 +157,7 @@ vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
 `docs/decisions.md` (architektonická rozhodnutí a proč).
 
 **Per-nástroj:** `README.md` (česky), `CHANGELOG.md`, volitelně
-`docs/ARCHITECTURE.md` a `docs/MANUAL_TEST.md` (mají GM a ZSM; BRE ne — menší nástroj).
+`docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; BRE ne — menší nástroj).
 
 **CHANGELOG** — Keep a Changelog, česky, **z pohledu uživatele skriptu**.
 Jeden zdroj pravdy: README na něj jen odkazuje. Interní řadu před veřejným vydáním
