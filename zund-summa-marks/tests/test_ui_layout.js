@@ -174,9 +174,12 @@ if (m && m.length === 4) {
 assert(w.spacing >= 8 && w.spacing <= 15,
     "Window spacing in HIG range 8-15 (got " + w.spacing + ")");
 
-// preferredSize.width set
-assert(w.preferredSize.width >= 350 && w.preferredSize.width <= 450,
-    "Window width 350-450px (got " + w.preferredSize.width + ")");
+// Width is deliberately NOT set on the window: the layout manager overwrites a
+// container's preferredSize (measured in Illustrator 30.8.1 — setting 390 gives
+// a 312px window). Assert the mechanism that actually controls width instead of
+// the one that silently did nothing.
+assert(String(w.alignChildren).indexOf("fill") !== -1,
+    "Window alignChildren cascades fill (got " + w.alignChildren + ")");
 
 
 // =====================================================
@@ -253,8 +256,8 @@ assert(ddMissingTip === 0, "All dropdowns have helpTip (missing: " + ddMissingTi
 console.log("\n=== TEST 5: Numeric edit text widths ===");
 var allEdits = w.find(function (c) { return c.type === "edittext"; });
 // Numeric edit-texts built via addRow live in a 130px value subgroup and are
-// 56px wide (gap, maxDist, markSize, orientDist, etc.). The scale field (etScale,
-// 60px) and the layer-name field (124px) are sized separately and excluded here.
+// M.NUM_FIELD (56px) wide (gap, maxDist, markSize, orientDist, etScale). The
+// layer-name field (M.ET_LAYER) is a different axis and is excluded here.
 var numericEdits = allEdits.filter(function (e) {
     return e.preferredSize.width === 56;
 });
