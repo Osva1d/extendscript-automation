@@ -115,7 +115,9 @@ ZSM.UI = {
         w.alignChildren  = ["fill", "top"];
         w.margins        = [20, 14, 20, 12];
         w.spacing        = M.SP_PANEL;
-        w.preferredSize.width = 390;
+        // No width on the window: the layout manager overwrites a container's
+        // preferredSize (measured 390 in -> 312px out). alignChildren "fill"
+        // above is what actually sets the width, from the widest panel.
 
         // S2 — single relayout helper. The +RELAYOUT_PAD nudge counters the
         // engine under-measuring the window height after rows are added/removed;
@@ -270,7 +272,7 @@ ZSM.UI = {
         stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
 
         var etScale = grpRatio.add("edittext", undefined, "1");
-        etScale.preferredSize.width = 60;   // match the other numeric inputs (addRow)
+        etScale.preferredSize.width = M.NUM_FIELD;   // same axis as addRow's numeric fields
         etScale.helpTip = l.TIP_SCALE_FIELD;
 
         /** Enable/disable the ratio field AND its "1:" label together, so the

@@ -206,7 +206,10 @@ GM.UI = {
         dlg.alignChildren = ["fill", "top"];
         dlg.margins = LO.DIALOG;
         dlg.spacing = LO.SECTION;   // gap between panels
-        dlg.preferredSize.width = 390;   // match ZSM/BRE; content grows if needed
+        // No width is set here on purpose. The layout manager overwrites a
+        // container's preferredSize (measured: 390 in -> 312px window out), so
+        // the line that used to sit here did nothing. Width comes from the
+        // alignChildren "fill" above, cascading to the widest panel.
         var defCfg = GM.Config.getDefaults();
         var sortedKeys = [];
 

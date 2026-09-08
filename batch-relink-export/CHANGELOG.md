@@ -4,6 +4,15 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Nevydáno]
+
+### Změněno
+
+- Sjednocen slovník tlačítek se zbytkem sady: **Storno** nyní znamená *zrušit
+  dialog* (dříve „Zrušit“), tlačítko pro zastavení běžícího zpracování se jmenuje
+  **Zastavit** (dříve „Storno“). Totéž slovo dosud znamenalo v tomto skriptu něco
+  jiného než v Grommet Marks a Zünd & Summa Marks.
+
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline). Sjednocení verzí napříč sadou pro open-source

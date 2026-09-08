@@ -164,9 +164,9 @@ BRE.L = (function () {
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
             BTN_RUN:            "Spustit",
-            BTN_CANCEL:         "Zrušit",
+            BTN_CANCEL:         "Storno",
             BTN_CLOSE:          "Zavřít",
-            BTN_STOP:           "Storno",
+            BTN_STOP:           "Zastavit",
             BTN_STOPPING:       "Zastavuji…",
             BTN_CONTINUE:       "Pokračovat",
 
