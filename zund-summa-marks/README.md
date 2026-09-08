@@ -87,8 +87,8 @@ zund-summa-marks/
 ├── dist/
 │   └── illustrator-zund-summa-marks.jsx   # Build output (single file)
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   └── MANUAL_TEST.md
+│   ├── architecture.md
+│   └── manual-test.md
 ├── tests/
 │   └── test_core_math.js
 ├── tools/
@@ -233,7 +233,7 @@ Skript automaticky migruje starší formáty:
 
 Jednotkové testy pro `ZSM.Core` (pure math): `tests/test_core_math.js`
 
-Manuální testy: viz `docs/MANUAL_TEST.md`
+Manuální testy: viz `docs/manual-test.md`
 ---
 
 ## Changelog

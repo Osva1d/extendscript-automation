@@ -122,7 +122,7 @@ reálně funguje — a odhalilo to až měření, ne čtení:
    `2026-06-28`). Kontrola podle původního pravidla by build okamžitě shodila.
    Opraveno: ES pole negeneruje drift → nekontroluje se; AS pole je ruční →
    kontroluje se. Dvě mechaniky, dvě pravidla — zdokumentováno v obou
-   `CONVENTIONS.md`.
+   `conventions.md`.
 
 Poučení: **konvenci vytěženou z kódu je pořád nutné ověřit proti mechanismu, který
 ji vyrábí.** „Vidím to v souborech" nestačí, když ta hodnota vzniká automaticky.
@@ -143,7 +143,7 @@ Nálezy z měření napříč šesti skripty. **Vědomě neimplementováno** —
    globály mezi běhy, takže stale state z předchozího spuštění může ovlivnit další.
    Ale je to **funkční změna** — vyžaduje testy a ověření v Illustratoru, ne
    textovou úpravu buildu.
-4. **`zund-summa-marks/docs/ARCHITECTURE.md` nese pre-rebaseline verze** — nadpis
+4. **`zund-summa-marks/docs/architecture.md` nese pre-rebaseline verze** — nadpis
    „v26.5.1" a „Aktuální verze: v26.5.0", zatímco veřejná řada je 1.0.0. Stejný
    drift, jaký se opravil v README changelogách; ARCHITECTURE se tehdy neměřilo.
 

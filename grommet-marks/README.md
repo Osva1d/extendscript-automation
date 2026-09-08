@@ -54,7 +54,7 @@ Sdílené jádro `json2.js` (JSON polyfill) a `ui_state.js` (`GM.UIState`) žij�
 `../shared/lib/` v kořeni repozitáře — build vkládá `json2.js` jako první a
 `ui_state.js` přes `buildUIState(GM)`. Viz [../docs/decisions.md](../docs/decisions.md).
 
-Podrobnosti (datové struktury, data flow, migrační řetěz) viz [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Podrobnosti (datové struktury, data flow, migrační řetěz) viz [docs/architecture.md](docs/architecture.md).
 
 ### Build a testy
 
@@ -64,7 +64,7 @@ npm test          # spustí testovací suity (Node.js)
 npm run verify    # build + test
 ```
 
-Testy (`tests/`) pokrývají čisté moduly v Node.js: core math, storage migrace, ui_state, validace. UI a DOM se ověřují manuálně — viz [docs/MANUAL_TEST.md](docs/MANUAL_TEST.md).
+Testy (`tests/`) pokrývají čisté moduly v Node.js: core math, storage migrace, ui_state, validace. UI a DOM se ověřují manuálně — viz [docs/manual-test.md](docs/manual-test.md).
 
 Build čte verzi z `package.json` a ověřuje shodu s `src/constants.js` (selže při rozporu).
 

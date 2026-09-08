@@ -216,8 +216,8 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 | Soubor | Obsah |
 |--------|-------|
 | `README.md` | Uživatelská + vývojářská dokumentace |
-| `docs/ARCHITECTURE.md` | Tento technický brief |
-| `docs/MANUAL_TEST.md` | Jediný manuální test plán (deploy gate, P0/P1) |
+| `docs/architecture.md` | Tento technický brief |
+| `docs/manual-test.md` | Jediný manuální test plán (deploy gate, P0/P1) |
 | `tests/test_core_math.js` | Jednotkové testy pro `ZSM.Core` (81 testů) |
 
 ---
@@ -242,5 +242,5 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 - Test coverage: 81 testů včetně BUG-1 symetrie a BUG-2 cliff-effect
 
 **Otevřené úkoly:**
-- Manuální testování dle docs/MANUAL_TEST.md (deploy gate P0)
+- Manuální testování dle docs/manual-test.md (deploy gate P0)
 - Deploy do `Projects/extendscript-automation` po PASS na P0
