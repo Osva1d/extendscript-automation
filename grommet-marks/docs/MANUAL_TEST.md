@@ -1,6 +1,12 @@
-# Grommet Marks — Manuální testovací protokol v6.0.0
+# Grommet Marks — Manuální testovací protokol
 
-> **Verze:** 6.0.0
+> **Verze skriptu tady záměrně není** — žila by vedle `package.json`,
+> `src/constants.js` a `CHANGELOG.md` jako čtvrtá kopie, kterou nic nehlídá
+> (a taky driftla: dokument uváděl v6.0.0, zatímco veřejná řada je 1.x).
+> Aktuální verzi hledej v [`../CHANGELOG.md`](../CHANGELOG.md).
+>
+> Čísla `v6.x` a dřívější v textu jsou **historické reference** k interní
+> řadě před veřejným vydáním, ne tvrzení o aktuálním stavu.
 > **Aktualizováno:** 2026-06-13
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
@@ -223,4 +229,4 @@ U každého neúspěchu poznač: **číslo testu**, **verzi Illustratoru**, **lo
 
 ---
 
-*Připravil: Osva1d — Test Plan v6.0.0, 2026-06-13*
+*Připravil: Osva1d — 2026-06-13*
