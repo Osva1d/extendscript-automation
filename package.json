@@ -1,0 +1,17 @@
+{
+  "name": "extendscript-automation-devtools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repo-level development tooling (lint, typecheck, Illustrator REPL). Not a build system — each tool still owns its own build and tests.",
+  "author": "Ladislav Osvald",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "bash tools/typecheck.sh"
+  },
+  "devDependencies": {
+    "eslint": "^10.10.0",
+    "types-for-adobe": "^7.2.6",
+    "typescript": "^7.0.2"
+  }
+}

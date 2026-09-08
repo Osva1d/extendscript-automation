@@ -1,0 +1,22 @@
+{
+  "//": "Editor support only — autocomplete and hover docs for the Illustrator DOM.",
+  "//checkJs": "Deliberately FALSE. Turning it on paints ~29 squiggles across working code (PageItem->GroupItem downcasts in bounds.js, Color union narrowing in draw.js, ScriptUI selection: number|ListItem). Those are places TS is technically right and the code is fine; fixing them is a separate, opt-in job. Hard checking is per-file via tools/typecheck.sh.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "types": [],
+    "lib": [],
+    "maxNodeModuleJsDepth": 0
+  },
+  "include": [
+    "typings/**/*.d.ts",
+    "node_modules/types-for-adobe/shared/JavaScript.d.ts",
+    "node_modules/types-for-adobe/shared/ScriptUI.d.ts",
+    "node_modules/types-for-adobe/shared/global.d.ts",
+    "node_modules/types-for-adobe/Illustrator/2022/index.d.ts",
+    "*/src/**/*.js",
+    "shared/lib/**/*.js"
+  ],
+  "exclude": ["node_modules", "**/dist", "**/tests"]
+}
