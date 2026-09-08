@@ -9,20 +9,30 @@
  *
  * KNOWN-MISSING in ExtendScript:
  *   - Array.prototype.map, filter, forEach, reduce, find, findIndex,
- *     includes, flat, flatMap, fill, copyWithin
+ *     includes, flat, flatMap, fill, copyWithin, some, every
+ *   - Array.prototype.indexOf and lastIndexOf. NOTE: this file previously
+ *     listed indexOf as SAFE ("ES5 but supported"). That was wrong. Measured
+ *     in Illustrator 30.8.1 on 2026-09-07: typeof [].indexOf === "undefined"
+ *     and calling it throws. String.prototype.indexOf DOES exist — the two
+ *     look alike and only a type-aware checker can tell them apart, which is
+ *     why tools/typecheck.sh owns that one and this regex scanner does not.
  *   - Array.isArray, Array.from, Array.of
  *   - String.prototype.includes, startsWith, endsWith, padStart, padEnd,
- *     repeat, trimStart, trimEnd
+ *     repeat, trim, trimStart, trimEnd, trimLeft, trimRight
  *   - Object.keys, values, entries, assign, freeze (sometimes), getOwn-
- *     PropertyNames partial, fromEntries
+ *     PropertyNames partial, fromEntries, create, defineProperty
+ *   - Function.prototype.bind
  *   - JSON.* — POLYFILLED via shared/lib/json2.js (so JSON.parse/stringify OK)
  *   - Promise, Map, Set, WeakMap, WeakSet
- *   - let, const, arrow functions (=>), template literals (`${...}`),
+ *   - let, arrow functions (=>), template literals (`${...}`),
  *     destructuring, spread/rest (...), default params, classes, async/await
+ *   - const is BANNED BY CONVENTION, not by the engine: it parses fine
+ *     (measured). Trailing commas in object/array literals parse fine too.
  *
  * SAFE in ExtendScript:
  *   - Array.prototype.push, pop, shift, unshift, splice, slice, concat,
- *     join, reverse, sort, indexOf (ES5 but supported), lastIndexOf
+ *     join, reverse, sort
+ *   - Date.now (the one ES5 static the engine does carry)
  *   - String.prototype.indexOf, charAt, charCodeAt, replace, split, slice,
  *     substring, substr, toLowerCase, toUpperCase
  *   - Object literal {}, hasOwnProperty, in, for-in
@@ -30,6 +40,12 @@
  *
  * This test scans every src/*.js file (excluding json2.js polyfill and
  * test infrastructure) for forbidden patterns and fails if any are found.
+ *
+ * It is regex-based, so it cannot see bracket notation (Object["keys"]) and
+ * it does flag matches inside string literals. `npm run lint` at the repo root
+ * covers the same ground on the AST, across all three tools. Both are kept:
+ * this one is self-contained and runs inside the ZSM suite with no install.
+ * Every claim above is re-measurable — see docs/extendscript-engine-facts.md.
  *
  * Usage: node tests/test_es3_compliance.js
  */

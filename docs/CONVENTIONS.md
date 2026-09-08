@@ -103,6 +103,34 @@ Jen dva moduly: `json2.js` (prostý soubor, bez namespace) a `ui_state.js`
 `storage`, `validation` a `utils` zůstávají lokální, protože jejich divergence je
 doménová. Odůvodnění v [`decisions.md`](decisions.md).
 
+## GUIDANCE — Vývojové nástroje (repo-level)
+
+Nic z toho nevstupuje do buildu ani do `dist/` — build zůstává `cat` modulů.
+Instalace: `npm install` v kořeni repa.
+
+| příkaz | co dělá | kdy |
+|---|---|---|
+| `npm run lint` | ESLint na `*/src/**` + `shared/lib/**` — chybějící ES3 metody, syntaxe, neznámé globály | před commitem |
+| `tools/typecheck.sh <soubory>` | typová kontrola proti Illustrator DOM typings | na **nově psaný** kód |
+| `tools/ai-eval.sh -e '<výraz>'` | spustí ExtendScript v běžícím Illustratoru a vrátí hodnotu | když je otázka „existuje tohle API / co to vrací" |
+
+**Dělba práce mezi lintem a typecheckem není libovolná.** ESLint vidí jména
+vlastností, ne typy — `[1,2].indexOf()` od `"abc".indexOf()` nerozliší, a to
+druhé je legitimní (viz `extendscript-engine-facts.md`). Typecheck to rozliší,
+protože typings modelují skutečné ExtendScript `Array`. Naopak `.map()` na
+netypovaném parametru chytí jen ESLint. Obojí, ne jedno.
+
+`tools/typecheck.sh` **vyžaduje jména souborů**. Puštěný na celé repo hlásí
+~29 nálezů ve funkčním kódu, kde má TS technicky pravdu (downcasty v
+`bounds.js`, zúžení `Color` v `draw.js`, `selection: number | ListItem` v
+`ui.js`). Srovnat je je samostatný, dobrovolný úkol — ne podmínka.
+`jsconfig.json` má proto `checkJs: false`: editor dává napovídání bez červených
+vlnovek nad fungujícím kódem.
+
+Naměřené chování enginu, o které se ta konfigurace opírá, je v
+[`extendscript-engine-facts.md`](extendscript-engine-facts.md). Když se něco
+z toho bude zdát divné, přeměř to — `tools/ai-eval.sh` je na to.
+
 ## GUIDANCE — Git
 
 **Conventional Commits** — 100 % commitů. Typy dle četnosti: `feat`, `docs`, `fix`,
