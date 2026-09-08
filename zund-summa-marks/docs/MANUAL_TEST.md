@@ -177,7 +177,7 @@ P1:  H [✅]  I [✅]  J [✅]  K [✅]
 [⚠️] Všechny P0 PASS
 
 Před deployem:
-[ ] verze sjednocena (package.json = src/config.js) a bumpnuta (marks-only = minor → 26.5.0)
+[ ] verze sjednocena (package.json = src/config.js = nejnovější CHANGELOG entry) a bumpnuta dle SemVer
 [ ] npm test (12/12+ suites) zelené
 [ ] bash tools/build.sh — dist přebudován
 [ ] dist zkopírován do Projects/extendscript-automation/Scripts/
