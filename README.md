@@ -19,7 +19,7 @@ core. Each tool has its own README, build, and version — this page is a signpo
 | **zund-summa-marks** | Registration marks for Zünd (ECHO) and Summa (OPOS) cutters — layer→spot-colour mapping, marks-only mode, named presets | [README](zund-summa-marks/README.md) |
 | **grommet-marks** | Banner grommet marks along artboard edges or a selected path — corner zones, Esko-style registration targets | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Batch-relink PDFs into an `.ai` imposition template and export print-ready PDFs | [README](batch-relink-export/README.md) |
-| **tile-export** | Split a large graphic into printable panels for manual trimming — per-edge adds, overlap, spot-colour trim line | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
+| **tile-export** | Split a large graphic into printable panels — per-edge adds, overlap, spot-colour trim line, plus a Zünd mode with registration marks and per-panel cut data | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
 
 `shared/` holds the namespace-neutral core modules both mark generators consume;
 the reasoning behind what is shared and what is deliberately not lives in

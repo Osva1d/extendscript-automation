@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.0.0",
+    version: "1.1.0",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.

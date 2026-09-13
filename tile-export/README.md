@@ -90,6 +90,42 @@ svislá, při vertikálním vodorovná.
 - Ručně tažené vodítko nikdy nesedí na kulaté číslo. Pole **Zaokrouhlit vodítka
   na** to srovná; nula je vezme tak, jak jsou.
 
+## Zünd režim
+
+Pro strojní přesný ořez. Přepínač v dialogu; když je vypnutý, nic nestojí.
+
+Zapnutý přidá do každého exportovaného plátu dvě věci:
+
+- **Registrační značky** — kulaté, v přímé barvě, na všech čtyřech hranách plus
+  orientační bod, který stroji říká, jak je plát otočený. Na dlouhých hranách
+  se interpolují, aby rozteč nepřesáhla zadané maximum.
+- **Ořezová data plátu** — tvarová kontura oříznutá na rozměr plátu.
+
+### Jak označit konturu
+
+**Přímou barvou, na vrstvě nezáleží.** V dialogu vybereš barvu ze seznamu
+přímých barev dokumentu; všechny cesty s tou barvou se považují za konturu,
+včetně compound paths s dírami.
+
+### Co kontura dělá na švu
+
+Nic zvláštního — **řídí to přelep**, který už znáš z tiskových plátů. Přelep 0
+dá pláty natupo, přelep 20 mm dá překryv. Žádné další nastavení.
+
+**Spad za konturou nástroj neřeší.** Musí být v dodaných datech; nekontroluje
+se a nedokresluje.
+
+### Na co si dát pozor
+
+- **MediaBox plátu je větší než plát.** Značky leží vně plátu — při odstupu
+  10 mm a značce 5 mm sahají 42,5 pt za každou hranu — takže stránka musí
+  vyrůst, aby se do ní vešly. Červená ořezová linka zůstává na hranici plátu,
+  tedy uvnitř většího MediaBoxu.
+- **Plát, do kterého kontura nezasahuje**, se v souhrnu nahlásí. Není to chyba
+  (prostřední plát obdélníkového výřezu ho legitimně nemá), ale plát, který
+  tiše dojede ke stroji bez ořezových dat, je tam nepříjemné překvapení.
+- **Jedna řezací barva.** Proříz, ryl a děrování zvlášť tahle verze neumí.
+
 ## Měřítko výstupu
 
 | volba | kdy |
@@ -118,6 +154,10 @@ jinak by výstup vyšel desetinásobně zmenšený a vypadal by správně.
   v sekci „Co přijde po v1".
 - Velký plát se při výstupu 1:1 nemusí vejít do artboardu Illustratoru
   (mez leží mezi 16 200 a 16 300 pt, tedy okolo 5,7 m).
+- **Dělení ořezové kontury není pod automatickými testy.** Stojí na
+  `executeMenuCommand`, tedy na běžícím Illustratoru, a ověřuje se sondami
+  s vizuální kontrolou. Geometrie plátů pod testy je, kontura ne.
+- Zünd režim zvládne **jednu** řezací přímou barvu. Summa není podporovaná.
 
 ## Řešení problémů
 
@@ -140,7 +180,8 @@ src/
 ├── config.js       TE.Config   — konstanty, getDefaults()
 ├── grid.js         TE.Grid     — řezy a geometrie plátů, žádný DOM (testovatelné)
 ├── doc.js          TE.Doc      — čtení artboardu, grafiky, přesahu, vodítek
-├── draw.js         TE.Draw     — přímá barva, ořezová linka, artboardy plátů
+├── draw.js         TE.Draw     — přímá barva, ořezová linka, značky, artboardy
+├── cut.js          TE.Cut      — detekce a ořez ořezové kontury
 ├── export.js       TE.Export   — transformace a dočasný dokument na plát
 ├── ui.js           TE.UI       — ScriptUI dialog, živý dopočet, předvolby
 ├── main.js                     — entry point, error boundary, dvoufázový běh
@@ -156,7 +197,9 @@ src/
   testy, včetně property testů na pokrytí mřížky a přesnost přelepu.
 - Verze je v `package.json`; build ji ověřuje proti `src/config.js` i proti
   nejnovějšímu záznamu v `CHANGELOG.md` (parity guard).
-- Sdílené jádro (`json2.js`, `ui_state.js`) žije v `../shared/lib/` — viz [../docs/decisions.md](../docs/decisions.md).
+- Sdílené jádro (`json2.js`, `ui_state.js`, `cut_marks.js`) žije
+  v `../shared/lib/`. Geometrii registračních značek sdílí se
+  `zund-summa-marks` — odůvodnění v [../docs/decisions.md](../docs/decisions.md).
 
 ## Changelog
 

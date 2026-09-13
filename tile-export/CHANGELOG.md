@@ -4,6 +4,37 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.1.0] — 2026-09-13
+
+### Added
+
+- **Zünd režim** — registrační značky na každém plátu a ořezová data plátu.
+  Zapíná se přepínačem v dialogu.
+- Ořezová kontura se hledá podle **přímé barvy**, nezávisle na vrstvě.
+- Kontura se ořezává **odečtením zakrývajícího rámu** — toutéž operací, jakou
+  se to dělá rukama. Compound path si přitom zachová díry, na rozdíl od průniku.
+- Geometrie značek je sdílená se `zund-summa-marks` (`shared/lib/cut_marks.js`),
+  takže chyba v pozici značky je chyba na jednom místě, ne na dvou.
+- Pláty, do kterých kontura nezasahuje, se hlásí v souhrnu.
+
+### Changed
+
+- Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole
+  Výsledku zkráceno na 85 px. Se zapnutým Zünd režimem měří 796 px, bez něj
+  stejně — viz poznámka níž.
+- `TE.Export.exportTile()` vrací `{file, contourPaths}` místo `File`.
+
+### Notes
+
+- **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně
+  plátu — při odstupu 10 mm a značce 5 mm sahají 42,5 pt za každou hranu —
+  a stránka musí vyrůst, aby se do ní vešly.
+- Dělení kontury stojí na `executeMenuCommand`, takže **není pod Node testy**.
+  Ověřuje se sondami s vizuální kontrolou. Proti v1 je to vědomé oslabení.
+- Skrývání Zünd panelu dialog **nezmenší** — ScriptUI drží místo i pro
+  neviditelnou skupinu. Výšku řeší rozložení sloupců, ne viditelnost.
+- Víc řezacích vrstev najednou (proříz, ryl, děrování) tato verze neumí.
+
 ## [1.0.0] — 2026-09-13
 
 První verze. Plátování velké grafiky na tiskové pláty pro **ruční ořez** —
