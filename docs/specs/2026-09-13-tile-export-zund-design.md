@@ -205,10 +205,81 @@ zcela mimo plát, tvar přesně na hranici plátu.
 | Kolik spotů `duplicate()` do cíle skutečně přenese | Sonda ukázala, že barva duplikátu je správná, ale `spots` v cíli obsahovaly po operaci nečekanou sadu. Před implementací ověřit, že se nevytváří duplicitní swatche |
 | Orientační bod per plát | ZSM ho kreslí jednou pro celou grafiku. Jestli má mít každý plát vlastní, nebo jen první, není rozhodnuto |
 
-## 10. Co přijde potom
+## 10. Další etapa — tvarové pláty podle reálného postupu
+
+**Tohle je nejbližší a nejdůležitější pokračování.** Verze popsaná výš dělá
+obdélníkové pláty; skutečný postup ve studiu je jiný a je popsán níž tak, aby
+se k němu dalo vrátit bez dalšího vyptávání.
+
+### Jak se to dělá rukama
+
+Pro každý plát:
+
+1. Rozdělenou konturu plátu vzít a udělat z ní **odsazenou cestu ven o spad**
+   (typicky 5 mm).
+2. Tou odsazenou cestou **oříznout grafiku clipping maskou**. Grafika plátu
+   tedy **není obdélník**, ale tvar kontury plus spad.
+3. Masku i ořezovou cestu přenést do nového dokumentu.
+4. **Artboard přizpůsobit grafice**, pak zvětšit o 20 mm na šířku i výšku.
+   Těch 20 mm není konstanta — je to důsledek parametrů značky: 5 mm odstup od
+   grafiky plus 5 mm značka na každé straně. ZSM tohle už počítá a vrací
+   `geo.ab`, takže žádný nový parametr nevzniká.
+5. Po obvodu rozmístit regmarky.
+6. **Vypnout vrstvu s ořezovou cestou** → uložit **tiskové PDF**.
+7. **Smazat vrstvu s grafikou**, zůstanou regmarky a cut → uložit **řezací PDF**
+   se suffixem `_cut`.
+
+Dva výstupy na plát, ne jeden. Artboard je pro obě stejný, jinak by stroj
+nevěděl, kde je co.
+
+### Čím se to liší od implementované verze
+
+| | implementováno | reálný postup |
+|---|---|---|
+| tvar grafiky na plátu | obdélník plátu | kontura + spad, přes clipping mask |
+| artboard | plát rozšířený o značky | bounding box oříznuté grafiky, pak značky |
+| výstupy na plát | jeden PDF | dva — tiskový a `_cut` |
+| spad za konturou | neřeší se | parametr, vytváří se odsazením cesty |
+
+Tvarový plát šetří materiál i barvu: u výřezu s velkými prázdnými plochami je
+bounding box oříznuté grafiky výrazně menší než obdélník plátu.
+
+### Co je pro to hotové
+
+- **Dělení kontury na pláty** (`TE.Cut.renderTileContour`) — ověřeno na reálné
+  kontuře, včetně prostředního plátu ořezávaného z obou stran.
+- **Detekce kontury podle přímé barvy** (`TE.Cut.findContour`).
+- **Sdílená geometrie značek** včetně `geo.ab`.
+- **Dialog** — přibude parametr spadu a změní se výchozí odstup značky.
+
+### Odsazená cesta — naměřeno, klíčová překážka je vyřešená
+
+`executeMenuCommand("Live Offset Path")` existuje, ale **hodnotu předat neumí**
+a aplikuje se s nulou. Panelový `Offset Path` neexistuje. Parametrizovaně to
+jde přes Live Effect XML:
+
+```js
+item.applyEffect('<LiveEffect name="Adobe Offset Path">'
+               + '<Dict data="R mlim 10 R ofst ' + offsetPt + ' I jntp 0 "/>'
+               + '</LiveEffect>');
+app.executeMenuCommand("expandStyle");   // efekt -> skutečná geometrie
+```
+
+`jntp` naměřeno na šesticípé hvězdě při offsetu 5 mm: **0 = zaoblený roh, dá
+přesně 14,17 pt**; 1 = uříznutý (10,90 pt, ubírá); 2 = prodloužená špička
+(35,48 pt, přidává). Kontrola na kruhu dala 14,17 pt vždy. **Pro ořezovou
+konturu `jntp 0`.**
+
+### Co zbývá vyřešit
+
+- Jak se vrstvy pojmenují a jak se pozná, která je která při druhém uložení.
+- Jestli je bounding box brát z `visibleBounds` nebo `geometricBounds` oříznuté
+  skupiny — u clipnuté skupiny se liší, viz skill `manipulating-illustrator-items`.
+- Chování, když kontura po odsazení přeteče přes sousední plát.
+
+## 11. Dál za tím
 
 1. **Víc řezacích vrstev najednou** — proříz, ryl a děrování jako samostatné
    přímé barvy, po vzoru tabulky vrstev v ZSM.
-2. **Summa** — stejná cesta, jiná geometrie značek; sdílené jádro už bude na
-   místě.
+2. **Summa** — stejná cesta, jiná geometrie značek; sdílené jádro už je na místě.
 3. **2D mřížka** — pořád otevřená z v1.

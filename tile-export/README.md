@@ -125,6 +125,10 @@ se a nedokresluje.
   (prostřední plát obdélníkového výřezu ho legitimně nemá), ale plát, který
   tiše dojede ke stroji bez ořezových dat, je tam nepříjemné překvapení.
 - **Jedna řezací barva.** Proříz, ryl a děrování zvlášť tahle verze neumí.
+- **Pláty jsou obdélníkové.** Reálný studiový postup ořezává grafiku samotnou
+  konturou rozšířenou o spad a ukládá dva PDF na plát — tiskové a `_cut`. To
+  tahle verze zatím neumí; postup i naměřené podklady k němu jsou ve specu
+  [`docs/specs/2026-09-13-tile-export-zund-design.md`](../docs/specs/2026-09-13-tile-export-zund-design.md) §10.
 
 ## Měřítko výstupu
 

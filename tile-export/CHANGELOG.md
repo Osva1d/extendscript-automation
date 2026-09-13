@@ -34,6 +34,10 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Skrývání Zünd panelu dialog **nezmenší** — ScriptUI drží místo i pro
   neviditelnou skupinu. Výšku řeší rozložení sloupců, ne viditelnost.
 - Víc řezacích vrstev najednou (proříz, ryl, děrování) tato verze neumí.
+- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Reálný studiový
+  postup ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
+  zvlášť — je to popsané ve specu §10 jako další etapa, včetně vyřešené
+  překážky s parametrickou odsazenou cestou.
 
 ## [1.0.0] — 2026-09-13
 
