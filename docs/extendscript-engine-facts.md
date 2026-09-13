@@ -235,6 +235,11 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
   počátku, tak míří **pod** artboard a export vyjde prázdný. Naměřeno:
   `documents.add(CMYK, 600, 400)` → `[0, 400, 600, 0]`. Po `documents.add()`
   proto vždy `artboardRect` nastav explicitně.
+- **`duplicate()` napříč dokumenty** zachová přímou barvu, nevytvoří duplicitní
+  swatche a kopie přežije zavření zdroje. Pozici ale drží **vůči středu
+  artboardu**, ne absolutně: kontura na `x = 44…815` se v dokumentu s poloviční
+  šířkou objevila na `−168…603`, tedy o 212,5 pt jinde — přesně rozdíl středů.
+  Při shodných artboardech je posun nulový. **Offset měř, nepředpovídej.**
 - Výchozí artboard se v české lokalizaci jmenuje **„Kreslicí plátno 1"** —
   detekce vlastních artboardů podle prefixu je proto jazykově nezávislá,
   detekce podle výchozího jména by nebyla.

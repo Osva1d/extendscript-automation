@@ -97,11 +97,18 @@ mechanismus, jakým ZSM přesouvá cesty na řezací vrstvy.
 Pro každý plát v jeho dočasném dokumentu:
 
 1. **přenést kompletní konturu** — `pathItem.duplicate(targetLayer,
-   ElementPlacement.PLACEATEND)` napříč dokumenty. Ověřeno: funguje, **zachová
-   přímou barvu** a duplikát přežije zavření zdrojového dokumentu.
-   Past: `duplicate()` zachová **absolutní** pozici, takže se kontura musí
-   posunout toutéž transformací jako grafika — `TE.Export.tileTransform()`
-   už ji počítá.
+   ElementPlacement.PLACEATEND)` napříč dokumenty. Ověřeno na reálné kontuře
+   (56 bodů, přímá barva `cut`): funguje, **zachová přímou barvu**, nevytváří
+   duplicitní swatche a duplikát přežije zavření zdroje.
+
+   **Past:** `duplicate()` zachová pozici **vůči středu artboardu**, ne
+   absolutně. Naměřeno: kontura na `x = 44…815` ve zdroji se v cíli s poloviční
+   šířkou objevila na `−168…603`, tedy posunutá o 212,5 pt — přesně rozdíl
+   středů obou artboardů. Při shodných artboardech je posun nulový.
+
+   Implementace proto **posun nepředpovídá, ale měří**: po duplikaci se přečtou
+   `geometricBounds` kopie a posune se tam, kam patří podle téže transformace,
+   jakou dostane grafika. To je odolné vůči tomu, jak Illustrator pozici počítá.
 2. dočasně jí dát výplň — Pathfinder pracuje s plochami, ne s obrysy
 3. nakreslit **zakrývající rám** a dát ho navrch
 4. `group` → `Live Pathfinder Subtract` → `expandStyle`
