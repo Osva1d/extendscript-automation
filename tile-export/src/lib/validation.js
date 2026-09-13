@@ -1,0 +1,117 @@
+// ------------------------------------------------------------------------
+// Module: TE.Validate — §5 rules. Errors stop the run, warnings do not.
+// Part of: Illustrator Tile Export
+// Depends on: TE.Utils, TE.L
+// ------------------------------------------------------------------------
+var TE = TE || {};
+
+TE.Validate = {
+    /**
+     * Checks a computed job against the document it will run on.
+     *
+     * @param {Array} tiles - Output of TE.Grid.computeTiles().
+     * @param {Object} ctx - {overhang:{left,right,top,bottom} in doc points,
+     *        graphicCount, scaleFactor, mediaWidth (mm or null), maxArtboard (pt)}.
+     * @param {Object} s - Settings.
+     * @returns {Object} {errors: Array, warnings: Array}. Empty errors means go.
+     */
+    check: function (tiles, ctx, s) {
+        var errors = [], warnings = [];
+        var eps = 1e-6;
+        var i, t, w, h, k, shortest, overlapPt;
+
+        // Exactly one placed graphic — export builds a temporary document that
+        // carries only the graphic, so anything else would be silently dropped.
+        if (ctx.graphicCount !== 1) {
+            errors.push(TE.L.format(TE.L.ERR_MANY_GRAPHICS, ctx.graphicCount));
+        }
+
+        // Adds must be covered by material the supplied PDF actually carries.
+        // A bigger add would leave a blank margin that looks fine on screen
+        // and is only found on the printed sheet.
+        this.checkAdd(errors, Number(s.addLeft),   ctx.overhang.left,   "left",   s);
+        this.checkAdd(errors, Number(s.addRight),  ctx.overhang.right,  "right",  s);
+        this.checkAdd(errors, Number(s.addTop),    ctx.overhang.top,    "top",    s);
+        this.checkAdd(errors, Number(s.addBottom), ctx.overhang.bottom, "bottom", s);
+
+        // Overlap must stay inside the shortest panel, or a panel would reach
+        // past its neighbour entirely.
+        shortest = this.shortestPanel(tiles, s);
+        overlapPt = TE.Utils.toDoc(Number(s.overlap) || 0, s);
+        if (tiles.length > 1 && overlapPt >= shortest - eps) {
+            errors.push(TE.L.format(TE.L.ERR_OVERLAP_BIG,
+                Math.round(Number(s.overlap)),
+                Math.round(TE.Utils.fromDoc(shortest, s))));
+        }
+
+        // A temporary document is never Large Canvas (measured: scaleFactor
+        // cannot be set and fails silently). Exporting a Large Canvas source
+        // at source scale would produce a silently shrunken panel.
+        if (ctx.scaleFactor > 1 && s.exportScale === "source") {
+            errors.push(TE.L.ERR_LARGE_CANVAS);
+        }
+
+        // Panel must fit an Illustrator artboard once the output scale applies.
+        k = (s.exportScale === "actual") ? TE.Utils.getEffectiveSF(s) : 1;
+        for (i = 0; i < tiles.length; i++) {
+            t = tiles[i].expanded;
+            w = (t[2] - t[0]) * k;
+            h = (t[1] - t[3]) * k;
+            if (w > ctx.maxArtboard || h > ctx.maxArtboard) {
+                errors.push(TE.L.ERR_AB_TOO_BIG);
+                break;
+            }
+        }
+
+        // Media width only warns — the user may not have entered one, and
+        // knowing better than them about their own press is not our job.
+        if (ctx.mediaWidth) {
+            for (i = 0; i < tiles.length; i++) {
+                t = tiles[i].expanded;
+                w = TE.Utils.fromDoc(t[2] - t[0], s);
+                if (w > Number(ctx.mediaWidth) + eps) {
+                    warnings.push(TE.L.format(TE.L.WARN_MEDIA,
+                        Math.round(w), Math.round(Number(ctx.mediaWidth))));
+                    break;
+                }
+            }
+        }
+
+        return { errors: errors, warnings: warnings };
+    },
+
+    /**
+     * One edge: the add must not exceed the graphic overhang there.
+     * Zero add ("načisto") needs no overhang at all.
+     * @param {Array} errors - Collected errors, mutated in place.
+     * @param {number} addMm - Add on this edge, real-world mm.
+     * @param {number} overhangPt - Available overhang, document points.
+     * @param {string} edge - Edge name for the message.
+     * @param {Object} s - Settings.
+     */
+    checkAdd: function (errors, addMm, overhangPt, edge, s) {
+        var add = Number(addMm) || 0;
+        if (add <= 0) { return; }
+        var addPt = TE.Utils.toDoc(add, s);
+        if (addPt > overhangPt + 1e-6) {
+            errors.push(TE.L.format(TE.L.ERR_ADD_OVERHANG, edge,
+                Math.round(add), Math.round(TE.Utils.fromDoc(overhangPt, s))));
+        }
+    },
+
+    /**
+     * Shortest clean panel along the split axis, in document points.
+     * @param {Array} tiles - Panels from computeTiles().
+     * @param {Object} s - Settings.
+     * @returns {number} Length in document points.
+     */
+    shortestPanel: function (tiles, s) {
+        var min = Infinity, i, c, len;
+        for (i = 0; i < tiles.length; i++) {
+            c = tiles[i].clean;
+            len = (s.direction === "horizontal") ? (c[2] - c[0]) : (c[1] - c[3]);
+            if (len < min) { min = len; }
+        }
+        return min;
+    }
+};

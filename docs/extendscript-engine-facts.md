@@ -137,3 +137,95 @@ další bylo dohledání, ne nové měření.
       doc.close(SaveOptions.DONOTSAVECHANGES);
   }
   ```
+
+## Export, artboardy a vodítka (naměřeno 2026-09-13, AI 30.8.1)
+
+Vzniklo při návrhu `tile-export`; platí ale mimo něj.
+
+### Illustrator neořezává obsah. Nikdy.
+
+Export výřezu nese **celá** zdrojová data. Artboard mění jen rozměr stránky —
+`pdfinfo` na výstupu hlásí správných 500 × 500 pt, ale uvnitř je celá grafika.
+
+| Co | Velikost | Poměr k celku |
+|---|---|---|
+| zdroj (vektorové PDF) | 74 199 B | — |
+| export celé plochy | 43 407 B | 100 % |
+| **plát 1/8 plochy, jen artboard** | **43 391 B** | **99,96 %** |
+| plát 1/8 + clipping maska (linked) | 44 766 B | 103 % |
+| plát 1/8 + clipping maska (embedded) | 43 451 B | 100 % |
+| plát 1/8 s „Preserve Editing Capabilities" | 358 966 B | 827 % |
+| rastrový zdroj | 51 794 B | — |
+| rastrový plát 1/8 | 52 841 B | 102 % |
+| rasterizovaný plát **ze zdroje vektorového** | 51 406 B | — |
+| rasterizovaný plát **ze zdroje rastrového** | 51 406 B | — |
+
+- **Clipping maska nepomůže** — přidá pár bajtů za masku samotnou.
+- **Embedded ani linked** na tom nic nemění.
+- `PDFSaveOptions` nemá ekvivalent InDesignového „Crop Image Data to Frames".
+- **Rasterizace je jediný únik.** Poslední dva řádky: stejná velikost na bajt
+  bez ohledu na zdroj. Velikost pak závisí na ploše a DPI, ne na zdroji.
+
+### `scaleFactor` nejde nastavit a selže tiše
+
+`app.documents.add()` dá dokument se `scaleFactor = 1`. Přiřazení
+`doc.scaleFactor = 10` proběhne **bez výjimky** a hodnota zůstane 1.
+`DocumentPreset` tu vlastnost nemá vůbec — vlastnosti jsou `title, width,
+height, numArtboards, artboardLayout, artboardSpacing, artboardRowsOrCols,
+colorMode, units, previewMode, rasterResolution, transparencyGrid,
+documentBleedOffset, documentBleedLink`.
+
+**Důsledek:** skriptem vytvořený dokument nikdy není Large Canvas.
+
+### Mez artboardu
+
+Měřeno **vycentrovaně** (plátno je centrované kolem počátku, takže artboard
+vedený z počátku narazí mnohem dřív a měření pak měří něco jiného):
+
+| šířka | výsledek |
+|---|---|
+| 16 200 pt (225 in) | OK |
+| 16 300 pt (226 in) | `CoOA` (1095724867) |
+| 16 384 pt a výš | `MRAP` (1346458189) |
+
+Mez u Large Canvas neověřena. Spolehlivější než konstanta je `try/catch`
+kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
+
+### Vodítka
+
+- **Ručně tažené vodítko JE `pathItem`** s `guides === true`, geometrie
+  v `pathPoints[].anchor`.
+- **Přesahuje artboard o řády.** Naměřeno: artboard vysoký 1000 pt, vodítko
+  od `y = 7691` do `y = −8692`. Filtrovat podle `geometricBounds` **nelze**.
+- **Orientace** z bodů: `x₁ = x₂` svislé, `y₁ = y₂` vodorovné.
+- **Pozice nejsou celá čísla** — naměřeno 1553,0909 · 962,1818 · 425,8181 pt.
+- **Čitelná i na zamčené i na skryté vrstvě** (3 ze 3). Skryté je nutné
+  ignorovat: uživatel je nevidí, nemůže podle nich chtít dělit.
+- Pořadí v kolekci je stacking order, ne prostorové — řadit podle souřadnice.
+
+### Pathfinder z ExtendScriptu
+
+- Panelové příkazy `Pathfinder Crop`, `Pathfinder Intersect`,
+  `Pathfinder Divide` **neexistují** — `executeMenuCommand` vrací
+  `yeKB` (1112237433).
+- Funguje `group` → `Live Pathfinder Intersect` → `expandStyle`. **Bez
+  seskupení se efekt neaplikuje** a tvar zůstane neoříznutý.
+- Pathfinder pracuje **s plochami, ne s obrysy** — kontura musí mít po dobu
+  operace výplň.
+- Compound path s dírou se při tom **rozpadl** (díra zmizela) a dva samostatné
+  tvary **selhaly** (Intersect dělá průnik všeho ve skupině naráz).
+
+### Spot barva a artboardy
+
+- `doc.spots.add()` + `colorType = ColorModel.SPOT` + `SpotColor.spot`
+  vytvoří použitelnou přímou barvu; `strokeColor.typename` je pak `SpotColor`.
+- `doc.artboards.add([left, top, right, bottom])` přijme rect se **záporným**
+  spodkem. `MRAP` znamená špatné pořadí nebo příliš velký rect.
+- **`documents.add(space, w, h)` položí artboard na `[0, h, w, 0]`**, tedy od
+  `y = h` dolů k nule — ne od nuly do záporna. Kód, který kreslí dolů od
+  počátku, tak míří **pod** artboard a export vyjde prázdný. Naměřeno:
+  `documents.add(CMYK, 600, 400)` → `[0, 400, 600, 0]`. Po `documents.add()`
+  proto vždy `artboardRect` nastav explicitně.
+- Výchozí artboard se v české lokalizaci jmenuje **„Kreslicí plátno 1"** —
+  detekce vlastních artboardů podle prefixu je proto jazykově nezávislá,
+  detekce podle výchozího jména by nebyla.
