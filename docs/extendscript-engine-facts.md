@@ -221,6 +221,11 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
   vytvoří použitelnou přímou barvu; `strokeColor.typename` je pak `SpotColor`.
 - `doc.artboards.add([left, top, right, bottom])` přijme rect se **záporným**
   spodkem. `MRAP` znamená špatné pořadí nebo příliš velký rect.
+- **`documents.add(space, w, h)` položí artboard na `[0, h, w, 0]`**, tedy od
+  `y = h` dolů k nule — ne od nuly do záporna. Kód, který kreslí dolů od
+  počátku, tak míří **pod** artboard a export vyjde prázdný. Naměřeno:
+  `documents.add(CMYK, 600, 400)` → `[0, 400, 600, 0]`. Po `documents.add()`
+  proto vždy `artboardRect` nastav explicitně.
 - Výchozí artboard se v české lokalizaci jmenuje **„Kreslicí plátno 1"** —
   detekce vlastních artboardů podle prefixu je proto jazykově nezávislá,
   detekce podle výchozího jména by nebyla.
