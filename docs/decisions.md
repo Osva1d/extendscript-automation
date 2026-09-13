@@ -164,3 +164,25 @@ Nálezy z měření napříč šesti skripty. **Vědomě neimplementováno** —
   skutečné 1.0.0). Řešení po releasu: buď verzi v README nezmiňovat (odkaz na
   CHANGELOG/Releases — částečně už uděláno), nebo README/CHANGELOG zahrnout do
   parity guardu.
+
+## Sdílené jádro rozšířeno o geometrii značek (2026-09-13)
+
+`ZSM.Core` přesunut do `shared/lib/cut_marks.js` jako `buildCutMarks(NS)`,
+stejným vzorem jako `ui_state.js`.
+
+**Proč se po roce otevírá to, co tenhle dokument uzavřel.** Kritérium je
+„oprav jednou platí i tam". Geometrie registračních značek je čistá matematika
+bez DOM a chyba v pozici značky je chyba v obou nástrojích — `zund-summa-marks`
+i `tile-export` z ní počítají totéž. Dřívější návrhy na rozšíření sdíleného
+jádra byly odmítnuty proto, že měřily **textovou podobnost** místo tohohle
+kritéria; tady obstojí.
+
+**Co sdílené není: kreslení.** `ZSM.Draw` je provázaný se správou řezacích
+vrstev, kterou `tile-export` nemá a nepotřebuje. Sdílí se výpočet, ne render.
+
+**Důkaz, že přesun nic nezměnil:** 13 suit ZSM prošlo před i po s identickými
+čísly, včetně těch, které modul načítají — MATH 123/123, DRAW.RENDER 78/78,
+PROPERTY 24/24.
+
+**Bilance sdíleného jádra po této změně:** 3 moduly — `json2.js`,
+`ui_state.js`, `cut_marks.js`.

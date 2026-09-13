@@ -3,7 +3,7 @@
  * ZSM.Core Math Verification Test Suite
  * Runs outside Illustrator (pure JS) — validates geometry calculations.
  *
- * IMPORTANT: Loads the real src/core.js — no copy-pasted algorithms.
+ * IMPORTANT: Loads the real shared/lib/cut_marks.js — no copy-pasted algorithms.
  * Single source of truth for the tested code.
  *
  * Reference: PROJECT_CHARTER.md specifications
@@ -47,8 +47,9 @@ ZSM.Config = {
 };
 
 // ===== LOAD PRODUCTION CODE =====
-var corePath = path.join(__dirname, "..", "src", "core.js");
+var corePath = path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js");
 eval(fs.readFileSync(corePath, "utf8"));
+buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 
 
 // ===== TEST FRAMEWORK =====

@@ -66,7 +66,8 @@ ZSM.Config = {
 global.alert = function () {};
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
-eval(fs.readFileSync(path.join(__dirname, "..", "src", "core.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
+buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 // Load bounds before draw — draw.getBounds delegates to ZSM.Bounds.get
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "bounds.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
