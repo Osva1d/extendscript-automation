@@ -22,6 +22,13 @@ TE.Config = {
     PRESET_KEY_DEFAULT: "[Default]",
     PRESET_KEY_LAST: "[Last Settings]",
 
+    // Read by shared/lib/cut_marks.js. The Summa values are unused here, but
+    // the shared module is a straight move from zund-summa-marks and reads
+    // them unconditionally — splitting it would be a refactor of production
+    // code nobody asked for.
+    summaXCenter: 10,
+    summaYVisual: 10,
+
     debug: false,
 
     /**
@@ -58,6 +65,20 @@ TE.Config = {
             pdfPreset:   "",
             outputDir:   "",
             namePattern: "{doc}_{n}",
+
+            // --- Zünd mode ---
+            zundMode:    false,         // master switch
+            cutSpot:     "cut",         // spot colour identifying the contour
+            markSizeZ:   5,             // mm, Zünd mark diameter
+            gapInner:    10,            // mm, gap from panel edge to mark
+            gapOuter:    0,             // mm, extra artboard margin
+            maxDist:     500,           // mm, maximum spacing between marks
+            orientDist:  100,           // mm, orientation dot from the corner
+            mode:        "ZUND",        // the shared geometry module branches on this
+            // Unused here; the shared module reads them and would break on undefined.
+            markSizeS:   3,
+            feedTop:     70,
+            feedBottom:  50,
             // Crash recovery: a run that died on panel 9 of 12 should not
             // re-export the eight that are already on disk.
             skipExisting: true

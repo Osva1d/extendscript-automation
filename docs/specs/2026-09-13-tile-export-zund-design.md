@@ -142,6 +142,16 @@ Sáhne se po něm až po doloženém selhání, ne preventivně.
 Počítají se ze sdíleného `buildCutMarks(TE)` s bounds **expanded rectu plátu**,
 v jeho dočasném dokumentu. Značky tak sedí na plát, ne na celou grafiku.
 
+**Artboard plátu musí v Zünd režimu vyrůst.** Značky leží *vně* plátu —
+naměřeno: při odstupu 10 mm a značce 5 mm sahají 42,5 pt za každou hranu.
+Sdílená geometrie proto vrací i `geo.ab`, artboard, který je pojme; `exportTile`
+jím po nakreslení značek artboard přepíše. Bez toho by se značky do PDF vůbec
+nedostaly.
+
+Důsledek: **MediaBox plátu je v Zünd režimu větší než plát sám.** Červená linka
+zůstává na hranici plátu, tedy nově uvnitř většího MediaBoxu — to je správně,
+protože označuje ořez, ne okraj stránky.
+
 Parametry převzaté z `ZSM.Config`: velikost značky, odstup od okraje, maximální
 rozteč, vzdálenost orientačního bodu.
 

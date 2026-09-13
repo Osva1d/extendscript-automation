@@ -98,6 +98,50 @@ TE.Draw = {
         return p;
     },
 
+
+    /**
+     * Draws Zünd registration marks from the shared geometry.
+     *
+     * Geometry comes from shared/lib/cut_marks.js so a wrong mark position is
+     * wrong in one place, not two. Drawing stays per tool: ZSM.Draw is wired
+     * into cut-layer management this tool does not have.
+     *
+     * @param {Document} doc - Temporary document of one panel.
+     * @param {Object} geo - Output of TE.Core.calculateAll().
+     * @param {Object} s - Settings.
+     * @returns {number} How many marks were drawn.
+     */
+    drawMarks: function (doc, geo, s) {
+        var spot = this.getOrCreateSpot(doc, s.cutSpot);
+        var r = TE.Utils.toDoc(Number(s.markSizeZ) / 2, s);
+        var i, m, c, n = 0;
+
+        for (i = 0; i < geo.marksZ.length; i++) {
+            // The shared geometry returns marks as {cx, cy} centres, not pairs.
+            m = geo.marksZ[i];
+            if (isNaN(m.cx) || isNaN(m.cy)) {
+                TE.Utils.log("drawMarks: skipping mark " + i + ", coordinate is NaN");
+                continue;
+            }
+            try {
+                // pathItems.ellipse(top, left, width, height) — the mark is
+                // centred on m, so the box starts half a diameter away.
+                c = doc.pathItems.ellipse(m.cy + r, m.cx - r, r * 2, r * 2);
+                c.filled = true;
+                c.fillColor = spot;
+                // Overprint, as zund-summa-marks does: the mark must not knock
+                // a hole in the artwork underneath it.
+                c.fillOverprint = true;
+                c.stroked = false;
+                c.name = "TE_mark";
+                n++;
+            } catch (e) {
+                TE.Utils.log("drawMarks: failed at mark " + i + ": " + e.message);
+            }
+        }
+        return n;
+    },
+
     /**
      * Returns the lines layer, emptied. Cleared on every start without asking,
      * so a crashed run leaves nothing behind — idempotence per ~/Dev/CLAUDE.md.

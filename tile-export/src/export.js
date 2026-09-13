@@ -94,13 +94,16 @@ TE.Export = {
      * @param {Object} ctx - {graphicFile, graphicBounds, docName, outFolder,
      *        total, pdfOptions}.
      * @param {Object} s - Settings.
-     * @returns {File} The written PDF.
+     * @returns {Object} {file: File, contourPaths: number}. contourPaths is 0
+     *          when the cut contour does not reach this panel, which is not an
+     *          error but belongs in the summary.
      * @throws {Error} TE_EXPORT:<index>:<message>
      */
     exportTile: function (tile, ctx, s) {
         var k = this.outputScale(s);
         var tf = this.tileTransform(tile, ctx.graphicBounds, k);
         var tmp = null;
+        var contourPaths = 0;
 
         try {
             tmp = app.documents.add(DocumentColorSpace.CMYK,
@@ -117,6 +120,27 @@ TE.Export = {
                 // The panel's outer rect maps exactly onto the temporary
                 // artboard, so the line marks the MediaBox of this PDF.
                 TE.Draw.drawTileLine(tmp, tf.artboard, s, k);
+            }
+
+            if (s.zundMode) {
+                // Marks are computed from THIS panel's rect, so they sit on
+                // the panel rather than on the whole graphic.
+                var geo = TE.Core.calculateAll(s, tf.artboard);
+                TE.Draw.drawMarks(tmp, geo, s);
+
+                // Marks sit OUTSIDE the panel — measured: with a 10 mm gap and
+                // a 5 mm mark, they reach 42.5 pt past each edge. The shared
+                // geometry returns the artboard that fits them, and the panel
+                // must grow to it or the marks never reach the PDF. The trim
+                // line stays where it was, now inside a larger MediaBox.
+                if (geo.ab) { tmp.artboards[0].artboardRect = geo.ab; }
+
+                if (ctx.contour && ctx.contour.length) {
+                    // Zero back means the contour does not reach this panel —
+                    // not an error (a middle panel of a rectangular cut-out
+                    // legitimately has none), but the caller reports it.
+                    contourPaths = TE.Cut.renderTileContour(tmp, ctx.contour, tf, s);
+                }
             }
 
             if (s.exportMode === "raster") {
@@ -138,7 +162,7 @@ TE.Export = {
             var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
             var out = new File(ctx.outFolder.fsName + "/" + name + ".pdf");
             tmp.saveAs(out, ctx.pdfOptions);
-            return out;
+            return { file: out, contourPaths: contourPaths };
         } catch (e) {
             throw new Error("TE_EXPORT:" + tile.index + ":" + e.message);
         } finally {
