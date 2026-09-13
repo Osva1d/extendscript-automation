@@ -47,6 +47,71 @@ TE.Grid = {
         return this.prepareGuides(guides, extent, s);
     },
 
+
+    /**
+     * Panel geometry. Two rules that never meet on the same edge:
+     * an OUTER edge of the graphic gets the per-edge add, an INNER edge
+     * (a seam with a neighbour) gets the overlap.
+     *
+     * The horizontal and vertical branches are written out separately rather
+     * than abstracted over an axis — this code is read when a panel comes out
+     * wrong, and explicit beats clever there.
+     *
+     * @param {Array} cuts - Ascending cut positions from computeCuts().
+     * @param {Array} cleanRect - [left, top, right, bottom] of the whole
+     *        graphic, top > bottom.
+     * @param {Object} s - Settings.
+     * @returns {Array} [{index, clean:[l,t,r,b], expanded:[l,t,r,b]}], for
+     *          vertical numbered from the top down.
+     */
+    computeTiles: function (cuts, cleanRect, s) {
+        var L = cleanRect[0], T = cleanRect[1], R = cleanRect[2], B = cleanRect[3];
+        var o  = TE.Utils.toDoc(Number(s.overlap)   || 0, s);
+        var aT = TE.Utils.toDoc(Number(s.addTop)    || 0, s);
+        var aB = TE.Utils.toDoc(Number(s.addBottom) || 0, s);
+        var aL = TE.Utils.toDoc(Number(s.addLeft)   || 0, s);
+        var aR = TE.Utils.toDoc(Number(s.addRight)  || 0, s);
+        var sym = (s.overlapMode === "symmetric");
+        var tiles = [];
+        var b = [], i, n, lo, hi;
+
+        if (s.direction === "horizontal") {
+            b.push(L);
+            for (i = 0; i < cuts.length; i++) { b.push(cuts[i]); }
+            b.push(R);
+            n = b.length - 1;
+
+            for (i = 0; i < n; i++) {
+                lo = (i === 0)     ? b[i]     - aL : (sym ? b[i]     - o / 2 : b[i]);
+                hi = (i === n - 1) ? b[i + 1] + aR : (sym ? b[i + 1] + o / 2 : b[i + 1] + o);
+                tiles.push({
+                    index: i + 1,
+                    clean:    [b[i], T, b[i + 1], B],
+                    expanded: [lo, T + aT, hi, B - aB]
+                });
+            }
+            return tiles;
+        }
+
+        // vertical — cuts ascend along Y, but panels are numbered top down,
+        // so the boundary list is built descending from the top.
+        b.push(T);
+        for (i = cuts.length - 1; i >= 0; i--) { b.push(cuts[i]); }
+        b.push(B);
+        n = b.length - 1;
+
+        for (i = 0; i < n; i++) {
+            hi = (i === 0)     ? b[i]     + aT : (sym ? b[i]     + o / 2 : b[i]);
+            lo = (i === n - 1) ? b[i + 1] - aB : (sym ? b[i + 1] - o / 2 : b[i + 1] - o);
+            tiles.push({
+                index: i + 1,
+                clean:    [L, b[i], R, b[i + 1]],
+                expanded: [L - aL, hi, R + aR, lo]
+            });
+        }
+        return tiles;
+    },
+
     /**
      * Filters, rounds, sorts and de-duplicates guide positions.
      *
