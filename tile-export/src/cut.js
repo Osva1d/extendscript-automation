@@ -57,6 +57,100 @@ TE.Cut = {
         return out;
     },
 
+
+    /**
+     * Transfers the contour into a panel's temporary document and clips it to
+     * the panel by subtracting a covering frame.
+     *
+     * Subtraction, not intersection — measured: Intersect leaves compound
+     * paths and multiple shapes uncropped, Subtract handles both and keeps
+     * holes. It is also what the user does by hand.
+     *
+     * @param {Document} tmpDoc - The panel's temporary document.
+     * @param {Array} sourceItems - Contour items in the SOURCE document.
+     * @param {Object} tf - Transform from TE.Export.tileTransform().
+     * @param {Object} s - Settings; cutSpot names the contour's spot colour.
+     * @returns {number} How many paths the clipped contour ended up as.
+     *          Zero means the contour does not reach this panel — not an
+     *          error, but the caller should say so in the summary.
+     * @throws {Error} TE_CUT:<message>
+     */
+    renderTileContour: function (tmpDoc, sourceItems, tf, s) {
+        var copies = [];
+        var i, dup, srcB, dupB, wantX, wantY;
+
+        try {
+            // 1. Transfer. duplicate() works across documents and keeps the
+            //    spot colour, but positions the copy relative to the ARTBOARD
+            //    CENTRE, not absolutely — measured: a contour at x = 44…815
+            //    landed at −168…603 in a half-width document, off by exactly
+            //    the difference between the two artboard centres.
+            //
+            //    So the offset is measured rather than predicted: read the
+            //    copy's bounds and move it where the same transform puts the
+            //    graphic. That holds however Illustrator computes it.
+            for (i = 0; i < sourceItems.length; i++) {
+                srcB = sourceItems[i].geometricBounds;
+                dup = sourceItems[i].duplicate(tmpDoc.layers[0],
+                                               ElementPlacement.PLACEATEND);
+                dupB = dup.geometricBounds;
+                wantX = (srcB[0] - tf.tileOrigin[0]) * tf.k;
+                wantY = (srcB[1] - tf.tileOrigin[1]) * tf.k;
+                dup.translate(wantX - dupB[0], wantY - dupB[1]);
+                // 2. Pathfinder works on areas, not strokes.
+                dup.filled = true;
+                copies.push(dup);
+            }
+            if (copies.length === 0) { return 0; }
+
+            // 3. Covering frame: outer rectangle with the panel as a hole.
+            var ab = tmpDoc.artboards[0].artboardRect;
+            var fr = this.frameRects(ab, 20000);
+            var outer = tmpDoc.pathItems.rectangle(
+                fr.outer[1], fr.outer[0],
+                fr.outer[2] - fr.outer[0], fr.outer[1] - fr.outer[3]);
+            var hole = tmpDoc.pathItems.rectangle(
+                fr.hole[1], fr.hole[0],
+                fr.hole[2] - fr.hole[0], fr.hole[1] - fr.hole[3]);
+            outer.filled = true; outer.stroked = false;
+            hole.filled = true; hole.stroked = false;
+
+            tmpDoc.selection = null;
+            outer.selected = true; hole.selected = true;
+            app.executeMenuCommand("compoundPath");
+            var frame = tmpDoc.compoundPathItems[0];
+            frame.zOrder(ZOrderMethod.BRINGTOFRONT);
+
+            // 4. Subtract. Grouping is mandatory — without it the live effect
+            //    is not applied and the shape comes back uncropped.
+            tmpDoc.selection = null;
+            for (i = 0; i < copies.length; i++) { copies[i].selected = true; }
+            frame.selected = true;
+            app.executeMenuCommand("group");
+            app.executeMenuCommand("Live Pathfinder Subtract");
+            app.executeMenuCommand("expandStyle");
+
+            // 5. Back to a hairline stroke in the spot colour. Cut paths are
+            //    read by the machine, not the eye, so thinner is more precise —
+            //    the opposite of the trim line, which a person has to see.
+            var spot = TE.Draw.getOrCreateSpot(tmpDoc, s.cutSpot);
+            var n = 0;
+            for (i = 0; i < tmpDoc.pathItems.length; i++) {
+                if (tmpDoc.pathItems[i].name === "TE_line") { continue; }
+                if (tmpDoc.pathItems[i].name === "TE_mark") { continue; }
+                tmpDoc.pathItems[i].filled = false;
+                tmpDoc.pathItems[i].stroked = true;
+                tmpDoc.pathItems[i].strokeColor = spot;
+                tmpDoc.pathItems[i].strokeWidth = 0.125;
+                tmpDoc.pathItems[i].name = "TE_cut";
+                n++;
+            }
+            return n;
+        } catch (e) {
+            throw new Error("TE_CUT:" + e.message);
+        }
+    },
+
     /**
      * Whether the document defines this spot colour.
      * @param {Document} doc - Document to check.

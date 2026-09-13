@@ -72,5 +72,19 @@ assert(TE.Export.buildName("{doc}_{n}_of_{total}", "b", 1, 4) === "b_1_of_4",
 assert(TE.Export.buildName("plat_{n}", "ignored", 7, 100) === "plat_007",
     "three-digit total pads to three");
 
+console.log("\n=== sourceOrigin, tileOrigin, k ===");
+assertClose(r.sourceOrigin[0], GRAPHIC[0], 0.001, "sourceOrigin drží levý okraj grafiky");
+assertClose(r.sourceOrigin[1], GRAPHIC[1], 0.001, "a její horní okraj");
+assertClose(r.tileOrigin[0], TILE.expanded[0], 0.001, "tileOrigin drží levý okraj plátu");
+assertClose(r.tileOrigin[1], TILE.expanded[1], 0.001, "a jeho horní okraj");
+assertClose(r.k, 1, 0.001, "k je měřítko výstupu");
+// A source point on the panel's left edge must map to 0 in the temporary doc.
+assertClose((TILE.expanded[0] - r.tileOrigin[0]) * r.k, 0, 0.001,
+    "levý okraj plátu se mapuje na počátek");
+assertClose((GRAPHIC[0] - r.tileOrigin[0]) * r.k, r.position[0], 0.001,
+    "pravidlo mapování sedí s pozicí grafiky");
+assertClose((GRAPHIC[0] - r10.tileOrigin[0]) * r10.k, r10.position[0], 0.001,
+    "a platí i při měřítku výstupu 1:1");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

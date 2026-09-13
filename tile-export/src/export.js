@@ -35,7 +35,15 @@ TE.Export = {
         return {
             artboard: [0, 0, (t[2] - t[0]) * k, -(t[1] - t[3]) * k],
             position: [(g[0] - t[0]) * k, (g[1] - t[1]) * k],
-            size:     [(g[2] - g[0]) * k, (g[1] - g[3]) * k]
+            size:     [(g[2] - g[0]) * k, (g[1] - g[3]) * k],
+            // Where the graphic sits in the SOURCE document, for reference.
+            sourceOrigin: [g[0], g[1]],
+            // The panel's top-left corner in the SOURCE document, plus the
+            // output scale. TE.Cut uses both to place a duplicated contour:
+            // a source point X maps to (X - tileOrigin) * k in the temporary
+            // document, which is the same rule the graphic follows.
+            tileOrigin: [t[0], t[1]],
+            k: k
         };
     },
 
