@@ -7,7 +7,7 @@
 
 **Language:** English · [Čeština](README.cs.md)
 
-This repository is a **monorepo of three independent tools** plus a small shared
+This repository is a **monorepo of four independent tools** plus a small shared
 core. Each tool has its own README, build, and version — this page is a signpost.
 
 ---
@@ -19,6 +19,7 @@ core. Each tool has its own README, build, and version — this page is a signpo
 | **zund-summa-marks** | Registration marks for Zünd (ECHO) and Summa (OPOS) cutters — layer→spot-colour mapping, marks-only mode, named presets | [README](zund-summa-marks/README.md) |
 | **grommet-marks** | Banner grommet marks along artboard edges or a selected path — corner zones, Esko-style registration targets | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Batch-relink PDFs into an `.ai` imposition template and export print-ready PDFs | [README](batch-relink-export/README.md) |
+| **tile-export** | Split a large graphic into printable panels for manual trimming — per-edge adds, overlap, spot-colour trim line | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
 
 `shared/` holds the namespace-neutral core modules both mark generators consume;
 the reasoning behind what is shared and what is deliberately not lives in
@@ -28,7 +29,7 @@ the reasoning behind what is shared and what is deliberately not lives in
 
 ## Shared conventions
 
-All three tools follow the same conventions and UX standards:
+All four tools follow the same conventions and UX standards:
 
 - **Bilingual UI** — Czech and English, switched automatically by Illustrator's locale
 - **Named presets** — saved configurations with automatic recall of the last-used one
@@ -81,6 +82,7 @@ extendscript-automation/
 ├── grommet-marks/          # tool: banner grommet marks
 ├── zund-summa-marks/       # tool: Zünd/Summa registration marks
 ├── batch-relink-export/    # tool: batch PDF relink + export
+├── tile-export/            # tool: split a graphic into printable panels
 ├── shared/lib/             # namespace-neutral core (ui_state, json2)
 ├── docs/decisions.md       # architecture decisions (what is shared, and why)
 ├── LICENSE

@@ -37,6 +37,7 @@ const EXTENDSCRIPT_GLOBALS = {
     SaveOptions: "readonly", StrokeCap: "readonly", StrokeJoin: "readonly",
     RulerUnits: "readonly", UserInteractionLevel: "readonly",
     PDFCompatibility: "readonly", PDFSaveOptions: "readonly",
+    RasterizeOptions: "readonly", RasterizationColorModel: "readonly",
     CMYKColor: "readonly", RGBColor: "readonly", SpotColor: "readonly",
     GrayColor: "readonly", NoColor: "readonly", ColorModel: "readonly",
 
@@ -44,7 +45,7 @@ const EXTENDSCRIPT_GLOBALS = {
     JSON: "readonly",
 
     // Tool namespaces and the shared-core factory the build wires up.
-    ZSM: "writable", GM: "writable", BRE: "writable",
+    ZSM: "writable", GM: "writable", BRE: "writable", TE: "writable",
     buildUIState: "readonly"
 };
 

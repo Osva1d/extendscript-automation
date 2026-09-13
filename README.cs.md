@@ -7,7 +7,7 @@
 
 **Jazyk:** [English](README.md) · Čeština
 
-Tento repozitář je **monorepo tří nezávislých nástrojů** plus malé sdílené jádro.
+Tento repozitář je **monorepo čtyř nezávislých nástrojů** plus malé sdílené jádro.
 Každý nástroj má vlastní README, build a verzi — tato stránka je rozcestník.
 
 ---
@@ -19,6 +19,7 @@ Každý nástroj má vlastní README, build a verzi — tato stránka je rozcest
 | **zund-summa-marks** | Registrační značky pro řezací plotry Zünd (ECHO) a Summa (OPOS) — mapování vrstva→přímá barva, mód „pouze značky", pojmenované presety | [README](zund-summa-marks/README.md) |
 | **grommet-marks** | Značky pro oka po obvodu artboardu nebo na vybrané cestě — rohové zóny, registrační terče v Esko stylu | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Hromadné relinkování PDF do `.ai` vyřazovací šablony a export tiskových PDF | [README](batch-relink-export/README.md) |
+| **tile-export** | Rozdělení velké grafiky na tiskové pláty pro ruční ořez — přídavky per hrana, přelep, ořezová linka v přímé barvě | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
 
 `shared/` drží namespace-neutrální jádro, které oba generátory značek sdílejí;
 odůvodnění, co se sdílí a co záměrně ne, je v
@@ -28,7 +29,7 @@ odůvodnění, co se sdílí a co záměrně ne, je v
 
 ## Společné konvence
 
-Všechny tři nástroje sdílejí stejné konvence a UX standardy:
+Všechny čtyři nástroje sdílejí stejné konvence a UX standardy:
 
 - **Dvojjazyčné UI** — čeština a angličtina, automaticky podle locale Illustratoru
 - **Pojmenované presety** — uložená nastavení s automatickým uchováním posledního použitého
@@ -81,6 +82,7 @@ extendscript-automation/
 ├── grommet-marks/          # nástroj: značky pro oka na bannery
 ├── zund-summa-marks/       # nástroj: registrační značky Zünd/Summa
 ├── batch-relink-export/    # nástroj: hromadný relink + export PDF
+├── tile-export/            # nástroj: rozdělení grafiky na tiskové pláty
 ├── shared/lib/             # namespace-neutrální jádro (ui_state, json2)
 ├── docs/decisions.md       # architektonická rozhodnutí (co se sdílí a proč)
 ├── LICENSE
