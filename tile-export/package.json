@@ -1,0 +1,23 @@
+{
+  "name": "tile-export",
+  "version": "1.0.0",
+  "description": "Splits large graphics into printable panels for manual trimming (Adobe Illustrator ExtendScript).",
+  "private": true,
+  "scripts": {
+    "test": "bash tests/run_all.sh",
+    "test:utils": "node tests/test_utils.js",
+    "test:cuts": "node tests/test_grid_cuts.js",
+    "test:tiles": "node tests/test_grid_tiles.js",
+    "test:validation": "node tests/test_validation.js",
+    "test:doc": "node tests/test_doc.js",
+    "test:transform": "node tests/test_export_transform.js",
+    "test:props": "node tests/test_properties.js",
+    "test:es3": "node tests/test_es3_compliance.js",
+    "build": "bash tools/build.sh",
+    "verify": "npm run build && npm test"
+  },
+  "author": "Ladislav Osvald",
+  "license": "MIT",
+  "engines": { "node": ">=14" },
+  "devDependencies": { "fast-check": "^4.7.0" }
+}
