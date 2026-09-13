@@ -106,14 +106,9 @@ TE.Export = {
             pi.position = tf.position;
 
             if (s.drawLine) {
-                // Clean rect of THIS panel, mapped into the temporary document.
-                var c = tile.clean, e = tile.expanded;
-                TE.Draw.drawTileLine(tmp, [
-                    (c[0] - e[0]) * k,
-                    (c[1] - e[1]) * k,
-                    (c[2] - e[0]) * k,
-                    (c[3] - e[1]) * k
-                ], s);
+                // The panel's outer rect maps exactly onto the temporary
+                // artboard, so the line marks the MediaBox of this PDF.
+                TE.Draw.drawTileLine(tmp, tf.artboard, s, k);
             }
 
             if (s.exportMode === "raster") {

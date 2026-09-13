@@ -46,7 +46,10 @@ TE.Config = {
 
             drawLine:    true,
             lineSpot:    "CutContour",
-            lineWidth:   1,             // pt
+            // pt of PRINTED output. 0.3 pt (0.11 mm) sits safely above the
+            // 0.25 pt hairline threshold where a line can vanish into a single
+            // pixel at 300 dpi, and stays thin enough not to widen the cut.
+            lineWidth:   0.3,
 
             scaleN:      1,             // manual 1:N document scale
             exportMode:  "vector",      // "vector" | "raster"

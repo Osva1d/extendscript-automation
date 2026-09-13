@@ -31,7 +31,8 @@ plát nese celou grafiku.
   vlevo, vpravo; nula znamená „načisto"
 - přelep, samostatně od přídavků; default 2 cm, nula pro desky
 - dva režimy přelepu: symetricky kolem švu, nebo celý na jeden plát
-- **červená linka** po obvodu čistého formátu každého plátu, v **přímé barvě**
+- **červená linka** po obvodu **vnějšího rozměru** plátu (MediaBoxu výstupu),
+  v **přímé barvě**
 - vytvoření artboardů s pojmenováním
 - export do PDF — vektorový nebo rastrový režim
 - presety, lokalizace cs/en (infrastruktura repa)
@@ -153,9 +154,27 @@ ne parametr — otočit jde jednou změnou, pokud se ukáže, že to lepiči cht
 
 Pro `vertical` platí totéž s prohozenými osami.
 
-**Artboard plátu** = rozšířený obdélník. **Červená linka plátu** = obdélník
-čistého formátu plátu, tedy `[bᵢ, Y0, bᵢ₊₁, Y1]` — po celém obvodu včetně švů.
-Na hranách „načisto" splývá s okrajem plátu.
+**Artboard plátu** = rozšířený obdélník. **Červená linka plátu** = tentýž
+rozšířený obdélník, tedy MediaBox exportovaného PDF.
+
+Opraveno 2026-09-13 po prvním běhu: původně byla linka na čistém formátu, což je
+obráceně. Řez podle ní by montážní spad odřízl, a lepič ho přitom potřebuje.
+Linka na vnějším rozměru znamená, že po řezu spad na plátu **zůstane**.
+
+Dvě věci, které z toho plynou a nejsou samozřejmé:
+
+- **Tah je posunutý dovnitř o svou polovinu**, aby jeho vnější okraj ležel přesně
+  na obdélníku. Tah vycentrovaný na hranu MediaBoxu přijde o vnější polovinu
+  a vytiskne se poloviční. Ověřeno: desetibodová linka má střed na `[5, 595]`
+  a viditelnou hranu na `[0, 600]`.
+- **Tloušťka je rozměr výstupu, ne dokumentu.** Dělí se měřítkem dokumentu
+  a násobí měřítkem výstupu, jinak 0,3 pt v dokumentu 1:10 vyjede jako 3 pt.
+  Ověřeno ve všech čtyřech kombinacích: `printed = 0,3 pt` vždy.
+
+**Tloušťka 0,3 pt jako výchozí** (0,11 mm). Průzkum tiskových specifikací:
+providéři garantují minimum mezi 0,25 a 1 pt, pod 0,25 pt je hairline, který se
+při 300 dpi vykreslí jako jediný pixel a může zmizet. 0,3 pt je bezpečně nad tou
+hranicí a pořád tenké.
 
 ## 4b. Vstupní stav dokumentu a přesah grafiky
 
@@ -441,6 +460,11 @@ Pořadí podle toho, jak na sobě stojí:
    - Spad pro ořez, který se u Zündu přidává navíc k přídavkům a přelepu.
 2. **2D mřížka** — dělení oběma směry, až se ukáže, že chybí.
 3. **Značky a číslování plátů** — vynecháno z v1 vědomě, ne přehlédnuto.
+
+   Sem patří i poznámka uživatele z prvního běhu: **linka na vnějším rozměru je
+   zároveň cutlinka pro Zünd** u přesného ořezu na sráz. Tatáž geometrie, jiná
+   role — a jiná tloušťka: pro stroj se doporučuje hairline 0,125 pt, protože ji
+   čte řezačka, ne oko. Až se bude dělat Zünd, je to hotová polovina práce.
 4. **Ořez obsahu mimo Illustrator** — pokud se ukáže, že rasterizace nestačí
    u vektorových grafik. Přidá externí závislost, což je u nástroje
    instalovaného copy-paste do složky skriptů provozní zátěž.

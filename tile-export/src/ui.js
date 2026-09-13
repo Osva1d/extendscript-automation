@@ -245,8 +245,31 @@ TE.UI = {
         etLineW.helpTip = l.TIP_LINE_WIDTH;
         gLine.add("statictext", undefined, "pt");
 
-        var etPreset = this.addRow(pExp, l.LBL_PDF_PRESET, s.pdfPreset, l.TIP_PDF_PRESET);
-        etPreset.characters = 18;
+        // PDF presets come from Illustrator itself, the same way
+        // batch-relink-export does it — typing the name by hand is how you get
+        // a silent fallback to the default preset on a typo.
+        var gPdf = pExp.add("group");
+        gPdf.alignment = ["fill", "top"];
+        var stPdfLbl = gPdf.add("statictext", undefined, l.LBL_PDF_PRESET);
+        this.lockW(stPdfLbl, this.M.LABEL_COL);
+        stPdfLbl.helpTip = l.TIP_PDF_PRESET;
+        var ddPdf = gPdf.add("dropdownlist", undefined, []);
+        ddPdf.alignment = ["fill", "center"];
+        ddPdf.helpTip = l.TIP_PDF_PRESET;
+
+        var pdfList = [];
+        try { pdfList = app.PDFPresetsList; }
+        catch (pdfErr) { pdfList = []; }
+        var pj;
+        for (pj = 0; pj < pdfList.length; pj++) { ddPdf.add("item", pdfList[pj]); }
+        if (ddPdf.items.length === 0) {
+            // No list available: fall back to the one preset every install has.
+            ddPdf.add("item", "[High Quality Print]");
+        }
+        ddPdf.selection = 0;
+        for (pj = 0; pj < ddPdf.items.length; pj++) {
+            if (ddPdf.items[pj].text === s.pdfPreset) { ddPdf.selection = pj; break; }
+        }
 
         var gOut = pExp.add("group");
         gOut.alignment = ["fill", "top"];
@@ -310,7 +333,7 @@ TE.UI = {
             etAddLeft: etAddLeft, etAddRight: etAddRight,
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
-            etPreset: etPreset, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
+            ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
 
@@ -329,7 +352,7 @@ TE.UI = {
 
         var i, all = [cbScale, etScaleN, etCleanW, etCleanH, etCount, etWidth, etRound,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
-                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip];
+                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf];
         for (i = 0; i < all.length; i++) { wire(all[i]); }
         for (i = 0; i < rbDir.length; i++) { wire(rbDir[i]); }
         for (i = 0; i < rbMode.length; i++) { wire(rbMode[i]); }
@@ -439,7 +462,7 @@ TE.UI = {
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
         s.lineWidth   = Number(r.etLineW.text) || 1;
-        s.pdfPreset   = r.etPreset.text;
+        s.pdfPreset   = r.ddPdf.selection ? r.ddPdf.selection.text : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
@@ -478,7 +501,10 @@ TE.UI = {
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
         r.etLineW.text = String(s.lineWidth);
-        r.etPreset.text = String(s.pdfPreset);
+        var pk;
+        for (pk = 0; pk < r.ddPdf.items.length; pk++) {
+            if (r.ddPdf.items[pk].text === s.pdfPreset) { r.ddPdf.selection = pk; break; }
+        }
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;

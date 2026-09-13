@@ -79,7 +79,7 @@
         var i, item;
         if (s.drawLine) {
             for (i = 0; i < tiles.length; i++) {
-                item = TE.Draw.drawTileLine(doc, tiles[i].clean, s);
+                item = TE.Draw.drawTileLine(doc, tiles[i].expanded, s, 1);
                 item.move(lay, ElementPlacement.PLACEATEND);
             }
         }

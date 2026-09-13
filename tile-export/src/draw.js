@@ -48,24 +48,52 @@ TE.Draw = {
     },
 
     /**
-     * Draws the trim line around one panel's clean format.
+     * Draws the trim line around one panel's OUTER rectangle.
      *
      * THE ONLY PLACE A LINE IS DRAWN. Both the preview in phase 1 and the
      * export in phase 2 call this. Two implementations of the same rectangle
      * would drift, and the difference would only show on the printed sheet.
      *
+     * Two things that are easy to get wrong and were:
+     *
+     * 1. The line marks the panel's OUTER size — the MediaBox of the exported
+     *    PDF — not the clean format. Cutting along it leaves the mounting bleed
+     *    on the panel, which is what the fitter needs. A line on the clean
+     *    format would have the finisher cut the bleed off.
+     *
+     * 2. The stroke is laid so its OUTER edge sits on that rectangle, i.e. the
+     *    path is inset by half the stroke width. A stroke centred on the
+     *    MediaBox edge loses its outer half outside the page and prints at half
+     *    the intended weight.
+     *
+     * Stroke width is a printed-output measurement, so it is divided by the
+     * document scale and multiplied by the output scale. Without that, a 0.3 pt
+     * line in a 1:10 document comes out as 3 pt on the press — the same class
+     * of bug as zund-summa-marks v26.4.0.
+     *
      * @param {Document} doc - Document to draw into.
-     * @param {Array} rect - Clean rect [l, t, r, b], top > bottom.
+     * @param {Array} rect - Outer rect [l, t, r, b] of the panel, top > bottom.
      * @param {Object} s - Settings (lineSpot, lineWidth).
+     * @param {number} k - Output scale; 1 for a preview in the source document.
      * @returns {PathItem} The drawn rectangle.
      */
-    drawTileLine: function (doc, rect, s) {
+    drawTileLine: function (doc, rect, s, k) {
         var spot = this.getOrCreateSpot(doc, s.lineSpot);
-        var p = doc.pathItems.rectangle(rect[1], rect[0], rect[2] - rect[0], rect[1] - rect[3]);
+        var scale = (k || 1) / TE.Utils.getEffectiveSF(s);
+        var sw = (Number(s.lineWidth) || 0.3) * scale;
+        var half = sw / 2;
+
+        // Inset by half the stroke so the stroke's outer edge lands on rect.
+        var p = doc.pathItems.rectangle(
+            rect[1] - half,
+            rect[0] + half,
+            (rect[2] - rect[0]) - sw,
+            (rect[1] - rect[3]) - sw
+        );
         p.filled = false;
         p.stroked = true;
         p.strokeColor = spot;
-        p.strokeWidth = Number(s.lineWidth) || 1;
+        p.strokeWidth = sw;
         p.name = "TE_line";
         return p;
     },
