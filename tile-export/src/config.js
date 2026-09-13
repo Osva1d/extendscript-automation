@@ -17,6 +17,11 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
+    // Preset keys. "[Last Settings]" always mirrors what the user last
+    // submitted; named presets stay immutable until explicitly saved.
+    PRESET_KEY_DEFAULT: "[Default]",
+    PRESET_KEY_LAST: "[Last Settings]",
+
     debug: false,
 
     /**
