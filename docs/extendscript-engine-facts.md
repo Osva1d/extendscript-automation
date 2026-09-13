@@ -224,6 +224,42 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
   (`rightmost` sedělo), ale vizuální kontrola ukázala, že díra tam nikdy
   nebyla. **U geometrických operací kontroluj výsledek očima, ne jen čísly.**
 
+### Odsazená cesta s parametrem — jedině přes `applyEffect()`
+
+`executeMenuCommand("Live Offset Path")` **existuje, ale hodnotu předat neumí** —
+aplikuje se s nulou a geometrie se nezmění. Panelový `Offset Path` neexistuje
+(`yeKB`).
+
+Parametrizovaně to jde přes Live Effect XML:
+
+```js
+item.applyEffect('<LiveEffect name="Adobe Offset Path">'
+               + '<Dict data="R mlim 10 R ofst ' + offsetPt + ' I jntp 0 "/>'
+               + '</LiveEffect>');
+app.executeMenuCommand("expandStyle");   // efekt -> skutečná geometrie
+```
+
+**Mapování `jntp` naměřeno na šesticípé hvězdě, offset 5 mm (14,17 pt):**
+
+| `jntp` | roh | rozšíření bounds |
+|---|---|---|
+| **0** | zaoblený | **14,17 pt — přesně zadaná hodnota** |
+| 1 | uříznutý | 10,90 pt (ubírá) |
+| 2 | prodloužená špička | 35,48 pt (přidává) |
+
+Kontrola na kruhu (bez rohů) dala 14,17 pt při každém nastavení — matematika
+offsetu je správná, liší se jen chování v rozích. **Pro ořezovou konturu
+`jntp 0`.**
+
+### Pozor na menu příkazy s dialogem
+
+`executeMenuCommand("Expand3")` otevře modální okno `Objekt ▸ Rozdělit…`.
+V sondě přes `ai-eval.sh` to **zablokuje Illustrator**, AppleScript most spadne
+na `-609 („Propojení je neplatné")` a neuložené dokumenty se ztratí. Naměřeno
+tvrdě, ztrátou dokumentu.
+
+Před testováním neznámého menu příkazu si ověř, že nevyvolává dialog.
+
 ### ScriptUI: skrytá skupina si drží místo
 
 `group.visible = false` **nezmenší dialog** — layout manager pro ni prostor
