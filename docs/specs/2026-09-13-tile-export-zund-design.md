@@ -157,12 +157,15 @@ rozteč, vzdálenost orientačního bodu.
 
 ## 6. Dialog
 
-Zünd panel jde do **pravého sloupce** a je **viditelný jen když je režim
-zapnutý**, s `win.layout.layout(true)` po přepnutí. Dialog v1 měří 767 px
-a Zünd panel by přidal zhruba 150 px, tedy přes použitelnou výšku obrazovky.
-Kdo Zünd nepoužívá, neplatí za něj místem.
+Zünd panel jde do **pravého sloupce**, a sloupce se přerozdělí podle
+naměřených výšek: vlevo Předvolby 57 + Dokument 86 + Dělení 177 + Přelep 214
+= 534 px, vpravo Export 276 + Zünd 165 = 441 px. Pole Výsledku se zkrátí ze 120
+na 85 px. Výsledek: **796 px v obou stavech**, uvnitř použitelné výšky.
 
-Zároveň se pole Výsledku zkrátí ze 120 na 85 px.
+**Dynamické skrývání panelu nefunguje a nepočítá se s ním.** ScriptUI drží místo
+i pro neviditelnou skupinu; naměřeno, že přepnutí `visible` i zastropování
+`maximumSize.height` pohnou dialogem o 0 px. Skrývání zůstalo jen proto, aby
+zašedlá Zünd pole nerušila, když je režim vypnutý — ne kvůli výšce.
 
 Obsah panelu: přímá barva kontury (dropdown ze swatchů dokumentu) a parametry
 značek z §5.

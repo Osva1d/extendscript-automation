@@ -224,6 +224,16 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
   (`rightmost` sedělo), ale vizuální kontrola ukázala, že díra tam nikdy
   nebyla. **U geometrických operací kontroluj výsledek očima, ne jen čísly.**
 
+### ScriptUI: skrytá skupina si drží místo
+
+`group.visible = false` **nezmenší dialog** — layout manager pro ni prostor
+rezervuje dál. Nepomůže ani `group.maximumSize.height = 0`. Naměřeno na dialogu
+`tile-export`: přepnutí obou vlastností pohnulo výškou okna o **0 px**.
+
+Důsledek: dynamickou viditelnost nelze použít jako nástroj na výšku dialogu.
+Výšku musí vyřešit rozložení (sloupce, zkrácení polí). `visible` má smysl jen
+na to, aby nerušil obsah, který právě neplatí.
+
 ### Spot barva a artboardy
 
 - `doc.spots.add()` + `colorType = ColorModel.SPOT` + `SpotColor.spot`
