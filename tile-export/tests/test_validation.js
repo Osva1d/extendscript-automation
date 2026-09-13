@@ -54,7 +54,8 @@ function ctx(over) {
         graphicCount: 1,
         scaleFactor: 1,
         mediaWidth: null,
-        maxArtboard: 16200
+        maxArtboard: 16200,
+        hasCutSpot: true
     }, over || {});
 }
 
@@ -109,6 +110,19 @@ console.log("\n=== media width is a warning, not an error ===");
 var r11 = TE.Validate.check(j.tiles, ctx({ mediaWidth: 800 }), j.s);
 assert(r11.errors.length === 0, "narrow media does not stop the run");
 assert(has(r11.warnings, "media-too-narrow"), "narrow media warns");
+
+console.log("\n=== Zünd: přímá barva kontury musí existovat ===");
+TE.L.ERR_NO_CUT_SPOT = "cut-spot-missing";
+var jz = job({ zundMode: true, cutSpot: "cut" });
+var rz = TE.Validate.check(jz.tiles, ctx({ hasCutSpot: false }), jz.s);
+assert(has(rz.errors, "cut-spot-missing"), "chybějící přímá barva je chyba");
+
+var rz2 = TE.Validate.check(jz.tiles, ctx({ hasCutSpot: true }), jz.s);
+assert(rz2.errors.length === 0, "existující přímá barva projde");
+
+var jn = job({ zundMode: false, cutSpot: "cut" });
+var rz3 = TE.Validate.check(jn.tiles, ctx({ hasCutSpot: false }), jn.s);
+assert(rz3.errors.length === 0, "mimo Zünd režim se barva nekontroluje");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

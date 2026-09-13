@@ -51,6 +51,12 @@ TE.Validate = {
             errors.push(TE.L.ERR_LARGE_CANVAS);
         }
 
+        // Zünd mode needs the contour's spot colour to exist. Checking it up
+        // front beats discovering it on panel five, half way through a batch.
+        if (s.zundMode && !ctx.hasCutSpot) {
+            errors.push(TE.L.format(TE.L.ERR_NO_CUT_SPOT, s.cutSpot));
+        }
+
         // Panel must fit an Illustrator artboard once the output scale applies.
         k = (s.exportScale === "actual") ? TE.Utils.getEffectiveSF(s) : 1;
         for (i = 0; i < tiles.length; i++) {

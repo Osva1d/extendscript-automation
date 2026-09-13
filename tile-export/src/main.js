@@ -30,6 +30,12 @@
         if (graphics.length === 0) { alert(TE.L.ERR_NO_GRAPHIC); return; }
         var gBounds = graphics[0].geometricBounds;
 
+        // Spot names feed the dialog's contour dropdown and its validation.
+        var spotNames = [], si;
+        try {
+            for (si = 0; si < doc.spots.length; si++) { spotNames.push(doc.spots[si].name); }
+        } catch (spotErr) { TE.Utils.log("spots unreadable: " + spotErr.message); }
+
         var pData = TE.Storage.load();
         if (!pData) {
             pData = { activePreset: TE.Config.PRESET_KEY_DEFAULT, presets: {} };
@@ -44,6 +50,7 @@
 
         var ctx = {
             cleanRect: clean.rect,
+            spotNames: spotNames,
             guides: guidesH.positions,
             guidesByDirection: { horizontal: guidesH, vertical: guidesV },
             validation: {
@@ -53,7 +60,10 @@
                 mediaWidth: null,
                 // Measured ceiling; the try/catch around artboards.add is the
                 // real guard, because this number ages with the application.
-                maxArtboard: 16200
+                maxArtboard: 16200,
+                // TE.UI.refresh() rewrites this on every keystroke from the
+                // spot the user currently has selected.
+                hasCutSpot: true
             }
         };
 
@@ -65,6 +75,9 @@
              || res.wrapper.presets[res.wrapper.activePreset];
 
         // --- phase 1: rebuild the panels from the clean artboard -------------
+        // Contour is read once and handed to every panel's export.
+        var contour = s.zundMode ? TE.Cut.findContour(doc, s.cutSpot) : [];
+
         var guides = ctx.guidesByDirection[s.direction];
         var ext = (s.direction === "horizontal")
             ? { start: clean.rect[0], end: clean.rect[2] }
@@ -118,17 +131,23 @@
             docName: String(doc.name).replace(/\.[^.]+$/, ""),
             outFolder: outFolder,
             total: tiles.length,
-            pdfOptions: pdfOpts
+            pdfOptions: pdfOpts,
+            contour: contour
         };
 
-        var done = 0, skipped = 0, failed = [];
+        var done = 0, skipped = 0, failed = [], noContour = [], res;
         for (i = 0; i < tiles.length; i++) {
             try {
                 if (s.skipExisting && TE.Export.outputExists(tiles[i], eCtx, s)) {
                     skipped++;
                     continue;
                 }
-                TE.Export.exportTile(tiles[i], eCtx, s);
+                res = TE.Export.exportTile(tiles[i], eCtx, s);
+                // Zero cut paths means the contour does not reach this panel.
+                // Legitimate for a middle panel of a rectangular cut-out, but
+                // a panel that quietly arrives at the machine without cut data
+                // is an unpleasant surprise there.
+                if (s.zundMode && res.contourPaths === 0) { noContour.push(tiles[i].index); }
                 done++;
             } catch (expErr) {
                 failed.push(tiles[i].index + ": " + expErr.message);
@@ -137,6 +156,9 @@
 
         msg.push(TE.L.format(TE.L.SUMMARY_DONE, done, outFolder.fsName));
         if (skipped > 0) { msg.push(TE.L.format(TE.L.SUMMARY_SKIPPED, skipped)); }
+        if (s.zundMode && noContour.length > 0) {
+            msg.push(TE.L.format(TE.L.WARN_NO_CONTOUR, noContour.join(", ")));
+        }
         if (failed.length > 0) { msg.push(failed.join("\n")); }
         alert(msg.join("\n"));
 
