@@ -83,20 +83,29 @@ TE.UI = {
     },
 
     /**
-     * Shows the dialog.
+     * Builds the dialog and shows it.
      * @param {Object} pData - Preset wrapper {activePreset, presets}.
-     * @param {Object} ctx - {cleanRect, guides, hiddenGuides, validation}.
+     * @param {Object} ctx - {cleanRect, guides, validation}.
      * @returns {Object|null} {action: "tiles"|"export", wrapper} or null on cancel.
      */
     show: function (pData, ctx) {
-        return this.buildDialog(pData, ctx);
+        var built = this.buildDialog(pData, ctx);
+        built.win.center();
+        built.win.show();
+        return built.result();
     },
 
     /**
-     * Builds and runs the dialog.
+     * Builds the dialog WITHOUT showing it.
+     *
+     * Kept separate from show() on purpose: a Window that builds and displays
+     * in one call cannot be measured, because ScriptUI Window is a host object
+     * whose show() cannot be overridden. With this seam a probe can lay the
+     * dialog out, read real bounds and close it — see the standard, §11.
+     *
      * @param {Object} pData - Preset wrapper.
      * @param {Object} ctx - Document context.
-     * @returns {Object|null} Result, or null on cancel.
+     * @returns {Object} {win, refs, result} — result() is valid after show().
      */
     buildDialog: function (pData, ctx) {
         var c = TE.Config;
@@ -109,8 +118,28 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
+        // Two columns. Stacked in one column the dialog measured 932 px tall,
+        // which does not fit a 1512 x 982 logical screen once the menu bar and
+        // Dock are gone. ScriptUI has no scrollable container — scrollbar is a
+        // control, not a viewport — so the fix is layout, not scrolling.
+        // Left column: what gets split. Right column: how it comes out.
+        var gCols = w.add("group");
+        gCols.orientation = "row";
+        gCols.alignChildren = ["fill", "top"];
+        gCols.alignment = ["fill", "top"];
+
+        var colL = gCols.add("group");
+        colL.orientation = "column";
+        colL.alignChildren = ["fill", "top"];
+        colL.alignment = ["fill", "top"];
+
+        var colR = gCols.add("group");
+        colR.orientation = "column";
+        colR.alignChildren = ["fill", "top"];
+        colR.alignment = ["fill", "top"];
+
         // --- Presets ---------------------------------------------------------
-        var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
+        var pPreset = colL.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
         var gPreset = pPreset.add("group");
         gPreset.alignment = ["fill", "top"];
@@ -126,7 +155,7 @@ TE.UI = {
         btnDel.helpTip = l.TIP_PRESET;
 
         // --- Document --------------------------------------------------------
-        var pDoc = w.add("panel", undefined, l.PANEL_DOC);
+        var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
         pDoc.alignChildren = ["fill", "top"];
 
         var gScale = pDoc.add("group");
@@ -159,7 +188,7 @@ TE.UI = {
         gClean.add("statictext", undefined, "mm");
 
         // --- Split -----------------------------------------------------------
-        var pSplit = w.add("panel", undefined, l.PANEL_SPLIT);
+        var pSplit = colL.add("panel", undefined, l.PANEL_SPLIT);
         pSplit.alignChildren = ["fill", "top"];
 
         var rbDir = this.addRadioRow(pSplit, l.LBL_DIRECTION,
@@ -175,7 +204,7 @@ TE.UI = {
         var etRound = this.addRow(pSplit, l.LBL_ROUND, s.guideRound, l.TIP_ROUND, "mm");
 
         // --- Overlap and adds ------------------------------------------------
-        var pEdges = w.add("panel", undefined, l.PANEL_EDGES);
+        var pEdges = colR.add("panel", undefined, l.PANEL_EDGES);
         pEdges.alignChildren = ["fill", "top"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
@@ -189,7 +218,7 @@ TE.UI = {
         var etAddRight  = this.addRow(pEdges, l.LBL_ADD_RIGHT,  s.addRight,  l.TIP_ADD, "mm");
 
         // --- Export ----------------------------------------------------------
-        var pExp = w.add("panel", undefined, l.PANEL_EXPORT);
+        var pExp = colR.add("panel", undefined, l.PANEL_EXPORT);
         pExp.alignChildren = ["fill", "top"];
 
         var rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
@@ -246,6 +275,8 @@ TE.UI = {
         cbSkip.value = !!s.skipExisting;
 
         // --- Result ----------------------------------------------------------
+        // Spans both columns: the per-panel lines run to about 60 characters
+        // and would wrap inside a single column.
         var pCalc = w.add("panel", undefined, l.PANEL_CALC);
         pCalc.alignChildren = ["fill", "top"];
         var stCalc = pCalc.add("statictext", undefined, "", { multiline: true });
@@ -357,21 +388,30 @@ TE.UI = {
         };
 
         // --- result ----------------------------------------------------------
-        var outcome = null;
+        var state = { outcome: null };
 
-        btnTiles.onClick = function () { outcome = "tiles"; w.close(1); };
-        btnExport.onClick = function () { outcome = "export"; w.close(1); };
-        btnCancel.onClick = function () { outcome = null; w.close(0); };
+        btnTiles.onClick = function () { state.outcome = "tiles"; w.close(1); };
+        btnExport.onClick = function () { state.outcome = "export"; w.close(1); };
+        btnCancel.onClick = function () { state.outcome = null; w.close(0); };
 
         refresh();
-        w.center();
-        w.show();
 
-        if (!outcome) { return null; }
-
-        pData.presets[c.PRESET_KEY_LAST] = this.collect(refs);
-        pData.activePreset = ddPreset.selection ? ddPreset.selection.text : c.PRESET_KEY_DEFAULT;
-        return { action: outcome, wrapper: pData };
+        return {
+            win: w,
+            refs: refs,
+            /**
+             * The dialog's outcome. Only meaningful once show() has returned.
+             * @returns {Object|null} {action, wrapper} or null on cancel.
+             */
+            result: function () {
+                if (!state.outcome) { return null; }
+                pData.presets[c.PRESET_KEY_LAST] = self.collect(refs);
+                pData.activePreset = ddPreset.selection
+                    ? ddPreset.selection.text
+                    : c.PRESET_KEY_DEFAULT;
+                return { action: state.outcome, wrapper: pData };
+            }
+        };
     },
 
     /**
