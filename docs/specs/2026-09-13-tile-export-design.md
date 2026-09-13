@@ -385,80 +385,59 @@ Pořadí podle toho, jak na sobě stojí:
    Uživatel vkládá tvarový ořez do extra vrstvy v přímé barvě; nástroj ho musí
    rozdělit mezi pláty.
 
-   **Průzkum proveden 2026-09-13**, výsledky rovnou sem, ať se neztratí:
+   **Průzkum proveden 2026-09-13, opraven 2026-09-13 po chybném měření:**
 
    - Clipping maska je **nepoužitelná** — geometrii neořízne (§3), takže by Zünd
      dostal celou konturu včetně části mimo plát.
    - ExtendScript nemá Pathfinder v API. Panelové příkazy `Pathfinder Crop`,
      `Pathfinder Intersect`, `Pathfinder Divide` **neexistují** — vrací
      `yeKB` (1112237433).
-   - Funkční cesta: vybrat konturu a obdélník plátu → `group` →
-     `Live Pathfinder Intersect` → `expandStyle`. Bez seskupení se efekt
-     neaplikuje a tvar zůstane neoříznutý.
+   - Funkční cesta: vybrat konturu a **zakrývající obdélník** → `group` →
+     `Live Pathfinder Subtract` → `expandStyle`. Bez seskupení se efekt
+     neaplikuje. Obdélník musí být **navrchu** — Minus Front odečítá horní
+     objekt od spodního.
    - Pathfinder pracuje **s plochami, ne s obrysy**. Kontura musí mít po dobu
      operace výplň; obrys se vrátí až potom.
 
-   | Případ | Výsledek |
-   |---|---|
-   | jeden tvar (hvězda, 18 bodů) | ořez přesně na hranici, uzavřená cesta, přímá barva zachována |
-   | prstenec s dírou (compound path) | ořez sedí, ale compound se **rozpadl** — díra zmizela |
-   | dva samostatné tvary | **selhalo** — druhý tvar neoříznut (pravý okraj 1100 místo 600) |
-
-   Oba neúspěchy mají společnou příčinu: Intersect dělá průnik všeho ve skupině
-   naráz. Řešení je smyčka po tvarech, každý s vlastní kopií obdélníku plátu —
-   tím se z jedné operace stává N volání `executeMenuCommand`, nejkřehčí část
-   celého nástroje.
-
-   ### Doporučená cesta: vlastní dělení cesty, ne Pathfinder
-
-   Návrh uživatele (2026-09-13): přidat do cesty bod v místě švu, rozpojit ji
-   a spojit body. Je to **clipping proti polorovině** — a protože šev je svislá
-   přímka, ne obecný tvar, je úloha řádově jednodušší než boolean operace.
-
-   Ověřeno měřením: `anchor`, `leftDirection` i `rightDirection` jdou v ExtendScript
-   číst i zapisovat. Cesta postavená od nuly z přečtených hodnot má bounds
-   identické s originálem na setiny bodu. `pathPoints.add()` přidává na konec,
-   takže rozdělení znamená postavit cestu znovu z pole bodů — což je v pořádku.
-
-   Algoritmus:
-
-   1. průsečík kubické Bézierovy křivky se svislou přímkou `x = c` — kubická
-      rovnice pro `t`, segment má 0 až 3 kořeny
-   2. rozdělení segmentu v `t` — de Casteljau, exaktní
-   3. zahodit úseky mimo plát
-   4. uzavřít konturu podél švu
-
-   | | Pathfinder | Vlastní dělení |
+   | případ | Subtract | Intersect |
    |---|---|---|
-   | compound path s dírou | rozpadl se | každá subcesta zvlášť |
-   | víc tvarů | selhalo | smyčka |
-   | testovatelnost | jen ručně v Illustratoru | čistá matematika, Node suite |
-   | závislost na výběru a z-orderu | ano | žádná |
-   | přesnost | co udělá Illustrator | exaktní |
+   | jeden tvar | ořez sedí | ořez sedí |
+   | compound path s dírou | **ořez sedí, díra zůstane** | neořízne (950 místo 600) |
+   | dva samostatné tvary | ořez sedí | neořízne (1400 místo 600) |
 
-   **Složitost je v kroku 4.** Dva průsečíky jsou triviální, čtyři a víc vyžadují
-   správné párování — seřadit podle Y a střídat vstup/výstup. Funguje pro
-   nesamoprotínající se kontury; samoprotínající tvar, tangenciální dotyk švu
-   a otevřené cesty je nutné ošetřit nebo poctivě odmítnout hláškou.
+   **Odečítání je správná operace, průnik ne.** Odpovídá to tomu, jak uživatel
+   dělí konturu rukama: zkopírovat celek, odečíst zakrývající obdélník, vložit
+   celek zpět, odečíst další.
 
-   Rozsah odhadem 300–500 řádků plus testy. Celé testovatelné bez Illustratoru.
+   ### Opravené chybné tvrzení
 
-   **Vedlejší přínos:** jedna polorovina stačí na všechno. Plát je průnik čtyř
-   polorovin, takže stejný kód pokryje svislé i vodorovné švy a budoucí 2D mřížku
-   (§10.2). Pathfinder by se s každým dalším směrem lámal znovu.
+   Dřívější verze tohoto specu tvrdila, že Pathfinder rozbíjí compound path
+   a selhává na víc tvarech. **Obojí bylo artefaktem vadného měření**, ne
+   chováním Illustratoru:
 
-   Pathfinder zůstává **záložní variantou**, kdyby se vlastní implementace ukázala
-   jako slepá ulička.
+   - compound path byl skládán ručně přes `compoundPathItems.add()` plus
+     `moveToBeginning`, což **nevytvoří** even-odd strukturu — vizuální kontrola
+     ukázala plný kruh s kružnicí navrchu, tedy žádnou díru. Správná cesta je
+     vybrat cesty a zavolat `executeMenuCommand("compoundPath")`.
+   - testoval se `Intersect`, ne `Subtract`.
 
-   **Otevřené, nutné vyřešit před implementací:**
+   Poučení, které platí i mimo tenhle nástroj: **u geometrické operace nestačí
+   změřit čísla, musí se na výsledek podívat.** `rightmost=600` vypadalo jako
+   úspěch i tam, kde díra zmizela.
 
-   - Chování compound path přeměřit na **reálných ořezových datech**, ne na
-     syntetickém kroužku. Test výše nastavoval výplň na `cp.pathItems[0]`, což
-     nemusí být správný způsob, a děrování je běžný požadavek.
-   - Co má kontura dělat **na švu** — rovný řez přesně na hranici plátu, nebo
-     konturu vedenou do přelepu? Dva různé výsledky na stroji.
-   - Spad pro ořez, který se u Zündu přidává navíc k přídavkům a přelepu.
-2. **2D mřížka** — dělení oběma směry, až se ukáže, že chybí.
+   ### Důsledek pro návrh
+
+   Vlastní dělení cesty (clipping proti polorovině, návrh uživatele) zůstává
+   **záložní variantou**, ne první volbou. Je pořád proveditelné — Bézierovy
+   řídící body jdou v ExtendScriptu číst i zapisovat a cesta postavená od nuly
+   má bounds identické s originálem — ale je to 300–500 řádků matematiky proti
+   třem voláním `executeMenuCommand`. Sáhne se po něm, až kdyby Pathfinder
+   narazil na limit, který v tomhle měření nevyšel najevo.
+
+   Riziko `executeMenuCommand` zůstává: závisí na výběru, z-orderu a seskupení,
+   což jsou stavy, které se v testu nedají zachytit jinak než spuštěním
+   v Illustratoru.
+
 3. **Značky a číslování plátů** — vynecháno z v1 vědomě, ne přehlédnuto.
 
    Sem patří i poznámka uživatele z prvního běhu: **linka na vnějším rozměru je

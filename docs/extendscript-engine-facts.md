@@ -212,8 +212,17 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
   seskupení se efekt neaplikuje** a tvar zůstane neoříznutý.
 - Pathfinder pracuje **s plochami, ne s obrysy** — kontura musí mít po dobu
   operace výplň.
-- Compound path s dírou se při tom **rozpadl** (díra zmizela) a dva samostatné
-  tvary **selhaly** (Intersect dělá průnik všeho ve skupině naráz).
+- **Odečítání, ne průnik.** `Live Pathfinder Subtract` ořízne správně jeden
+  tvar, compound path **i s dírou**, i víc samostatných tvarů. `Intersect`
+  u posledních dvou neořízne vůbec. Zakrývající obdélník musí být navrchu —
+  Minus Front odečítá horní objekt od spodního.
+- **`compoundPathItems.add()` + `moveToBeginning` NEVYTVOŘÍ compound path.**
+  Vznikne plná plocha s kružnicí navrchu, ne díra, a `compoundPathItems.length`
+  přesto hlásí 1. Správně je vybrat cesty a zavolat
+  `executeMenuCommand("compoundPath")`. Dřívější závěr „Pathfinder rozbíjí
+  compound path" byl artefaktem tohohle omylu — čísla vypadala správně
+  (`rightmost` sedělo), ale vizuální kontrola ukázala, že díra tam nikdy
+  nebyla. **U geometrických operací kontroluj výsledek očima, ne jen čísly.**
 
 ### Spot barva a artboardy
 
