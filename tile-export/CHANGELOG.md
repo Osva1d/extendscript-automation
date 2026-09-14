@@ -26,6 +26,13 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Changed
 
+- **Režim „počet plátů" dává pláty stejné šířky.** Dřív dělil rovnoměrně čistý
+  formát a přelep přidal až potom, takže hotové pláty stejné nebyly —
+  1010/1020/1010 mm na grafice 3000 mm s přelepem 20. To neodpovídalo žádnému
+  zadání: ani stejné pláty, ani zadaná šířka. Přelep a přídavky jsou teď
+  součástí dělení: `W = (délka + přídavky + (n−1) × přelep) / n`.
+  **Při nulovém přelepu je výsledek totožný s dřívějším**, takže desky, které
+  se plátují bez přelepu, se změna nedotkne.
 - Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole
   Výsledku zkráceno na 85 px. Se zapnutým Zünd režimem měří 796 px, bez něj
   stejně — viz poznámka níž.

@@ -59,6 +59,28 @@ Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než
 
 Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 
+## Tři způsoby dělení
+
+| volba | co zaručuje |
+|---|---|
+| **počet plátů** | *n* plátů **stejné hotové šířky** |
+| **šířka plátu** | pláty zadané šířky, poslední kratší |
+| **vodítka** | švy přesně tam, kam je položíš |
+
+Každá odpovídá jinému zadání zakázky. „Počet plátů" počítá přelep a přídavky
+**do** dělení, takže hotové pláty vyjdou stejné:
+
+```
+W = (délka + přídavky + (n − 1) × přelep) / n
+```
+
+U tapet a nástěnných grafik je stejná šířka pruhů legitimní požadavek —
+usnadňuje montáž a spotřeba materiálu je jedno číslo. U polepů se častěji volí
+šířka podle role a montážníka; na to je režim „šířka plátu".
+
+Při **nulovém přelepu** se vzorec zredukuje na prosté rovnoměrné dělení, takže
+desky se plátují stejně jako dřív.
+
 ## Přídavky, přelep a linka
 
 **Přídavek** je montážní spad na vnějším obvodu celé grafiky. Čtyři nezávislá
