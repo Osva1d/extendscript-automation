@@ -42,7 +42,8 @@ global.alert = function () {};
 
 // Load production code
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
-eval(fs.readFileSync(path.join(__dirname, "..", "src", "core.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
+buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 
 
 // ===== TEST FRAMEWORK =====

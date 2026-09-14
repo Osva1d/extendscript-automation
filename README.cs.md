@@ -19,7 +19,7 @@ Každý nástroj má vlastní README, build a verzi — tato stránka je rozcest
 | **zund-summa-marks** | Registrační značky pro řezací plotry Zünd (ECHO) a Summa (OPOS) — mapování vrstva→přímá barva, mód „pouze značky", pojmenované presety | [README](zund-summa-marks/README.md) |
 | **grommet-marks** | Značky pro oka po obvodu artboardu nebo na vybrané cestě — rohové zóny, registrační terče v Esko stylu | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Hromadné relinkování PDF do `.ai` vyřazovací šablony a export tiskových PDF | [README](batch-relink-export/README.md) |
-| **tile-export** | Rozdělení velké grafiky na tiskové pláty pro ruční ořez — přídavky per hrana, přelep, ořezová linka v přímé barvě | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
+| **tile-export** | Rozdělení velké grafiky na tiskové pláty — přídavky per hrana, přelep, ořezová linka v přímé barvě, plus Zünd režim s regmarkami a ořezovými daty plátu | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
 
 `shared/` drží namespace-neutrální jádro, které oba generátory značek sdílejí;
 odůvodnění, co se sdílí a co záměrně ne, je v

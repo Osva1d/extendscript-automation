@@ -35,7 +35,15 @@ TE.Export = {
         return {
             artboard: [0, 0, (t[2] - t[0]) * k, -(t[1] - t[3]) * k],
             position: [(g[0] - t[0]) * k, (g[1] - t[1]) * k],
-            size:     [(g[2] - g[0]) * k, (g[1] - g[3]) * k]
+            size:     [(g[2] - g[0]) * k, (g[1] - g[3]) * k],
+            // Where the graphic sits in the SOURCE document, for reference.
+            sourceOrigin: [g[0], g[1]],
+            // The panel's top-left corner in the SOURCE document, plus the
+            // output scale. TE.Cut uses both to place a duplicated contour:
+            // a source point X maps to (X - tileOrigin) * k in the temporary
+            // document, which is the same rule the graphic follows.
+            tileOrigin: [t[0], t[1]],
+            k: k
         };
     },
 
@@ -84,15 +92,18 @@ TE.Export = {
      *
      * @param {Object} tile - One entry from TE.Grid.computeTiles().
      * @param {Object} ctx - {graphicFile, graphicBounds, docName, outFolder,
-     *        total, pdfOptions}.
+     *        total, pdfOptions, contour, markDef}.
      * @param {Object} s - Settings.
-     * @returns {File} The written PDF.
+     * @returns {Object} {file: File, contourPaths: number}. contourPaths is 0
+     *          when the cut contour does not reach this panel, which is not an
+     *          error but belongs in the summary.
      * @throws {Error} TE_EXPORT:<index>:<message>
      */
     exportTile: function (tile, ctx, s) {
         var k = this.outputScale(s);
         var tf = this.tileTransform(tile, ctx.graphicBounds, k);
         var tmp = null;
+        var contourPaths = 0;
 
         try {
             tmp = app.documents.add(DocumentColorSpace.CMYK,
@@ -109,6 +120,29 @@ TE.Export = {
                 // The panel's outer rect maps exactly onto the temporary
                 // artboard, so the line marks the MediaBox of this PDF.
                 TE.Draw.drawTileLine(tmp, tf.artboard, s, k);
+            }
+
+            if (s.zundMode) {
+                // Marks are computed from THIS panel's rect, so they sit on
+                // the panel rather than on the whole graphic.
+                var geo = TE.Core.calculateAll(s, tf.artboard);
+                // markDef carries the spot definition from the source document;
+                // a temporary document starts with only the default swatches.
+                TE.Draw.drawMarks(tmp, geo, s, ctx.markDef);
+
+                // Marks sit OUTSIDE the panel — measured: with a 10 mm gap and
+                // a 5 mm mark, they reach 42.5 pt past each edge. The shared
+                // geometry returns the artboard that fits them, and the panel
+                // must grow to it or the marks never reach the PDF. The trim
+                // line stays where it was, now inside a larger MediaBox.
+                if (geo.ab) { tmp.artboards[0].artboardRect = geo.ab; }
+
+                if (ctx.contour && ctx.contour.length) {
+                    // Zero back means the contour does not reach this panel —
+                    // not an error (a middle panel of a rectangular cut-out
+                    // legitimately has none), but the caller reports it.
+                    contourPaths = TE.Cut.renderTileContour(tmp, ctx.contour, tf, s);
+                }
             }
 
             if (s.exportMode === "raster") {
@@ -130,7 +164,7 @@ TE.Export = {
             var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
             var out = new File(ctx.outFolder.fsName + "/" + name + ".pdf");
             tmp.saveAs(out, ctx.pdfOptions);
-            return out;
+            return { file: out, contourPaths: contourPaths };
         } catch (e) {
             throw new Error("TE_EXPORT:" + tile.index + ":" + e.message);
         } finally {

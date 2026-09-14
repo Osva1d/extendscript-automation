@@ -109,4 +109,45 @@ fc.assert(fc.property(arbJob, function (j) {
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 
+console.log("\n=== Property 4: the count mode yields panels of EQUAL finished width ===");
+// The strongest invariant of the three modes: "n panels" must mean n panels
+// the same size, whatever the overlap, the adds or the direction.
+fc.assert(fc.property(arbJob, function (j) {
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var t = r.tiles, i, w, first;
+    for (i = 0; i < t.length; i++) {
+        w = (j.dir === "horizontal")
+            ? t[i].expanded[2] - t[i].expanded[0]
+            : t[i].expanded[1] - t[i].expanded[3];
+        if (i === 0) { first = w; }
+        else if (Math.abs(w - first) > 1e-6) { return false; }
+    }
+    return true;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
+console.log("\n=== Property 5: panels consume exactly the expected material ===");
+// Sum of finished widths = clean span + both edge adds + one overlap per seam.
+// That is the identity the equal-width formula is derived from, checked the
+// other way round.
+fc.assert(fc.property(arbJob, function (j) {
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var t = r.tiles, i, sum = 0;
+    for (i = 0; i < t.length; i++) {
+        sum += (j.dir === "horizontal")
+            ? t[i].expanded[2] - t[i].expanded[0]
+            : t[i].expanded[1] - t[i].expanded[3];
+    }
+    var span = (j.dir === "horizontal")
+        ? r.clean[2] - r.clean[0]
+        : r.clean[1] - r.clean[3];
+    var addLow  = (j.dir === "horizontal") ? 0  : 25;   // addLeft / addBottom in build()
+    var addHigh = (j.dir === "horizontal") ? 40 : 40;   // addRight / addTop
+    var want = span
+             + TE.Utils.toDoc(addLow, r.s) + TE.Utils.toDoc(addHigh, r.s)
+             + (j.n - 1) * TE.Utils.toDoc(j.overlap, r.s);
+    return Math.abs(sum - want) < 1e-6;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
 console.log("\nALL PROPERTIES HOLD");

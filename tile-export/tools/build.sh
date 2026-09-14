@@ -51,11 +51,13 @@ MODULES=(
     "$SRC_DIR/lib/utils.js"
     "$SRC_DIR/lib/validation.js"
     "../shared/lib/ui_state.js"
+    "../shared/lib/cut_marks.js"
     "$SRC_DIR/config.js"
     "$SRC_DIR/lib/storage.js"
     "$SRC_DIR/grid.js"
     "$SRC_DIR/doc.js"
     "$SRC_DIR/draw.js"
+    "$SRC_DIR/cut.js"
     "$SRC_DIR/export.js"
     "$SRC_DIR/ui.js"
     "$SRC_DIR/main.js"
@@ -112,6 +114,9 @@ for m in "${MODULES[@]}"; do
     # Bind the namespace-neutral shared module right after it loads.
     if [ "$m" = "../shared/lib/ui_state.js" ]; then
         echo "buildUIState(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/cut_marks.js" ]; then
+        echo "buildCutMarks(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
     fi
 done
 

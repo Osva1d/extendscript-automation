@@ -29,8 +29,7 @@ TE.Grid = {
         if (s.divideMode === "count") {
             n = Math.round(Number(s.tileCount));
             if (isNaN(n) || n < 2) { throw new Error("TE_MIN_TILES"); }
-            for (i = 1; i < n; i++) { cuts.push(start + span * i / n); }
-            return cuts;
+            return this.equalCuts(s, extent, n);
         }
 
         if (s.divideMode === "width") {
@@ -110,6 +109,81 @@ TE.Grid = {
             });
         }
         return tiles;
+    },
+
+    /**
+     * Cut positions for n panels of EQUAL FINISHED width.
+     *
+     * "n panels" promises n panels the same size, so the overlap and the edge
+     * adds have to be part of the division, not added afterwards. Dividing the
+     * clean format evenly and adding the overlap later produces panels of
+     * different widths — measured 1010/1020/1010 mm on a 3000 mm graphic with
+     * a 20 mm overlap — which matches no job spec: neither equal panels nor a
+     * given panel width.
+     *
+     * The material a job consumes is the clean length plus both edge adds plus
+     * one overlap per inner seam, and there are n-1 of those:
+     *
+     *     W = (span + addLow + addHigh + (n - 1) * overlap) / n
+     *
+     * At zero overlap this reduces to plain even division, so rigid boards —
+     * which are tiled without overlap — behave exactly as before.
+     *
+     * Equal panels matter for wallpaper and wall graphics, where constant strip
+     * width eases fitting and makes material use one number. Sign work often
+     * wants the opposite, a width that suits the installer; that is what the
+     * "panel width" and "guides" modes are for.
+     *
+     * @param {Object} s - Settings.
+     * @param {Object} extent - {start, end} ascending axis.
+     * @param {number} n - Panel count, already validated as >= 2.
+     * @returns {Array} Ascending cut positions.
+     */
+    equalCuts: function (s, extent, n) {
+        var span = extent.end - extent.start;
+        var o = TE.Utils.toDoc(Number(s.overlap) || 0, s);
+
+        // The adds at the two ENDS OF THE SPLIT AXIS, which are different
+        // settings depending on direction.
+        var addLow, addHigh;
+        if (s.direction === "horizontal") {
+            addLow  = TE.Utils.toDoc(Number(s.addLeft) || 0, s);
+            addHigh = TE.Utils.toDoc(Number(s.addRight) || 0, s);
+        } else {
+            // The axis ascends from the bottom, so "low" is the bottom edge.
+            addLow  = TE.Utils.toDoc(Number(s.addBottom) || 0, s);
+            addHigh = TE.Utils.toDoc(Number(s.addTop) || 0, s);
+        }
+
+        var W = (span + addLow + addHigh + (n - 1) * o) / n;
+
+        // Where the first cut sits depends on how much of the overlap the
+        // panel at the LOW end of the axis carries.
+        //
+        // Symmetric: half, either direction.
+        // One-sided horizontal: the LEFT panel carries all of it, and left is
+        //   the low end — so its seam sits a full overlap short.
+        // One-sided vertical: the TOP panel carries all of it, and top is the
+        //   HIGH end — so the panel at the low end carries none.
+        // Missing that asymmetry made vertical one-sided panels differ by
+        // exactly 2x the overlap (found by property test, n=2, overlap=1).
+        var first;
+        if (s.overlapMode === "symmetric") {
+            first = W - o / 2 - addLow;
+        } else if (s.direction === "horizontal") {
+            first = W - o - addLow;
+        } else {
+            first = W - addLow;
+        }
+        var cuts = [];
+        var c = extent.start + first;
+        cuts.push(c);
+        var i;
+        for (i = 2; i < n; i++) {
+            c = c + W - o;
+            cuts.push(c);
+        }
+        return cuts;
     },
 
     /**

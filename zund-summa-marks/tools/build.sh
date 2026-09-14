@@ -9,7 +9,7 @@
 #   Concatenates Zund/Summa Marks source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.js
+#   json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → cut_marks.js → bounds.js → draw.js → ui.js → main.js
 # ===========================================================================
 
 set -euo pipefail
@@ -93,7 +93,8 @@ cat "../shared/lib/ui_state.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared
 echo "buildUIState(ZSM);"        >> "$OUTPUT" && echo "" >> "$OUTPUT"   # bind shared module to ZSM namespace
 cat "$SRC_DIR/config.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/storage.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
-cat "$SRC_DIR/core.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/cut_marks.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildCutMarks(ZSM);"       >> "$OUTPUT" && echo "" >> "$OUTPUT"   # bind shared module to ZSM namespace
 cat "$SRC_DIR/lib/bounds.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/draw.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"

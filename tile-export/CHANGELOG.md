@@ -4,6 +4,61 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.1.0] — 2026-09-13
+
+### Added
+
+- **Zünd režim** — registrační značky na každém plátu a ořezová data plátu.
+  **V dialogu je zatím skrytý** (`TE.Config.ZUND_ENABLED`), protože neposlouží
+  plátované zakázce — viz poznámky níž. Kód je hotový a otestovaný; další
+  etapa na něm staví.
+- Ořezová kontura se hledá podle **přímé barvy**, nezávisle na vrstvě.
+- Kontura se ořezává **odečtením zakrývajícího rámu** — toutéž operací, jakou
+  se to dělá rukama. Compound path si přitom zachová díry, na rozdíl od průniku.
+- Geometrie značek je sdílená se `zund-summa-marks` (`shared/lib/cut_marks.js`),
+  takže chyba v pozici značky je chyba na jednom místě, ne na dvou.
+- Pláty, do kterých kontura nezasahuje, se hlásí v souhrnu.
+- **Barva značek je vlastní nastavení**, oddělené od barvy kontury — značka
+  v barvě řezu by na stroji od řezu nešla rozeznat. Výchozí je registrační,
+  na výběr jsou přímé barvy dokumentu (typicky bílá `Spot 1` na černý a čirý
+  materiál s čirým linerem). Neznámá barva spadne na registrační a nikdy se
+  nevytvoří sama.
+
+### Changed
+
+- **Režim „počet plátů" dává pláty stejné šířky.** Dřív dělil rovnoměrně čistý
+  formát a přelep přidal až potom, takže hotové pláty stejné nebyly —
+  1010/1020/1010 mm na grafice 3000 mm s přelepem 20. To neodpovídalo žádnému
+  zadání: ani stejné pláty, ani zadaná šířka. Přelep a přídavky jsou teď
+  součástí dělení: `W = (délka + přídavky + (n−1) × přelep) / n`.
+  **Při nulovém přelepu je výsledek totožný s dřívějším**, takže desky, které
+  se plátují bez přelepu, se změna nedotkne.
+- Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole
+  Výsledku zkráceno na 85 px. Se zapnutým Zünd režimem měří 796 px, bez něj
+  stejně — viz poznámka níž.
+- `TE.Export.exportTile()` vrací `{file, contourPaths}` místo `File`.
+
+### Notes
+
+- **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně
+  plátu — při odstupu 10 mm a značce 5 mm sahají 42,5 pt za každou hranu —
+  a stránka musí vyrůst, aby se do ní vešly.
+- Dělení kontury stojí na `executeMenuCommand`, takže **není pod Node testy**.
+  Ověřuje se sondami s vizuální kontrolou. Proti v1 je to vědomé oslabení.
+- Skrývání Zünd panelu dialog **nezmenší** — ScriptUI drží místo i pro
+  neviditelnou skupinu. Výšku řeší rozložení sloupců, ne viditelnost.
+- Víc řezacích vrstev najednou (proříz, ryl, děrování) tato verze neumí.
+- **Zünd režim je v dialogu skrytý a nepokryje plátovanou zakázku.** Na
+  rozděleném plátu pokračuje motiv přes šev, takže na té straně není kam
+  umístit značky. Odsazená cesta jako maska, která motiv ukončí, je potřeba
+  i pro rovný ořez. Panel se vrátí přepnutím `ZUND_ENABLED` v `src/config.js`,
+  až bude maska hotová.
+- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Reálný studiový
+  postup ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
+  zvlášť — popsané ve specu §10, včetně vyřešené překážky s parametrickou
+  odsazenou cestou.
+
+
 ## [1.0.0] — 2026-09-13
 
 První verze. Plátování velké grafiky na tiskové pláty pro **ruční ořez** —

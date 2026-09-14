@@ -42,15 +42,45 @@ function throwsWith(fn, code, msg) {
 var D = TE.Config.getDefaults();
 var EXT = { start: 0, end: mm(3000) };   // 3000 mm wide graphic
 
-console.log("\n=== count mode ===");
-var c1 = TE.Grid.computeCuts(merge(D, { divideMode: "count", tileCount: 3 }), EXT, null);
-assert(c1.length === 2, "3 panels produce 2 cuts");
-assertClose(c1[0], mm(1000), 0.001, "first cut at 1000 mm");
-assertClose(c1[1], mm(2000), 0.001, "second cut at 2000 mm");
+console.log("\n=== count mode: EQUAL FINISHED PANELS ===");
+// The count mode promises n equal panels, so the cuts must account for the
+// overlap and the edge adds — the finished width is
+//   W = (L + addLeft + addRight + (n-1) * overlap) / n
+// Dividing the clean format evenly and adding the overlap afterwards gives
+// panels of different widths, which matches no job spec.
 
-var c2 = TE.Grid.computeCuts(merge(D, { divideMode: "count", tileCount: 2 }), EXT, null);
+// 3000 mm, 3 panels, 20 mm overlap, no adds: W = (3000 + 40) / 3 = 1013.33
+var base = { divideMode: "count", tileCount: 3, overlap: 20,
+             overlapMode: "symmetric", addLeft: 0, addRight: 0 };
+var c1 = TE.Grid.computeCuts(merge(D, base), EXT, null);
+assert(c1.length === 2, "3 panels produce 2 cuts");
+assertClose(c1[0], mm(1003.3333), 0.01, "first cut: W - overlap/2");
+assertClose(c1[1], mm(1996.6667), 0.01, "second cut: previous + W - overlap");
+
+// One-sided overlap shifts only the first cut: c1 = W - overlap
+var c1b = TE.Grid.computeCuts(merge(D, merge(base, { overlapMode: "onesided" })), EXT, null);
+assertClose(c1b[0], mm(993.3333), 0.01, "one-sided: first cut is W - overlap");
+assertClose(c1b[1], mm(1986.6667), 0.01, "one-sided: second cut follows the same step");
+
+// Edge adds enlarge the finished panel, so they belong in W too.
+// W = (3000 + 40 + 40 + 40) / 3 = 1040
+var cAdd = TE.Grid.computeCuts(
+    merge(D, merge(base, { addLeft: 40, addRight: 40 })), EXT, null);
+assertClose(cAdd[0], mm(990), 0.01, "with adds: W - overlap/2 - addLeft");
+
+// ZERO OVERLAP must reduce to plain even division — this is what keeps rigid
+// boards behaving exactly as before.
+var c2 = TE.Grid.computeCuts(
+    merge(D, { divideMode: "count", tileCount: 2, overlap: 0, addLeft: 0, addRight: 0 }),
+    EXT, null);
 assert(c2.length === 1, "2 panels produce 1 cut");
-assertClose(c2[0], mm(1500), 0.001, "cut in the middle");
+assertClose(c2[0], mm(1500), 0.001, "no overlap: cut in the middle, as before");
+
+var c2c = TE.Grid.computeCuts(
+    merge(D, { divideMode: "count", tileCount: 3, overlap: 0, addLeft: 0, addRight: 0 }),
+    EXT, null);
+assertClose(c2c[0], mm(1000), 0.001, "no overlap, 3 panels: thirds, as before");
+assertClose(c2c[1], mm(2000), 0.001, "and the second third");
 
 throwsWith(function () {
     TE.Grid.computeCuts(merge(D, { divideMode: "count", tileCount: 1 }), EXT, null);

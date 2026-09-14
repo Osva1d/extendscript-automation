@@ -98,6 +98,188 @@ TE.Draw = {
         return p;
     },
 
+
+
+    /**
+     * Name of the registration swatch. It is always index 1 and its name is
+     * LOCALIZED — "[Registrační]" on a Czech install — so it must be read,
+     * never assumed. Same approach as zund-summa-marks.
+     * @param {Document} doc - Document to read from.
+     * @returns {string} The registration swatch name.
+     */
+    getRegistrationName: function (doc) {
+        try {
+            return doc.swatches[1].name;
+        } catch (e) {
+            return "[Registration]";
+        }
+    },
+
+    /**
+     * Colours offerable for registration marks: registration first, then the
+     * document's own spot colours. System spots are bracketed and skipped —
+     * registration is already in the list.
+     * @param {Document} doc - Document to read from.
+     * @returns {Array} Swatch names.
+     */
+    listMarkColors: function (doc) {
+        var names = [this.getRegistrationName(doc)];
+        var i, j, n, dup;
+        try {
+            for (i = 0; i < doc.spots.length; i++) {
+                try {
+                    n = doc.spots[i].name;
+                    if (n.charAt(0) === "[") { continue; }
+                    dup = false;
+                    for (j = 0; j < names.length; j++) {
+                        if (names[j] === n) { dup = true; break; }
+                    }
+                    if (!dup) { names.push(n); }
+                } catch (e2) {
+                    // Skip unreadable spots (corrupt or unresolved library refs).
+                }
+            }
+        } catch (e) {
+            TE.Utils.log("listMarkColors: spots unreadable: " + e.message);
+        }
+        return names;
+    },
+
+    /**
+     * Reads a spot colour's definition so it can be recreated in a temporary
+     * document, which starts with only the default swatches.
+     *
+     * Returns null for registration — every document already has it — and for
+     * anything unknown, which the caller turns into a registration fallback.
+     *
+     * @param {Document} doc - Source document.
+     * @param {string} name - Spot colour name.
+     * @returns {Object|null} {name, cyan, magenta, yellow, black} or null.
+     */
+    readSpotDef: function (doc, name) {
+        if (!name || name === this.getRegistrationName(doc) || name.charAt(0) === "[") {
+            return null;
+        }
+        var i, sp, c;
+        try {
+            for (i = 0; i < doc.spots.length; i++) {
+                sp = doc.spots[i];
+                if (sp.name !== name) { continue; }
+                c = sp.color;
+                if (c && c.typename === "CMYKColor") {
+                    return { name: name, cyan: c.cyan, magenta: c.magenta,
+                             yellow: c.yellow, black: c.black };
+                }
+                // Non-CMYK spot (RGB or Lab): recreate as black rather than
+                // guessing a conversion the press would disagree with.
+                return { name: name, cyan: 0, magenta: 0, yellow: 0, black: 100 };
+            }
+        } catch (e) {
+            TE.Utils.log("readSpotDef failed for " + name + ": " + e.message);
+        }
+        return null;
+    },
+
+    /**
+     * The colour to draw marks with, in THIS document.
+     *
+     * Cascade: a definition carried from the source document is recreated here;
+     * otherwise the named swatch if it exists; otherwise registration. Never
+     * silently invents a spot colour the user did not ask for — a mark in the
+     * wrong colour is one the machine will not read.
+     *
+     * @param {Document} doc - Document to draw into.
+     * @param {string} name - Requested colour name.
+     * @param {Object|null} def - Definition from TE.Draw.readSpotDef(), or null.
+     * @returns {Object} A colour ready to assign.
+     */
+    resolveMarkColor: function (doc, name, def) {
+        var i, sc;
+        if (def) {
+            try {
+                for (i = 0; i < doc.spots.length; i++) {
+                    if (doc.spots[i].name === def.name) {
+                        sc = new SpotColor();
+                        sc.spot = doc.spots[i];
+                        return sc;
+                    }
+                }
+                var spot = doc.spots.add();
+                spot.name = def.name;
+                spot.colorType = ColorModel.SPOT;
+                var cmyk = new CMYKColor();
+                cmyk.cyan = def.cyan; cmyk.magenta = def.magenta;
+                cmyk.yellow = def.yellow; cmyk.black = def.black;
+                spot.color = cmyk;
+                sc = new SpotColor();
+                sc.spot = spot;
+                return sc;
+            } catch (e) {
+                TE.Utils.log("resolveMarkColor: cannot recreate " + def.name + ": " + e.message);
+            }
+        }
+        try {
+            return doc.swatches.getByName(name || this.getRegistrationName(doc)).color;
+        } catch (e2) {
+            try {
+                return doc.swatches.getByName(this.getRegistrationName(doc)).color;
+            } catch (e3) {
+                var k = new CMYKColor();
+                k.black = 100;
+                return k;
+            }
+        }
+    },
+
+    /**
+     * Draws Zünd registration marks from the shared geometry.
+     *
+     * Geometry comes from shared/lib/cut_marks.js so a wrong mark position is
+     * wrong in one place, not two. Drawing stays per tool: ZSM.Draw is wired
+     * into cut-layer management this tool does not have.
+     *
+     * The mark colour is its OWN setting, not the contour's — marks in the cut
+     * colour would be indistinguishable from the cut on the machine. Default is
+     * registration; white Spot 1 is used on black and clear material.
+     *
+     * @param {Document} doc - Temporary document of one panel.
+     * @param {Object} geo - Output of TE.Core.calculateAll().
+     * @param {Object} s - Settings.
+     * @param {Object|null} markDef - Spot definition carried from the source
+     *        document, from TE.Draw.readSpotDef(). Null means registration.
+     * @returns {number} How many marks were drawn.
+     */
+    drawMarks: function (doc, geo, s, markDef) {
+        var spot = this.resolveMarkColor(doc, s.markColor, markDef);
+        var r = TE.Utils.toDoc(Number(s.markSizeZ) / 2, s);
+        var i, m, c, n = 0;
+
+        for (i = 0; i < geo.marksZ.length; i++) {
+            // The shared geometry returns marks as {cx, cy} centres, not pairs.
+            m = geo.marksZ[i];
+            if (isNaN(m.cx) || isNaN(m.cy)) {
+                TE.Utils.log("drawMarks: skipping mark " + i + ", coordinate is NaN");
+                continue;
+            }
+            try {
+                // pathItems.ellipse(top, left, width, height) — the mark is
+                // centred on m, so the box starts half a diameter away.
+                c = doc.pathItems.ellipse(m.cy + r, m.cx - r, r * 2, r * 2);
+                c.filled = true;
+                c.fillColor = spot;
+                // Overprint, as zund-summa-marks does: the mark must not knock
+                // a hole in the artwork underneath it.
+                c.fillOverprint = true;
+                c.stroked = false;
+                c.name = "TE_mark";
+                n++;
+            } catch (e) {
+                TE.Utils.log("drawMarks: failed at mark " + i + ": " + e.message);
+            }
+        }
+        return n;
+    },
+
     /**
      * Returns the lines layer, emptied. Cleared on every start without asking,
      * so a crashed run leaves nothing behind — idempotence per ~/Dev/CLAUDE.md.

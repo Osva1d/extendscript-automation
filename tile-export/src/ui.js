@@ -118,7 +118,10 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns. Stacked in one column the dialog measured 932 px tall,
+        // Two columns, balanced by measured panel heights: left carries
+        // Presets 57 + Document 86 + Split 177 + Overlap 214 = 534 px, right
+        // Export 276 + Zünd 165 = 441 px. Stacked in one column the dialog
+        // measured 932 px tall,
         // which does not fit a 1512 x 982 logical screen once the menu bar and
         // Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -204,7 +207,7 @@ TE.UI = {
         var etRound = this.addRow(pSplit, l.LBL_ROUND, s.guideRound, l.TIP_ROUND, "mm");
 
         // --- Overlap and adds ------------------------------------------------
-        var pEdges = colR.add("panel", undefined, l.PANEL_EDGES);
+        var pEdges = colL.add("panel", undefined, l.PANEL_EDGES);
         pEdges.alignChildren = ["fill", "top"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
@@ -297,14 +300,97 @@ TE.UI = {
         cbSkip.helpTip = l.TIP_SKIP;
         cbSkip.value = !!s.skipExisting;
 
+
+        // --- Zünd -------------------------------------------------------------
+        // Hidden behind TE.Config.ZUND_ENABLED — see the comment there. The
+        // panel is not built at all rather than merely made invisible, because
+        // ScriptUI reserves space for an invisible group (measured, 0 px
+        // difference).
+        var cbZund = null, ddCutSpot = null, ddMarkColor = null;
+        var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
+
+        if (c.ZUND_ENABLED) {
+        var pZund = colR.add("panel", undefined, l.PANEL_ZUND);
+        pZund.alignChildren = ["fill", "top"];
+
+        var gZundOn = pZund.add("group");
+        gZundOn.alignment = ["fill", "top"];
+        var stZundLbl = gZundOn.add("statictext", undefined, l.LBL_ZUND_MODE);
+        this.lockW(stZundLbl, this.M.LABEL_COL);
+        stZundLbl.helpTip = l.TIP_ZUND_MODE;
+        cbZund = gZundOn.add("checkbox", undefined, "");
+        cbZund.helpTip = l.TIP_ZUND_MODE;
+        cbZund.value = !!s.zundMode;
+
+        // Everything below lives in one group so it hides as a unit. The dialog
+        // is 767 px tall without it and this panel adds ~150 px, which is past
+        // the usable height of a 1512x982 logical screen. Hidden when the mode
+        // is off, nobody pays for it in vertical space.
+        var gZundBody = pZund.add("group");
+        gZundBody.orientation = "column";
+        gZundBody.alignChildren = ["fill", "top"];
+        gZundBody.alignment = ["fill", "top"];
+
+        var gCutSpot = gZundBody.add("group");
+        gCutSpot.alignment = ["fill", "top"];
+        var stCutSpotLbl = gCutSpot.add("statictext", undefined, l.LBL_CUT_SPOT);
+        this.lockW(stCutSpotLbl, this.M.LABEL_COL);
+        stCutSpotLbl.helpTip = l.TIP_CUT_SPOT;
+        ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
+        ddCutSpot.alignment = ["fill", "center"];
+        ddCutSpot.helpTip = l.TIP_CUT_SPOT;
+        var spotList = ctx.spotNames || [];
+        var zj;
+        for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
+        if (ddCutSpot.items.length === 0) { ddCutSpot.add("item", s.cutSpot); }
+        ddCutSpot.selection = 0;
+        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
+            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
+        }
+
+        var gMarkCol = gZundBody.add("group");
+        gMarkCol.alignment = ["fill", "top"];
+        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
+        this.lockW(stMarkColLbl, this.M.LABEL_COL);
+        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
+        ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
+        ddMarkColor.alignment = ["fill", "center"];
+        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
+        var mcList = ctx.markColors || [];
+        var mj;
+        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
+        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
+        ddMarkColor.selection = 0;
+        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
+            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
+        }
+
+        etMarkSize = this.addRow(gZundBody, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
+        etGapInner = this.addRow(gZundBody, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
+        etMaxDist  = this.addRow(gZundBody, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
+        etOrient   = this.addRow(gZundBody, l.LBL_ORIENT,    s.orientDist, l.TIP_ORIENT,  "mm");
+
+        // Hiding these greys the settings out but does NOT shrink the dialog:
+        // ScriptUI keeps the space reserved for an invisible group, and capping
+        // maximumSize.height does not change that either — both measured, both
+        // moved the dialog by 0 px. It does not matter: with the columns
+        // balanced the dialog is 796 px in either state, inside the usable
+        // height. Hiding stays because seeing greyed-out Zünd fields while the
+        // mode is off is noise.
+        gZundBody.visible = cbZund.value;
+        }   // end ZUND_ENABLED
+
         // --- Result ----------------------------------------------------------
         // Spans both columns: the per-panel lines run to about 60 characters
         // and would wrap inside a single column.
         var pCalc = w.add("panel", undefined, l.PANEL_CALC);
         pCalc.alignChildren = ["fill", "top"];
         var stCalc = pCalc.add("statictext", undefined, "", { multiline: true });
-        stCalc.preferredSize.height = 120;   // [deviation] multiline statictext
-                                             // collapses to one line without a height
+        stCalc.preferredSize.height = 85;    // [deviation] multiline statictext
+                                             // collapses to one line without a
+                                             // height; 85 keeps the dialog inside
+                                             // the usable screen height once the
+                                             // Zünd panel is open
         stCalc.alignment = ["fill", "top"];
 
         // --- Footer ----------------------------------------------------------
@@ -334,6 +420,9 @@ TE.UI = {
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
+            cbZund: cbZund, ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
+            etMarkSize: etMarkSize,
+            etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
 
@@ -352,13 +441,33 @@ TE.UI = {
 
         var i, all = [cbScale, etScaleN, etCleanW, etCleanH, etCount, etWidth, etRound,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
-                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf];
+                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
+                      etMarkSize, etGapInner, etMaxDist, etOrient, ddCutSpot,
+                      ddMarkColor];
+        // Zünd controls are null when the panel is not built.
+        var wired = [];
+        for (i = 0; i < all.length; i++) { if (all[i]) { wired.push(all[i]); } }
+        all = wired;
         for (i = 0; i < all.length; i++) { wire(all[i]); }
         for (i = 0; i < rbDir.length; i++) { wire(rbDir[i]); }
         for (i = 0; i < rbMode.length; i++) { wire(rbMode[i]); }
         for (i = 0; i < rbOverlapMode.length; i++) { wire(rbOverlapMode[i]); }
         for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
         for (i = 0; i < rbExpScale.length; i++) { wire(rbExpScale[i]); }
+
+        // Null when the panel was not built — see TE.Config.ZUND_ENABLED.
+        if (cbZund) {
+            cbZund.onClick = function () {
+                // Hiding greys the settings out but does NOT shrink the dialog:
+                // ScriptUI reserves space for an invisible group and capping
+                // maximumSize.height changes nothing — both measured at 0 px.
+                // It does not matter; the balanced columns keep the dialog at
+                // 796 px either way. Hiding stays so the fields do not clutter
+                // the panel while the mode is off.
+                gZundBody.visible = cbZund.value;
+                refresh();
+            };
+        }
 
         cbScale.onClick = function () {
             etScaleN.enabled = cbScale.value;
@@ -466,6 +575,18 @@ TE.UI = {
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
+        if (r.cbZund) {
+            s.zundMode    = r.cbZund.value;
+            s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : "cut";
+            s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
+            s.markSizeZ   = Number(r.etMarkSize.text) || 5;
+            s.gapInner    = Number(r.etGapInner.text) || 10;
+            s.maxDist     = Number(r.etMaxDist.text) || 500;
+            s.orientDist  = Number(r.etOrient.text) || 100;
+        } else {
+            // Panel not built: the mode cannot be on, whatever a stored preset says.
+            s.zundMode = false;
+        }
         return s;
     },
 
@@ -508,6 +629,20 @@ TE.UI = {
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
+        if (!r.cbZund) { return; }
+        r.cbZund.value = !!s.zundMode;
+        var zk;
+        for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
+            if (r.ddCutSpot.items[zk].text === s.cutSpot) { r.ddCutSpot.selection = zk; break; }
+        }
+        var mk;
+        for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
+            if (r.ddMarkColor.items[mk].text === s.markColor) { r.ddMarkColor.selection = mk; break; }
+        }
+        r.etMarkSize.text = String(s.markSizeZ);
+        r.etGapInner.text = String(s.gapInner);
+        r.etMaxDist.text = String(s.maxDist);
+        r.etOrient.text = String(s.orientDist);
     },
 
     /**
@@ -548,6 +683,11 @@ TE.UI = {
         r.etDPI.enabled   = (s.exportMode === "raster");
         r.etSpot.enabled  = s.drawLine;
         r.etLineW.enabled = s.drawLine;
+
+        // The dialog re-reads this on every keystroke, so validation checks the
+        // spot the user has selected now, not the one in saved settings.
+        ctx.validation.hasCutSpot = !s.zundMode
+            || TE.Utils.indexOf(ctx.spotNames || [], s.cutSpot) !== -1;
 
         var clean = this.resolveClean(r, ctx, s);
 

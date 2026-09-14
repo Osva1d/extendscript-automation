@@ -29,6 +29,8 @@ SUITES=(
     "tests/test_grid_tiles.js"
     "tests/test_validation.js"
     "tests/test_doc.js"
+    "tests/test_cut.js"
+    "tests/test_markcolor.js"
     "tests/test_export_transform.js"
     "tests/test_properties.js"
 )

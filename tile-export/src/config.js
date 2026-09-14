@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.0.0",
+    version: "1.1.0",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
@@ -17,10 +17,29 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
+    // Zünd mode is finished and tested but NOT usable for a tiled job: on a
+    // split panel the artwork continues across the seam, reaches the panel
+    // edge, and leaves no clear space for a registration mark on that side.
+    // The fix is the offset-path mask (spec 2026-09-13-tile-export-zund §10),
+    // which also ends the artwork at the seam.
+    //
+    // Until then the panel stays out of the dialog. The code is kept, not
+    // commented out — contour splitting, marks and the colour cascade are all
+    // verified and are what the next stage builds on. Flip this to true to
+    // bring the panel back.
+    ZUND_ENABLED: false,
+
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
     PRESET_KEY_DEFAULT: "[Default]",
     PRESET_KEY_LAST: "[Last Settings]",
+
+    // Read by shared/lib/cut_marks.js. The Summa values are unused here, but
+    // the shared module is a straight move from zund-summa-marks and reads
+    // them unconditionally — splitting it would be a refactor of production
+    // code nobody asked for.
+    summaXCenter: 10,
+    summaYVisual: 10,
 
     debug: false,
 
@@ -58,6 +77,25 @@ TE.Config = {
             pdfPreset:   "",
             outputDir:   "",
             namePattern: "{doc}_{n}",
+
+            // --- Zünd mode ---
+            zundMode:    false,         // master switch
+            cutSpot:     "cut",         // spot colour identifying the contour
+            markSizeZ:   5,             // mm, Zünd mark diameter
+            // Marks get their OWN colour, never the contour's — otherwise the
+            // machine cannot tell a mark from a cut. Registration is the
+            // standard; white Spot 1 is used on black and clear material with
+            // a clear liner.
+            markColor:   "[Registration]",
+            gapInner:    10,            // mm, gap from panel edge to mark
+            gapOuter:    0,             // mm, extra artboard margin
+            maxDist:     500,           // mm, maximum spacing between marks
+            orientDist:  100,           // mm, orientation dot from the corner
+            mode:        "ZUND",        // the shared geometry module branches on this
+            // Unused here; the shared module reads them and would break on undefined.
+            markSizeS:   3,
+            feedTop:     70,
+            feedBottom:  50,
             // Crash recovery: a run that died on panel 9 of 12 should not
             // re-export the eight that are already on disk.
             skipExisting: true
