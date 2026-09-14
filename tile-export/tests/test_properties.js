@@ -111,22 +111,27 @@ fc.assert(fc.property(arbJob, function (j) {
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 
-console.log("\n=== Property 4: the count mode yields panels of EQUAL printed width ===");
-// The strongest invariant of the three modes: "n panels" must mean n panels
-// of the same PRINTED size — the expanded rect, which is what gets cut —
-// whatever the overlap, the adds or the direction. The clean widths differ
-// by design; see TE.Grid.equalCuts.
+console.log("\n=== Property 4: the count mode yields panels of EQUAL CLEAN width ===");
+// "n panels" divides the graphic into n equal pieces of artwork, and neither
+// the overlap, nor which panel carries it, nor the edge adds may move a seam.
+// The printed widths differ by design — an outer panel has one seam, an inner
+// panel two; equal PRINTED panels are what the width mode's ceiling delivers
+// (property 6).
 fc.assert(fc.property(arbJob, function (j) {
     var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles, i, w, first;
+    var span = (j.dir === "horizontal")
+        ? r.clean[2] - r.clean[0]
+        : r.clean[1] - r.clean[3];
     for (i = 0; i < t.length; i++) {
         w = (j.dir === "horizontal")
-            ? t[i].expanded[2] - t[i].expanded[0]
-            : t[i].expanded[1] - t[i].expanded[3];
+            ? t[i].clean[2] - t[i].clean[0]
+            : t[i].clean[1] - t[i].clean[3];
         if (i === 0) { first = w; }
         else if (Math.abs(w - first) > 1e-6) { return false; }
     }
-    return true;
+    // And that width is exactly the span divided by the count.
+    return Math.abs(first - span / j.n) < 1e-6;
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 

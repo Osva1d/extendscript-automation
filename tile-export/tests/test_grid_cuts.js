@@ -42,32 +42,34 @@ function throwsWith(fn, code, msg) {
 var D = TE.Config.getDefaults();
 var EXT = { start: 0, end: mm(3000) };   // 3000 mm wide graphic
 
-console.log("\n=== count mode: EQUAL PRINTED PANELS ===");
-// The count mode promises n equal panels, so the cuts must account for the
-// overlap and the edge adds — the printed width is
-//   W = (L + addLeft + addRight + (n-1) * overlap) / n
-// Dividing the clean format evenly and adding the overlap afterwards equalises
-// the CLEAN widths instead and leaves the printed ones different — the other
-// legitimate reading, and the one the "panel width" mode covers.
+console.log("\n=== count mode: EQUAL CLEAN PANELS ===");
+// "n panels" divides the GRAPHIC into n, so the cuts are exact fractions of the
+// clean span and nothing else moves them. The overlap is material added on top
+// afterwards, the adds sit outside the graphic entirely. Equalising the PRINTED
+// widths instead is the other reading, and it lives in the "panel width" mode
+// with "dissolve the remainder" ticked — give it the roll, get equal prints.
 
-// 3000 mm, 3 panels, 20 mm overlap, no adds: W = (3000 + 40) / 3 = 1013.33
+// 3000 mm, 3 panels, 20 mm overlap, no adds: cuts are plain thirds.
 var base = { divideMode: "count", tileCount: 3, overlap: 20,
              overlapMode: "symmetric", addLeft: 0, addRight: 0 };
 var c1 = TE.Grid.computeCuts(merge(D, base), EXT, null);
 assert(c1.length === 2, "3 panels produce 2 cuts");
-assertClose(c1[0], mm(1003.3333), 0.01, "first cut: W - overlap/2");
-assertClose(c1[1], mm(1996.6667), 0.01, "second cut: previous + W - overlap");
+assertClose(c1[0], mm(1000), 0.01, "first cut is a plain third");
+assertClose(c1[1], mm(2000), 0.01, "second cut is two thirds");
 
-// One-sided overlap shifts only the first cut: c1 = W - overlap
+// The overlap mode decides which panel carries the material, never where the
+// seam is — both one-sided variants cut in exactly the same places.
 var c1b = TE.Grid.computeCuts(merge(D, merge(base, { overlapMode: "onesided" })), EXT, null);
-assertClose(c1b[0], mm(993.3333), 0.01, "one-sided: first cut is W - overlap");
-assertClose(c1b[1], mm(1986.6667), 0.01, "one-sided: second cut follows the same step");
+assertClose(c1b[0], mm(1000), 0.01, "one-sided does not move the first cut");
+assertClose(c1b[1], mm(2000), 0.01, "nor the second");
+var c1c = TE.Grid.computeCuts(
+    merge(D, merge(base, { overlapMode: "onesided", overlapCarrier: "second" })), EXT, null);
+assertClose(c1c[0], mm(1000), 0.01, "the other carrier does not move it either");
 
-// Edge adds enlarge the printed panel, so they belong in W too.
-// W = (3000 + 40 + 40 + 40) / 3 = 1040
+// Adds sit outside the graphic, so they cannot move an internal seam.
 var cAdd = TE.Grid.computeCuts(
     merge(D, merge(base, { addLeft: 40, addRight: 40 })), EXT, null);
-assertClose(cAdd[0], mm(990), 0.01, "with adds: W - overlap/2 - addLeft");
+assertClose(cAdd[0], mm(1000), 0.01, "edge adds leave the seams alone");
 
 // ZERO OVERLAP must reduce to plain even division — this is what keeps rigid
 // boards behaving exactly as before.

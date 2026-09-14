@@ -63,36 +63,31 @@ Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 
 | volba | co zaručuje |
 |---|---|
-| **počet plátů** | *n* plátů **stejné tiskové šířky** |
+| **počet plátů** | *n* plátů **stejné čisté šířky**, švy na přesných zlomcích |
 | **šířka plátu** | pláty zadané šířky, poslední kratší — nebo stejné pláty pod zadaným stropem |
 | **vodítka** | švy přesně tam, kam je položíš |
 
-Každá odpovídá jinému zadání zakázky. „Počet plátů" počítá přelep a přídavky
-**do** dělení, takže všechny pláty vyjdou z tiskárny stejně široké:
+Každý režim patří tomu, kdo zakázku svazuje: **počet** určuje návrh, **šířku**
+materiál, **vodítka** ty.
 
-```
-W = (délka + přídavky + (n − 1) × přelep) / n
-```
+„Počet plátů" dělí **grafiku**. Pět plátů z 5000 mm znamená švy na 1000, 2000,
+3000 a 4000 a pět plátů po 1000 mm načisto. Přelep je materiál, který se k tomu
+přidá navíc, a přídavky leží mimo grafiku — ani jedno šev neposune.
 
-**Stejná je tisková šířka** — MediaBox, na kterém leží červená linka, tedy to,
-co finišer opravdu řeže. Čisté šířky (kus motivu mezi švy) stejné nejsou a být
-nemůžou: krajní plát má jeden šev, vnitřní dva, takže při stejné tiskové šířce
-na sebe krajní bere víc motivu. Grafika 3000 mm, 3 pláty, přelep 20 mm:
+Tiskové šířky pak stejné nejsou, a být nemůžou: krajní plát má jeden šev,
+vnitřní dva. Na 5000 mm, 5 plátů, přelep 20 mm, bez přídavků:
 
-| režim přelepu | tisková šířka | čistá šířka |
+| umístění přelepu | tisková šířka | čistá šířka |
 |---|---|---|
-| symetricky | 1013,3 × 3 | 1003,3 \| 993,3 \| 1003,3 |
-| jednostranně | 1013,3 × 3 | 993,3 \| 993,3 \| 1013,3 |
+| půl na každou stranu | 1010 \| 1020 \| 1020 \| 1020 \| 1010 | 1000 × 5 |
+| celý na levý / horní | 1020 \| 1020 \| 1020 \| 1020 \| 1000 | 1000 × 5 |
+| celý na pravý / dolní | 1000 \| 1020 \| 1020 \| 1020 \| 1020 | 1000 × 5 |
 
-Jednostranný přelep rovnoměrnost **neruší** — jen posune šev o půl přelepu.
-Obojí naráz mít nejde: buď stejné tiskové šířky, nebo stejné čisté.
-
-U tapet a nástěnných grafik je stejná šířka pruhů legitimní požadavek —
-usnadňuje montáž a spotřeba materiálu je jedno číslo. U polepů se častěji volí
-šířka podle role a montážníka; na to je režim „šířka plátu".
-
-Při **nulovém přelepu** se vzorec zredukuje na prosté rovnoměrné dělení, obě
-definice splynou a desky se plátují stejně jako dřív.
+**Potřebuješ naopak stejné tiskové pláty?** Na to je „šířka plátu" se
+zaškrtnutým „rozpustit zbytek" — zadáš šířku role a dostaneš stejné pláty, co
+se pod ni vejdou. Obojí naráz mít nejde: buď stejné čisté šířky, nebo stejné
+tiskové. Při **nulovém přelepu** obě definice splynou, takže desky se plátují
+tak i tak stejně.
 
 ### Šířka plátu a „rozpustit zbytek"
 

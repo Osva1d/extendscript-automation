@@ -63,6 +63,42 @@ function widthMM(tile, st) {
     return Math.round(TE.Utils.fromDoc(d, st) * 100) / 100;
 }
 
+/** Clean width of a panel along the split axis, in real millimetres. */
+function cleanMM(tile, st) {
+    var c = tile.clean;
+    var d = (st.direction === "horizontal") ? (c[2] - c[0]) : (c[1] - c[3]);
+    return Math.round(TE.Utils.fromDoc(d, st) * 100) / 100;
+}
+
+function assertAllCleanEqual(tiles, st, expected, label) {
+    var i, w, ok = true, got = [];
+    for (i = 0; i < tiles.length; i++) {
+        w = cleanMM(tiles[i], st);
+        got.push(w);
+        if (Math.abs(w - expected) > 0.02) { ok = false; }
+    }
+    total++;
+    if (ok) { pass++; }
+    else {
+        fail++;
+        console.log("  FAIL: " + label + " | got=" + got.join("|") + " expected all " + expected);
+    }
+}
+
+/** Printed widths of every panel, in real millimetres, as a "a|b|c" string. */
+function printedRow(tiles, st) {
+    var i, got = [];
+    for (i = 0; i < tiles.length; i++) { got.push(widthMM(tiles[i], st)); }
+    return got.join("|");
+}
+
+function assertPrinted(tiles, st, expected, label) {
+    var got = printedRow(tiles, st);
+    total++;
+    if (got === expected) { pass++; }
+    else { fail++; console.log("  FAIL: " + label + " | got=" + got + " expected=" + expected); }
+}
+
 function assertAllEqual(tiles, st, expected, label) {
     var i, w, ok = true;
     for (i = 0; i < tiles.length; i++) {
@@ -83,32 +119,37 @@ var t = build(s);
 assert(t.length === 3, "3 panels");
 assert(t[0].index === 1 && t[2].index === 3, "panels numbered 1..3");
 
-// W = (3000 + 0 + 40 + 2*20) / 3 = 1026.67 mm
-assertAllEqual(t, s, 1026.67, "všechny tři pláty stejně široké");
+// The count mode divides the GRAPHIC, so the seams are exact thirds of 3000
+// and the clean panels are 1000 mm each whatever the overlap and the adds do.
+assertAllCleanEqual(t, s, 1000, "všechny tři pláty stejně široké načisto");
+// The printed widths then differ: p1 has one seam and a flush outer edge, p2
+// has two seams, p3 has one seam and a 40 mm add.
+assertPrinted(t, s, "1010|1020|1050", "tiskové šířky se liší podle počtu švů");
 
 assertClose(t[0].clean[0], 0, 0.001, "p1 clean left at graphic edge");
-assertClose(t[0].clean[2], mm(1016.6667), 0.01, "p1 clean right at the first cut");
+assertClose(t[0].clean[2], mm(1000), 0.01, "p1 clean right at the first cut");
 assertClose(t[0].expanded[0], 0, 0.001, "p1 left flush: no add");
-assertClose(t[0].expanded[2], mm(1026.6667), 0.01, "p1 right: half the overlap");
+assertClose(t[0].expanded[2], mm(1010), 0.01, "p1 right: half the overlap");
 assertClose(t[0].expanded[1], mm(1040), 0.01, "p1 top: 40 mm add");
 assertClose(t[0].expanded[3], mm(-40), 0.01, "p1 bottom: 40 mm add");
 
-assertClose(t[1].expanded[0], mm(1006.6667), 0.01, "p2 left: half overlap into panel 1");
-assertClose(t[1].expanded[2], mm(2033.3333), 0.01, "p2 right: half overlap into panel 3");
+assertClose(t[1].expanded[0], mm(990), 0.01, "p2 left: half overlap into panel 1");
+assertClose(t[1].expanded[2], mm(2010), 0.01, "p2 right: half overlap into panel 3");
 
-assertClose(t[2].expanded[0], mm(2013.3333), 0.01, "p3 left: half overlap");
+assertClose(t[2].expanded[0], mm(1990), 0.01, "p3 left: half overlap");
 assertClose(t[2].expanded[2], mm(3040), 0.01, "p3 right: 40 mm add, not overlap");
 
 console.log("\n=== overlap lands exactly on the seam ===");
 assertClose(t[0].expanded[2] - t[1].expanded[0], mm(20), 0.01, "p1/p2 overlap is 20 mm");
 assertClose(t[1].expanded[2] - t[2].expanded[0], mm(20), 0.01, "p2/p3 overlap is 20 mm");
 
-console.log("\n=== one-sided overlap: still equal panels ===");
+console.log("\n=== one-sided overlap: seams unmoved, printed widths shift ===");
 var s1 = merge(s, { overlapMode: "onesided" });
 var t1 = build(s1);
-assertAllEqual(t1, s1, 1026.67, "jednostranný přelep dá stejně široké pláty");
-assertClose(t1[0].expanded[2], mm(1026.6667), 0.01, "left panel carries the whole overlap");
-assertClose(t1[1].expanded[0], mm(1006.6667), 0.01, "right panel starts exactly on the seam");
+assertAllCleanEqual(t1, s1, 1000, "jednostranný přelep na dělení nesahá");
+assertPrinted(t1, s1, "1020|1020|1040", "levý plát u každého švu nese celý přelep");
+assertClose(t1[0].expanded[2], mm(1020), 0.01, "left panel carries the whole overlap");
+assertClose(t1[1].expanded[0], mm(1000), 0.01, "right panel starts exactly on the seam");
 assertClose(t1[0].expanded[2] - t1[1].expanded[0], mm(20), 0.01, "overlap is still 20 mm");
 
 console.log("\n=== one-sided the other way: the RIGHT panel carries it ===");
@@ -117,9 +158,11 @@ console.log("\n=== one-sided the other way: the RIGHT panel carries it ===");
 // reaching past it.
 var s2 = merge(s, { overlapMode: "onesided", overlapCarrier: "second" });
 var t2 = build(s2);
-assertAllEqual(t2, s2, 1026.67, "druhý nosič přelepu nechává pláty stejné");
-assertClose(t2[0].expanded[2], mm(1026.6667), 0.01, "left panel ends exactly on the seam");
-assertClose(t2[1].expanded[0], mm(1006.6667), 0.01, "right panel carries the whole overlap");
+assertAllCleanEqual(t2, s2, 1000, "ani druhý nosič na dělení nesahá");
+// The job from the screenshot, one panel short: 5000/5 reads the same way.
+assertPrinted(t2, s2, "1000|1020|1060", "první plát bez přelepu, ostatní s celým");
+assertClose(t2[0].expanded[2], mm(1000), 0.01, "left panel ends exactly on the seam");
+assertClose(t2[1].expanded[0], mm(980), 0.01, "right panel carries the whole overlap");
 assertClose(t2[0].expanded[2] - t2[1].expanded[0], mm(20), 0.01, "overlap is still 20 mm");
 assertClose(t2[0].expanded[0], 0, 0.001, "outer left edge untouched: flush stays flush");
 assertClose(t2[2].expanded[2], mm(3040), 0.01, "outer right edge still carries the add");
@@ -127,11 +170,11 @@ assertClose(t2[2].expanded[2], mm(3040), 0.01, "outer right edge still carries t
 console.log("\n=== rigid boards: overlap 0 behaves exactly as plain division ===");
 var s0 = merge(s, { overlap: 0 });
 var t0 = build(s0);
-// W = (3000 + 0 + 40) / 3 = 1013.33
-assertAllEqual(t0, s0, 1013.33, "bez přelepu jsou pláty taky stejné");
-assertClose(t0[0].clean[2], mm(1013.3333), 0.01, "no overlap: first cut is a plain third of the padded span");
-assertClose(t0[0].expanded[2], mm(1013.3333), 0.01, "panels butt together");
-assertClose(t0[1].expanded[0], mm(1013.3333), 0.01, "no overlap on the other side either");
+assertAllCleanEqual(t0, s0, 1000, "bez přelepu jsou pláty taky stejné");
+assertPrinted(t0, s0, "1000|1000|1040", "bez přelepu se liší jen plát s přídavkem");
+assertClose(t0[0].clean[2], mm(1000), 0.01, "no overlap: first cut is a plain third of the span");
+assertClose(t0[0].expanded[2], mm(1000), 0.01, "panels butt together");
+assertClose(t0[1].expanded[0], mm(1000), 0.01, "no overlap on the other side either");
 
 // With no adds at all, zero overlap must give exact thirds — the pre-change
 // behaviour, which is what keeps rigid-board presets working.
@@ -141,8 +184,8 @@ assertClose(tPlain[0].clean[2], mm(1000), 0.01, "no overlap, no adds: exact thir
 assertClose(tPlain[1].clean[2], mm(2000), 0.01, "and the second third");
 
 console.log("\n=== clean format never carries adds or overlap ===");
-assertClose(t[1].clean[0], mm(1016.6667), 0.01, "p2 clean left is the cut");
-assertClose(t[1].clean[2], mm(2023.3333), 0.01, "p2 clean right is the cut");
+assertClose(t[1].clean[0], mm(1000), 0.01, "p2 clean left is the cut");
+assertClose(t[1].clean[2], mm(2000), 0.01, "p2 clean right is the cut");
 assertClose(t[1].clean[1], mm(1000), 0.01, "p2 clean top is the graphic top");
 assertClose(t[1].clean[3], 0, 0.001, "p2 clean bottom is the graphic bottom");
 
@@ -154,8 +197,8 @@ var sv = merge(D, {
 });
 var tv = build(sv);
 assert(tv.length === 2, "2 vertical panels");
-// W = (1000 + 0 + 40 + 20) / 2 = 530 mm
-assertAllEqual(tv, sv, 530, "svislé pláty jsou taky stejně vysoké");
+assertAllCleanEqual(tv, sv, 500, "svislé pláty jsou taky stejně vysoké načisto");
+assertPrinted(tv, sv, "550|510", "horní nese přídavek nahoře, dolní jen půl přelepu");
 assertClose(tv[0].clean[1], mm(1000), 0.01, "panel 1 is the TOP one");
 assertClose(tv[0].expanded[1], mm(1040), 0.01, "panel 1 top: 40 mm add");
 assertClose(tv[1].expanded[3], 0, 0.001, "panel 2 bottom flush: no add");
@@ -168,7 +211,8 @@ console.log("\n=== vertical + one-sided: the combination the unit tests used to 
 // Getting that backwards made the two panels differ by exactly 2x the overlap.
 var svo = merge(sv, { overlapMode: "onesided" });
 var tvo = build(svo);
-assertAllEqual(tvo, svo, 530, "svisle jednostranně jsou pláty taky stejné");
+assertAllCleanEqual(tvo, svo, 500, "svisle jednostranně je dělení pořád na půl");
+assertPrinted(tvo, svo, "560|500", "horní plát nese celý přelep");
 assertClose(tvo[0].expanded[3] - tvo[1].expanded[1], mm(-20), 0.01,
     "horní plát nese celý přelep, dolní začíná přesně na švu");
 
@@ -177,17 +221,19 @@ console.log("\n=== vertical + the other carrier: the LOWER panel carries it ==="
 // of the ascending axis carries the overlap — the mirror of the case above.
 var svo2 = merge(sv, { overlapMode: "onesided", overlapCarrier: "second" });
 var tvo2 = build(svo2);
-assertAllEqual(tvo2, svo2, 530, "svisle a obráceně jsou pláty pořád stejné");
-assertClose(tvo2[0].expanded[3], mm(510), 0.01, "horní plát končí přesně na švu");
-assertClose(tvo2[1].expanded[1], mm(530), 0.01, "dolní plát nese celý přelep");
+assertAllCleanEqual(tvo2, svo2, 500, "ani obráceně se dělení nehne");
+assertPrinted(tvo2, svo2, "540|520", "dolní plát nese celý přelep");
+assertClose(tvo2[0].expanded[3], mm(500), 0.01, "horní plát končí přesně na švu");
+assertClose(tvo2[1].expanded[1], mm(520), 0.01, "dolní plát nese celý přelep");
 assertClose(tvo2[1].expanded[1] - tvo2[0].expanded[3], mm(20), 0.01, "přelep je pořád 20 mm");
 
 console.log("\n=== 1:10 document ===");
 var CLEAN10 = [0, mm(100), mm(300), 0];
 var s10 = merge(s, { scaleN: 10 });
 var t10 = build(s10, CLEAN10);
-assertAllEqual(t10, s10, 1026.67, "měřítko 1:10 nemění skutečné šířky plátů");
-assertClose(t10[0].expanded[2], mm(102.6667), 0.01, "adds and overlap shrink with the document");
+assertAllCleanEqual(t10, s10, 1000, "měřítko 1:10 nemění skutečné šířky plátů");
+assertPrinted(t10, s10, "1010|1020|1050", "ani tiskové šířky");
+assertClose(t10[0].expanded[2], mm(101), 0.01, "adds and overlap shrink with the document");
 assertClose(t10[0].expanded[1], mm(104), 0.01, "top add shrinks too");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
