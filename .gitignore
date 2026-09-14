@@ -5,3 +5,8 @@ node_modules/
 
 # Build artifacts — shipped as release assets, not tracked (since v1.1.0)
 dist/
+
+# Implementation plans — scaffolding for a single piece of work, not documentation.
+# The specs record the decisions and the measurements; the plans are step-by-step
+# instructions that stop being useful once the work lands.
+docs/plans/
