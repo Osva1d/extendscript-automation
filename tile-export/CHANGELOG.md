@@ -28,11 +28,14 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   neexistuje — směr se řídí pořadím lepení, a to se u tiskového PSV
   a u tapet liší. Volba je teď třetí možnost v řádku „Umístění přelepu";
   výchozí zůstává původní chování a starší předvolby ho podědí.
-- **„Rozpustit zbytek" u šířky plátu.** Zaškrtnutím se zadané číslo čte jako
-  strop **tiskové** šířky — tedy šířka role — a grafika se rozdělí na nejmenší
-  počet stejných plátů, které se pod něj vejdou:
-  `n = ceil((délka + přídavky − přelep) / (strop − přelep))`. Bez zaškrtnutí
-  platí původní chování: přesná čistá šířka a kratší poslední plát.
+- **Přepínač „Rovnoměrně — stejné tiskové pláty".** Mění, co má vyjít stejné:
+  místo stejných čistých šířek stejné tiskové, tedy včetně přelepu a přídavků
+  (`W = (délka + přídavky + (n−1) × přelep) / n`). Platí pro oba číselné
+  režimy a liší se jen tím, odkud se bere *n*: u počtu plátů srovná pláty,
+  které sis vyžádal, u šířky plátu přečte šířku jako **strop tiskové šířky**
+  — šířku role — a vezme nejmenší počet stejných plátů, které se pod něj
+  vejdou (`n = ceil((délka + přídavky − přelep) / (strop − přelep))`).
+  Vypnuto platí původní chování obou režimů. Dialog o řádek vyšší, 825 px.
 
 ### Changed
 

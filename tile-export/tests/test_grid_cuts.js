@@ -47,7 +47,7 @@ console.log("\n=== count mode: EQUAL CLEAN PANELS ===");
 // clean span and nothing else moves them. The overlap is material added on top
 // afterwards, the adds sit outside the graphic entirely. Equalising the PRINTED
 // widths instead is the other reading, and it lives in the "panel width" mode
-// with "dissolve the remainder" ticked — give it the roll, get equal prints.
+// with "equalise" ticked — give it the roll, get equal prints.
 
 // 3000 mm, 3 panels, 20 mm overlap, no adds: cuts are plain thirds.
 var base = { divideMode: "count", tileCount: 3, overlap: 20,
@@ -89,6 +89,26 @@ throwsWith(function () {
     TE.Grid.computeCuts(merge(D, { divideMode: "count", tileCount: 1 }), EXT, null);
 }, "TE_MIN_TILES", "one panel is rejected");
 
+console.log("\n=== count mode + equal panels ===");
+// The switch asks for equal PRINTED panels with n as typed, so the overlap and
+// the adds come back into the division:
+//   W = (L + addLeft + addRight + (n-1) * overlap) / n
+var eq = merge(D, merge(base, { equalPanels: true }));
+var ce = TE.Grid.computeCuts(eq, EXT, null);
+// W = (3000 + 2*20) / 3 = 1013.33, symmetric so c1 = W - overlap/2
+assertClose(ce[0], mm(1003.3333), 0.01, "equal panels: first cut is W - overlap/2");
+assertClose(ce[1], mm(1996.6667), 0.01, "equal panels: second cut is c1 + W - overlap");
+
+// Off, the very same settings give plain thirds. One switch, two readings.
+var ceOff = TE.Grid.computeCuts(merge(D, base), EXT, null);
+assertClose(ceOff[0], mm(1000), 0.01, "unticked, the same job cuts at a third");
+
+// Zero overlap collapses the two readings, which is why boards never care.
+var eq0 = merge(D, { divideMode: "count", tileCount: 3, overlap: 0,
+                     addLeft: 0, addRight: 0, equalPanels: true });
+assertClose(TE.Grid.computeCuts(eq0, EXT, null)[0], mm(1000), 0.01,
+    "no overlap: equal printed and equal clean are the same cut");
+
 console.log("\n=== width mode ===");
 var c3 = TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 1400 }), EXT, null);
 assert(c3.length === 2, "1400 mm width over 3000 mm gives 2 cuts");
@@ -102,7 +122,7 @@ throwsWith(function () {
     TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 0 }), EXT, null);
 }, "TE_BAD_WIDTH", "zero width is rejected");
 
-console.log("\n=== width mode + dissolve the remainder ===");
+console.log("\n=== width mode + equal panels ===");
 // The width is reread as a ceiling on the PRINTED panel, and the graphic goes
 // into the fewest equal panels that fit under it:
 //   n >= (span + adds - overlap) / (width - overlap)
@@ -110,7 +130,7 @@ console.log("\n=== width mode + dissolve the remainder ===");
 //   1400 -> ceil(2980/1380) = 3 panels, printed 3040/3 = 1013.33
 //   1000 -> ceil(2980/ 980) = 4 panels, printed 3060/4 =  765
 var dis = function (w) {
-    return merge(D, { divideMode: "width", tileWidth: w, dissolveRemainder: true });
+    return merge(D, { divideMode: "width", tileWidth: w, equalPanels: true });
 };
 var cd1 = TE.Grid.computeCuts(dis(1400), EXT, null);
 assert(cd1.length === 2, "1400 mm ceiling gives 3 panels");

@@ -227,6 +227,28 @@ assertClose(tvo2[0].expanded[3], mm(500), 0.01, "horní plát končí přesně n
 assertClose(tvo2[1].expanded[1], mm(520), 0.01, "dolní plát nese celý přelep");
 assertClose(tvo2[1].expanded[1] - tvo2[0].expanded[3], mm(20), 0.01, "přelep je pořád 20 mm");
 
+console.log("\n=== equal panels: the job from the screenshot ===");
+// 5000 x 1000 mm, 5 panels, 20 mm overlap, whole overlap on the right/lower
+// panel, no adds. Unticked this is five 1000 mm panels printing 1000 then
+// 1020 four times; ticked it is five identical 1016 mm prints.
+var CLEAN5 = [0, mm(1000), mm(5000), 0];
+var sScr = merge(D, {
+    direction: "horizontal", divideMode: "count", tileCount: 5,
+    overlap: 20, overlapMode: "onesided", overlapCarrier: "second",
+    addTop: 0, addBottom: 0, addLeft: 0, addRight: 0
+});
+var tScr = build(sScr, CLEAN5);
+assertAllCleanEqual(tScr, sScr, 1000, "bez rovnoměrnosti pláty po 1000 načisto");
+assertPrinted(tScr, sScr, "1000|1020|1020|1020|1020", "první bez přelepu, ostatní s celým");
+
+var sEq = merge(sScr, { equalPanels: true });
+var tEq = build(sEq, CLEAN5);
+assertPrinted(tEq, sEq, "1016|1016|1016|1016|1016", "s rovnoměrností pět stejných tisků");
+assertClose(tEq[0].clean[2] - tEq[0].clean[0], mm(1016), 0.01,
+    "plát bez přelepu si vezme víc motivu");
+assertClose(tEq[1].clean[2] - tEq[1].clean[0], mm(996), 0.01,
+    "pláty s přelepem odpovídajícím méně");
+
 console.log("\n=== 1:10 document ===");
 var CLEAN10 = [0, mm(100), mm(300), 0];
 var s10 = merge(s, { scaleN: 10 });

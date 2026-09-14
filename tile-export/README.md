@@ -64,11 +64,12 @@ Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 | volba | co zaručuje |
 |---|---|
 | **počet plátů** | *n* plátů **stejné čisté šířky**, švy na přesných zlomcích |
-| **šířka plátu** | pláty zadané šířky, poslední kratší — nebo stejné pláty pod zadaným stropem |
+| **šířka plátu** | pláty zadané čisté šířky, poslední kratší |
 | **vodítka** | švy přesně tam, kam je položíš |
 
 Každý režim patří tomu, kdo zakázku svazuje: **počet** určuje návrh, **šířku**
-materiál, **vodítka** ty.
+materiál, **vodítka** ty. Nad všemi třemi stojí přepínač **Rovnoměrně**, který
+mění, co se má srovnat — viz níž.
 
 „Počet plátů" dělí **grafiku**. Pět plátů z 5000 mm znamená švy na 1000, 2000,
 3000 a 4000 a pět plátů po 1000 mm načisto. Přelep je materiál, který se k tomu
@@ -83,27 +84,34 @@ vnitřní dva. Na 5000 mm, 5 plátů, přelep 20 mm, bez přídavků:
 | celý na levý / horní | 1020 \| 1020 \| 1020 \| 1020 \| 1000 | 1000 × 5 |
 | celý na pravý / dolní | 1000 \| 1020 \| 1020 \| 1020 \| 1020 | 1000 × 5 |
 
-**Potřebuješ naopak stejné tiskové pláty?** Na to je „šířka plátu" se
-zaškrtnutým „rozpustit zbytek" — zadáš šířku role a dostaneš stejné pláty, co
-se pod ni vejdou. Obojí naráz mít nejde: buď stejné čisté šířky, nebo stejné
-tiskové. Při **nulovém přelepu** obě definice splynou, takže desky se plátují
-tak i tak stejně.
+**Potřebuješ naopak stejné tiskové pláty?** Na to je přepínač Rovnoměrně.
+Obojí naráz mít nejde: buď stejné čisté šířky, nebo stejné tiskové. Při
+**nulovém přelepu** obě definice splynou, takže desky se plátují tak i tak
+stejně.
 
-### Šířka plátu a „rozpustit zbytek"
+### Rovnoměrně — stejné tiskové pláty
 
-Bez zaškrtnutí je zadané číslo **čistá** šířka plátu a poslední plát vyjde
-kratší o zbytek. Pozor: **tištěný plát je o přelep širší** — 1200 mm načisto
-se vytiskne na 1220 — takže na roli musí zbýt místo.
+Zaškrtnutí mění, co má vyjít stejné: místo stejných **čistých** šířek stejné
+**tiskové**, tedy včetně přelepu a přídavků. Šířka plátu je pak
+`W = (délka + přídavky + (n − 1) × přelep) / n`.
 
-Se zaškrtnutím je totéž číslo **strop tiskové šířky**, tedy šířka role, a
-grafika se rozdělí na nejmenší počet **stejných** plátů, které se pod něj
-vejdou:
+Přepínač platí pro oba číselné režimy a v každém dělá totéž — liší se jen tím,
+odkud se bere *n*.
+
+**S počtem plátů** srovná pláty, které sis vyžádal. Na 5000 mm, 5 plátů,
+přelep 20 mm:
+
+| Rovnoměrně | tisková šířka | čistá šířka |
+|---|---|---|
+| vypnuto | 1000 \| 1020 \| 1020 \| 1020 \| 1020 | 1000 × 5 |
+| zapnuto | 1016 × 5 | 1016 \| 996 \| 996 \| 996 \| 996 |
+
+**Se šířkou plátu** se zadaná šířka přečte jako **strop tiskové šířky**, tedy
+šířka role, a vyjde nejmenší počet stejných plátů, které se pod něj vejdou:
 
 ```
 n = ceil((délka + přídavky − přelep) / (strop − přelep))
 ```
-
-Na grafice 5000 mm s přelepem 20 mm:
 
 | strop | pláty | tisková šířka |
 |---|---|---|
@@ -115,6 +123,11 @@ Poslední řádek ukazuje, proč je to strop a ne přání: pět plátů by se v
 na 1016 mm, tedy přes, takže se musí na šest. Skok je nevyhnutelný — jakmile
 mají být pláty stejné a zároveň pod stropem, jejich šířka je počtem plátů
 jednoznačně daná.
+
+**Bez zaškrtnutí** je šířka plátu prostě čistá šířka a poslední plát vyjde
+kratší o zbytek. Pozor: **tištěný plát je pak o přelep širší** — 1200 mm
+načisto se vytiskne na 1220 — takže na roli musí zbýt místo. Právě tohle
+zaškrtnutí odstraní.
 
 ## Přídavky, přelep a linka
 
