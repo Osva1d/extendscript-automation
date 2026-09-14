@@ -200,15 +200,23 @@ třikrát nezávisle popsal totéž očekávání: 5000 mm na 5 plátů jsou pl�
 1000 mm a přelep je materiál navíc. Na to sedí dělení grafiky, ne materiálu.
 
 **Co se mezitím změnilo.** V době psaní §5 neexistoval strop šířky. Dnes
-existuje: „šířka plátu" + „rozpustit zbytek" vrátí stejné **tiskové** pláty
+existuje: „šířka plátu" + „Rovnoměrně" vrátí stejné **tiskové** pláty
 pod zadanou šířkou role. Požadavek, kvůli kterému se §5 psalo, je tedy
 splněný — jen v jiném režimu, a v tom správném:
 
 | režim | co zakázku svazuje | co zaručuje |
 |---|---|---|
 | počet plátů | návrh | stejná **čistá** šířka, švy na zlomcích |
-| šířka plátu + rozpustit | materiál (role) | stejná **tisková** šířka pod stropem |
+| šířka plátu | materiál | pláty zadané čisté šířky, poslední kratší |
 | vodítka | ty | šev tam, kam ho položíš |
+
+**Dodatek (téhož dne).** Rovnoměrnost nakonec nezůstala vlastností jednoho
+režimu, ale samostatným přepínačem **Rovnoměrně — stejné tiskové pláty** nad
+oběma číselnými režimy. S počtem srovná pláty, které si uživatel vyžádal; se
+šířkou přečte šířku jako strop role a odvodí počet. Je to jeden koncept, takže
+jeden ovládací prvek. Tím padá i poslední bod §5: volba nezůstala schovaná
+v režimu, dostala jméno a vlastní řádek — což je přesně to, co variantě (c)
+v §4 chybělo.
 
 Argument §5 bodu 1 („dnešní chování neplní žádné zadání") byl vyvrácen už
 v §7. Body 2 a 4 platí dál a platí i pro návrat. Bod 3 (menší UI) padl: volba

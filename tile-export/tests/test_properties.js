@@ -181,7 +181,7 @@ var arbCeiling = fc.record({
 fc.assert(fc.property(arbCeiling, function (j) {
     var s = merge(D, {
         direction: j.dir, divideMode: "width", tileWidth: j.ceiling,
-        dissolveRemainder: true,
+        equalPanels: true,
         overlap: j.overlap, overlapMode: j.mode, overlapCarrier: j.carrier,
         addTop: 40, addBottom: 25, addLeft: 0, addRight: 40
     });
@@ -199,6 +199,34 @@ fc.assert(fc.property(arbCeiling, function (j) {
         if (i === 0) { first = w; } else if (Math.abs(w - first) > 1e-6) { return false; }
     }
     return t.length >= 2;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
+console.log("\n=== Property 7: the count mode with equal panels equalises the PRINT ===");
+// The other half of property 4: same mode, switch on, and now it is the
+// printed widths that must match while the clean ones are free to differ.
+fc.assert(fc.property(arbJob, function (j) {
+    var s = merge(D, {
+        direction: j.dir, divideMode: "count", tileCount: j.n,
+        overlap: j.overlap, overlapMode: j.mode, overlapCarrier: j.carrier,
+        equalPanels: true,
+        addTop: 40, addBottom: 25, addLeft: 0, addRight: 40
+    });
+    var clean = [0, mm(j.height), mm(j.width), 0];
+    var ext = (j.dir === "horizontal")
+        ? { start: clean[0], end: clean[2] }
+        : { start: clean[3], end: clean[1] };
+    var t = TE.Grid.computeTiles(TE.Grid.computeCuts(s, ext, null), clean, s);
+    var i, w, first;
+    if (t.length !== j.n) { return false; }
+    for (i = 0; i < t.length; i++) {
+        w = (j.dir === "horizontal")
+            ? t[i].expanded[2] - t[i].expanded[0]
+            : t[i].expanded[1] - t[i].expanded[3];
+        if (i === 0) { first = w; }
+        else if (Math.abs(w - first) > 1e-6) { return false; }
+    }
+    return true;
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 

@@ -204,13 +204,22 @@ TE.UI = {
 
         var etCount = this.addRow(pSplit, l.LBL_COUNT, s.tileCount, l.TIP_COUNT);
         var etWidth = this.addRow(pSplit, l.LBL_WIDTH, s.tileWidth, l.TIP_WIDTH, "mm");
-        // Rides in the width row rather than getting its own: it changes what
-        // that one number means, and a row of its own would read as a separate
-        // setting. addRow() hands back the field, and its parent is the row.
-        var cbDissolve = etWidth.parent.add("checkbox", undefined, l.LBL_DISSOLVE);
-        cbDissolve.helpTip = l.TIP_DISSOLVE;
-        cbDissolve.value = !!s.dissolveRemainder;
         var etRound = this.addRow(pSplit, l.LBL_ROUND, s.guideRound, l.TIP_ROUND, "mm");
+
+        // A row of its own because it belongs to BOTH numbers above it: with a
+        // count it equalises the n panels asked for, with a width it rereads
+        // that width as a ceiling and derives n. One concept, one control — two
+        // differently named checkboxes for the same switch would cost more in
+        // confusion than this row costs in height. Meaningless with guides,
+        // which are placed by hand, so it greys out there.
+        var gEqual = pSplit.add("group");
+        gEqual.alignment = ["fill", "top"];
+        var stEqualLbl = gEqual.add("statictext", undefined, l.LBL_EQUAL);
+        this.lockW(stEqualLbl, this.M.LABEL_COL);
+        stEqualLbl.helpTip = l.TIP_EQUAL;
+        var cbEqual = gEqual.add("checkbox", undefined, l.LBL_EQUAL_CB);
+        cbEqual.helpTip = l.TIP_EQUAL;
+        cbEqual.value = !!s.equalPanels;
 
         // --- Overlap and adds ------------------------------------------------
         var pEdges = colL.add("panel", undefined, l.PANEL_EDGES);
@@ -432,7 +441,7 @@ TE.UI = {
             etCleanW: etCleanW, etCleanH: etCleanH,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, etRound: etRound,
-            cbDissolve: cbDissolve,
+            cbEqual: cbEqual,
             etOverlap: etOverlap, rbOverlapMode: rbOverlapMode,
             etAddTop: etAddTop, etAddBottom: etAddBottom,
             etAddLeft: etAddLeft, etAddRight: etAddRight,
@@ -459,7 +468,7 @@ TE.UI = {
         }
 
         var i, all = [cbScale, etScaleN, etCleanW, etCleanH, etCount, etWidth,
-                      cbDissolve, etRound,
+                      etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
                       etMarkSize, etGapInner, etMaxDist, etOrient, ddCutSpot,
@@ -578,7 +587,7 @@ TE.UI = {
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
         s.tileCount   = Number(r.etCount.text);
         s.tileWidth   = Number(r.etWidth.text);
-        s.dissolveRemainder = r.cbDissolve.value;
+        s.equalPanels = r.cbEqual.value;
         s.guideRound  = Number(r.etRound.text) || 0;
         s.overlap     = Number(r.etOverlap.text) || 0;
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
@@ -628,7 +637,7 @@ TE.UI = {
         r.rbMode[2].value = (s.divideMode === "guides");
         r.etCount.text = String(s.tileCount);
         r.etWidth.text = String(s.tileWidth);
-        r.cbDissolve.value = !!s.dissolveRemainder;
+        r.cbEqual.value = !!s.equalPanels;
         r.etRound.text = String(s.guideRound);
         r.etOverlap.text = String(s.overlap);
         var oneSided  = (s.overlapMode === "onesided");
@@ -706,7 +715,7 @@ TE.UI = {
         // Mode-dependent fields: show the one that applies, grey the rest.
         r.etCount.enabled = (s.divideMode === "count");
         r.etWidth.enabled = (s.divideMode === "width");
-        r.cbDissolve.enabled = (s.divideMode === "width");
+        r.cbEqual.enabled = (s.divideMode !== "guides");
         r.etRound.enabled = (s.divideMode === "guides");
         r.etDPI.enabled   = (s.exportMode === "raster");
         r.etSpot.enabled  = s.drawLine;

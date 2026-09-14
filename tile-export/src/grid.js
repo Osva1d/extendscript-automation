@@ -33,17 +33,17 @@ TE.Grid = {
         // artwork each one carries. Their PRINTED widths then differ, because an
         // outer panel has one seam and an inner panel two.
         //
-        // Equalising the printed widths instead is the other real reading, and
-        // it is what "panel width" + "dissolve the remainder" does: give it the
-        // roll and it returns equal printed panels. That mode did not exist when
-        // this one briefly carried both meanings, and it is the better home for
-        // it — the count comes from the design, the width from the material.
+        // Equalising the PRINTED widths instead is the other real reading, and
+        // s.equalPanels asks for it explicitly — here with n as typed, and in
+        // the width branch with n derived from a ceiling. Both end up in
+        // equalCuts(); the only difference is where n comes from.
         //
         // Neither overlap nor adds move these cuts: adds sit outside the
         // graphic, and the overlap is not part of the division.
         if (s.divideMode === "count") {
             n = Math.round(Number(s.tileCount));
             if (isNaN(n) || n < 2) { throw new Error("TE_MIN_TILES"); }
+            if (s.equalPanels) { return this.equalCuts(s, extent, n); }
             for (i = 1; i < n; i++) { cuts.push(start + span * i / n); }
             return cuts;
         }
@@ -52,9 +52,9 @@ TE.Grid = {
             w = TE.Utils.toDoc(Number(s.tileWidth), s);
             if (isNaN(w) || w <= 0) { throw new Error("TE_BAD_WIDTH"); }
 
-            // "Dissolve the remainder" rereads the same number as a CEILING on
-            // the PRINTED width — the roll is what the panel has to fit — and
-            // then asks for the fewest equal panels that stay under it.
+            // Equal panels rereads the same number as a CEILING on the PRINTED
+            // width — the roll is what the panel has to fit — and then asks for
+            // the fewest equal panels that stay under it.
             //
             //   W(n) = (span + adds + (n-1)*o) / n <= w
             //   n >= (span + adds - o) / (w - o)
@@ -63,7 +63,7 @@ TE.Grid = {
             // every extra seam adds one overlap to the material but the ceiling
             // applies per panel. The plain reading below caps the CLEAN width
             // instead, so its panels print up to one overlap wider than w.
-            if (s.dissolveRemainder) {
+            if (s.equalPanels) {
                 var o = TE.Utils.toDoc(Number(s.overlap) || 0, s);
                 if (w <= o) { throw new Error("TE_BAD_WIDTH"); }
                 var a = this.axisAdds(s);
