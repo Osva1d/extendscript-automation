@@ -92,7 +92,12 @@ svislá, při vertikálním vodorovná.
 
 ## Zünd režim
 
-Pro strojní přesný ořez. Přepínač v dialogu; když je vypnutý, nic nestojí.
+> **Zatím skrytý.** Panel se v dialogu nezobrazuje, protože režim neposlouží
+> plátované zakázce — viz [Na co si dát pozor](#na-co-si-dát-pozor). Kód je
+> hotový a otestovaný; zapíná se přepnutím `ZUND_ENABLED` v `src/config.js`
+> a další etapa na něm staví.
+
+Pro strojní přesný ořez.
 
 Zapnutý přidá do každého exportovaného plátu dvě věci:
 

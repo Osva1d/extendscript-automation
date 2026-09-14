@@ -9,7 +9,9 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 ### Added
 
 - **Zünd režim** — registrační značky na každém plátu a ořezová data plátu.
-  Zapíná se přepínačem v dialogu.
+  **V dialogu je zatím skrytý** (`TE.Config.ZUND_ENABLED`), protože neposlouží
+  plátované zakázce — viz poznámky níž. Kód je hotový a otestovaný; další
+  etapa na něm staví.
 - Ořezová kontura se hledá podle **přímé barvy**, nezávisle na vrstvě.
 - Kontura se ořezává **odečtením zakrývajícího rámu** — toutéž operací, jakou
   se to dělá rukama. Compound path si přitom zachová díry, na rozdíl od průniku.
@@ -39,9 +41,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Skrývání Zünd panelu dialog **nezmenší** — ScriptUI drží místo i pro
   neviditelnou skupinu. Výšku řeší rozložení sloupců, ne viditelnost.
 - Víc řezacích vrstev najednou (proříz, ryl, děrování) tato verze neumí.
-- **Zünd režim zatím nepokryje plátovanou zakázku.** Na rozděleném plátu
-  pokračuje motiv přes šev, takže na té straně není kam umístit značky.
-  Odsazená cesta jako maska, která motiv ukončí, je potřeba i pro rovný ořez.
+- **Zünd režim je v dialogu skrytý a nepokryje plátovanou zakázku.** Na
+  rozděleném plátu pokračuje motiv přes šev, takže na té straně není kam
+  umístit značky. Odsazená cesta jako maska, která motiv ukončí, je potřeba
+  i pro rovný ořez. Panel se vrátí přepnutím `ZUND_ENABLED` v `src/config.js`,
+  až bude maska hotová.
 - **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Reálný studiový
   postup ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
   zvlášť — popsané ve specu §10, včetně vyřešené překážky s parametrickou

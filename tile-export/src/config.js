@@ -17,6 +17,18 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
+    // Zünd mode is finished and tested but NOT usable for a tiled job: on a
+    // split panel the artwork continues across the seam, reaches the panel
+    // edge, and leaves no clear space for a registration mark on that side.
+    // The fix is the offset-path mask (spec 2026-09-13-tile-export-zund §10),
+    // which also ends the artwork at the seam.
+    //
+    // Until then the panel stays out of the dialog. The code is kept, not
+    // commented out — contour splitting, marks and the colour cascade are all
+    // verified and are what the next stage builds on. Flip this to true to
+    // bring the panel back.
+    ZUND_ENABLED: false,
+
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
     PRESET_KEY_DEFAULT: "[Default]",
