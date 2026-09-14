@@ -211,6 +211,24 @@ zcela mimo plát, tvar přesně na hranici plátu.
 obdélníkové pláty; skutečný postup ve studiu je jiný a je popsán níž tak, aby
 se k němu dalo vrátit bez dalšího vyptávání.
 
+### Maska je nutná i pro ROVNÝ ořez
+
+Zásadní zjištění od uživatele (2026-09-14), které mění vyznění celé
+implementované verze:
+
+**Na rozděleném plátu pokračuje motiv přes šev.** Grafika tam sahá až k hraně
+plátu a dál, takže na té straně **není kam umístit značky** — registrační značka
+potřebuje kolem sebe prázdné místo, aby ji stroj přečetl.
+
+Odsazená cesta jako maska tedy není jen věc tvarového ořezu. **Je nutná i pro
+rovný ořez**, protože je to ona, kdo motiv na švu ukončí a uvolní pás pro
+značky.
+
+Důsledek: implementovaná verze (obdélníkové pláty, grafika sahající k hraně)
+**neumí umístit značky na stranu, kde plát navazuje na soused**. Je použitelná
+jen tam, kde plát žádného souseda nemá — tedy prakticky nikde, protože kdyby
+neměl, neplátoval by se.
+
 ### Jak se to dělá rukama
 
 Pro každý plát:
@@ -273,6 +291,10 @@ konturu `jntp 0`.**
 ### Co zbývá vyřešit
 
 - Jak se vrstvy pojmenují a jak se pozná, která je která při druhém uložení.
+- **Barva značek je vlastní parametr, ne barva kontury.** Standard je
+  registrační; výjimečně bílá přímá barva `Spot 1` na černé a čiré materiály
+  s čirým linerem. ZSM to řeší přes `s.markColor` a `swatches[1]` jako
+  registrační (jméno je lokalizované).
 - Jestli je bounding box brát z `visibleBounds` nebo `geometricBounds` oříznuté
   skupiny — u clipnuté skupiny se liší, viz skill `manipulating-illustrator-items`.
 - Chování, když kontura po odsazení přeteče přes sousední plát.
