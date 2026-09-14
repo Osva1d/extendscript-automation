@@ -53,8 +53,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   umístit značky. Odsazená cesta jako maska, která motiv ukončí, je potřeba
   i pro rovný ořez. Panel se vrátí přepnutím `ZUND_ENABLED` v `src/config.js`,
   až bude maska hotová.
-- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Reálný studiový
-  postup ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
+- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Postup používaný v praxi ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
   zvlášť — popsané ve specu §10, včetně vyřešené překážky s parametrickou
   odsazenou cestou.
 

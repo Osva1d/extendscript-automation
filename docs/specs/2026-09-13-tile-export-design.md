@@ -8,8 +8,8 @@ Datum: 2026-09-13 · Stav: návrh, neschválený k implementaci
 
 ## 1. Problém
 
-Většinu plátování velkoformátových grafik zvládne RIP. Ruční plátování ve studiu
-se dělá jen ve dvou případech:
+Většinu plátování velkoformátových grafik zvládne RIP. Ručně se plátuje jen ve
+dvou případech:
 
 1. **Nerovnoměrné dělení** — šev se musí vyhnout textu nebo logu. RIP to neumí.
 2. **Strojní přesný ořez na Zündu** — každý plát potřebuje regmarky a vlastní
@@ -150,7 +150,7 @@ Všechny tři vstupní režimy plní tutéž strukturu, takže zbytek nástroje 
 - horní hrana: vždy `+T`; dolní hrana: vždy `−B`
 
 U `onesided` nese přelep vždy **levý** plát (u `vertical` **horní**). Konstanta,
-ne parametr — otočit jde jednou změnou, pokud se ukáže, že to lepiči chtějí jinak.
+ne parametr — otočit jde jednou změnou, pokud se ukáže, že montáž to chce jinak.
 
 Pro `vertical` platí totéž s prohozenými osami.
 
@@ -158,7 +158,7 @@ Pro `vertical` platí totéž s prohozenými osami.
 rozšířený obdélník, tedy MediaBox exportovaného PDF.
 
 Opraveno 2026-09-13 po prvním běhu: původně byla linka na čistém formátu, což je
-obráceně. Řez podle ní by montážní spad odřízl, a lepič ho přitom potřebuje.
+obráceně. Řez podle ní by montážní spad odřízl, a montáž ho přitom potřebuje.
 Linka na vnějším rozměru znamená, že po řezu spad na plátu **zůstane**.
 
 Dvě věci, které z toho plynou a nejsou samozřejmé:
@@ -178,14 +178,14 @@ hranicí a pořád tenké.
 
 ## 4b. Vstupní stav dokumentu a přesah grafiky
 
-Reálný postup uživatele: **plátno se založí na rozměr čistého formátu** (u velké
+Výchozí stav: **plátno je založené na rozměr čistého formátu** (u velké
 grafiky v poměru 1:10) a do něj se umístí navázané PDF, které **už nese
 připravený spad pro přídavky**.
 
 Z toho plynou dvě věci, které návrh musí hlídat:
 
 **Grafika artboard přesahuje.** Materiál pro přídavky je fyzicky k dispozici, ale
-jen tolik, kolik ho dodavatel dat připravil. Nástroj změří skutečný přesah per
+jen tolik, kolik ho nesou dodaná data. Nástroj změří skutečný přesah per
 hrana z `placedItem.geometricBounds` proti `artboardRect`:
 
 ```
@@ -427,7 +427,7 @@ Pořadí podle toho, jak na sobě stojí:
 
    ### Důsledek pro návrh
 
-   Vlastní dělení cesty (clipping proti polorovině, návrh uživatele) zůstává
+   Vlastní dělení cesty (clipping proti polorovině) zůstává
    **záložní variantou**, ne první volbou. Je pořád proveditelné — Bézierovy
    řídící body jdou v ExtendScriptu číst i zapisovat a cesta postavená od nuly
    má bounds identické s originálem — ale je to 300–500 řádků matematiky proti

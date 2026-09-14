@@ -9,13 +9,12 @@ Datum: 2026-09-13 · Stav: návrh, neschválený k implementaci
 
 ## 1. Problém
 
-`tile-export` v1 řeší první ze dvou případů, kdy se ve studiu plátuje ručně:
+`tile-export` v1 řeší první ze dvou případů, kdy se plátuje ručně:
 nerovnoměrné dělení, kde se šev musí vyhnout textu. Tenhle návrh řeší **druhý**:
 strojní přesný ořez, tvarový nebo rovný, kde každý plát potřebuje regmarky
 a vlastní korektní ořezová data.
 
-Dnešní ruční postup, popsaný uživatelem: zkopírovat celkovou konturu do
-schránky, cestářem od ní odečíst zakrývající obdélník ve vhodném místě —
+Ruční postup: zkopírovat celkovou konturu do schránky, cestářem od ní odečíst zakrývající obdélník ve vhodném místě —
 výsledek je ořez jednoho plátu — vložit kompletní konturu zpět a odečíst, co
 nemá zůstat. A tak dokola pro každý plát.
 
@@ -208,13 +207,12 @@ zcela mimo plát, tvar přesně na hranici plátu.
 ## 10. Další etapa — tvarové pláty podle reálného postupu
 
 **Tohle je nejbližší a nejdůležitější pokračování.** Verze popsaná výš dělá
-obdélníkové pláty; skutečný postup ve studiu je jiný a je popsán níž tak, aby
+obdélníkové pláty; postup používaný v praxi je jiný a je popsán níž tak, aby
 se k němu dalo vrátit bez dalšího vyptávání.
 
 ### Maska je nutná i pro ROVNÝ ořez
 
-Zásadní zjištění od uživatele (2026-09-14), které mění vyznění celé
-implementované verze:
+Zásadní zjištění (2026-09-14), které mění vyznění celé implementované verze:
 
 **Na rozděleném plátu pokračuje motiv přes šev.** Grafika tam sahá až k hraně
 plátu a dál, takže na té straně **není kam umístit značky** — registrační značka
@@ -229,7 +227,7 @@ Důsledek: implementovaná verze (obdélníkové pláty, grafika sahající k hr
 jen tam, kde plát žádného souseda nemá — tedy prakticky nikde, protože kdyby
 neměl, neplátoval by se.
 
-### Jak se to dělá rukama
+### Jak postup vypadá
 
 Pro každý plát:
 

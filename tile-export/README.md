@@ -6,7 +6,7 @@ každého plátu do vlastního PDF.
 
 ## Proč existuje
 
-Ruční plátování ve studiu se dělá jen ve dvou případech; ten zbytek zvládne RIP.
+Ruční plátování má smysl jen ve dvou případech; zbytek zvládne RIP.
 Tenhle nástroj řeší **první z nich: nerovnoměrné dělení**, kdy se šev musí
 vyhnout textu nebo logu a RIP to neumí.
 
@@ -167,8 +167,7 @@ se a nedokresluje.
   **není kam dát značky** — registrační značka potřebuje kolem sebe volné místo.
   Vyřeší to až odsazená cesta jako maska, která motiv na švu ukončí; ta je
   potřeba i pro **rovný** ořez, nejen pro tvarový.
-- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Reálný studiový
-  postup ořezává grafiku konturou rozšířenou o spad a ukládá dva PDF — tiskové
+- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Postup používaný v praxi ořezává grafiku konturou rozšířenou o spad a ukládá dva PDF — tiskové
   a `_cut`. Postup i naměřené podklady jsou ve specu
   [`docs/specs/2026-09-13-tile-export-zund-design.md`](../docs/specs/2026-09-13-tile-export-zund-design.md) §10.
 
