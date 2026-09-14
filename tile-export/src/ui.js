@@ -385,12 +385,18 @@ TE.UI = {
         // and would wrap inside a single column.
         var pCalc = w.add("panel", undefined, l.PANEL_CALC);
         pCalc.alignChildren = ["fill", "top"];
-        var stCalc = pCalc.add("statictext", undefined, "", { multiline: true });
-        stCalc.preferredSize.height = 85;    // [deviation] multiline statictext
-                                             // collapses to one line without a
-                                             // height; 85 keeps the dialog inside
-                                             // the usable screen height once the
-                                             // Zünd panel is open
+        // [deviation] readonly edittext, not statictext. The summary is as long
+        // as the job needs — a line per panel plus the bleed line plus any
+        // warnings — and a fixed-height statictext CLIPS the rest with no sign
+        // that anything is missing: at 85 px a five-panel job showed panels 1-3
+        // and swallowed 4, 5, the bleed line and every error. An edittext with
+        // scrolling keeps the content reachable, and readonly keeps it from
+        // being edited. 85 px stays because the dialog has to fit the usable
+        // screen height with the Zünd panel open. Selectable text is a bonus:
+        // the panel sizes can be copied straight into a job sheet.
+        var stCalc = pCalc.add("edittext", undefined, "",
+            { multiline: true, scrolling: true, readonly: true });
+        stCalc.preferredSize.height = 85;
         stCalc.alignment = ["fill", "top"];
 
         // --- Footer ----------------------------------------------------------
@@ -674,6 +680,7 @@ TE.UI = {
         var l = TE.L;
         var s = this.collect(r);
         var lines = [];
+        var alerts = [];   // errors and warnings, rendered ABOVE the geometry
         var ok = true;
 
         // Mode-dependent fields: show the one that applies, grey the rest.
@@ -721,15 +728,18 @@ TE.UI = {
                 Math.round(TE.Utils.fromDoc(ctx.validation.overhang.top, s)),
                 Math.round(TE.Utils.fromDoc(ctx.validation.overhang.bottom, s))));
 
-            for (i = 0; i < v.warnings.length; i++) { lines.push("! " + v.warnings[i]); }
-            for (i = 0; i < v.errors.length; i++) { lines.push("✗ " + v.errors[i]); }
+            for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
+            for (i = 0; i < v.warnings.length; i++) { alerts.push("! " + v.warnings[i]); }
             ok = (v.errors.length === 0);
         } catch (err) {
-            lines.push("✗ " + this.describeError(err));
+            alerts.push("✗ " + this.describeError(err));
             ok = false;
         }
 
-        r.stCalc.text = lines.join("\n");
+        // Errors first, then warnings, then the geometry. Whatever else scrolls
+        // out of sight, the reason the Export button is dead must not: it used
+        // to sit at the BOTTOM, below one line per panel.
+        r.stCalc.text = alerts.concat(lines).join("\n");
         r.btnTiles.enabled = ok;
         r.btnExport.enabled = ok;
     },
