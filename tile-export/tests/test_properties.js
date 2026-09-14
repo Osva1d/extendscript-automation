@@ -26,10 +26,11 @@ function merge(base, over) {
     return r;
 }
 
-function build(n, widthMm, heightMm, overlapMm, mode, dir) {
+function build(n, widthMm, heightMm, overlapMm, mode, dir, carrier) {
     var s = merge(D, {
         direction: dir, divideMode: "count", tileCount: n,
         overlap: overlapMm, overlapMode: mode,
+        overlapCarrier: carrier || "first",
         addTop: 40, addBottom: 25, addLeft: 0, addRight: 40
     });
     var clean = [0, mm(heightMm), mm(widthMm), 0];
@@ -48,6 +49,7 @@ var arbJob = fc.record({
     height:  fc.integer({ min: 600, max: 6000 }),
     overlap: fc.integer({ min: 0, max: 40 }),
     mode:    fc.constantFrom("symmetric", "onesided"),
+    carrier: fc.constantFrom("first", "second"),
     dir:     fc.constantFrom("horizontal", "vertical")
 }).filter(function (j) {
     var span = (j.dir === "horizontal") ? j.width : j.height;
@@ -56,7 +58,7 @@ var arbJob = fc.record({
 
 console.log("\n=== Property 1: clean panels tile the graphic exactly ===");
 fc.assert(fc.property(arbJob, function (j) {
-    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles, i;
     if (t.length !== j.n) { return false; }
 
@@ -80,7 +82,7 @@ console.log("  ok (500 runs)");
 
 console.log("\n=== Property 2: adjacent panels overlap by exactly the configured amount ===");
 fc.assert(fc.property(arbJob, function (j) {
-    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles, i, got;
     var want = TE.Utils.toDoc(j.overlap, r.s);
 
@@ -96,7 +98,7 @@ console.log("  ok (500 runs)");
 
 console.log("\n=== Property 3: outer edges carry the add, never the overlap ===");
 fc.assert(fc.property(arbJob, function (j) {
-    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles;
     var addL = TE.Utils.toDoc(0,  r.s);   // addLeft is 0 — "načisto"
     var addR = TE.Utils.toDoc(40, r.s);
@@ -115,7 +117,7 @@ console.log("\n=== Property 4: the count mode yields panels of EQUAL printed wid
 // whatever the overlap, the adds or the direction. The clean widths differ
 // by design; see TE.Grid.equalCuts.
 fc.assert(fc.property(arbJob, function (j) {
-    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles, i, w, first;
     for (i = 0; i < t.length; i++) {
         w = (j.dir === "horizontal")
@@ -133,7 +135,7 @@ console.log("\n=== Property 5: panels consume exactly the expected material ==="
 // That is the identity the equal-width formula is derived from, checked the
 // other way round.
 fc.assert(fc.property(arbJob, function (j) {
-    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
+    var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir, j.carrier);
     var t = r.tiles, i, sum = 0;
     for (i = 0; i < t.length; i++) {
         sum += (j.dir === "horizontal")
