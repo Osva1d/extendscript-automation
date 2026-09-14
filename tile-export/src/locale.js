@@ -65,7 +65,9 @@ TE.L = (function () {
             LBL_COUNT:           "Panels",
             TIP_COUNT:           "How many panels to split into. At least 2. All of them get the same PRINTED width — overlap and edge adds are part of the division, so the clean widths differ.",
             LBL_WIDTH:           "Panel width",
-            TIP_WIDTH:           "Maximum panel width. The last panel comes out shorter when the graphic does not divide evenly.",
+            TIP_WIDTH:           "Clean width of a panel. The PRINTED panel comes out up to one overlap wider, so leave room on the roll. The last panel is shorter by whatever is left over — unless you dissolve the remainder.",
+            LBL_DISSOLVE:        "dissolve the remainder",
+            TIP_DISSOLVE:        "Reads the width as a ceiling on the PRINTED panel — the roll — and splits the graphic into the fewest EQUAL panels that stay under it. No short last panel. 5000 mm with a 20 mm overlap: a 1200 ceiling gives 5 panels of 1016, a 1000 ceiling gives 6 of 850, because 5 would print 1016.",
             LBL_ROUND:           "Round guides to",
             TIP_ROUND:           "Hand-dragged guides are never round numbers. Zero takes them as they are.",
 
@@ -196,7 +198,9 @@ TE.L = (function () {
             LBL_COUNT:           "Počet plátů",
             TIP_COUNT:           "Na kolik plátů rozdělit. Nejméně 2. Všechny mají stejnou TISKOVOU šířku — přelep a přídavky jsou součástí dělení, takže čisté šířky se liší.",
             LBL_WIDTH:           "Šířka plátu",
-            TIP_WIDTH:           "Největší šířka plátu. Poslední plát vyjde kratší, když grafika nevyjde beze zbytku.",
+            TIP_WIDTH:           "Šířka plátu načisto. TIŠTĚNÝ plát vyjde až o přelep širší, počítej s tím na roli. Poslední plát vyjde kratší o zbytek — pokud zbytek nerozpustíš.",
+            LBL_DISSOLVE:        "rozpustit zbytek",
+            TIP_DISSOLVE:        "Bere šířku jako strop TIŠTĚNÉHO plátu, tedy jako šířku role, a rozdělí grafiku na nejmenší počet STEJNÝCH plátů, které se pod strop vejdou. Žádný krátký poslední plát. Na 5000 mm s přelepem 20: strop 1200 dá 5 plátů po 1016, strop 1000 dá 6 po 850, protože pět by se vytisklo na 1016.",
             LBL_ROUND:           "Zaokrouhlit vodítka na",
             TIP_ROUND:           "Ručně tažená vodítka nikdy nesedí na kulaté číslo. Nula je vezme tak, jak jsou.",
 

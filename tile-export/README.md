@@ -64,7 +64,7 @@ Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 | volba | co zaručuje |
 |---|---|
 | **počet plátů** | *n* plátů **stejné tiskové šířky** |
-| **šířka plátu** | pláty zadané šířky, poslední kratší |
+| **šířka plátu** | pláty zadané šířky, poslední kratší — nebo stejné pláty pod zadaným stropem |
 | **vodítka** | švy přesně tam, kam je položíš |
 
 Každá odpovídá jinému zadání zakázky. „Počet plátů" počítá přelep a přídavky
@@ -93,6 +93,33 @@ usnadňuje montáž a spotřeba materiálu je jedno číslo. U polepů se čast�
 
 Při **nulovém přelepu** se vzorec zredukuje na prosté rovnoměrné dělení, obě
 definice splynou a desky se plátují stejně jako dřív.
+
+### Šířka plátu a „rozpustit zbytek"
+
+Bez zaškrtnutí je zadané číslo **čistá** šířka plátu a poslední plát vyjde
+kratší o zbytek. Pozor: **tištěný plát je o přelep širší** — 1200 mm načisto
+se vytiskne na 1220 — takže na roli musí zbýt místo.
+
+Se zaškrtnutím je totéž číslo **strop tiskové šířky**, tedy šířka role, a
+grafika se rozdělí na nejmenší počet **stejných** plátů, které se pod něj
+vejdou:
+
+```
+n = ceil((délka + přídavky − přelep) / (strop − přelep))
+```
+
+Na grafice 5000 mm s přelepem 20 mm:
+
+| strop | pláty | tisková šířka |
+|---|---|---|
+| 1300 | 4 | 1265 |
+| 1200 | 5 | 1016 |
+| 1000 | **6** | **850** |
+
+Poslední řádek ukazuje, proč je to strop a ne přání: pět plátů by se vytisklo
+na 1016 mm, tedy přes, takže se musí na šest. Skok je nevyhnutelný — jakmile
+mají být pláty stejné a zároveň pod stropem, jejich šířka je počtem plátů
+jednoznačně daná.
 
 ## Přídavky, přelep a linka
 

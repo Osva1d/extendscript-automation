@@ -35,6 +35,27 @@ TE.Grid = {
         if (s.divideMode === "width") {
             w = TE.Utils.toDoc(Number(s.tileWidth), s);
             if (isNaN(w) || w <= 0) { throw new Error("TE_BAD_WIDTH"); }
+
+            // "Dissolve the remainder" rereads the same number as a CEILING on
+            // the PRINTED width — the roll is what the panel has to fit — and
+            // then asks for the fewest equal panels that stay under it.
+            //
+            //   W(n) = (span + adds + (n-1)*o) / n <= w
+            //   n >= (span + adds - o) / (w - o)
+            //
+            // Which is why the overlap appears on both sides of the division:
+            // every extra seam adds one overlap to the material but the ceiling
+            // applies per panel. The plain reading below caps the CLEAN width
+            // instead, so its panels print up to one overlap wider than w.
+            if (s.dissolveRemainder) {
+                var o = TE.Utils.toDoc(Number(s.overlap) || 0, s);
+                if (w <= o) { throw new Error("TE_BAD_WIDTH"); }
+                var a = this.axisAdds(s);
+                n = Math.ceil((span + a.low + a.high - o) / (w - o) - 1e-9);
+                if (n < 2) { throw new Error("TE_MIN_TILES"); }
+                return this.equalCuts(s, extent, n);
+            }
+
             // Tolerance guards the exact-fit case: 3000/1500 must give 2 panels,
             // not 3 with a zero-width trailing one, despite float arithmetic.
             n = Math.ceil(span / w - 1e-9);
@@ -166,17 +187,8 @@ TE.Grid = {
         var span = extent.end - extent.start;
         var o = TE.Utils.toDoc(Number(s.overlap) || 0, s);
 
-        // The adds at the two ENDS OF THE SPLIT AXIS, which are different
-        // settings depending on direction.
-        var addLow, addHigh;
-        if (s.direction === "horizontal") {
-            addLow  = TE.Utils.toDoc(Number(s.addLeft) || 0, s);
-            addHigh = TE.Utils.toDoc(Number(s.addRight) || 0, s);
-        } else {
-            // The axis ascends from the bottom, so "low" is the bottom edge.
-            addLow  = TE.Utils.toDoc(Number(s.addBottom) || 0, s);
-            addHigh = TE.Utils.toDoc(Number(s.addTop) || 0, s);
-        }
+        var a = this.axisAdds(s);
+        var addLow = a.low, addHigh = a.high;
 
         var W = (span + addLow + addHigh + (n - 1) * o) / n;
 
@@ -210,6 +222,29 @@ TE.Grid = {
             cuts.push(c);
         }
         return cuts;
+    },
+
+    /**
+     * The edge adds at the two ENDS OF THE SPLIT AXIS, in document points.
+     *
+     * Which two of the four settings those are depends on the direction, and
+     * the axis always ascends — so "low" is the LEFT edge across and the
+     * BOTTOM edge down.
+     *
+     * @param {Object} s - Settings.
+     * @returns {Object} {low, high} in document points.
+     */
+    axisAdds: function (s) {
+        if (s.direction === "horizontal") {
+            return {
+                low:  TE.Utils.toDoc(Number(s.addLeft) || 0, s),
+                high: TE.Utils.toDoc(Number(s.addRight) || 0, s)
+            };
+        }
+        return {
+            low:  TE.Utils.toDoc(Number(s.addBottom) || 0, s),
+            high: TE.Utils.toDoc(Number(s.addTop) || 0, s)
+        };
     },
 
     /**

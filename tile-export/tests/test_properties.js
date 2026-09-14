@@ -154,4 +154,47 @@ fc.assert(fc.property(arbJob, function (j) {
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 
+console.log("\n=== Property 6: dissolved remainder never prints wider than the ceiling ===");
+// The whole promise of the checkbox: the entered width is a ceiling on the
+// PRINTED panel, whatever the overlap, the adds, the direction or the count
+// that falls out of it.
+var arbCeiling = fc.record({
+    ceiling: fc.integer({ min: 300, max: 4000 }),
+    width:   fc.integer({ min: 600, max: 12000 }),
+    height:  fc.integer({ min: 600, max: 6000 }),
+    overlap: fc.integer({ min: 0, max: 40 }),
+    mode:    fc.constantFrom("symmetric", "onesided"),
+    carrier: fc.constantFrom("first", "second"),
+    dir:     fc.constantFrom("horizontal", "vertical")
+}).filter(function (j) {
+    var span = (j.dir === "horizontal") ? j.width : j.height;
+    // The ceiling has to leave room for at least two panels and clear the
+    // overlap, which is what TE.Grid rejects outright.
+    return j.ceiling > j.overlap && j.ceiling < span / 2;
+});
+
+fc.assert(fc.property(arbCeiling, function (j) {
+    var s = merge(D, {
+        direction: j.dir, divideMode: "width", tileWidth: j.ceiling,
+        dissolveRemainder: true,
+        overlap: j.overlap, overlapMode: j.mode, overlapCarrier: j.carrier,
+        addTop: 40, addBottom: 25, addLeft: 0, addRight: 40
+    });
+    var clean = [0, mm(j.height), mm(j.width), 0];
+    var ext = (j.dir === "horizontal")
+        ? { start: clean[0], end: clean[2] }
+        : { start: clean[3], end: clean[1] };
+    var t = TE.Grid.computeTiles(TE.Grid.computeCuts(s, ext, null), clean, s);
+    var i, w, first;
+    for (i = 0; i < t.length; i++) {
+        w = (j.dir === "horizontal")
+            ? t[i].expanded[2] - t[i].expanded[0]
+            : t[i].expanded[1] - t[i].expanded[3];
+        if (w > TE.Utils.toDoc(j.ceiling, s) + 1e-6) { return false; }
+        if (i === 0) { first = w; } else if (Math.abs(w - first) > 1e-6) { return false; }
+    }
+    return t.length >= 2;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
 console.log("\nALL PROPERTIES HOLD");
