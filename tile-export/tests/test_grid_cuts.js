@@ -42,12 +42,13 @@ function throwsWith(fn, code, msg) {
 var D = TE.Config.getDefaults();
 var EXT = { start: 0, end: mm(3000) };   // 3000 mm wide graphic
 
-console.log("\n=== count mode: EQUAL FINISHED PANELS ===");
+console.log("\n=== count mode: EQUAL PRINTED PANELS ===");
 // The count mode promises n equal panels, so the cuts must account for the
 // overlap and the edge adds — the printed width is
 //   W = (L + addLeft + addRight + (n-1) * overlap) / n
-// Dividing the clean format evenly and adding the overlap afterwards gives
-// panels of different widths, which matches no job spec.
+// Dividing the clean format evenly and adding the overlap afterwards equalises
+// the CLEAN widths instead and leaves the printed ones different — the other
+// legitimate reading, and the one the "panel width" mode covers.
 
 // 3000 mm, 3 panels, 20 mm overlap, no adds: W = (3000 + 40) / 3 = 1013.33
 var base = { divideMode: "count", tileCount: 3, overlap: 20,
@@ -98,6 +99,39 @@ assert(c4.length === 1, "exact fit gives 1 cut, not 2");
 throwsWith(function () {
     TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 0 }), EXT, null);
 }, "TE_BAD_WIDTH", "zero width is rejected");
+
+console.log("\n=== width mode + dissolve the remainder ===");
+// The width is reread as a ceiling on the PRINTED panel, and the graphic goes
+// into the fewest equal panels that fit under it:
+//   n >= (span + adds - overlap) / (width - overlap)
+// D carries overlap 20 and no adds, so on 3000 mm:
+//   1400 -> ceil(2980/1380) = 3 panels, printed 3040/3 = 1013.33
+//   1000 -> ceil(2980/ 980) = 4 panels, printed 3060/4 =  765
+var dis = function (w) {
+    return merge(D, { divideMode: "width", tileWidth: w, dissolveRemainder: true });
+};
+var cd1 = TE.Grid.computeCuts(dis(1400), EXT, null);
+assert(cd1.length === 2, "1400 mm ceiling gives 3 panels");
+// The cut is not the width: D is symmetric, so the first seam sits half an
+// overlap back from the panel edge — 1013.33 - 10.
+assertClose(cd1[0], mm(1003.3333), 0.01, "first cut is an equal-panel cut, not 1400");
+var cd2 = TE.Grid.computeCuts(dis(1000), EXT, null);
+assert(cd2.length === 3, "1000 mm ceiling needs a fourth panel: five would print 1016");
+
+// The exact boundary must not spill into one panel too many.
+var cd3 = TE.Grid.computeCuts(dis(1013.3333333), EXT, null);
+assert(cd3.length === 2, "a ceiling exactly on the resulting width stays at 3 panels");
+
+throwsWith(function () { TE.Grid.computeCuts(dis(20), EXT, null); },
+    "TE_BAD_WIDTH", "a ceiling equal to the overlap is rejected");
+throwsWith(function () { TE.Grid.computeCuts(dis(10), EXT, null); },
+    "TE_BAD_WIDTH", "a ceiling below the overlap is rejected");
+throwsWith(function () { TE.Grid.computeCuts(dis(5000), EXT, null); },
+    "TE_MIN_TILES", "a ceiling wider than the graphic cannot be tiled");
+
+// Off, the same number keeps its old meaning: exact clean width, short last.
+var cOff = TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 1400 }), EXT, null);
+assertClose(cOff[0], mm(1400), 0.01, "with the box unticked the cut is still at 1400");
 
 console.log("\n=== guides mode ===");
 var g = [mm(2000), mm(-50), mm(500), mm(3200), mm(1200)];

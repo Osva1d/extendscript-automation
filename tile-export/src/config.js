@@ -53,6 +53,11 @@ TE.Config = {
             divideMode:  "count",       // "count" | "width" | "guides"
             tileCount:   3,
             tileWidth:   1000,          // mm, used when divideMode === "width"
+            // Off: tileWidth is the exact CLEAN width and the last panel takes
+            // whatever is left over. On: it is a ceiling on the PRINTED width
+            // — the roll — and the graphic splits into the fewest equal panels
+            // that fit under it.
+            dissolveRemainder: false,
             guideRound:  0,             // mm step for rounding guide positions; 0 = as-is
 
             overlap:     20,            // mm, "přelep"; 0 for rigid boards

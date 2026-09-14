@@ -28,6 +28,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   neexistuje — směr se řídí pořadím lepení, a to se u tiskového PSV
   a u tapet liší. Volba je teď třetí možnost v řádku „Umístění přelepu";
   výchozí zůstává původní chování a starší předvolby ho podědí.
+- **„Rozpustit zbytek" u šířky plátu.** Zaškrtnutím se zadané číslo čte jako
+  strop **tiskové** šířky — tedy šířka role — a grafika se rozdělí na nejmenší
+  počet stejných plátů, které se pod něj vejdou:
+  `n = ceil((délka + přídavky − přelep) / (strop − přelep))`. Bez zaškrtnutí
+  platí původní chování: přesná čistá šířka a kratší poslední plát.
 
 ### Changed
 
@@ -49,6 +54,12 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - `TE.Export.exportTile()` vrací `{file, contourPaths}` místo `File`.
 
 ### Fixed
+
+- **Nápověda u „šířka plátu" slibovala strop, který nedržel.** Stálo tam
+  „Největší šířka plátu", jenže to platilo jen o čisté šířce — tištěný plát
+  vyjde až o přelep širší (zadáno 1200, vytištěno 1220). Kdo tam psal šířku
+  role, dostával pláty o přelep přes. Text teď říká obojí a odkazuje na
+  „rozpustit zbytek", které ten strop drží doopravdy.
 
 - **Souhrn v poli Výsledek už nic nezamlčí.** Bylo to `statictext` s pevnou
   výškou 85 px, do kterého se psal libovolně dlouhý text — u pěti plátů se
