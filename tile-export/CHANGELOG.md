@@ -43,6 +43,16 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   stejně — viz poznámka níž.
 - `TE.Export.exportTile()` vrací `{file, contourPaths}` místo `File`.
 
+### Fixed
+
+- **Souhrn v poli Výsledek už nic nezamlčí.** Bylo to `statictext` s pevnou
+  výškou 85 px, do kterého se psal libovolně dlouhý text — u pěti plátů se
+  zobrazily pláty 1–3 a beze stopy zmizely pláty 4 a 5, řádek s dostupným
+  spadem **a všechna varování i chyby**. Tlačítko Vytvořit a exportovat tak
+  mohlo zůstat šedé bez jediného vysvětlení. Pole je teď `edittext`
+  (readonly, se scrollováním) a chyby s varováními se vypisují **nahoře**,
+  nad geometrií. Text jde navíc označit a zkopírovat do zakázkového listu.
+
 ### Notes
 
 - **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně
