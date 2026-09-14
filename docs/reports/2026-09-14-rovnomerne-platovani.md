@@ -11,12 +11,13 @@ Režim „počet plátů" dělí rovnoměrně **čistý formát**, a přelep se 
 potom. Výsledek jsou pláty, které stejné nejsou. Naměřeno na grafice 3000 mm,
 3 pláty, přelep 20 mm, bez přídavků:
 
-| režim přelepu | šířky hotových plátů |
+| režim přelepu | tiskové šířky plátů |
 |---|---|
 | symetricky | 1010 \| **1020** \| 1010 mm |
 | jednostranně | 1020 \| 1020 \| **1000** mm |
 
-Součet je v obou případech 3040 mm.
+Součet je v obou případech 3040 mm. Čisté šířky přitom stejné jsou —
+1000 mm třikrát. Viz oprava v §7.
 
 **Je to překvapivé chování.** Uživatel, který zadá „3 pláty", přirozeně čeká tři
 stejné — ne tři různé. Rozdíl je tím větší, čím větší je přelep a čím méně je
@@ -146,3 +147,41 @@ které dnes chybí.
 - README a CHANGELOG — popsat, co režim „počet plátů" slibuje.
 
 Odhad: jde o jednu funkci a její testy, ne o zásah do architektury.
+
+---
+
+## 7. Oprava — dvě definice „stejných plátů" (2026-09-14, po implementaci)
+
+Zpráva výše má v §5 vadný první důvod. Stojí tam, že dřívější chování
+„neplní žádné zadání". **Není to pravda.** Dřívější chování dávalo stejné
+**čisté** šířky (1000/1000/1000 mm) a různé tiskové; nová implementace dává
+stejné **tiskové** šířky a různé čisté. Obě definice odpovídají reálnému
+zadání a rozhodovalo se tedy mezi nimi, ne mezi chybou a opravou.
+
+Naměřeno na produkčním kódu, grafika 3000 mm, 3 pláty, přelep 20 mm:
+
+| | tisková šířka | čistá šířka |
+|---|---|---|
+| dřívější chování | 1010 \| 1020 \| 1010 | 1000 \| 1000 \| 1000 |
+| nynější, symetricky | 1013,3 × 3 | 1003,3 \| 993,3 \| 1003,3 |
+| nynější, jednostranně | 1013,3 × 3 | 993,3 \| 993,3 \| 1013,3 |
+
+**Obojí naráz nejde.** Krajní plát má jeden šev, vnitřní dva; při konstantní
+tiskové šířce musí krajní nést víc motivu. Jedinou výjimkou je nulový přelep,
+kde obě definice splynou.
+
+**Volba zůstává na tiskové šířce.** Červená linka leží na MediaBoxu, takže
+tisková šířka je to, co finišer řeže a co se objedná z role — a právě ta má být
+předvídatelná. Ale je to volba, ne oprava, a v README, CHANGELOGu i v dokumentaci
+`TE.Grid.equalCuts` je teď pojmenovaná.
+
+**Rovnoměrnost platí v obou režimech přelepu.** Jednostranný přelep ji neruší:
+posune se šev o půl přelepu (vodorovně řez na 993,3 místo 1003,3, svisle na
+1013,3 — opačným směrem, protože přelep nese druhý konec osy), tiskové šířky
+zůstanou stejné. Ověřeno property testem, 500 běhů, obě orientace, oba režimy.
+
+Tím padá i vzorec v §3: `c₁ = W − o − aL` platí jen vodorovně. Svisle nese
+přelep horní plát, tedy **vysoký** konec vzestupné osy, takže plát na nízkém
+konci nenese nic a `c₁ = W − aB`. Tuhle asymetrii odhalil až property test
+během implementace (n = 2, přelep 1: pláty se lišily přesně o dvojnásobek
+přelepu).

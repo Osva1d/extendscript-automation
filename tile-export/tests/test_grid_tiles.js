@@ -37,7 +37,7 @@ var D = TE.Config.getDefaults();
 var CLEAN = [0, mm(1000), mm(3000), 0];
 
 console.log("\n=== real job: horizontal, 3 panels, T/B 40 mm, left flush, right 40 mm ===");
-// The count mode promises EQUAL finished panels, so the cuts depend on the
+// The count mode promises EQUAL printed panels, so the cuts depend on the
 // overlap and the edge adds. Each scenario therefore recomputes its own cuts —
 // reusing one set across different overlaps is what made the earlier version
 // of this test wrong.

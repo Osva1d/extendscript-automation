@@ -109,9 +109,11 @@ fc.assert(fc.property(arbJob, function (j) {
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 
-console.log("\n=== Property 4: the count mode yields panels of EQUAL finished width ===");
+console.log("\n=== Property 4: the count mode yields panels of EQUAL printed width ===");
 // The strongest invariant of the three modes: "n panels" must mean n panels
-// the same size, whatever the overlap, the adds or the direction.
+// of the same PRINTED size — the expanded rect, which is what gets cut —
+// whatever the overlap, the adds or the direction. The clean widths differ
+// by design; see TE.Grid.equalCuts.
 fc.assert(fc.property(arbJob, function (j) {
     var r = build(j.n, j.width, j.height, j.overlap, j.mode, j.dir);
     var t = r.tiles, i, w, first;
@@ -127,7 +129,7 @@ fc.assert(fc.property(arbJob, function (j) {
 console.log("  ok (500 runs)");
 
 console.log("\n=== Property 5: panels consume exactly the expected material ===");
-// Sum of finished widths = clean span + both edge adds + one overlap per seam.
+// Sum of printed widths = clean span + both edge adds + one overlap per seam.
 // That is the identity the equal-width formula is derived from, checked the
 // other way round.
 fc.assert(fc.property(arbJob, function (j) {

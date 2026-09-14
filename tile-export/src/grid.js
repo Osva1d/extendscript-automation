@@ -112,14 +112,29 @@ TE.Grid = {
     },
 
     /**
-     * Cut positions for n panels of EQUAL FINISHED width.
+     * Cut positions for n panels of equal PRINTED width.
      *
-     * "n panels" promises n panels the same size, so the overlap and the edge
-     * adds have to be part of the division, not added afterwards. Dividing the
-     * clean format evenly and adding the overlap later produces panels of
-     * different widths — measured 1010/1020/1010 mm on a 3000 mm graphic with
-     * a 20 mm overlap — which matches no job spec: neither equal panels nor a
-     * given panel width.
+     * PRINTED width is the expanded rect — the PDF MediaBox, which is where the
+     * red line sits and therefore what the finisher cuts. Equal printed width
+     * means equal pieces of material and one number for the estimate.
+     *
+     * It cannot be had together with equal CLEAN widths, and that is a design
+     * choice, not an artefact. An outer panel has one seam and an inner panel
+     * has two, so at a constant printed width the outer panel must carry more
+     * of the graphic (3000 mm, 3 panels, 20 mm overlap, symmetric):
+     *
+     *   equal printed (here):        printed 1013.3 x3  clean 1003.3/993.3/1003.3
+     *   equal clean (even division): clean   1000   x3  printed 1010/1020/1010
+     *
+     * Both answer a real job spec. This tool prints and cuts, so the printed
+     * width is the one that has to be predictable. At zero overlap they meet.
+     *
+     * Equal printed width holds in BOTH overlap modes — one-sided does not
+     * break it, it only moves the seam by overlap/2 (measured: horizontal cuts
+     * at 993.3 instead of 1003.3, vertical at 1013.3, the two directions
+     * shifting opposite ways because a different end of the axis carries the
+     * overlap). What the mode changes is which panel ends up with the wider
+     * clean width.
      *
      * The material a job consumes is the clean length plus both edge adds plus
      * one overlap per inner seam, and there are n-1 of those:

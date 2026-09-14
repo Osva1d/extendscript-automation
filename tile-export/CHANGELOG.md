@@ -26,11 +26,16 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Changed
 
-- **Režim „počet plátů" dává pláty stejné šířky.** Dřív dělil rovnoměrně čistý
-  formát a přelep přidal až potom, takže hotové pláty stejné nebyly —
-  1010/1020/1010 mm na grafice 3000 mm s přelepem 20. To neodpovídalo žádnému
-  zadání: ani stejné pláty, ani zadaná šířka. Přelep a přídavky jsou teď
-  součástí dělení: `W = (délka + přídavky + (n−1) × přelep) / n`.
+- **Režim „počet plátů" dává pláty stejné tiskové šířky.** Dřív dělil
+  rovnoměrně čistý formát a přelep přidal až potom, takže z tiskárny vyjely
+  pláty různě široké — 1010/1020/1010 mm na grafice 3000 mm s přelepem 20.
+  Přelep a přídavky jsou teď součástí dělení:
+  `W = (délka + přídavky + (n−1) × přelep) / n`.
+  Stejná je **tisková** šířka, tedy MediaBox, na kterém leží červená linka
+  a podle kterého se řeže. Čisté šířky se při nenulovém přelepu liší vždy —
+  obojí naráz mít nejde a dřívější chování dávalo přesně opak: stejné čisté
+  šířky, různé tiskové. Platí v obou režimech přelepu; jednostranný jen posune
+  šev o půl přelepu.
   **Při nulovém přelepu je výsledek totožný s dřívějším**, takže desky, které
   se plátují bez přelepu, se změna nedotkne.
 - Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole

@@ -63,23 +63,36 @@ Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 
 | volba | co zaručuje |
 |---|---|
-| **počet plátů** | *n* plátů **stejné hotové šířky** |
+| **počet plátů** | *n* plátů **stejné tiskové šířky** |
 | **šířka plátu** | pláty zadané šířky, poslední kratší |
 | **vodítka** | švy přesně tam, kam je položíš |
 
 Každá odpovídá jinému zadání zakázky. „Počet plátů" počítá přelep a přídavky
-**do** dělení, takže hotové pláty vyjdou stejné:
+**do** dělení, takže všechny pláty vyjdou z tiskárny stejně široké:
 
 ```
 W = (délka + přídavky + (n − 1) × přelep) / n
 ```
 
+**Stejná je tisková šířka** — MediaBox, na kterém leží červená linka, tedy to,
+co finišer opravdu řeže. Čisté šířky (kus motivu mezi švy) stejné nejsou a být
+nemůžou: krajní plát má jeden šev, vnitřní dva, takže při stejné tiskové šířce
+na sebe krajní bere víc motivu. Grafika 3000 mm, 3 pláty, přelep 20 mm:
+
+| režim přelepu | tisková šířka | čistá šířka |
+|---|---|---|
+| symetricky | 1013,3 × 3 | 1003,3 \| 993,3 \| 1003,3 |
+| jednostranně | 1013,3 × 3 | 993,3 \| 993,3 \| 1013,3 |
+
+Jednostranný přelep rovnoměrnost **neruší** — jen posune šev o půl přelepu.
+Obojí naráz mít nejde: buď stejné tiskové šířky, nebo stejné čisté.
+
 U tapet a nástěnných grafik je stejná šířka pruhů legitimní požadavek —
 usnadňuje montáž a spotřeba materiálu je jedno číslo. U polepů se častěji volí
 šířka podle role a montážníka; na to je režim „šířka plátu".
 
-Při **nulovém přelepu** se vzorec zredukuje na prosté rovnoměrné dělení, takže
-desky se plátují stejně jako dřív.
+Při **nulovém přelepu** se vzorec zredukuje na prosté rovnoměrné dělení, obě
+definice splynou a desky se plátují stejně jako dřív.
 
 ## Přídavky, přelep a linka
 

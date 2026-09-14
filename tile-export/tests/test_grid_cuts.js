@@ -44,7 +44,7 @@ var EXT = { start: 0, end: mm(3000) };   // 3000 mm wide graphic
 
 console.log("\n=== count mode: EQUAL FINISHED PANELS ===");
 // The count mode promises n equal panels, so the cuts must account for the
-// overlap and the edge adds — the finished width is
+// overlap and the edge adds — the printed width is
 //   W = (L + addLeft + addRight + (n-1) * overlap) / n
 // Dividing the clean format evenly and adding the overlap afterwards gives
 // panels of different widths, which matches no job spec.
@@ -62,7 +62,7 @@ var c1b = TE.Grid.computeCuts(merge(D, merge(base, { overlapMode: "onesided" }))
 assertClose(c1b[0], mm(993.3333), 0.01, "one-sided: first cut is W - overlap");
 assertClose(c1b[1], mm(1986.6667), 0.01, "one-sided: second cut follows the same step");
 
-// Edge adds enlarge the finished panel, so they belong in W too.
+// Edge adds enlarge the printed panel, so they belong in W too.
 // W = (3000 + 40 + 40 + 40) / 3 = 1040
 var cAdd = TE.Grid.computeCuts(
     merge(D, merge(base, { addLeft: 40, addRight: 40 })), EXT, null);
