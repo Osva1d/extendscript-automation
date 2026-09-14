@@ -70,6 +70,11 @@ TE.Config = {
             zundMode:    false,         // master switch
             cutSpot:     "cut",         // spot colour identifying the contour
             markSizeZ:   5,             // mm, Zünd mark diameter
+            // Marks get their OWN colour, never the contour's — otherwise the
+            // machine cannot tell a mark from a cut. Registration is the
+            // standard; white Spot 1 is used on black and clear material with
+            // a clear liner.
+            markColor:   "[Registration]",
             gapInner:    10,            // mm, gap from panel edge to mark
             gapOuter:    0,             // mm, extra artboard margin
             maxDist:     500,           // mm, maximum spacing between marks

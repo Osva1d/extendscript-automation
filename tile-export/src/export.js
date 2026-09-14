@@ -92,7 +92,7 @@ TE.Export = {
      *
      * @param {Object} tile - One entry from TE.Grid.computeTiles().
      * @param {Object} ctx - {graphicFile, graphicBounds, docName, outFolder,
-     *        total, pdfOptions}.
+     *        total, pdfOptions, contour, markDef}.
      * @param {Object} s - Settings.
      * @returns {Object} {file: File, contourPaths: number}. contourPaths is 0
      *          when the cut contour does not reach this panel, which is not an
@@ -126,7 +126,9 @@ TE.Export = {
                 // Marks are computed from THIS panel's rect, so they sit on
                 // the panel rather than on the whole graphic.
                 var geo = TE.Core.calculateAll(s, tf.artboard);
-                TE.Draw.drawMarks(tmp, geo, s);
+                // markDef carries the spot definition from the source document;
+                // a temporary document starts with only the default swatches.
+                TE.Draw.drawMarks(tmp, geo, s, ctx.markDef);
 
                 // Marks sit OUTSIDE the panel — measured: with a 10 mm gap and
                 // a 5 mm mark, they reach 42.5 pt past each edge. The shared

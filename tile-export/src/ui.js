@@ -340,6 +340,23 @@ TE.UI = {
             if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
         }
 
+        var gMarkCol = gZundBody.add("group");
+        gMarkCol.alignment = ["fill", "top"];
+        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
+        this.lockW(stMarkColLbl, this.M.LABEL_COL);
+        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
+        var ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
+        ddMarkColor.alignment = ["fill", "center"];
+        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
+        var mcList = ctx.markColors || [];
+        var mj;
+        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
+        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
+        ddMarkColor.selection = 0;
+        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
+            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
+        }
+
         var etMarkSize = this.addRow(gZundBody, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
         var etGapInner = this.addRow(gZundBody, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
         var etMaxDist  = this.addRow(gZundBody, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
@@ -394,7 +411,8 @@ TE.UI = {
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
-            cbZund: cbZund, ddCutSpot: ddCutSpot, etMarkSize: etMarkSize,
+            cbZund: cbZund, ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
+            etMarkSize: etMarkSize,
             etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
@@ -415,7 +433,8 @@ TE.UI = {
         var i, all = [cbScale, etScaleN, etCleanW, etCleanH, etCount, etWidth, etRound,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
-                      etMarkSize, etGapInner, etMaxDist, etOrient, ddCutSpot];
+                      etMarkSize, etGapInner, etMaxDist, etOrient, ddCutSpot,
+                      ddMarkColor];
         for (i = 0; i < all.length; i++) { wire(all[i]); }
         for (i = 0; i < rbDir.length; i++) { wire(rbDir[i]); }
         for (i = 0; i < rbMode.length; i++) { wire(rbMode[i]); }
@@ -544,6 +563,7 @@ TE.UI = {
         s.skipExisting = r.cbSkip.value;
         s.zundMode    = r.cbZund.value;
         s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : "cut";
+        s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
         s.markSizeZ   = Number(r.etMarkSize.text) || 5;
         s.gapInner    = Number(r.etGapInner.text) || 10;
         s.maxDist     = Number(r.etMaxDist.text) || 500;
@@ -594,6 +614,10 @@ TE.UI = {
         var zk;
         for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
             if (r.ddCutSpot.items[zk].text === s.cutSpot) { r.ddCutSpot.selection = zk; break; }
+        }
+        var mk;
+        for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
+            if (r.ddMarkColor.items[mk].text === s.markColor) { r.ddMarkColor.selection = mk; break; }
         }
         r.etMarkSize.text = String(s.markSizeZ);
         r.etGapInner.text = String(s.gapInner);

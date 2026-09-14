@@ -51,6 +51,7 @@
         var ctx = {
             cleanRect: clean.rect,
             spotNames: spotNames,
+            markColors: TE.Draw.listMarkColors(doc),
             guides: guidesH.positions,
             guidesByDirection: { horizontal: guidesH, vertical: guidesV },
             validation: {
@@ -77,6 +78,9 @@
         // --- phase 1: rebuild the panels from the clean artboard -------------
         // Contour is read once and handed to every panel's export.
         var contour = s.zundMode ? TE.Cut.findContour(doc, s.cutSpot) : [];
+        // Mark colour definition, read once from the source document so each
+        // temporary document can recreate it.
+        var markDef = s.zundMode ? TE.Draw.readSpotDef(doc, s.markColor) : null;
 
         var guides = ctx.guidesByDirection[s.direction];
         var ext = (s.direction === "horizontal")
@@ -132,7 +136,8 @@
             outFolder: outFolder,
             total: tiles.length,
             pdfOptions: pdfOpts,
-            contour: contour
+            contour: contour,
+            markDef: markDef
         };
 
         var done = 0, skipped = 0, failed = [], noContour = [], res;

@@ -16,6 +16,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Geometrie značek je sdílená se `zund-summa-marks` (`shared/lib/cut_marks.js`),
   takže chyba v pozici značky je chyba na jednom místě, ne na dvou.
 - Pláty, do kterých kontura nezasahuje, se hlásí v souhrnu.
+- **Barva značek je vlastní nastavení**, oddělené od barvy kontury — značka
+  v barvě řezu by na stroji od řezu nešla rozeznat. Výchozí je registrační,
+  na výběr jsou přímé barvy dokumentu (typicky bílá `Spot 1` na černý a čirý
+  materiál s čirým linerem). Neznámá barva spadne na registrační a nikdy se
+  nevytvoří sama.
 
 ### Changed
 
@@ -41,8 +46,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   postup ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
   zvlášť — popsané ve specu §10, včetně vyřešené překážky s parametrickou
   odsazenou cestou.
-- **Značky se kreslí barvou kontury.** Vlastní parametr barvy značek (standard
-  registrační, výjimečně bílá `Spot 1`) přijde s další etapou.
+
 
 ## [1.0.0] — 2026-09-13
 

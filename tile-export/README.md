@@ -101,6 +101,16 @@ Zapnutý přidá do každého exportovaného plátu dvě věci:
   se interpolují, aby rozteč nepřesáhla zadané maximum.
 - **Ořezová data plátu** — tvarová kontura oříznutá na rozměr plátu.
 
+### Barva značek
+
+**Vlastní nastavení, oddělené od barvy kontury** — značka v barvě řezu by na
+stroji od řezu nešla rozeznat. Výchozí je registrační; v dropdownu jsou přímé
+barvy dokumentu, takže na černý a čirý materiál s čirým linerem zvolíš bílou
+`Spot 1`.
+
+Neznámá barva spadne na registrační. Nástroj přímou barvu **nikdy nevytvoří
+sám** — když ji chceš, musí být v dokumentu.
+
 ### Jak označit konturu
 
 **Přímou barvou, na vrstvě nezáleží.** V dialogu vybereš barvu ze seznamu

@@ -291,10 +291,11 @@ konturu `jntp 0`.**
 ### Co zbývá vyřešit
 
 - Jak se vrstvy pojmenují a jak se pozná, která je která při druhém uložení.
-- **Barva značek je vlastní parametr, ne barva kontury.** Standard je
-  registrační; výjimečně bílá přímá barva `Spot 1` na černé a čiré materiály
-  s čirým linerem. ZSM to řeší přes `s.markColor` a `swatches[1]` jako
-  registrační (jméno je lokalizované).
+- ~~Barva značek jako vlastní parametr~~ — **vyřešeno 2026-09-14.**
+  `s.markColor` s kaskádou: definice přenesená ze zdroje se v dočasném
+  dokumentu obnoví, jinak pojmenovaný swatch, jinak registrační. Nikdy se
+  nevytvoří barva, kterou uživatel nezadal. Registrační swatch se čte jako
+  `swatches[1]`, protože jeho jméno je lokalizované.
 - Jestli je bounding box brát z `visibleBounds` nebo `geometricBounds` oříznuté
   skupiny — u clipnuté skupiny se liší, viz skill `manipulating-illustrator-items`.
 - Chování, když kontura po odsazení přeteče přes sousední plát.
