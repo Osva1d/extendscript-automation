@@ -71,6 +71,10 @@ TE.Grid = {
         var aL = TE.Utils.toDoc(Number(s.addLeft)   || 0, s);
         var aR = TE.Utils.toDoc(Number(s.addRight)  || 0, s);
         var sym = (s.overlapMode === "symmetric");
+        // Which side of a seam the one-sided overlap sits on. "first" is the
+        // panel that comes first in numbering: left when splitting across,
+        // upper when splitting down.
+        var firstCarries = (s.overlapCarrier !== "second");
         var tiles = [];
         var b = [], i, n, lo, hi;
 
@@ -81,8 +85,10 @@ TE.Grid = {
             n = b.length - 1;
 
             for (i = 0; i < n; i++) {
-                lo = (i === 0)     ? b[i]     - aL : (sym ? b[i]     - o / 2 : b[i]);
-                hi = (i === n - 1) ? b[i + 1] + aR : (sym ? b[i + 1] + o / 2 : b[i + 1] + o);
+                lo = (i === 0)     ? b[i]     - aL
+                   : (sym ? b[i]     - o / 2 : (firstCarries ? b[i]         : b[i]     - o));
+                hi = (i === n - 1) ? b[i + 1] + aR
+                   : (sym ? b[i + 1] + o / 2 : (firstCarries ? b[i + 1] + o : b[i + 1]));
                 tiles.push({
                     index: i + 1,
                     clean:    [b[i], T, b[i + 1], B],
@@ -100,8 +106,10 @@ TE.Grid = {
         n = b.length - 1;
 
         for (i = 0; i < n; i++) {
-            hi = (i === 0)     ? b[i]     + aT : (sym ? b[i]     + o / 2 : b[i]);
-            lo = (i === n - 1) ? b[i + 1] - aB : (sym ? b[i + 1] - o / 2 : b[i + 1] - o);
+            hi = (i === 0)     ? b[i]     + aT
+               : (sym ? b[i]     + o / 2 : (firstCarries ? b[i]         : b[i]     + o));
+            lo = (i === n - 1) ? b[i + 1] - aB
+               : (sym ? b[i + 1] - o / 2 : (firstCarries ? b[i + 1] - o : b[i + 1]));
             tiles.push({
                 index: i + 1,
                 clean:    [L, b[i], R, b[i + 1]],
@@ -172,20 +180,23 @@ TE.Grid = {
 
         var W = (span + addLow + addHigh + (n - 1) * o) / n;
 
-        // Where the first cut sits depends on how much of the overlap the
-        // panel at the LOW end of the axis carries.
+        // Where the first cut sits depends on how much of the overlap the panel
+        // at the LOW end of the axis carries — half when symmetric, all of it
+        // or none when one-sided.
         //
-        // Symmetric: half, either direction.
-        // One-sided horizontal: the LEFT panel carries all of it, and left is
-        //   the low end — so its seam sits a full overlap short.
-        // One-sided vertical: the TOP panel carries all of it, and top is the
-        //   HIGH end — so the panel at the low end carries none.
-        // Missing that asymmetry made vertical one-sided panels differ by
-        // exactly 2x the overlap (found by property test, n=2, overlap=1).
+        // The low end is the LEFT panel going across and the BOTTOM panel going
+        // down, and panels are numbered left to right and TOP to bottom. So the
+        // panel that carries a "first" overlap is the low-end one horizontally
+        // and the high-end one vertically: the same setting flips meaning with
+        // the direction. Missing that asymmetry made vertical one-sided panels
+        // differ by exactly 2x the overlap (found by property test, n=2,
+        // overlap=1), so it is written out rather than inferred.
+        var firstCarries = (s.overlapCarrier !== "second");
+        var lowCarries = (s.direction === "horizontal") ? firstCarries : !firstCarries;
         var first;
         if (s.overlapMode === "symmetric") {
             first = W - o / 2 - addLow;
-        } else if (s.direction === "horizontal") {
+        } else if (lowCarries) {
             first = W - o - addLow;
         } else {
             first = W - addLow;

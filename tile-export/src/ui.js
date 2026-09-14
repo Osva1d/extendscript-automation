@@ -211,9 +211,15 @@ TE.UI = {
         pEdges.alignChildren = ["fill", "top"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
+        // Three options for two settings: the mode (symmetric or one-sided) and,
+        // when one-sided, which panel of the seam carries the material. Kept as
+        // one row because the second question only exists inside the second
+        // answer, and a separate row would be greyed out most of the time.
+        var carrierIdx = (s.overlapMode !== "onesided") ? 0
+                       : (s.overlapCarrier === "second") ? 2 : 1;
         var rbOverlapMode = this.addRadioRow(pEdges, l.LBL_OVERLAP_MODE,
-            [l.OVERLAP_SYMMETRIC, l.OVERLAP_ONESIDED],
-            (s.overlapMode === "onesided") ? 1 : 0, l.TIP_OVERLAP_MODE);
+            [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
+            carrierIdx, l.TIP_OVERLAP_MODE);
 
         var etAddTop    = this.addRow(pEdges, l.LBL_ADD_TOP,    s.addTop,    l.TIP_ADD, "mm");
         var etAddBottom = this.addRow(pEdges, l.LBL_ADD_BOTTOM, s.addBottom, l.TIP_ADD, "mm");
@@ -566,7 +572,8 @@ TE.UI = {
         s.tileWidth   = Number(r.etWidth.text);
         s.guideRound  = Number(r.etRound.text) || 0;
         s.overlap     = Number(r.etOverlap.text) || 0;
-        s.overlapMode = r.rbOverlapMode[1].value ? "onesided" : "symmetric";
+        s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
+        s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
         s.addTop      = Number(r.etAddTop.text) || 0;
         s.addBottom   = Number(r.etAddBottom.text) || 0;
         s.addLeft     = Number(r.etAddLeft.text) || 0;
@@ -614,8 +621,11 @@ TE.UI = {
         r.etWidth.text = String(s.tileWidth);
         r.etRound.text = String(s.guideRound);
         r.etOverlap.text = String(s.overlap);
-        r.rbOverlapMode[0].value = (s.overlapMode !== "onesided");
-        r.rbOverlapMode[1].value = (s.overlapMode === "onesided");
+        var oneSided  = (s.overlapMode === "onesided");
+        var carrier2nd = oneSided && (s.overlapCarrier === "second");
+        r.rbOverlapMode[0].value = !oneSided;
+        r.rbOverlapMode[1].value = oneSided && !carrier2nd;
+        r.rbOverlapMode[2].value = carrier2nd;
         r.etAddTop.text = String(s.addTop);
         r.etAddBottom.text = String(s.addBottom);
         r.etAddLeft.text = String(s.addLeft);

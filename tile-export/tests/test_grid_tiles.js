@@ -111,6 +111,19 @@ assertClose(t1[0].expanded[2], mm(1026.6667), 0.01, "left panel carries the whol
 assertClose(t1[1].expanded[0], mm(1006.6667), 0.01, "right panel starts exactly on the seam");
 assertClose(t1[0].expanded[2] - t1[1].expanded[0], mm(20), 0.01, "overlap is still 20 mm");
 
+console.log("\n=== one-sided the other way: the RIGHT panel carries it ===");
+// Same job, overlapCarrier "second". The panels stay equal and the seam moves,
+// mirroring the "first" case: panel 1 now ends exactly on the seam instead of
+// reaching past it.
+var s2 = merge(s, { overlapMode: "onesided", overlapCarrier: "second" });
+var t2 = build(s2);
+assertAllEqual(t2, s2, 1026.67, "druhý nosič přelepu nechává pláty stejné");
+assertClose(t2[0].expanded[2], mm(1026.6667), 0.01, "left panel ends exactly on the seam");
+assertClose(t2[1].expanded[0], mm(1006.6667), 0.01, "right panel carries the whole overlap");
+assertClose(t2[0].expanded[2] - t2[1].expanded[0], mm(20), 0.01, "overlap is still 20 mm");
+assertClose(t2[0].expanded[0], 0, 0.001, "outer left edge untouched: flush stays flush");
+assertClose(t2[2].expanded[2], mm(3040), 0.01, "outer right edge still carries the add");
+
 console.log("\n=== rigid boards: overlap 0 behaves exactly as plain division ===");
 var s0 = merge(s, { overlap: 0 });
 var t0 = build(s0);
@@ -158,6 +171,16 @@ var tvo = build(svo);
 assertAllEqual(tvo, svo, 530, "svisle jednostranně jsou pláty taky stejné");
 assertClose(tvo[0].expanded[3] - tvo[1].expanded[1], mm(-20), 0.01,
     "horní plát nese celý přelep, dolní začíná přesně na švu");
+
+console.log("\n=== vertical + the other carrier: the LOWER panel carries it ===");
+// Vertical flips the axis end, so "second" here means the panel at the LOW end
+// of the ascending axis carries the overlap — the mirror of the case above.
+var svo2 = merge(sv, { overlapMode: "onesided", overlapCarrier: "second" });
+var tvo2 = build(svo2);
+assertAllEqual(tvo2, svo2, 530, "svisle a obráceně jsou pláty pořád stejné");
+assertClose(tvo2[0].expanded[3], mm(510), 0.01, "horní plát končí přesně na švu");
+assertClose(tvo2[1].expanded[1], mm(530), 0.01, "dolní plát nese celý přelep");
+assertClose(tvo2[1].expanded[1] - tvo2[0].expanded[3], mm(20), 0.01, "přelep je pořád 20 mm");
 
 console.log("\n=== 1:10 document ===");
 var CLEAN10 = [0, mm(100), mm(300), 0];

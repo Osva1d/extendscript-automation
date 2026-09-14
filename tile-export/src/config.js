@@ -57,6 +57,16 @@ TE.Config = {
 
             overlap:     20,            // mm, "přelep"; 0 for rigid boards
             overlapMode: "symmetric",   // "symmetric" | "onesided"
+            // Which panel of a seam carries a one-sided overlap: "first" is the
+            // left or upper one, "second" the right or lower. There is no single
+            // trade convention — it follows the installation order, which in
+            // turn follows the viewing direction outdoors and water shedding on
+            // exteriors. Default "first" matches the tiled-PSV guidance (install
+            // right to left, left tile laps onto the right); wallpaper is
+            // commonly hung the other way. Irrelevant when the overlap is
+            // double-cut away. Absent from older presets, which merge onto these
+            // defaults and so keep the behaviour they had.
+            overlapCarrier: "first",    // "first" | "second"
 
             addTop:      0,             // mm, "přídavek"; 0 means "načisto"
             addBottom:   0,

@@ -102,12 +102,21 @@ pole, každé může být nula — to znamená „načisto". Typické zadání �
 
 **Přelep** je materiál společný dvěma sousedním plátům. Výchozí 2 cm pro ořez na
 tupo; **u desek (forex, kapa) nastav nulu** — pláty pak jdou k sobě natupo.
-Umístění přelepu má dvě varianty:
+Umístění přelepu má tři varianty:
 
 | volba | co udělá |
 |---|---|
 | Půl na každou stranu | šev leží uprostřed překryvové zóny |
-| Celý na jeden plát | levý (u vertikálního dělení horní) plát nese celý přelep, soused začíná přesně na švu |
+| Celý na levý / horní | přelep nese plát před švem, soused začíná přesně na švu |
+| Celý na pravý / dolní | přelep nese plát za švem, opačně |
+
+Která z jednostranných je ta správná, **neurčuje žádná jednotná norma** — řídí
+se pořadím lepení. Tiskové PSV se lepí zprava doleva a levý plát překrývá pravý
+(u vodorovných švů zdola nahoru, aby voda stékala přes šev, ne do něj); tapety
+se běžně lepí opačně. **Při ořezu na tupo je volba lhostejná** — přelep se
+stejně odřízne. Rozhoduje až tam, kde překryv na grafice zůstane: pak má
+překrývající hrana ležet odvrácená od hlavního směru pohledu, aby nevrhala
+viditelný stín.
 
 **Červená linka** se kreslí po obvodu **čistého formátu** plátu, tedy včetně švů,
 v přímé barvě. Na hranách „načisto" splývá s okrajem plátu. Přímá barva se

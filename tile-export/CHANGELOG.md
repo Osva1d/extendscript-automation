@@ -23,6 +23,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   na výběr jsou přímé barvy dokumentu (typicky bílá `Spot 1` na černý a čirý
   materiál s čirým linerem). Neznámá barva spadne na registrační a nikdy se
   nevytvoří sama.
+- **Umístění jednostranného přelepu jde zvolit.** Dřív ho vždy nesl plát před
+  švem (levý, u svislého dělení horní). Rešerše ukázala, že jednotná konvence
+  neexistuje — směr se řídí pořadím lepení, a to se u tiskového PSV
+  a u tapet liší. Volba je teď třetí možnost v řádku „Umístění přelepu";
+  výchozí zůstává původní chování a starší předvolby ho podědí.
 
 ### Changed
 
