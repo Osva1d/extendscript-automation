@@ -185,3 +185,36 @@ přelep horní plát, tedy **vysoký** konec vzestupné osy, takže plát na ní
 konci nenese nic a `c₁ = W − aB`. Tuhle asymetrii odhalil až property test
 během implementace (n = 2, přelep 1: pláty se lišily přesně o dvojnásobek
 přelepu).
+
+---
+
+## 8. Doporučení §5 se ruší (2026-09-14, po ostré zkoušce)
+
+Zpráva doporučila nahradit režim „počet plátů" rovnoměrnými **tiskovými**
+pláty. Po zkoušce na reálném zadání se to vrací zpět: **počet plátů dělí
+grafiku**, jako v 1.0.0.
+
+**Proč.** Původní požadavek zněl „stejně velké pláty"; vzorec v závorce byl
+uvozený slovem *tuším*, tedy odhad, a já ho přečetl jako zadání. Uživatel pak
+třikrát nezávisle popsal totéž očekávání: 5000 mm na 5 plátů jsou pláty po
+1000 mm a přelep je materiál navíc. Na to sedí dělení grafiky, ne materiálu.
+
+**Co se mezitím změnilo.** V době psaní §5 neexistoval strop šířky. Dnes
+existuje: „šířka plátu" + „rozpustit zbytek" vrátí stejné **tiskové** pláty
+pod zadanou šířkou role. Požadavek, kvůli kterému se §5 psalo, je tedy
+splněný — jen v jiném režimu, a v tom správném:
+
+| režim | co zakázku svazuje | co zaručuje |
+|---|---|---|
+| počet plátů | návrh | stejná **čistá** šířka, švy na zlomcích |
+| šířka plátu + rozpustit | materiál (role) | stejná **tisková** šířka pod stropem |
+| vodítka | ty | šev tam, kam ho položíš |
+
+Argument §5 bodu 1 („dnešní chování neplní žádné zadání") byl vyvrácen už
+v §7. Body 2 a 4 platí dál a platí i pro návrat. Bod 3 (menší UI) padl: volba
+přibyla, ale u šířky, kde má věcný důvod.
+
+**Poučení do příště** je v §7 a platí i tady — než nahradím chování, mám
+pojmenovat, co to staré garantovalo, a hedge v zadání (*tuším*, *asi*,
+*nejspíš*) číst jako hypotézu, ne jako specifikaci.
+

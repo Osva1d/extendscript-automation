@@ -26,10 +26,26 @@ TE.Grid = {
         var cuts = [];
         var i, n, w;
 
+        // "n panels" divides the GRAPHIC into n, so the seams land on exact
+        // fractions of the clean format — 5 panels of a 5000 mm graphic seam at
+        // 1000, 2000, 3000, 4000 — and the overlap is material added on top of
+        // that. The panels are equal in the sense that survives: the piece of
+        // artwork each one carries. Their PRINTED widths then differ, because an
+        // outer panel has one seam and an inner panel two.
+        //
+        // Equalising the printed widths instead is the other real reading, and
+        // it is what "panel width" + "dissolve the remainder" does: give it the
+        // roll and it returns equal printed panels. That mode did not exist when
+        // this one briefly carried both meanings, and it is the better home for
+        // it — the count comes from the design, the width from the material.
+        //
+        // Neither overlap nor adds move these cuts: adds sit outside the
+        // graphic, and the overlap is not part of the division.
         if (s.divideMode === "count") {
             n = Math.round(Number(s.tileCount));
             if (isNaN(n) || n < 2) { throw new Error("TE_MIN_TILES"); }
-            return this.equalCuts(s, extent, n);
+            for (i = 1; i < n; i++) { cuts.push(start + span * i / n); }
+            return cuts;
         }
 
         if (s.divideMode === "width") {

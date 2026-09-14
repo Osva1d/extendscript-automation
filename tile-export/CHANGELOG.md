@@ -36,18 +36,14 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Changed
 
-- **Režim „počet plátů" dává pláty stejné tiskové šířky.** Dřív dělil
-  rovnoměrně čistý formát a přelep přidal až potom, takže z tiskárny vyjely
-  pláty různě široké — 1010/1020/1010 mm na grafice 3000 mm s přelepem 20.
-  Přelep a přídavky jsou teď součástí dělení:
-  `W = (délka + přídavky + (n−1) × přelep) / n`.
-  Stejná je **tisková** šířka, tedy MediaBox, na kterém leží červená linka
-  a podle kterého se řeže. Čisté šířky se při nenulovém přelepu liší vždy —
-  obojí naráz mít nejde a dřívější chování dávalo přesně opak: stejné čisté
-  šířky, různé tiskové. Platí v obou režimech přelepu; jednostranný jen posune
-  šev o půl přelepu.
-  **Při nulovém přelepu je výsledek totožný s dřívějším**, takže desky, které
-  se plátují bez přelepu, se změna nedotkne.
+- **Režim „počet plátů" dělí grafiku, ne materiál.** Během vývoje 1.1.0 byl
+  načas přepnutý na stejné **tiskové** šířky
+  (`W = (délka + přídavky + (n−1) × přelep) / n`) a je zpátky na tom, co dělal
+  v 1.0.0: švy na přesných zlomcích čistého formátu, pláty stejně široké
+  **načisto**. Pět plátů z 5000 mm tedy znamená švy na 1000/2000/3000/4000
+  a pět plátů po 1000 mm, přelep je materiál navíc. Přelep ani přídavky švem
+  nehnou. Stejné tiskové pláty umí od této verze „šířka plátu" + „rozpustit
+  zbytek", kam to zadání patří — počet plátů určuje návrh, šířku materiál.
 - Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole
   Výsledku zkráceno na 85 px. Se zapnutým Zünd režimem měří 796 px, bez něj
   stejně — viz poznámka níž.
