@@ -109,9 +109,19 @@ Tlačítko **Jen pláty** (bez exportu).
 pojmenovaných předponou pro generované pláty. Původní artboard čistého formátu
 zůstane.
 
-**T4.2 — červená linka.** Leží po obvodu **tiskového** plátu, ne čistého.
-Zvětši si roh: **vnější hrana tahu musí sedět přesně na hraně artboardu**, ne
-na střed ani dovnitř. Tohle už jednou bylo špatně.
+**T4.2 — červená linka.** Leží po obvodu **tiskového** plátu, ne čistého, a její
+**vnější hrana tahu sedí přesně na hraně artboardu**. Tohle už jednou bylo špatně.
+
+Okem to ale nezkontroluješ. Illustrator kreslí tah na střed cesty, takže skript
+nakreslí cestu zmenšenou o půl tahu a vnější polovina dosedne na cíl — při 1:10
+a lince 0,3 pt je to odsazení **0,015 pt, tedy 5 tisícin milimetru**. Neuvidíš ho
+ani při maximálním zvětšení. Dvě cesty, jak to ověřit doopravdy:
+
+1. **Čísly.** Vyber linku a v Okno → Informace přepni na ohraničení. Ohraničení
+   *včetně tahu* se musí rovnat rozměru artboardu na setiny. (Cesta samotná je
+   o ten půltah menší — to je správně, ne nález.)
+2. **Okem.** Nastav linku dočasně na **3 pt**. Odsazení je pak 1,5 pt a je vidět
+   okamžitě. Ověřuješ tím přesně stejnou aritmetiku, jen zvětšenou stokrát.
 
 **T4.3 — tloušťka.** Nastav 0,3 pt a změř v Illustratoru (Okno → Tah).
 Při 1:10 musí být v dokumentu **0,03 pt**, aby po zvětšení na skutečnou velikost
