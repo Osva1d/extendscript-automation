@@ -289,3 +289,18 @@ na to, aby nerušil obsah, který právě neplatí.
 - Výchozí artboard se v české lokalizaci jmenuje **„Kreslicí plátno 1"** —
   detekce vlastních artboardů podle prefixu je proto jazykově nezávislá,
   detekce podle výchozího jména by nebyla.
+
+### Tah je vždy na střed cesty a zarovnání není v DOM
+
+Panel Tah nabízí zarovnání dovnitř / na střed / ven, ale **PathItem tu vlastnost
+nemá**. Naměřeno (Illustrator 30.8.1): `"strokeAlignment" in pathItem` → `false`,
+`typeof pathItem.strokeAlignment` → `"undefined"`.
+
+Tah tedy vždy přesahuje **půl své šířky na každou stranu** cesty. Naměřeno na
+obdélníku s `geometricBounds` `10,80,60,30` a tahem 10 pt: `visibleBounds` jsou
+`5,85,65,25`, tedy 5 pt ven po celém obvodu.
+
+Důsledek: když má vnější hrana tahu ležet na konkrétním obdélníku, musí se
+**cesta nakreslit zmenšená o půl tahu** na každé straně. To dělá
+`TE.Draw.drawTileLine`; naměřená odchylka vnější hrany od cíle je **0 pt** při
+1:1 i 1:10 a pro tloušťky 0,3 i 3 pt.
