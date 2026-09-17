@@ -93,6 +93,22 @@ TE.Utils = {
     },
 
     /**
+     * Text from a dialog field to a Number, accepting the Czech decimal comma.
+     *
+     * Otherwise exactly Number() — "" is 0, garbage is NaN — so every caller
+     * keeps deciding for itself what an empty or invalid field falls back to.
+     * Bare Number() rejects "0,3" as NaN, and the dialog's "|| fallback" then
+     * swapped in a different value without a word: 1 pt for a line width,
+     * zero for an overlap or an add.
+     *
+     * @param {string|number} val - Raw field text.
+     * @returns {number} Parsed value, NaN when not numeric.
+     */
+    toNumber: function (val) {
+        return Number(String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, ""));
+    },
+
+    /**
      * Validates a numeric input. Normalises the Czech decimal comma and trims
      * whitespace. Returns null rather than a silent zero — Number("") is 0 in
      * JavaScript, which would turn an empty field into a valid measurement.

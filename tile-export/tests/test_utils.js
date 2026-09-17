@@ -53,6 +53,18 @@ assert(TE.Utils.indexOf(["a", "b", "c"], "b") === 1, "finds element");
 assert(TE.Utils.indexOf(["a"], "z") === -1, "missing element -> -1");
 assert(TE.Utils.indexOf([], "z") === -1, "empty array -> -1");
 
+console.log("\n=== toNumber ===");
+// Number() with the Czech decimal comma, and nothing else changed: callers
+// rely on "" being 0 and garbage being NaN to pick their own fallback.
+assert(TE.Utils.toNumber("0,3") === 0.3, "Czech decimal comma");
+assert(TE.Utils.toNumber("0.3") === 0.3, "decimal point unchanged");
+assert(TE.Utils.toNumber(" 12,5 ") === 12.5, "whitespace trimmed around a comma");
+assert(TE.Utils.toNumber(20) === 20, "a number passes through");
+assert(TE.Utils.toNumber("") === 0, "empty is 0, exactly like Number()");
+assert(TE.Utils.toNumber("0") === 0, "zero is zero");
+assert(isNaN(TE.Utils.toNumber("abc")), "garbage is NaN");
+assert(isNaN(TE.Utils.toNumber("1,5,3")), "two separators are NaN, not 1.5");
+
 console.log("\n=== validateNumber ===");
 assert(TE.Utils.validateNumber("12,5", 0, 100, "x") === 12.5, "Czech decimal comma");
 assert(TE.Utils.validateNumber("  7 ", 0, 100, "x") === 7, "whitespace trimmed");

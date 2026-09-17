@@ -54,6 +54,15 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Desetinná čárka v dialogu se tiše zahazovala.** Každé číselné pole se četlo
+  přes `Number()`, které `0,3` nepřečte, a náhradní hodnota pak nastoupila bez
+  jediného slova. U tloušťky linky to byl **1 pt** (i po uložení do předvolby),
+  hůř u přelepu a přídavků: **12,5 mm přelepu se změnilo na nulu** a přídavek
+  2,5 na „načisto" — rovnou do tiskových dat. Nástroj přitom parser s čárkou
+  měl a měl ho otestovaný; dialog ho jen obcházel. Všech 15 polí teď jde přes
+  `TE.Utils.toNumber`, test hlídá i zdroják, aby se holé `Number()` nevrátilo,
+  a náhradní tloušťka linky je 0,3 pt jako výchozí hodnota, ne 1 pt.
+
 - **Nápověda u „šířka plátu" slibovala strop, který nedržel.** Stálo tam
   „Největší šířka plátu", jenže to platilo jen o čisté šířce — tištěný plát
   vyjde až o přelep širší (zadáno 1200, vytištěno 1220). Kdo tam psal šířku
