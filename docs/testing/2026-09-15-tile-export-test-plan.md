@@ -30,15 +30,37 @@ Pak v Illustratoru spusť `tile-export/tools/make-test-document.jsx`. Vyrobí:
 - blok **NEŘEZAT na 850–1450 mm** — rovnoměrné dělení na 3 pláty ho v 1000 mm rozřízne
 - **vodítka na 800 a 1900 mm**, která ho míjí
 
-V dialogu nastav ručně **měřítko 1:10**. Všechny testy níž běží na tomhle archu,
-pokud není řečeno jinak.
+### Výchozí nastavení
+
+**Dialog si pamatuje poslední hodnoty**, takže před každou sekcí vrať nastavení
+sem. Jinak zdědíš, co jsi zkoušel naposledy, a čísla nebudou sedět — ne kvůli
+vadě, ale kvůli jinému vstupu.
+
+| pole v dialogu | hodnota |
+|---|---|
+| Ruční měřítko 1:N | zaškrtnuto, **10** |
+| Čistý formát | prázdné (vezme se artboard) |
+| Směr | **Horizontálně** |
+| Dělit podle | Počtu plátů, **3** |
+| Rovnoměrně | **nezaškrtnuto** |
+| Přelep | **20** mm |
+| Umístění přelepu | **Půl na každou stranu** |
+| Přídavky nahoře / dole / vlevo / vpravo | **0 / 0 / 0 / 0** |
+| Kreslit ořezovou linku | zaškrtnuto, CutContour, 0,3 pt |
+| Měřítko výstupu | Stejné jako dokument |
+
+Každý test níž uvádí jen to, **čím se od tohohle liší**. Všechny testy běží na
+testovacím archu výš.
+
+Nejcitlivější je **Umístění přelepu**: při vypnutém Rovnoměrně na něm závisí
+tisková šířka úplně každého testu v sekcích 1 a 2. Při zapnutém Rovnoměrně na
+něm tisková šířka nezávisí — to je v sekci 3 naopak předmětem zkoušky.
 
 ---
 
 ## 1. Dělení (T1)
 
-Přelep 20 mm, symetricky, bez přídavků, Rovnoměrně **vypnuto**.
-Kontroluj v poli Výsledek.
+Výchozí nastavení (§0), mění se jen dělení. Kontroluj v poli Výsledek.
 
 | # | nastavení | čekám (čistá \| tisková šířka, mm) |
 |---|---|---|
@@ -61,7 +83,7 @@ to je celý důvod, proč režim vodítek existuje.
 
 ## 2. Přelep a přídavky (T2)
 
-Počet plátů 3, bez přídavků, Rovnoměrně vypnuto.
+Výchozí nastavení (§0), mění se umístění přelepu.
 
 | # | umístění přelepu | čekám (tisková, mm) |
 |---|---|---|
@@ -72,8 +94,10 @@ Počet plátů 3, bez přídavků, Rovnoměrně vypnuto.
 
 Čistá šířka je ve všech čtyřech 1000 × 3 — umístění přelepu švem nehne.
 
-**T2.5 — přídavky.** Nahoře 40, dole 40, vlevo 0, vpravo 40, přelep 20,
-počet 3. Čekám tiskové **1010 \| 1020 \| 1050** a výšku plátů 1080 mm.
+**T2.5 — přídavky.** Nahoře 40, dole 40, vlevo 0, vpravo 40, umístění **Půl na
+každou stranu**. Čekám tiskové **1010 \| 1020 \| 1050** a výšku plátů 1080 mm.
+(S „Celý na levý / horní" by vyšlo 1020 \| 1020 \| 1040, s „Celý na pravý /
+dolní" 1000 \| 1020 \| 1060.)
 Přídavek se objeví jen na vnějším obvodu, nikdy na švu.
 
 **T2.6 — načisto.** Vlevo 0 znamená, že levá hrana prvního plátu leží přesně
@@ -83,7 +107,10 @@ na čistém formátu. Zkontroluj v dokumentu, že tam nic nepřečnívá.
 
 ## 3. Rovnoměrně (T3)
 
-Nový přepínač. Mění, co má vyjít stejné.
+Výchozí nastavení (§0) a **Rovnoměrně zaškrtnuto**. Mění, co má vyjít stejné.
+
+Čisté šířky v tabulce platí pro **Půl na každou stranu**. Tiskové šířky na
+umístění přelepu záviset nesmí — to ověřuje T3.7.
 
 | # | nastavení | čekám (čistá \| tisková, mm) |
 |---|---|---|
@@ -92,12 +119,22 @@ Nový přepínač. Mění, co má vyjít stejné.
 | T3.3 | šířka plátu 1000, **zap** | **4 pláty**, 755 \| 745 \| 745 \| 755 — 765 × 4 |
 | T3.4 | přelep 0, počet 3, **zap** | 1000 × 3 — 1000 × 3, tedy stejné jako vypnuto |
 
-**T3.5 — očekávaná nečinnost.** Vertikálně, 2 pláty, přelep 20, bez přídavků:
+**T3.5 — očekávaná nečinnost.** Vertikálně, 2 pláty, **Půl na každou stranu**:
 zapnuto i vypnuto dá **510 \| 510**. Není to chyba — u dvou plátů bez přídavků
-jsou oba krajní, takže se obě definice potkají. Kdyby se lišily, byl by to nález.
+jsou oba krajní a nesou každý půl přelepu, takže se obě definice potkají.
+
+Platí to **jen** pro Půl na každou stranu. S jednostranným umístěním se to
+rozejde: vypnuto dá 520 \| 500 nebo 500 \| 520, zapnuto 510 \| 510. Když tohle
+uvidíš, zkontroluj umístění dřív, než to nahlásíš.
 
 **T3.6 — strop drží.** Šířka plátu 1000 se zapnutým přepínačem nesmí vytisknout
 nic širšího než 1000 mm. Projdi všechny pláty v souhrnu.
+
+**T3.7 — tisková šířka na umístění přelepu nezávisí.** Počet 3, Rovnoměrně
+zaškrtnuto. Přepni postupně všechna tři umístění přelepu. Tisková šířka musí
+zůstat **1013,3 × 3** ve všech třech; měnit se smí jen čisté šířky a to, který
+plát je širší načisto. Totéž u šířky plátu 1000: čtyři pláty po 765 bez ohledu
+na umístění.
 
 ---
 
@@ -145,7 +182,7 @@ linky ne.
 
 Tlačítko **Vytvořit a exportovat**, cílová složka na plochu.
 
-**T5.1 — nejdůležitější test celého plánu.** Exportuj 3 pláty s přelepem 20.
+**T5.1 — nejdůležitější test celého plánu.** Výchozí nastavení (§0), exportuj.
 Otevři **prostřední** PDF. Uvnitř nesmí být **žádná červená linka sousedních
 plátů** — jen jeho vlastní po obvodu. Pláty se překrývají o přelep, takže kdyby
 se kreslilo do zdrojového dokumentu, sousedova linka by tam byla. Tohle je
