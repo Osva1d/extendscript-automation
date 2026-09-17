@@ -249,6 +249,11 @@ Text jde označit a zkopírovat.
 **T7.4 — předvolby.** Ulož předvolbu, změň nastavení, načti ji zpět. Musí sedět
 **všechna** pole včetně nových (Rovnoměrně, umístění přelepu). Pak ji smaž.
 
+Aspoň tři pole zadej **s desetinnou čárkou** — tloušťka linky `0,3`, přelep
+`12,5`, přídavek `2,5`. Po načtení se smí ukázat s tečkou (`0.3`), ale **hodnota
+musí sedět**. Tady se našla první vada: čárka se zahazovala, tloušťka se vracela
+jako 1 pt a přelep i přídavky jako nula.
+
 **T7.5 — poslední nastavení.** Zavři dialog přes Zrušit a spusť znovu — pamatuje
 si poslední hodnoty, ne výchozí.
 
