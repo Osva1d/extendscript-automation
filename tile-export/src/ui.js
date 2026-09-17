@@ -582,26 +582,26 @@ TE.UI = {
      */
     collect: function (r) {
         var s = TE.Config.getDefaults();
-        s.scaleN      = r.cbScale.value ? (Number(r.etScaleN.text) || 1) : 1;
+        s.scaleN      = r.cbScale.value ? (TE.Utils.toNumber(r.etScaleN.text) || 1) : 1;
         s.direction   = r.rbDir[1].value ? "vertical" : "horizontal";
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
-        s.tileCount   = Number(r.etCount.text);
-        s.tileWidth   = Number(r.etWidth.text);
+        s.tileCount   = TE.Utils.toNumber(r.etCount.text);
+        s.tileWidth   = TE.Utils.toNumber(r.etWidth.text);
         s.equalPanels = r.cbEqual.value;
-        s.guideRound  = Number(r.etRound.text) || 0;
-        s.overlap     = Number(r.etOverlap.text) || 0;
+        s.guideRound  = TE.Utils.toNumber(r.etRound.text) || 0;
+        s.overlap     = TE.Utils.toNumber(r.etOverlap.text) || 0;
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
         s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
-        s.addTop      = Number(r.etAddTop.text) || 0;
-        s.addBottom   = Number(r.etAddBottom.text) || 0;
-        s.addLeft     = Number(r.etAddLeft.text) || 0;
-        s.addRight    = Number(r.etAddRight.text) || 0;
+        s.addTop      = TE.Utils.toNumber(r.etAddTop.text) || 0;
+        s.addBottom   = TE.Utils.toNumber(r.etAddBottom.text) || 0;
+        s.addLeft     = TE.Utils.toNumber(r.etAddLeft.text) || 0;
+        s.addRight    = TE.Utils.toNumber(r.etAddRight.text) || 0;
         s.exportMode  = r.rbExpMode[1].value ? "raster" : "vector";
         s.exportScale = r.rbExpScale[1].value ? "actual" : "source";
-        s.rasterDPI   = Number(r.etDPI.text) || 150;
+        s.rasterDPI   = TE.Utils.toNumber(r.etDPI.text) || 150;
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
-        s.lineWidth   = Number(r.etLineW.text) || 1;
+        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 0.3;   // = default; was 1
         s.pdfPreset   = r.ddPdf.selection ? r.ddPdf.selection.text : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
@@ -610,10 +610,10 @@ TE.UI = {
             s.zundMode    = r.cbZund.value;
             s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : "cut";
             s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
-            s.markSizeZ   = Number(r.etMarkSize.text) || 5;
-            s.gapInner    = Number(r.etGapInner.text) || 10;
-            s.maxDist     = Number(r.etMaxDist.text) || 500;
-            s.orientDist  = Number(r.etOrient.text) || 100;
+            s.markSizeZ   = TE.Utils.toNumber(r.etMarkSize.text) || 5;
+            s.gapInner    = TE.Utils.toNumber(r.etGapInner.text) || 10;
+            s.maxDist     = TE.Utils.toNumber(r.etMaxDist.text) || 500;
+            s.orientDist  = TE.Utils.toNumber(r.etOrient.text) || 100;
         } else {
             // Panel not built: the mode cannot be on, whatever a stored preset says.
             s.zundMode = false;

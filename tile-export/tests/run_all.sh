@@ -33,6 +33,7 @@ SUITES=(
     "tests/test_markcolor.js"
     "tests/test_export_transform.js"
     "tests/test_properties.js"
+    "tests/test_ui_collect.js"
 )
 
 TOTAL_SUITES=${#SUITES[@]}
