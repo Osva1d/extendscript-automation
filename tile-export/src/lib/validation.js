@@ -44,13 +44,6 @@ TE.Validate = {
                 TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DECIMAL)));
         }
 
-        // A temporary document is never Large Canvas (measured: scaleFactor
-        // cannot be set and fails silently). Exporting a Large Canvas source
-        // at source scale would produce a silently shrunken panel.
-        if (ctx.scaleFactor > 1 && s.exportScale === "source") {
-            errors.push(TE.L.ERR_LARGE_CANVAS);
-        }
-
         // Zünd mode needs the contour's spot colour to exist. Checking it up
         // front beats discovering it on panel five, half way through a batch.
         if (s.zundMode && !ctx.hasCutSpot) {
@@ -58,13 +51,20 @@ TE.Validate = {
         }
 
         // Panel must fit an Illustrator artboard once the output scale applies.
-        k = (s.exportScale === "actual") ? TE.Utils.getEffectiveSF(s) : 1;
+        // TE.Utils.outputScale is the export's own rule, so this measures the
+        // size the export will actually produce. The message names the panel,
+        // its size and the limit: without them nobody could tell whether more
+        // panels would help — they do not when it is the height that overflows.
+        k = TE.Utils.outputScale(s, ctx.scaleFactor);
         for (i = 0; i < tiles.length; i++) {
             t = tiles[i].expanded;
             w = (t[2] - t[0]) * k;
             h = (t[1] - t[3]) * k;
             if (w > ctx.maxArtboard || h > ctx.maxArtboard) {
-                errors.push(TE.L.ERR_AB_TOO_BIG);
+                errors.push(TE.L.format(TE.L.ERR_AB_TOO_BIG, tiles[i].index,
+                    TE.Utils.formatMM(TE.Utils.pt2mm(w), TE.L.DECIMAL),
+                    TE.Utils.formatMM(TE.Utils.pt2mm(h), TE.L.DECIMAL),
+                    TE.Utils.formatMM(TE.Utils.pt2mm(ctx.maxArtboard), TE.L.DECIMAL)));
                 break;
             }
         }

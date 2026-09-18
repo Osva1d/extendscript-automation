@@ -58,11 +58,58 @@ var flush = TE.Export.tileTransform({ index: 1, expanded: [0, 1000, 500, 0] }, G
 assertClose(flush.position[0], 0, 0.001, "no offset when the panel starts at the graphic");
 assertClose(flush.position[1], 0, 0.001, "no vertical offset either");
 
-console.log("\n=== outputScale ===");
-assertClose(TE.Export.outputScale({ exportScale: "source", scaleN: 10 }), 1, 0.001,
-    "source scale keeps document units");
-assertClose(TE.Export.outputScale({ exportScale: "actual", scaleN: 10 }), 10, 0.001,
-    "actual scale uses the effective factor");
+console.log("\n=== outputScale: what \"same as document\" means ===");
+// sf is the SOURCE document's Large Canvas factor, passed in. It used to be
+// read from app.activeDocument — which, during an export, is the temporary
+// document and never Large Canvas.
+var U = TE.Utils;
+assertClose(U.outputScale({ exportScale: "source", scaleN: 10 }, 1), 1, 0.001,
+    "ordinary 1:10 document, same as document: stays 1:10");
+assertClose(U.outputScale({ exportScale: "actual", scaleN: 10 }, 1), 10, 0.001,
+    "ordinary 1:10 document, 1:1: x10");
+// N1. Large Canvas is Illustrator's internal representation, invisible on the
+// rulers, so "same as document" means what the rulers show.
+assertClose(U.outputScale({ exportScale: "source", scaleN: 1 }, 10), 10, 0.001,
+    "Large Canvas drawn 1:1, same as document: real size");
+assertClose(U.outputScale({ exportScale: "actual", scaleN: 1 }, 10), 10, 0.001,
+    "Large Canvas drawn 1:1, 1:1: the same real size");
+assertClose(U.outputScale({ exportScale: "source", scaleN: 10 }, 10), 10, 0.001,
+    "Large Canvas drawn 1:10, same as document: a 1:10 proof");
+assertClose(U.outputScale({ exportScale: "actual", scaleN: 10 }, 10), 100, 0.001,
+    "Large Canvas drawn 1:10, 1:1: x100");
+
+console.log("\n=== outputLineScale: the trim line at output scale ===");
+// Printed width times this is the stroke in the temporary document. The Large
+// Canvas factor cancels out: at 1:1 the line is its printed width, at the
+// document's own scale printed / N, and the RIP scales it back up.
+assertClose(U.outputLineScale({ exportScale: "actual", scaleN: 10 }), 1, 1e-9,
+    "1:1 output: full printed width");
+assertClose(U.outputLineScale({ exportScale: "source", scaleN: 10 }), 0.1, 1e-9,
+    "1:10 output: a tenth, the RIP scales it up");
+assertClose(U.outputLineScale({ exportScale: "source", scaleN: 1 }), 1, 1e-9,
+    "a document drawn 1:1: full width either way");
+// N10: the old rule divided by the ACTIVE document's factor. On a Large Canvas
+// source at 1:1 that was the temporary document's 1, so 0.3 pt came out 3 pt.
+global.app.activeDocument.scaleFactor = 10;
+assertClose(U.outputLineScale({ exportScale: "actual", scaleN: 1 }), 1, 1e-9,
+    "whatever document is active, a 1:1 line stays its printed width");
+global.app.activeDocument.scaleFactor = 1;
+
+console.log("\n=== guard: export never asks which document is active ===");
+// The two defects above share one cause — reading app.activeDocument while a
+// temporary document is the active one. So check the source for it.
+// Comments are stripped first: the ones explaining this very rule name
+// app.activeDocument, and must not trip it.
+function code(src) { return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, ""); }
+var exSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "export.js"), "utf8"));
+var exBody = exSrc.slice(exSrc.indexOf("exportTile: function"));
+assert(!/getSF|getEffectiveSF|activeDocument/.test(exBody),
+    "exportTile takes every scale from its context");
+var drSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
+var dlBody = drSrc.slice(drSrc.indexOf("drawTileLine: function"),
+                         drSrc.indexOf("getRegistrationName: function"));
+assert(!/getSF|getEffectiveSF|activeDocument/.test(dlBody),
+    "drawTileLine takes its scale as an argument");
 
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",

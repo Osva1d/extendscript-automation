@@ -54,6 +54,26 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Export v 1:1 u velkých zakázek už nepadá.** Do dočasného dokumentu každého
+  plátu se vkládá celá grafika a její velikost se nastavovala přes `.width`,
+  který Illustrator nad 16 347,7 pt (≈ 5,77 m) odmítne. Každá zeď širší nebo
+  vyšší než ~5,77 m i se spadávkou tak v 1:1 spadla na `Specified value greater
+  than maximum allowed value` — i když se každý plát vešel. Teď `resize()`, který
+  takový strop nemá (změřeno do 70 m).
+- **„Stejné jako dokument" znamená, co ukazují pravítka.** U Large Canvasu to
+  dřív mířilo na jeho vnitřní desetinové souřadnice, které nikdo nevidí a které
+  nejde vyexportovat, a končilo chybou s radou „použij 1:1", která často vedla do
+  další chyby. Large Canvas teď v „Stejné jako dokument" vyjde ve skutečné
+  velikosti, s ručním 1:10 jako náhled 1:10. Hláška o Large Canvasu zmizela.
+- **Linka u Large Canvasu vycházela desetkrát tlustší.** Tloušťka se počítala
+  z měřítka *aktivního* dokumentu, a tím je při exportu dočasný, nikdy Large
+  Canvas. 0,3 pt tak vyšlo jako 3 pt; dřív se to neprojevilo jen proto, že export
+  z Large Canvasu vždycky spadl dřív. Export už aktivní dokument nečte vůbec.
+- **Hláška „plát se nevejde do artboardu" říká co a o kolik** — číslo plátu,
+  jeho rozměr při zvoleném měřítku výstupu a strop. Dřív nešlo poznat, jestli
+  pomůže víc plátů. Validace i export navíc počítají měřítko výstupu jedním
+  pravidlem; dřív měl každý svou kopii.
+
 - **Vypnutá linka už nezakládá prázdnou vrstvu.** Vrstva `TE_lines` se
   zakládala při každém běhu, i když se linka nekreslila. Teď existuje právě
   tehdy, když jsou v ní linky: běh bez linky smaže linky z předchozího běhu

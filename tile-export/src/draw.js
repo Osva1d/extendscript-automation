@@ -54,7 +54,7 @@ TE.Draw = {
      * export in phase 2 call this. Two implementations of the same rectangle
      * would drift, and the difference would only show on the printed sheet.
      *
-     * Two things that are easy to get wrong and were:
+     * Three things that are easy to get wrong and were:
      *
      * 1. The line marks the panel's OUTER size — the MediaBox of the exported
      *    PDF — not the clean format. Cutting along it leaves the mounting bleed
@@ -66,21 +66,25 @@ TE.Draw = {
      *    MediaBox edge loses its outer half outside the page and prints at half
      *    the intended weight.
      *
-     * Stroke width is a printed-output measurement, so it is divided by the
-     * document scale and multiplied by the output scale. Without that, a 0.3 pt
-     * line in a 1:10 document comes out as 3 pt on the press — the same class
-     * of bug as zund-summa-marks v26.4.0.
+     * 3. Stroke width is a printed-output measurement, so it has to be scaled
+     *    to the document it is drawn into. Without that, a 0.3 pt line in a
+     *    1:10 document comes out as 3 pt on the press — the same class of bug
+     *    as zund-summa-marks v26.4.0. The scale is PASSED IN: it used to be
+     *    derived here from app.activeDocument, which during an export is the
+     *    temporary document, so a Large Canvas panel got a line ten times too
+     *    thick (N10).
      *
      * @param {Document} doc - Document to draw into.
      * @param {Array} rect - Outer rect [l, t, r, b] of the panel, top > bottom.
      * @param {Object} s - Settings (lineSpot, lineWidth).
-     * @param {number} k - Output scale; 1 for a preview in the source document.
+     * @param {number} lineScale - Stroke points per printed point:
+     *        1 / TE.Utils.getEffectiveSF(s) for the preview in the source
+     *        document, TE.Utils.outputLineScale(s) in a temporary one.
      * @returns {PathItem} The drawn rectangle.
      */
-    drawTileLine: function (doc, rect, s, k) {
+    drawTileLine: function (doc, rect, s, lineScale) {
         var spot = this.getOrCreateSpot(doc, s.lineSpot);
-        var scale = (k || 1) / TE.Utils.getEffectiveSF(s);
-        var sw = (Number(s.lineWidth) || 0.3) * scale;
+        var sw = (Number(s.lineWidth) || 0.3) * (Number(lineScale) || 1);
         var half = sw / 2;
 
         // Inset by half the stroke so the stroke's outer edge lands on rect.
