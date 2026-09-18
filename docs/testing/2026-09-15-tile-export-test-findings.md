@@ -13,6 +13,9 @@ testy, které ještě nejsou hotové, a část nálezů se týká stejných mís
 
 Číslování je stálé — na nález se odkazuj jeho číslem, i když se mezitím opraví.
 
+**Dávka hotová 2026-09-18:** celky 1–3 opravené. Otevřené zůstávají N5 (dluh)
+a N11 (patří do etapy maska/Zünd); P1 rozhodne přetest R8.1.
+
 ---
 
 ## Čeká na opravu
@@ -132,6 +135,10 @@ ověřit, že náhled 1:N nekreslí značky ve špatném měřítku. Týká se a
 
 ### N2 — neplatná šířka plátu hlásí cizí chybu
 
+**Stav: opraveno v `a52aab8`** (dávka, celek 3). Obě cesty mají vlastní text; strop
+pod přelepem hází vlastní kód `TE_CEILING_OVERLAP`. `ERR_CUTS_ORDER` tím ztratil
+jediné použití a zmizel. Hlídá `test_grid_cuts` a `test_ui_summary`. Níž původní záznam.
+
 **Test:** T8.3. **Kde:** `tile-export/src/ui.js:691`, `describeError()`.
 
 `TE_BAD_WIDTH` nemá vlastní text a mapuje se na `ERR_CUTS_ORDER`, takže šířka
@@ -146,6 +153,9 @@ případy — „šířka musí být kladné číslo" a „strop musí být vět
 
 ### N3 — název hrany v české hlášce je anglicky
 
+**Stav: opraveno v `a52aab8`** (dávka, celek 3). Hlídá `test_ui_summary` pro všechny
+čtyři hrany. Níž původní záznam.
+
 **Test:** T8.5. **Kde:** `tile-export/src/lib/validation.js:32–35` předává
 `"left"`, `"right"`, `"top"`, `"bottom"` přímo do `ERR_ADD_OVERHANG`.
 
@@ -158,6 +168,10 @@ gramaticky seděla: „Přídavek vlevo (60 mm) překračuje přesah grafiky (50
 ---
 
 ### N4 — souhrnné hlášky: číslovky a „nahrazeno"
+
+**Stav: opraveno v `a8ae9d1`** (dávka, celek 3). Tvar „Počet …: N", který sedí na
+jakékoli číslo. Stejnou vadu měla i hláška o vodítkách na skrytých vrstvách
+(`WARN_GUIDE_HIDDEN`), opraveno s ní. Níž původní záznam.
 
 **Test:** T4.5. **Kde:** `tile-export/src/locale.js:171–173`,
 `tile-export/src/main.js:113`, `:165`, `:166`.
@@ -261,6 +275,8 @@ dočasného dokumentu výslovně, nečíst aktivní dokument. Nejdřív změřit
 
 ### N12 — texty o lince: jeden zastaralý, jeden neúplný
 
+**Stav: opraveno v `4b5e764`** (dávka, celek 3), podle N13. Níž původní záznam.
+
 **Test:** přetest R2.1 (2026-09-18). **Druh:** texty, patří do celku 3.
 
 **Příznak.** V dialogu je tloušťka linky 0,3 pt, ale v testovacím archu 1:10 se
@@ -291,6 +307,12 @@ psát až podle něj.
 ---
 
 ### N13 — linka vystředěná na hraně, dvojnásobný tah, výchozí 1 pt
+
+**Stav: hotovo v `bb777c2`** (dávka, celek 3). Ověřeno na produkčním `exportTile`,
+zeď 6 × 1 m v 1:10: v PDF jeden obdélník přesně na hranách MediaBoxu, tah 2 pt
+(0,2 pt v 1:10), Illustrator ho navíc sám obalí ořezem artboardu. Poppler při
+600 dpi: vidět 0,96–1,04 pt na všech čtyřech hranách, v 1:10 0,1 pt, v rastru
+300 dpi taky 1 pt (rastrování ořezává na artboard). Níž původní záznam.
 
 **Test:** přetest, znovu P1 (2026-09-18). **Druh:** změna zadání — návrh
 uživatele. Patří do celku 3 spolu s N12, protože mění i texty.
@@ -469,6 +491,8 @@ zopakovat sondu pro všech šest hodnot.
 ---
 
 ### N15 — texty, které přežily změnu návrhu
+
+**Stav: opraveno v `4b5e764`** (dávka, celek 3).
 
 **Nalezeno** při psaní celku 2, ne testem. **Druh:** texty, patří do celku 3.
 

@@ -449,7 +449,7 @@ TE.UI = {
         gBtn.alignment = "right";
         var btnCancel = gBtn.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var btnTiles  = gBtn.add("button", undefined, l.BTN_TILES_ONLY);
-        btnTiles.helpTip = l.TIP_LINE;
+        btnTiles.helpTip = l.TIP_TILES_ONLY;
         var btnExport = gBtn.add("button", undefined, l.BTN_TILES_EXPORT, { name: "ok" });
 
         // --- wiring ----------------------------------------------------------
@@ -730,7 +730,7 @@ TE.UI = {
         s.rasterDPI   = TE.Utils.toNumber(r.etDPI.text) || 150;
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
-        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 0.3;   // = default; was 1
+        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
         s.pdfPreset   = r.ddPdf.selection ? r.ddPdf.selection.text : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
@@ -824,7 +824,8 @@ TE.UI = {
     describeError: function (err) {
         var code = String(err && err.message);
         if (code === "TE_MIN_TILES") { return TE.L.ERR_MIN_TILES; }
-        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_CUTS_ORDER; }
+        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_BAD_WIDTH; }
+        if (code === "TE_CEILING_OVERLAP") { return TE.L.ERR_CEILING_OVERLAP; }
         if (code === "TE_NO_GUIDES") { return TE.L.ERR_NO_GUIDES; }
         return code;
     },

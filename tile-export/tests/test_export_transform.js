@@ -111,6 +111,29 @@ var dlBody = drSrc.slice(drSrc.indexOf("drawTileLine: function"),
 assert(!/getSF|getEffectiveSF|activeDocument/.test(dlBody),
     "drawTileLine takes its scale as an argument");
 
+console.log("\n=== drawTileLine: centred on the panel edge, twice as thick (N13) ===");
+// The page edge crops the outer half and the configured width stays inside
+// the panel. The path itself lies ON the edge — where a cutter follows it in
+// Zünd mode, and where the edge always falls inside the stroke.
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
+TE.Draw.getOrCreateSpot = function () { return "spot"; };
+var drawn = null;
+var fakeDoc = { pathItems: { rectangle: function (t, l, w, h) {
+    drawn = { t: t, l: l, w: w, h: h };
+    return {};
+} } };
+var line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineSpot: "CutContour", lineWidth: 1 }, 1);
+assertClose(drawn.t, TILE.expanded[1], 1e-9, "path top lies on the panel edge");
+assertClose(drawn.l, TILE.expanded[0], 1e-9, "path left lies on the panel edge");
+assertClose(drawn.w, 400, 1e-9, "full panel width, no inset");
+assertClose(drawn.h, 800, 1e-9, "full panel height, no inset");
+assertClose(line.strokeWidth, 2, 1e-9, "1 pt visible is a 2 pt stroke");
+line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: 1 }, 0.1);
+assertClose(line.strokeWidth, 0.2, 1e-9, "1:10 output: scaled first, then doubled");
+line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: "" }, 1);
+assertClose(line.strokeWidth, 2, 1e-9, "no width given: the 1 pt default, doubled");
+assertClose(TE.Config.getDefaults().lineWidth, 1, 1e-9, "the default is 1 pt visible");
+
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",
     "index is zero-padded to the width of the total");

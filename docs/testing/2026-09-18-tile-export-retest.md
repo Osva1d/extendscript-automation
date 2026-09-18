@@ -18,6 +18,10 @@ hraně, 1 pt) patří do celku 3 a **mění očekávání u linky** v R2.3, R3�
 a R8.2. Rozměry stránek v R3–R5 platí dál.
 
 **Celek 2 hotový** (N14 `830ef43`, N8 `0919ded`, N9 `05a7366`) — R6 platí.
+**Celek 3 hotový** (N2 a N3 `a52aab8`, N4 `a8ae9d1`, N13 `bb777c2`, texty N12
+a N15 `4b5e764`) — R7 platí a **linka má nová čísla**: pole Tloušťka je dál to, co je vidět
+v tisku (výchozí 1 pt), ale kreslí se dvojnásobná přes hranu plátu. Očekávání
+níž jsou přepsaná; R2.1 a R2.2 z první várky platily pro starou linku.
 
 ---
 
@@ -35,6 +39,8 @@ a R8.2. Rozměry stránek v R3–R5 platí dál.
 | texty souhrnu a hlášek | skutečný `refresh()` s češtinou | čísla v R4 a R5 níž |
 | N14 — obnovení přepínačů | skutečný `buildDialog` ze všech šesti uložených hodnot | každá se otevře i vrátí správně |
 | N8 — předvolby | skutečný dialog z tvého nastavení, zápis nahrazený atrapou | otevření „[Default] *", ↺, přepnutí, „TEST *", Uložit; rozměr 1178 × 825 beze změny |
+| N13 — linka na hraně | produkční `exportTile`, zeď 6 × 1 m v 1:10, rozbor PDF, Poppler 600 dpi | jeden obdélník přesně na MediaBoxu, tah 2 pt (0,2 v 1:10); vidět 0,96–1,04 pt na všech čtyřech hranách (0,1 v 1:10) |
+| N2, N3 — hlášky | skutečný `refresh()` s češtinou | „Šířka plátu musí být kladné číslo.", strop pod přelepem, „Přídavek vlevo (60 mm)…" |
 
 ## Co potřebuji od tebe
 
@@ -67,6 +73,9 @@ Výchozí nastavení je tabulka z §0 původního plánu a každý test níž uv
 čím se od ní liší. **Dialog si pamatuje poslední stav** — před každou sekcí ho
 vrať.
 
+**Předvolba TEST má ještě tloušťku linky 0,3 pt.** Načti ji, přepiš tloušťku na
+1 pt a dej **Uložit** — tím zároveň zkoušíš R6.1 a R6.3.
+
 ---
 
 ## R1 — Kouř: dialog žije (testovací arch)
@@ -81,22 +90,23 @@ pravítka, a o Large Canvasu.
 
 ## R2 — Linka v náhledu (Jen pláty)
 
-Změnilo se, jak se linka škáluje. V náhledu to zvenku ověřit neumím.
+Linka se škáluje jinak (N10) a od N13 leží jinde. V náhledu to zvenku ověřit
+neumím. Tloušťka v dialogu **1 pt**:
 
 | # | dokument | ruční měřítko | Okno → Tah ukáže |
 |---|---|---|---|
-| R2.1 | testovací arch | 1:10 | **0,03 pt** |
-| R2.2 | `lc-6000x1000.ai` | vypnuto | **0,3 pt** |
+| R2.1 | testovací arch | 1:10 | **0,2 pt** |
+| R2.2 | `lc-6000x1000.ai` | vypnuto | **2 pt** |
 
-**Pole v dialogu je vždy tloušťka v tisku** — proto tam je v obou případech
-0,3 pt. **Panel Tah ukazuje tloušťku v měřítku dokumentu:** arch je kreslený
-v 1:10, takže 0,03 pt, a po zvětšení na skutečnou velikost vyjde 0,3. Large
-Canvas je navenek ve skutečné velikosti, takže panel ukáže rovnou 0,3 (vnitřně
-je 0,03 — Large Canvas zobrazuje všechno desetkrát; ověřeno v R2.2). Dialog to
-zatím nikde neříká — nález N12.
+**Pole v dialogu je tloušťka viditelná v tisku.** Panel Tah ukazuje celý tah
+v měřítku dokumentu: ten je dvojnásobný, protože vnější polovinu ořízne okraj
+stránky, a arch kreslený v 1:10 ho má desetkrát menší — 2 × 1 pt / 10 = 0,2 pt.
+Large Canvas je navenek ve skutečné velikosti, takže panel ukáže rovnou 2 pt.
 
-**R2.3** Vnější hrana linky sedí na hraně artboardu — ohraničení včetně tahu
-v Okno → Informace (T4.2), na archu i v `lc-6000x1000.ai`.
+**R2.3** Cesta linky leží přesně na hraně artboardu: ohraničení **bez tahu**
+v Okno → Informace se rovná artboardu, s tahem je na každé straně o půl tahu
+větší (T4.2). Na archu i v `lc-6000x1000.ai`. Při 1 pt ve skutečné velikosti
+je vidět okem, že linka hranu obkročuje.
 
 **R2.4** Rychlá regrese: Jen pláty třikrát po sobě nezmnoží artboardy ani linky
 (T4.5); s vypnutou linkou nevznikne vrstva `TE_lines` (T4.7).
@@ -109,8 +119,8 @@ Změnil se kód, kterým se grafika vkládá do plátu.
 
 | # | měřítko výstupu | čekám |
 |---|---|---|
-| R3.1 | Stejné jako dokument | 3 PDF, stránky **101 \| 102 \| 101 × 100 mm**, v každém právě jedna linka |
-| R3.2 | 1:1 skutečná velikost | stránky **1010 \| 1020 \| 1010 × 1000 mm**, linka 0,3 pt |
+| R3.1 | Stejné jako dokument | 3 PDF, stránky **101 \| 102 \| 101 × 100 mm**, v každém právě jedna linka, vidět 0,1 pt |
+| R3.2 | 1:1 skutečná velikost | stránky **1010 \| 1020 \| 1010 × 1000 mm**, linka vidět **1 pt** na všech čtyřech hranách |
 | R3.3 | 1:1, **Rastr** 150 dpi | stránky jako R3.2, obsah rastrový |
 
 **R3.4** Přeskočit hotové (T5.4): druhý běh do stejné složky nic nepřepíše a řekne,
@@ -124,19 +134,19 @@ Ruční měřítko **vypnuté**. Dialog musí ukázat „Faktor Large Canvas: 10
 
 | # | měřítko výstupu | čekám v souhrnu | čekám z exportu |
 |---|---|---|---|
-| R4.1 | Stejné jako dokument | **bez chyby**; 6000 × 1000; tiskové 2010 \| 2020 \| 2010; spad vlevo 250, vpravo 250, nahoře 655, dole 655 | 3 PDF, stránky **2010 \| 2020 \| 2010 × 1000 mm**, linka **0,3 pt** |
+| R4.1 | Stejné jako dokument | **bez chyby**; 6000 × 1000; tiskové 2010 \| 2020 \| 2010; spad vlevo 250, vpravo 250, nahoře 655, dole 655 | 3 PDF, stránky **2010 \| 2020 \| 2010 × 1000 mm**, linka vidět **1 pt** |
 | R4.2 | 1:1 skutečná velikost | totéž | totéž |
 
 Pak ruční měřítko **1:10** (složené × 100 — dokument představuje zeď 60 × 10 m):
 
 | # | měřítko výstupu | čekám v souhrnu | čekám z exportu |
 |---|---|---|---|
-| R4.3 | Stejné jako dokument | bez chyby; 60000 × 10000; tiskové 20010 \| 20020 \| 20010 | **náhled 1:10**: stránky 2001 \| 2002 \| 2001 × 1000 mm, linka 0,03 pt |
+| R4.3 | Stejné jako dokument | bez chyby; 60000 × 10000; tiskové 20010 \| 20020 \| 20010 | **náhled 1:10**: stránky 2001 \| 2002 \| 2001 × 1000 mm, linka vidět 0,1 pt |
 | R4.4 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." Tlačítko **šedé**. | — |
 
 Do opravy: R4.1 hlásil chybu Large Canvasu, R4.2 padal při exportu
 (`Specified value greater than maximum allowed value`), a kdyby prošel, linka by
-měla 3 pt.
+byla desetkrát tlustší.
 
 ---
 
@@ -146,8 +156,8 @@ Ruční měřítko **1:10** (výchozí), „Faktor Large Canvas: 1".
 
 | # | měřítko výstupu | čekám v souhrnu | čekám z exportu |
 |---|---|---|---|
-| R5.1 | Stejné jako dokument | 6000 × 1000; tiskové 2010 \| 2020 \| 2010 | stránky **201 \| 202 \| 201 × 100 mm**, linka 0,03 pt |
-| R5.2 | 1:1 skutečná velikost | totéž | stránky **2010 \| 2020 \| 2010 × 1000 mm**, linka 0,3 pt |
+| R5.1 | Stejné jako dokument | 6000 × 1000; tiskové 2010 \| 2020 \| 2010 | stránky **201 \| 202 \| 201 × 100 mm**, linka vidět 0,1 pt |
+| R5.2 | 1:1 skutečná velikost | totéž | stránky **2010 \| 2020 \| 2010 × 1000 mm**, linka vidět **1 pt** |
 
 **R5.2 je nejdůležitější řádek přetestu.** Tohle je běžná velká zakázka
 a do opravy N7 tady export padal na každém plátu.
@@ -187,15 +197,16 @@ názvu. S názvem existující předvolby → dotaz na přepsání.
 
 ---
 
-## R7 — Hlášky (až po celku 3: N2, N3, N4)
+## R7 — Hlášky (celek 3: N2, N3, N4, N15)
 
 | # | co udělat | čekám |
 |---|---|---|
-| R7.1 | šířka plátu 0 | vlastní hláška o neplatné šířce, ne „Pozice řezů…" |
-| R7.2 | šířka plátu 15, Rovnoměrně, přelep 20 | hláška, že strop musí být větší než přelep |
-| R7.3 | přídavek vlevo 60 na archu se spadem 50 | „Přídavek **vlevo** (60 mm)…" |
-| R7.4 | Jen pláty dvakrát po sobě | druhé hlášení řekne, že předchozí pláty nahradilo |
-| R7.5 | export 1, 3 a 5 plátů | hlášení je česky správně pro každý počet |
+| R7.1 | Dělit podle šířky, šířka plátu 0 | „Šířka plátu musí být kladné číslo." |
+| R7.2 | šířka plátu 15, Rovnoměrně, přelep 20 | „Se zaškrtnutým Rovnoměrně je šířka plátu stropem tiskové šířky a musí být větší než přelep." |
+| R7.3 | přídavek vlevo 60 na archu se spadem 50 | „Přídavek vlevo (60 mm) překračuje přesah grafiky (50 mm)." |
+| R7.4 | Jen pláty dvakrát po sobě | první „Počet vytvořených plátů: 3.", druhé „… (předchozí nahrazeny)." |
+| R7.5 | Jen pláty a export se 2, 3 a 5 pláty | hlášení mají tvar „Počet …: N", česky správně pro každý počet |
+| R7.6 | nápovědy: Počet plátů, PDF preset, Jen pláty, linka, tloušťka | žádná nemluví o „rozpuštění zbytku" ani o prázdném PDF presetu; Jen pláty říká, co tlačítko dělá; linka je „po obvodu tiskového plátu" |
 
 ---
 
@@ -207,12 +218,12 @@ ve kterém prohlížeči co — data v PDF jsou symetrická, jde jen o vykreslen
 
 **R8.2 — tisková zkouška** (§9 původního plánu). Vytiskni ve skutečné velikosti
 plát z R3.2 nebo R5.2, stačí výřez s rohem:
-- je linka 0,3 pt **bezpečně vidět**?
+- je linka 1 pt **bezpečně vidět**?
 - nezvětšuje ořez?
 - je na **všech čtyřech** hranách?
 
-Výsledek patří do specu — je to jediné číslo v nástroji, které stojí na cizím
-doporučení, ne na měření u vás.
+Výsledek patří do specu. Výchozí 1 pt je tvoje volba z přetestu; tisk ji
+potvrdí nebo posune.
 
 ---
 

@@ -65,11 +65,13 @@ eq(TE.UI.collect(refs({ etRound: "2,5" })).guideRound, 2.5, "guide rounding with
 
 console.log("\n=== fallbacks are unchanged — only the parsing moved ===");
 // Empty, zero and garbage still take the same fallback each field always had.
-// The one fallback that changes is the line width's: it disagreed with the
-// default (0.3) and with draw.js's own guard.
-eq(TE.UI.collect(refs({ etLineW: "" })).lineWidth, 0.3, "empty line width falls back to the default");
-eq(TE.UI.collect(refs({ etLineW: "0" })).lineWidth, 0.3, "zero line width falls back to the default");
-eq(TE.UI.collect(refs({ etLineW: "abc" })).lineWidth, 0.3, "garbage line width falls back to the default");
+// The one fallback that changed is the line width's: it disagreed with the
+// default and with draw.js's own guard. Compared to the default itself, which
+// N13 moved from 0.3 to 1 pt.
+var LW = TE.Config.getDefaults().lineWidth;
+eq(TE.UI.collect(refs({ etLineW: "" })).lineWidth, LW, "empty line width falls back to the default");
+eq(TE.UI.collect(refs({ etLineW: "0" })).lineWidth, LW, "zero line width falls back to the default");
+eq(TE.UI.collect(refs({ etLineW: "abc" })).lineWidth, LW, "garbage line width falls back to the default");
 eq(TE.UI.collect(refs({ etOverlap: "" })).overlap, 0, "empty overlap is still 0");
 eq(TE.UI.collect(refs({ etDPI: "" })).rasterDPI, 150, "empty DPI still falls back to 150");
 eq(isNaN(TE.UI.collect(refs({ etWidth: "abc" })).tileWidth), true,

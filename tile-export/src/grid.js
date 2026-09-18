@@ -18,7 +18,8 @@ TE.Grid = {
      * @param {Array|null} guides - Guide positions in document points, used
      *        only when s.divideMode === "guides". Unsorted input is fine.
      * @returns {Array} Ascending cut positions, edges excluded.
-     * @throws {Error} message is one of TE_MIN_TILES, TE_BAD_WIDTH, TE_NO_GUIDES.
+     * @throws {Error} message is one of TE_MIN_TILES, TE_BAD_WIDTH,
+     *         TE_CEILING_OVERLAP, TE_NO_GUIDES.
      */
     computeCuts: function (s, extent, guides) {
         var start = extent.start;
@@ -65,7 +66,9 @@ TE.Grid = {
             // instead, so its panels print up to one overlap wider than w.
             if (s.equalPanels) {
                 var o = TE.Utils.toDoc(Number(s.overlap) || 0, s);
-                if (w <= o) { throw new Error("TE_BAD_WIDTH"); }
+                // A valid width, just too small to be a ceiling: every panel
+                // carries the overlap, so nothing would be left for artwork.
+                if (w <= o) { throw new Error("TE_CEILING_OVERLAP"); }
                 var a = this.axisAdds(s);
                 n = Math.ceil((span + a.low + a.high - o) / (w - o) - 1e-9);
                 if (n < 2) { throw new Error("TE_MIN_TILES"); }

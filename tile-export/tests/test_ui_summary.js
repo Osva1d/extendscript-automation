@@ -96,6 +96,23 @@ has(tErr, "Přelep (1000,5 mm) musí být menší než nejkratší plát (1000 m
 var tAdd = summary({ etAddLeft: { text: "52,5" } });
 has(tAdd, "(52,5 mm)", "add error quotes what was typed");
 
+console.log("\n=== N2: a bad panel width says so, not 'cut positions' ===");
+var widthMode = [{ value: false }, { value: true }, { value: false }];
+var t71 = summary({ rbMode: widthMode, etWidth: { text: "0", enabled: true } });
+has(t71, "\u2717 Šířka plátu musí být kladné číslo.", "R7.1: zero width");
+eq(t71.indexOf("Pozice švů") === -1, true, "and not the cut-order message");
+var t72 = summary({ rbMode: widthMode, etWidth: { text: "15", enabled: true },
+    cbEqual: { value: true, enabled: true } });
+has(t72, "\u2717 Se zaškrtnutým Rovnoměrně je šířka plátu stropem tiskové šířky a musí být větší než přelep.",
+    "R7.2: a ceiling at or under the overlap");
+
+console.log("\n=== N3: the edge is named in Czech, and the sentence reads ===");
+var t73 = summary({ etAddLeft: { text: "60" } });
+has(t73, "\u2717 Přídavek vlevo (60 mm) překračuje přesah grafiky (50 mm).", "R7.3: left");
+has(summary({ etAddBottom: { text: "60" } }), "Přídavek dole (60 mm)", "bottom");
+has(summary({ etAddRight: { text: "60" } }), "Přídavek vpravo (60 mm)", "right");
+has(summary({ etAddTop: { text: "60" } }), "Přídavek nahoře (60 mm)", "top");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more

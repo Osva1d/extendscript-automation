@@ -46,7 +46,7 @@ vadě, ale kvůli jinému vstupu.
 | Přelep | **20** mm |
 | Umístění přelepu | **Půl na každou stranu** |
 | Přídavky nahoře / dole / vlevo / vpravo | **0 / 0 / 0 / 0** |
-| Kreslit ořezovou linku | zaškrtnuto, CutContour, 0,3 pt |
+| Kreslit ořezovou linku | zaškrtnuto, CutContour, 1 pt (do N13 0,3 pt) |
 | Měřítko výstupu | Stejné jako dokument |
 
 Každý test níž uvádí jen to, **čím se od tohohle liší**. Všechny testy běží na
@@ -147,22 +147,20 @@ pojmenovaných předponou pro generované pláty. Původní artboard čistého f
 zůstane.
 
 **T4.2 — červená linka.** Leží po obvodu **tiskového** plátu, ne čistého, a její
-**vnější hrana tahu sedí přesně na hraně artboardu**. Tohle už jednou bylo špatně.
-
-Okem to ale nezkontroluješ. Illustrator kreslí tah na střed cesty, takže skript
-nakreslí cestu zmenšenou o půl tahu a vnější polovina dosedne na cíl — při 1:10
-a lince 0,3 pt je to odsazení **0,015 pt, tedy 5 tisícin milimetru**. Neuvidíš ho
-ani při maximálním zvětšení. Dvě cesty, jak to ověřit doopravdy:
+**cesta leží přesně na hraně artboardu**; tah je dvojnásobek zadané tloušťky,
+takže polovina přečnívá ven a v PDF ji ořízne okraj stránky. (Změněno N13,
+2026-09-18 — do té doby byla cesta posunutá o půl tahu dovnitř.)
 
 1. **Čísly.** Vyber linku a v Okno → Informace přepni na ohraničení. Ohraničení
-   *včetně tahu* se musí rovnat rozměru artboardu na setiny. (Cesta samotná je
-   o ten půltah menší — to je správně, ne nález.)
-2. **Okem.** Nastav linku dočasně na **3 pt**. Odsazení je pak 1,5 pt a je vidět
-   okamžitě. Ověřuješ tím přesně stejnou aritmetiku, jen zvětšenou stokrát.
+   *bez tahu* (geometrické) se musí rovnat rozměru artboardu na setiny.
+   Ohraničení s tahem je na každé straně o půl tahu větší — to je správně.
+2. **Okem.** Při 1 pt ve skutečné velikosti linka viditelně obkročuje hranu
+   artboardu, půlka dovnitř, půlka ven. V PDF je vidět jen vnitřní půlka.
 
-**T4.3 — tloušťka.** Nastav 0,3 pt a změř v Illustratoru (Okno → Tah).
-Při 1:10 musí být v dokumentu **0,03 pt**, aby po zvětšení na skutečnou velikost
-vyšla 0,3. Kdyby byla v dokumentu 0,3, vytiskne se 3 pt.
+**T4.3 — tloušťka.** Nastav 1 pt a změř v Illustratoru (Okno → Tah). Tah je
+dvojnásobný, takže při 1:10 musí být v dokumentu **0,2 pt**: po zvětšení na
+skutečnou velikost 2 pt, z toho se vytiskne vnitřní 1 pt. Ve skutečné velikosti
+(1:1, Large Canvas) ukáže panel 2 pt.
 
 **T4.4 — přímá barva.** Linka je v přímé barvě `CutContour`. Když ve vzorníku
 není, vytvoří se. Když tam je, **použije se stávající** a nepřepíše se.
@@ -256,7 +254,7 @@ dokument, který **nikdy není Large Canvas**, a musí plát do něj desetkrát
 zvětšit — to je to, co se tu ověřuje. (Do opravy N1 tady nástroj hlásil chybu.)
 
 **T6.2 — ověř i export, v obou volbách.** Vyexportuj a otevři prostřední plát:
-MediaBox **2020 × 1000 mm** (5726,0 × 2834,6 pt), linka **0,3 pt**. Grafika přes
+MediaBox **2020 × 1000 mm** (5726,0 × 2834,6 pt), linka **1 pt** viditelná (tah 2 pt, od N13). Grafika přes
 celý dokument je v 1:1 přes 6 m — do opravy N7 tady export padal na
 `Specified value greater than maximum allowed value` a do opravy N10 by linka
 vyšla 3 pt.
@@ -354,9 +352,9 @@ Najeď myší na každý popisek a přečti nápovědu.
 - **Zünd režim** — v dialogu je skrytý (`ZUND_ENABLED`), protože bez masky
   neposlouží plátované zakázce. Jeho geometrii drží 13 suit v `zund-summa-marks`
   a sdílené jádro.
-- **Tisková zkouška linky 0,3 pt** — jediné číslo v nástroji, které stojí na
-  cizím doporučení a ne na měření u vás. Vytiskni plát a podívej se, jestli je
-  linka bezpečně vidět a nezvětšuje ořez. Výsledek patří do specu.
+- **Tisková zkouška linky** — výchozí 1 pt (dřív 0,3 pt podle cizího doporučení)
+  zvolil uživatel po přetestu; ověřit na vytištěném plátu, že je linka vidět
+  na všech čtyřech hranách a nezvětšuje ořez. Výsledek patří do specu.
 - **Výkon na velké zakázce** — 20+ plátů z těžkého PDF. Není to funkce, ale
   chce se vědět, jestli to doběhne.
 

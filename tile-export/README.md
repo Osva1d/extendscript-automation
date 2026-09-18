@@ -153,11 +153,17 @@ stejně odřízne. Rozhoduje až tam, kde překryv na grafice zůstane: pak má
 překrývající hrana ležet odvrácená od hlavního směru pohledu, aby nevrhala
 viditelný stín.
 
-**Červená linka** se kreslí po obvodu **čistého formátu** plátu, tedy včetně švů,
-v přímé barvě. Na hranách „načisto" splývá s okrajem plátu. Přímá barva se
-v dokumentu vytvoří, pokud tam není; když ji vytvořit nelze, nástroj se zastaví
-místo aby tiše přepadl na CMYK — linka ve špatné barvě vypadá správně a dojede
-až k finišerovi.
+**Červená linka** se kreslí po obvodu **tiskového** plátu — včetně přelepu
+a přídavků, tedy přesně po MediaBoxu exportovaného PDF — v přímé barvě. Leží
+středem na hraně plátu a má dvojnásobnou tloušťku: vnější polovinu ořízne okraj
+stránky a vytiskne se vnitřní, v tloušťce zadané v dialogu (výchozí 1 pt).
+Hrana stránky tak vždycky padne do tahu a posun o zlomek bodu v prohlížeči,
+v RIPu ani při ořezu linku neuřízne ani vedle ní nenechá bílou škvíru. Panel
+Tah v Illustratoru proto ukazuje dvojnásobek.
+
+Přímá barva se v dokumentu vytvoří, pokud tam není; když ji vytvořit nelze,
+nástroj se zastaví místo aby tiše přepadl na CMYK — linka ve špatné barvě
+vypadá správně a dojede až k finišerovi.
 
 ## Vodítka
 
@@ -214,7 +220,9 @@ se a nedokresluje.
 - **MediaBox plátu je větší než plát.** Značky leží vně plátu — při odstupu
   10 mm a značce 5 mm sahají 42,5 pt za každou hranu — takže stránka musí
   vyrůst, aby se do ní vešly. Červená ořezová linka zůstává na hranici plátu,
-  tedy uvnitř většího MediaBoxu.
+  tedy uvnitř většího MediaBoxu — a ten ji neořízne, takže je vidět v plné,
+  dvojnásobné tloušťce. V Zünd režimu je to řezová linka, která se nemá
+  tisknout; tisk od řezu oddělí až etapa s maskou.
 - **Plát, do kterého kontura nezasahuje**, se v souhrnu nahlásí. Není to chyba
   (prostřední plát obdélníkového výřezu ho legitimně nemá), ale plát, který
   tiše dojede ke stroji bez ořezových dat, je tam nepříjemné překvapení.

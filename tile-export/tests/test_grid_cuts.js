@@ -144,10 +144,14 @@ assert(cd2.length === 3, "1000 mm ceiling needs a fourth panel: five would print
 var cd3 = TE.Grid.computeCuts(dis(1013.3333333), EXT, null);
 assert(cd3.length === 2, "a ceiling exactly on the resulting width stays at 3 panels");
 
+// Its own code, not TE_BAD_WIDTH: the width is a fine positive number here,
+// it is only too small to be a ceiling, and the message has to say so (N2).
 throwsWith(function () { TE.Grid.computeCuts(dis(20), EXT, null); },
-    "TE_BAD_WIDTH", "a ceiling equal to the overlap is rejected");
+    "TE_CEILING_OVERLAP", "a ceiling equal to the overlap is rejected");
 throwsWith(function () { TE.Grid.computeCuts(dis(10), EXT, null); },
-    "TE_BAD_WIDTH", "a ceiling below the overlap is rejected");
+    "TE_CEILING_OVERLAP", "a ceiling below the overlap is rejected");
+throwsWith(function () { TE.Grid.computeCuts(dis(0), EXT, null); },
+    "TE_BAD_WIDTH", "a zero ceiling is a bad width first, not a ceiling problem");
 throwsWith(function () { TE.Grid.computeCuts(dis(5000), EXT, null); },
     "TE_MIN_TILES", "a ceiling wider than the graphic cannot be tiled");
 

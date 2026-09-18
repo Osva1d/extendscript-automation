@@ -61,10 +61,15 @@ TE.Draw = {
      *    on the panel, which is what the fitter needs. A line on the clean
      *    format would have the finisher cut the bleed off.
      *
-     * 2. The stroke is laid so its OUTER edge sits on that rectangle, i.e. the
-     *    path is inset by half the stroke width. A stroke centred on the
-     *    MediaBox edge loses its outer half outside the page and prints at half
-     *    the intended weight.
+     * 2. The path lies ON that rectangle and the stroke is twice the set
+     *    width. Strokes are always centred on their path, so the page edge
+     *    crops the outer half and the set width stays inside the panel. Until
+     *    N13 the path was inset by half the stroke instead, which put the
+     *    stroke's outer edge exactly on the page edge — with zero tolerance,
+     *    so a fraction of a point lost in a viewer, the RIP or the cut shaved
+     *    the line or opened a white sliver beside it. Now the edge always
+     *    falls inside the stroke. In Zünd mode the line is the cut path and
+     *    does not print; there the path must be on the edge anyway.
      *
      * 3. Stroke width is a printed-output measurement, so it has to be scaled
      *    to the document it is drawn into. Without that, a 0.3 pt line in a
@@ -84,20 +89,15 @@ TE.Draw = {
      */
     drawTileLine: function (doc, rect, s, lineScale) {
         var spot = this.getOrCreateSpot(doc, s.lineSpot);
-        var sw = (Number(s.lineWidth) || 0.3) * (Number(lineScale) || 1);
-        var half = sw / 2;
+        // Visible width in document points; the stroke is twice that (see 2).
+        var sw = (Number(s.lineWidth) || 1) * (Number(lineScale) || 1);
 
-        // Inset by half the stroke so the stroke's outer edge lands on rect.
-        var p = doc.pathItems.rectangle(
-            rect[1] - half,
-            rect[0] + half,
-            (rect[2] - rect[0]) - sw,
-            (rect[1] - rect[3]) - sw
-        );
+        var p = doc.pathItems.rectangle(rect[1], rect[0],
+            rect[2] - rect[0], rect[1] - rect[3]);
         p.filled = false;
         p.stroked = true;
         p.strokeColor = spot;
-        p.strokeWidth = sw;
+        p.strokeWidth = 2 * sw;
         p.name = "TE_line";
         return p;
     },
