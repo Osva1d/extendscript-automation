@@ -318,7 +318,8 @@ Najeď myší na každý popisek a přečti nápovědu.
 | T8.9 | spustit bez otevřeného dokumentu | srozumitelná hláška, ne pád |
 | T8.10 | zamčená vrstva s linkami | nespadne, nebo řekne proč |
 
-**Dvě známé drobnosti, ať je nehlásíš jako nález:**
+**Dvě známé drobnosti, ať je nehlásíš jako nález** (zapsané jako N3 a N2 v
+[nálezech](2026-09-15-tile-export-test-findings.md)):
 
 - U T8.5 je název hrany v české větě anglicky (`left`).
 - U T8.3 se ukáže hláška **„Pozice řezů musí být vzestupné a uvnitř grafiky."**
@@ -342,6 +343,10 @@ Najeď myší na každý popisek a přečti nápovědu.
 ---
 
 ## 10. Jak hlásit nález
+
+Všechno nalezené se zapisuje do
+[nálezů z tohoto běhu](2026-09-15-tile-export-test-findings.md) — co čeká na
+opravu, co je jen pozorování a co už je opravené, s commitem.
 
 Nastavení dialogu (nebo rovnou otisk) plus co vyšlo. Geometrii pak umím přehrát
 offline proti produkčnímu kódu a porovnat, aniž bych hádal.
