@@ -295,7 +295,7 @@ TE.L = (function () {
             ERR_RESERVED_NAME:   "Názvy v hranatých závorkách jsou vyhrazené. Zvol jiný.",
             BTN_TILES_ONLY:      "Jen pláty",
             BTN_TILES_EXPORT:    "Vytvořit a exportovat",
-            BTN_CANCEL:          "Zrušit"
+            BTN_CANCEL:          "Storno"
         }
     };
 
