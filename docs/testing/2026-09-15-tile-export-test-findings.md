@@ -320,14 +320,16 @@ Viditelná tloušťka se rovná zadané **jen tam, kde tah ořízne hrana strán
   grafika souseda.
 - **Jednodušší kód** — odpadne zmenšování obdélníku.
 
-**Kde to neplatí:** všude, kde stránka neleží na hraně plátu.
-- **Zünd režim** (dnes skrytý) zvětšuje artboard kvůli značkám
-  (`export.js`, `geo.ab`). Vnější polovina by se vytiskla a linka by měla 2 pt.
-  Stejně jako dnes tam ale prosakuje i grafika souseda. Patří do etapy
-  maska/Zünd: linku dát **dovnitř ořezové masky** plátu, maska pak udělá to, co
-  dnes hrana stránky.
-- **PDF předvolba se spadávkou:** vnější polovina se objeví ve spadávce, spolu
-  s grafikou souseda. Ověřit na předvolbách, které používáš.
+**Zünd režim** (upřesnění uživatele 2026-09-18). Linka se tam **netiskne**,
+slouží jako řezová. Zvětšený artboard (`export.js`, `geo.ab`) jí proto nevadí.
+N13 tam naopak pomáhá: cesta poleží přesně na hraně plátu, tedy tam, kde má
+řezat stroj — dnes je o půl tahu uvnitř. Tisk v Zünd režimu ohraničí **ořezová
+maska z odsazené cesty** této linky; to je zadání etapy maska/Zünd (spec §10).
+Dřívější návrh tohoto záznamu „linku dát dovnitř masky" byl chybný — řezová
+linka musí zůstat celá a samostatná.
+
+**PDF předvolba se spadávkou:** vnější polovina linky se objeví ve spadávce,
+spolu s grafikou souseda. Ověřit na předvolbách, které používáš.
 
 **Význam pole Tloušťka se nemění** — dál je to tloušťka viditelná v tisku,
 kreslí se dvojnásobná (v 1:N 2/N). Staré předvolby s 0,3 pt tak dál tisknou
