@@ -264,8 +264,8 @@ do běžného dokumentu sedí.
 dokument teď představuje grafiku **60 × 10 metrů**. Souhrn to musí ukázat —
 60000 × 10000, pláty po 20000, i dostupný spad desetkrát větší (500 mm). Oba
 exporty jsou přitom **správně zablokované**: ve zdrojovém měřítku kvůli Large
-Canvas, v 1:1 proto, že plát 20 × 10 m se do artboardu Illustratoru nevejde (strop
-je 5779 mm na stranu). T6.3 tedy ověřuje jen to, že se faktory násobí; šedé
+Canvas, v 1:1 proto, že plát 20 × 10 m se do artboardu Illustratoru nevejde (strop,
+který nástroj hlídá, je 16 200 pt, asi 5715 mm na stranu). T6.3 tedy ověřuje jen to, že se faktory násobí; šedé
 tlačítko tu není nález.
 
 ---
