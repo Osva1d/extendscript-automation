@@ -5,6 +5,8 @@ Patří k [testovacímu plánu](2026-09-15-tile-export-test-plan.md). Běh
 zapsané níž, prošlo. Mimo plán zůstává tisková zkouška linky (§9 plánu)
 a otevřená otázka u P1.
 
+**Přetest po dávce oprav:** [2026-09-18-tile-export-retest.md](2026-09-18-tile-export-retest.md).
+
 **Rozhodnutí 2026-09-18:** čekající nálezy se neopravují po jednom. Opraví se
 dávkou, až bude plán dojetý celý. Důvod: oprava uprostřed běhu mění vstupy pro
 testy, které ještě nejsou hotové, a část nálezů se týká stejných míst v kódu.
