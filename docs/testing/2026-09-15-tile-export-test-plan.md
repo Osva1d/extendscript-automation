@@ -303,8 +303,18 @@ jako 1 pt a přelep i přídavky jako nula.
 Po změně hodnot dnes předvolba nedá najevo, že se liší od uložené, a zpátky se
 dá načíst jen oklikou přes Default — nález N8. Nehlas znovu.
 
-**T7.5 — poslední nastavení.** Zavři dialog přes Zrušit a spusť znovu — pamatuje
-si poslední hodnoty, ne výchozí.
+**T7.5 — poslední nastavení.** Změň pár hodnot a zavři dialog přes **Zrušit**.
+Spusť znovu: dialog ukáže hodnoty z **posledního potvrzeného běhu** (Jen pláty
+nebo Vytvořit a exportovat) — ne ty zrušené, a ne výchozí. Zrušit úpravy
+zahazuje; nastavení se ukládá jen po potvrzení, stejně jako v Zünd Summa Marks
+a Grommet Marks.
+
+Pozor na seznam předvoleb: může ukazovat „[Default]", i když pole drží hodnoty
+posledního běhu — nápis se týká vybrané předvolby, ne hodnot v polích. Dnes to
+nic nedá najevo (nález N8); rozhodují hodnoty v polích.
+
+(Dřívější znění testu slibovalo, že si dialog pamatuje i zrušené úpravy. To byla
+chyba v plánu, ne v nástroji.)
 
 **T7.6 — stará předvolba.** Máš-li předvolbu uloženou před dneškem, načti ji.
 Nesmí spadnout; chybějící nové klíče se doplní z výchozích hodnot a chová se
