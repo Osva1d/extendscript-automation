@@ -152,7 +152,7 @@ Pak ruční měřítko **1:10** (složené × 100 — dokument představuje zeď
 | # | měřítko výstupu | čekám v souhrnu | čekám z exportu |
 |---|---|---|---|
 | R4.3 | Stejné jako dokument | bez chyby; 60000 × 10000; tiskové 20010 \| 20020 \| 20010 | **náhled 1:10**: stránky 2001 \| 2002 \| 2001 × 1000 mm, linka vidět 0,1 pt |
-| R4.4 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." Tlačítko **šedé**. | — |
+| R4.4 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." Vytvořit a exportovat **šedé**; Jen pláty zatím taky, i když nic neexportuje (N17). | — |
 
 Do opravy: R4.1 hlásil chybu Large Canvasu, R4.2 padal při exportu
 (`Specified value greater than maximum allowed value`), a kdyby prošel, linka by

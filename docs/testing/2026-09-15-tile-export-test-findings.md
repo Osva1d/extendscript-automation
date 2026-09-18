@@ -538,6 +538,27 @@ artboardu, takže jde o zobrazení, ne o nový výpočet. Opravit po přetestu.
 
 ---
 
+### N17 — kontrola velikosti výstupu zašedí i Jen pláty
+
+**Test:** dotaz k přetestu (2026-09-18), týká se R4.4. **Druh:** vada, drobná.
+**Kde:** `tile-export/src/ui.js:914–915` (obě tlačítka z jednoho `ok`),
+`src/lib/validation.js:54–71` (`ERR_AB_TOO_BIG` měří plát v měřítku výstupu).
+
+Jen pláty měřítko výstupu nepoužívá: artboardy a linky vznikají v dokumentu
+v jeho vlastním měřítku (`main.js`, fáze 1; tloušťka linky přes
+`getEffectiveSF`). Kontrola „plát se vejde do artboardu v měřítku výstupu" je
+ale chyba, a chyba zašedí obě tlačítka. V R4.4 (Large Canvas, ruční 1:10,
+výstup 1:1, plát 20 m) je tak šedé i Jen pláty, přestože pláty v dokumentu
+(2002 mm) by vznikly bez potíží. Omezení, které se týká jen exportu, blokuje
+akci, která nic neexportuje.
+
+**Oprava.** Tahle chyba ať zašedí jen Vytvořit a exportovat; hláška zůstane ve
+Výsledku, aby bylo vidět proč. Validace ji vrátí zvlášť (třeba `exportErrors`)
+a `refresh` podle ní vypne jen export. Přetest R4.4: export šedý, Jen pláty
+aktivní. Opravit po přetestu.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
