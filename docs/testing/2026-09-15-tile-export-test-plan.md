@@ -174,7 +174,9 @@ nastavením. Čekám pořád stejný počet artboardů a linek — ne trojnásob
 musí zmizet, ne se navrstvit.
 
 **T4.7 — vypnutá linka.** Odškrtni Kreslit ořezovou linku. Artboardy vzniknou,
-linky ne.
+linky ne — a **nevznikne ani prázdná vrstva `TE_lines`**. Pak zapni linku, spusť,
+a znovu vypni: vrstva musí zmizet i s linkami, ostatní vrstvy zůstat.
+(Prázdná vrstva se zakládala dřív; nalezeno tímhle testem.)
 
 ---
 

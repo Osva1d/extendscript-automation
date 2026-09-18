@@ -90,7 +90,10 @@
         var tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
 
         TE.Draw.removeTileArtboards(doc);
-        var lay = TE.Draw.clearLinesLayer(doc);
+        // The lines layer exists exactly when lines are drawn: a run without
+        // them clears last run's lines and takes the empty layer with it.
+        var lay = s.drawLine ? TE.Draw.clearLinesLayer(doc) : null;
+        if (!s.drawLine) { TE.Draw.removeLinesLayer(doc); }
         TE.Draw.createTileArtboards(doc, tiles);
 
         var i, item;

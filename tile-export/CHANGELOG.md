@@ -54,6 +54,12 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Vypnutá linka už nezakládá prázdnou vrstvu.** Vrstva `TE_lines` se
+  zakládala při každém běhu, i když se linka nekreslila. Teď existuje právě
+  tehdy, když jsou v ní linky: běh bez linky smaže linky z předchozího běhu
+  a vezme s sebou i vrstvu. Nikdy ale nesmaže vrstvu, ve které je něco cizího
+  (podvrstva), ani poslední vrstvu dokumentu.
+
 - **Souhrn i chybové hlášky ukazují desetiny milimetru.** Všechna čísla v poli
   Výsledek šla přes `Math.round`, tedy na celé milimetry. Dokud se 3000 dělilo
   na tisíce, nevadilo to; s Rovnoměrně vyjdou pláty na 1026,67 mm a dialog
