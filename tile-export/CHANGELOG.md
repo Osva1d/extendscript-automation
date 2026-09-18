@@ -110,6 +110,28 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   (readonly, se scrollováním) a chyby s varováními se vypisují **nahoře**,
   nad geometrií. Text jde navíc označit a zkopírovat do zakázkového listu.
 
+- **Dialog po otevření přepínal dvě uložená nastavení.** Uložená „Šířka plátu"
+  se otevřela jako „Vodítka" a „Půl na každou stranu" jako „Celý na levý"; kdo
+  si toho nevšiml, další běh uložil špatnou hodnotu. Příčina je v enginu:
+  ExtendScript vyhodnocuje řetězený ternární operátor zleva
+  (`a ? x : b ? y : z` jako `(a ? x : b) ? y : z`), Node podle specifikace —
+  proto to testy neviděly. Obě místa jsou přepsaná a vlastní pravidlo lintu
+  `engine/no-bare-nested-ternary` hlásí každý vnořený ternár bez závorek.
+
+- **Předvolba dává najevo neuložené změny.** Jakmile se hodnoty v dialogu liší
+  od uložené předvolby, dostane v seznamu hvězdičku; **↺** vrátí uložené
+  hodnoty a **Uložit** zapíše nové (u [Default] neaktivní). Po otevření seznam
+  ukazuje aktivní předvolbu a hvězdičkou přizná, když poslední běh jel s jinými
+  hodnotami — dřív tvrdil „[Default]" nad hodnotami, které výchozí nebyly.
+
+- **Uložení a smazání předvolby se zapisuje hned.** Předvolba uložená
+  v dialogu se dřív ztratila, když se dialog zavřel Stornem — na disk šla až
+  s dokončeným během. Oba sourozenecké nástroje ukládají hned. Storno dál
+  zahazuje jen úpravy polí.
+
+- Tlačítko Zrušit se česky jmenuje **Storno**, jako ve standardu dialogů
+  a v ostatních nástrojích.
+
 ### Notes
 
 - **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně

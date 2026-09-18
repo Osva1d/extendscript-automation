@@ -142,9 +142,16 @@ TE.L = (function () {
             BTN_SAVE_AS:         "Save As\u2026",
             BTN_DEL:             "Delete",
             BTN_DEFAULTS:        "Defaults",
-            TIP_PRESET:          "Saved configurations. The last used one is recalled on the next run.",
+            BTN_REVERT:          "\u21BA",
+            TIP_PRESET:          "Saved configurations. An asterisk means the values in the dialog differ from the saved preset: \u21BA brings the saved ones back, Save writes the new ones. The dialog opens with the values of the last confirmed run.",
+            TIP_REVERT:          "Discards unsaved changes and reloads the preset as saved.",
+            TIP_SAVE:            "Overwrites the active preset with the values in the dialog. Not available for [Default] \u2014 save those under a new name.",
+            TIP_SAVE_AS:         "Saves the values in the dialog as a new preset.",
+            TIP_DEL:             "Deletes the selected preset. [Default] cannot be deleted.",
             ASK_PRESET_NAME:     "Preset name:",
             ASK_PRESET_DELETE:   "Delete preset %s?",
+            ASK_PRESET_OVERWRITE: "Preset %s already exists. Overwrite it?",
+            ERR_RESERVED_NAME:   "Names in square brackets are reserved. Choose another.",
             BTN_TILES_ONLY:      "Panels only",
             BTN_TILES_EXPORT:    "Create and export",
             BTN_CANCEL:          "Cancel"
@@ -276,12 +283,19 @@ TE.L = (function () {
             BTN_SAVE_AS:         "Uložit jako\u2026",
             BTN_DEL:             "Smazat",
             BTN_DEFAULTS:        "Výchozí",
-            TIP_PRESET:          "Uložené konfigurace. Poslední použitá se vybaví při dalším spuštění.",
+            BTN_REVERT:          "\u21BA",
+            TIP_PRESET:          "Uložené konfigurace. Hvězdička znamená, že se hodnoty v dialogu od uložené předvolby liší: \u21BA vrátí uložené, Uložit zapíše nové. Dialog se otevře s hodnotami posledního potvrzeného běhu.",
+            TIP_REVERT:          "Zahodí neuložené změny a načte předvolbu tak, jak je uložená.",
+            TIP_SAVE:            "Přepíše aktivní předvolbu hodnotami z dialogu. U [Default] nejde \u2014 ty ulož pod novým jménem.",
+            TIP_SAVE_AS:         "Uloží hodnoty z dialogu jako novou předvolbu.",
+            TIP_DEL:             "Smaže vybranou předvolbu. [Default] smazat nejde.",
             ASK_PRESET_NAME:     "Název předvolby:",
             ASK_PRESET_DELETE:   "Smazat předvolbu %s?",
+            ASK_PRESET_OVERWRITE: "Předvolba %s už existuje. Přepsat?",
+            ERR_RESERVED_NAME:   "Názvy v hranatých závorkách jsou vyhrazené. Zvol jiný.",
             BTN_TILES_ONLY:      "Jen pláty",
             BTN_TILES_EXPORT:    "Vytvořit a exportovat",
-            BTN_CANCEL:          "Zrušit"
+            BTN_CANCEL:          "Storno"
         }
     };
 

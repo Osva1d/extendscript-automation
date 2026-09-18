@@ -13,7 +13,8 @@ TE.UI = {
         LABEL_COL: 150,   // label column; every row label shares this right edge
         NUM_FIELD:   7,   // characters, not px — numeric fields scale with locale
         PATH_FIELD: 26,   // characters; output path needs to show a usable tail
-        BROWSE_MAX:  90   // px cap so fill slack goes to the path field, not the button
+        BROWSE_MAX:  90,  // px cap so fill slack goes to the path field, not the button
+        REVERT_BTN:  30   // px; a one-glyph button at the native 80 px dwarfs its row
     },
 
     /**
@@ -152,10 +153,18 @@ TE.UI = {
         var ddPreset = gPreset.add("dropdownlist", undefined, []);
         ddPreset.alignment = ["fill", "center"];
         ddPreset.helpTip = l.TIP_PRESET;
+        // Revert and Save sit next to the list they act on, like
+        // zund-summa-marks: both are live only while the preset has unsaved
+        // edits (N8).
+        var btnRevert = gPreset.add("button", undefined, l.BTN_REVERT);
+        btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
+        btnRevert.helpTip = l.TIP_REVERT;
+        var btnSave = gPreset.add("button", undefined, l.BTN_SAVE);
+        btnSave.helpTip = l.TIP_SAVE;
         var btnSaveAs = gPreset.add("button", undefined, l.BTN_SAVE_AS);
-        btnSaveAs.helpTip = l.TIP_PRESET;
+        btnSaveAs.helpTip = l.TIP_SAVE_AS;
         var btnDel = gPreset.add("button", undefined, l.BTN_DEL);
-        btnDel.helpTip = l.TIP_PRESET;
+        btnDel.helpTip = l.TIP_DEL;
 
         // --- Document --------------------------------------------------------
         var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
@@ -198,7 +207,11 @@ TE.UI = {
             [l.DIR_HORIZONTAL, l.DIR_VERTICAL],
             (s.direction === "vertical") ? 1 : 0, l.TIP_DIRECTION);
 
-        var modeIdx = (s.divideMode === "width") ? 1 : (s.divideMode === "guides") ? 2 : 0;
+        // No chained ?: here — ExtendScript evaluates it left to right and
+        // reopened a saved "width" as "guides" (N14).
+        var modeIdx = 0;
+        if (s.divideMode === "width") { modeIdx = 1; }
+        if (s.divideMode === "guides") { modeIdx = 2; }
         var rbMode = this.addRadioRow(pSplit, l.LBL_MODE,
             [l.MODE_COUNT, l.MODE_WIDTH, l.MODE_GUIDES], modeIdx, l.TIP_MODE);
 
@@ -230,8 +243,12 @@ TE.UI = {
         // when one-sided, which panel of the seam carries the material. Kept as
         // one row because the second question only exists inside the second
         // answer, and a separate row would be greyed out most of the time.
-        var carrierIdx = (s.overlapMode !== "onesided") ? 0
-                       : (s.overlapCarrier === "second") ? 2 : 1;
+        // Not a chained ?: — see modeIdx; this one reopened "half on each
+        // side" as "all on left" (N14).
+        var carrierIdx = 0;
+        if (s.overlapMode === "onesided") {
+            carrierIdx = (s.overlapCarrier === "second") ? 2 : 1;
+        }
         var rbOverlapMode = this.addRadioRow(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);
@@ -458,6 +475,7 @@ TE.UI = {
 
         function refresh() {
             self.refresh(w, refs, ctx);
+            refreshModifiedIndicator();
             relayout();
         }
 
@@ -509,43 +527,155 @@ TE.UI = {
         };
 
         // --- preset handling -------------------------------------------------
-        function fillPresetList() {
-            var k;
-            ddPreset.removeAll();
+        // State transitions live in the shared TE.UIState; this block only
+        // wires them to the controls — the zund-summa-marks pattern (N8).
+        // Every preset operation goes to disk at once, as in both sibling
+        // tools: Storno throws away edits to the FIELDS, never a preset the
+        // user explicitly saved or deleted.
+        var sortedKeys = [];
+
+        // The active preset as THIS dialog shows it — what the asterisk
+        // compares against. The stored object would not do: the hidden Zünd
+        // panel collects defaults whatever the preset holds, and [Default]
+        // stores a PDF preset "" that no list item has. Compared raw, both
+        // would read as modified the moment they are loaded.
+        var baseline = null;
+
+        function current() { return self.collect(refs); }
+        function snapshot() { baseline = current(); }
+
+        /** pData with the active preset replaced by its baseline. */
+        function shownData() {
+            var v = { activePreset: pData.activePreset, presets: {} }, k;
             for (k in pData.presets) {
-                if (pData.presets.hasOwnProperty(k) && k !== c.PRESET_KEY_LAST) {
-                    ddPreset.add("item", k);
-                }
+                if (pData.presets.hasOwnProperty(k)) { v.presets[k] = pData.presets[k]; }
             }
-            if (ddPreset.items.length === 0) { ddPreset.add("item", c.PRESET_KEY_DEFAULT); }
-            ddPreset.selection = 0;
+            if (baseline) { v.presets[pData.activePreset] = baseline; }
+            return v;
         }
-        fillPresetList();
+
+        /** The list text for a key, as TE.UIState.formatPresetList writes it. */
+        function presetLabel(key) {
+            return (key === c.PRESET_KEY_DEFAULT && l.PRESET_DEFAULT) ? l.PRESET_DEFAULT : key;
+        }
+
+        /** Rebuilds the list — order and asterisk from the shared module. */
+        function updatePresetList() {
+            var entries = TE.UIState.formatPresetList(shownData(), current(), l);
+            var sel = 0, j;
+            ddPreset.removeAll();
+            sortedKeys = [];
+            for (j = 0; j < entries.length; j++) {
+                ddPreset.add("item", entries[j].displayText);
+                sortedKeys.push(entries[j].key);
+                if (entries[j].isActive) { sel = j; }
+            }
+            // Fires onChange, which ignores the preset that is already active.
+            if (ddPreset.items.length > 0) { ddPreset.selection = sel; }
+        }
+
+        /**
+         * Asterisk and button states after any change. Relabels every item,
+         * not only the active one: switching away from an edited preset would
+         * otherwise leave its asterisk behind.
+         */
+        function refreshModifiedIndicator() {
+            var modified = TE.UIState.isModified(shownData(), current());
+            var j, key, text;
+            btnRevert.enabled = modified;
+            btnSave.enabled = modified && (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            for (j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
+                key = sortedKeys[j];
+                text = presetLabel(key) + ((key === pData.activePreset && modified) ? " *" : "");
+                if (ddPreset.items[j].text !== text) { ddPreset.items[j].text = text; }
+            }
+        }
+
+        function persist() {
+            if (!TE.Storage.save(pData)) { alert(l.ERR_WRITE_SETTINGS); }
+        }
+
+        // A file edited by hand or written by an older build may lack
+        // [Default] or name an active preset that is gone.
+        if (!pData.presets[c.PRESET_KEY_DEFAULT]) {
+            pData.presets[c.PRESET_KEY_DEFAULT] = c.getDefaults();
+        }
+        if (!pData.presets[pData.activePreset] || pData.activePreset === c.PRESET_KEY_LAST) {
+            pData.activePreset = c.PRESET_KEY_DEFAULT;
+        }
+
+        // The fields hold the last confirmed run, the list names the active
+        // preset. Measure that preset as the dialog shows it, then put the run
+        // back — so the list says "*" at once when the two differ, instead of
+        // naming a preset over values that are not its own (T7.5).
+        var activeP = pData.presets[pData.activePreset];
+        if (activeP !== s) {
+            self.apply(refs, activeP);
+            snapshot();
+            self.apply(refs, s);
+        } else {
+            snapshot();
+        }
+        updatePresetList();
 
         ddPreset.onChange = function () {
             if (!ddPreset.selection) { return; }
-            var p = pData.presets[ddPreset.selection.text];
-            if (p) { self.apply(refs, p); refresh(); }
+            var key = sortedKeys[ddPreset.selection.index];
+            if (!key || key === pData.activePreset) { return; }
+            var res = TE.UIState.selectPreset(pData, key);
+            if (!res.ok) { return; }
+            self.apply(refs, res.settings);
+            snapshot();
+            refresh();
+        };
+
+        /** ↺ — back to the active preset as saved. Nothing is written. */
+        btnRevert.onClick = function () {
+            var p = pData.presets[pData.activePreset];
+            if (!p) { return; }
+            self.apply(refs, p);
+            snapshot();
+            refresh();
+        };
+
+        /** Overwrites the active preset. Disabled on [Default]. */
+        btnSave.onClick = function () {
+            var res = TE.UIState.save(pData, current());
+            if (!res.ok) { return; }
+            snapshot();
+            persist();
+            refresh();
         };
 
         btnSaveAs.onClick = function () {
-            var name = prompt(l.ASK_PRESET_NAME, "");
-            if (!name) { return; }
-            pData.presets[name] = self.collect(refs);
-            fillPresetList();
-            var j;
-            for (j = 0; j < ddPreset.items.length; j++) {
-                if (ddPreset.items[j].text === name) { ddPreset.selection = j; break; }
+            var raw = prompt(l.ASK_PRESET_NAME, "");
+            if (raw === null || raw === "") { return; }
+            if (!TE.UIState.validatePresetName(raw)) {
+                alert(l.ERR_RESERVED_NAME);
+                return;
             }
+            var res = TE.UIState.saveAs(pData, raw, current(), function (name) {
+                return confirm(l.format(l.ASK_PRESET_OVERWRITE, name));
+            });
+            if (!res.ok) { return; }
+            snapshot();
+            updatePresetList();
+            persist();
+            refresh();
         };
 
         btnDel.onClick = function () {
-            if (!ddPreset.selection) { return; }
-            var name = ddPreset.selection.text;
-            if (name === c.PRESET_KEY_DEFAULT) { return; }
+            var name = pData.activePreset;
+            if (name === c.PRESET_KEY_DEFAULT) { return; }   // disabled there anyway
             if (!confirm(l.format(l.ASK_PRESET_DELETE, name))) { return; }
-            delete pData.presets[name];
-            fillPresetList();
+            var res = TE.UIState.deleteActive(pData);
+            if (!res.ok) { return; }
+            self.apply(refs, pData.presets[c.PRESET_KEY_DEFAULT]);
+            snapshot();
+            updatePresetList();
+            persist();
+            refresh();
         };
 
         // --- result ----------------------------------------------------------
@@ -567,9 +697,8 @@ TE.UI = {
             result: function () {
                 if (!state.outcome) { return null; }
                 pData.presets[c.PRESET_KEY_LAST] = self.collect(refs);
-                pData.activePreset = ddPreset.selection
-                    ? ddPreset.selection.text
-                    : c.PRESET_KEY_DEFAULT;
+                // pData.activePreset is kept current by the preset handlers.
+                // The list text cannot stand in for it: it may end in " *".
                 return { action: state.outcome, wrapper: pData };
             }
         };
@@ -657,7 +786,12 @@ TE.UI = {
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
         r.etLineW.text = String(s.lineWidth);
+        // A stored name the list lacks — [Default]'s "", a preset deleted
+        // from Illustrator — falls back to the first item, as when the dialog
+        // is built. Keeping the previous selection made one preset look
+        // different depending on what was loaded before it (N8).
         var pk;
+        r.ddPdf.selection = 0;
         for (pk = 0; pk < r.ddPdf.items.length; pk++) {
             if (r.ddPdf.items[pk].text === s.pdfPreset) { r.ddPdf.selection = pk; break; }
         }
@@ -667,10 +801,12 @@ TE.UI = {
         if (!r.cbZund) { return; }
         r.cbZund.value = !!s.zundMode;
         var zk;
+        r.ddCutSpot.selection = 0;
         for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
             if (r.ddCutSpot.items[zk].text === s.cutSpot) { r.ddCutSpot.selection = zk; break; }
         }
         var mk;
+        r.ddMarkColor.selection = 0;
         for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
             if (r.ddMarkColor.items[mk].text === s.markColor) { r.ddMarkColor.selection = mk; break; }
         }
