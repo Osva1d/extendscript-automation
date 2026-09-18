@@ -730,7 +730,7 @@ TE.UI = {
         s.rasterDPI   = TE.Utils.toNumber(r.etDPI.text) || 150;
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
-        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 0.3;   // = default; was 1
+        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
         s.pdfPreset   = r.ddPdf.selection ? r.ddPdf.selection.text : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
