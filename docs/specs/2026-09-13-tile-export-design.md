@@ -163,18 +163,23 @@ Linka na vnějším rozměru znamená, že po řezu spad na plátu **zůstane**.
 
 Dvě věci, které z toho plynou a nejsou samozřejmé:
 
-- **Tah je posunutý dovnitř o svou polovinu**, aby jeho vnější okraj ležel přesně
-  na obdélníku. Tah vycentrovaný na hranu MediaBoxu přijde o vnější polovinu
-  a vytiskne se poloviční. Ověřeno: desetibodová linka má střed na `[5, 595]`
-  a viditelnou hranu na `[0, 600]`.
+- **Cesta leží přesně na obdélníku a tah je dvojnásobný** (od 2026-09-18, N13).
+  Tah je vždy na střed cesty, takže vnější polovinu ořízne okraj stránky
+  a uvnitř zůstane zadaná tloušťka. Hrana stránky tak vždycky padne do tahu.
+  Původně byla cesta posunutá o půl tahu dovnitř, aby vnější okraj tahu ležel
+  přesně na hraně stránky (ověřeno: desetibodová linka měla střed na `[5, 595]`
+  a viditelnou hranu na `[0, 600]`) — jenže s nulovou rezervou, a v prohlížeči
+  pak byla linka vidět jen na dvou hranách. Nová geometrie nepřidává závislost:
+  na tom, že stránka ořízne obsah, stojí celý nástroj, protože v PDF plátu je
+  celá grafika včetně sousedů (§3).
 - **Tloušťka je rozměr výstupu, ne dokumentu.** Dělí se měřítkem dokumentu
   a násobí měřítkem výstupu, jinak 0,3 pt v dokumentu 1:10 vyjede jako 3 pt.
   Ověřeno ve všech čtyřech kombinacích: `printed = 0,3 pt` vždy.
 
-**Tloušťka 0,3 pt jako výchozí** (0,11 mm). Průzkum tiskových specifikací:
-providéři garantují minimum mezi 0,25 a 1 pt, pod 0,25 pt je hairline, který se
-při 300 dpi vykreslí jako jediný pixel a může zmizet. 0,3 pt je bezpečně nad tou
-hranicí a pořád tenké.
+**Tloušťka 1 pt jako výchozí** (0,35 mm, viditelná část). Rozhodnutí uživatele
+po přetestu 2026-09-18: původních 0,3 pt, vybraných podle tiskových specifikací
+(providéři garantují minimum mezi 0,25 a 1 pt, pod 0,25 pt je hairline, který
+se při 300 dpi vykreslí jako jediný pixel), bylo v praxi příliš slabých.
 
 ## 4b. Vstupní stav dokumentu a přesah grafiky
 

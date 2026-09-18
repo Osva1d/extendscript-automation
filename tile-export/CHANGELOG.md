@@ -45,12 +45,22 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   v 1.0.0: švy na přesných zlomcích čistého formátu, pláty stejně široké
   **načisto**. Pět plátů z 5000 mm tedy znamená švy na 1000/2000/3000/4000
   a pět plátů po 1000 mm, přelep je materiál navíc. Přelep ani přídavky švem
-  nehnou. Stejné tiskové pláty umí od této verze „šířka plátu" + „rozpustit
-  zbytek", kam to zadání patří — počet plátů určuje návrh, šířku materiál.
+  nehnou. Stejné tiskové pláty dá od této verze přepínač Rovnoměrně, u počtu
+  plátů i u šířky plátu.
 - Dialog přerovnán do vyváženějších sloupců (Přelep a přídavky vlevo) a pole
   Výsledku zkráceno na 85 px. Se zapnutým Zünd režimem měří 796 px, bez něj
   stejně — viz poznámka níž.
 - `TE.Export.exportTile()` vrací `{file, contourPaths}` místo `File`.
+- **Červená linka leží středem na hraně plátu a výchozí tloušťka je 1 pt.**
+  Dřív byla cesta posunutá o půl tahu dovnitř, aby vnější okraj tahu padl
+  přesně na okraj stránky — s nulovou rezervou, takže zlomek bodu ztracený
+  v prohlížeči, RIPu nebo při ořezu linku uřízl nebo vedle ní nechal bílou
+  škvíru; v prohlížeči byla vidět jen na dvou hranách. Teď leží cesta přesně
+  na hraně a tah je dvojnásobný: vnější polovinu ořízne okraj stránky, uvnitř
+  zůstane zadaná tloušťka a hrana stránky do tahu padne vždycky. Pole
+  Tloušťka dál znamená, co je vidět v tisku, takže starší předvolby tisknou
+  stejně; panel Tah ukazuje dvojnásobek. Výchozí 1 pt místo 0,3 pt, které se
+  ukázalo jako příliš slabé. Návrh uživatele z přetestu.
 
 ### Fixed
 
@@ -100,7 +110,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   „Největší šířka plátu", jenže to platilo jen o čisté šířce — tištěný plát
   vyjde až o přelep širší (zadáno 1200, vytištěno 1220). Kdo tam psal šířku
   role, dostával pláty o přelep přes. Text teď říká obojí a odkazuje na
-  „rozpustit zbytek", které ten strop drží doopravdy.
+  Rovnoměrně, které ten strop drží doopravdy.
 
 - **Souhrn v poli Výsledek už nic nezamlčí.** Bylo to `statictext` s pevnou
   výškou 85 px, do kterého se psal libovolně dlouhý text — u pěti plátů se
@@ -131,6 +141,23 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 - Tlačítko Zrušit se česky jmenuje **Storno**, jako ve standardu dialogů
   a v ostatních nástrojích.
+
+- **Hlášky říkají, co je špatně.** Nulová nebo nesmyslná šířka plátu hlásila
+  „Pozice švů musí růst…", tedy chybu, kterou nikdo nezadal; teď má vlastní
+  text, a strop tiskové šířky pod přelepem (s Rovnoměrně) taky. Chyba přídavku
+  dávala do české věty anglický název hrany („Přídavek left"); teď „Přídavek
+  vlevo (60 mm) překračuje přesah grafiky (50 mm)."
+
+- **Souhrnná hlášení sedí na jakékoli číslo.** „Vytvořeno %s plátů" je česky
+  správně jen od pěti výš; hlášení teď mají tvar „Počet vytvořených plátů: 3".
+  Opakované Jen pláty navíc řekne, že předchozí pláty nahradilo — dřív to
+  vypadalo, že přibyly další.
+
+- **Nápovědy, které lhaly.** Linka prý leží po obvodu čistého formátu (leží po
+  tiskovém), tloušťka neříkala, že jde o tloušťku v tisku, počet plátů odkazoval
+  na už neexistující „rozpuštění zbytku", PDF preset sliboval prázdnou volbu,
+  kterou seznam nemá, a tlačítko Jen pláty mělo nápovědu o lince místo o tom,
+  co dělá.
 
 ### Notes
 

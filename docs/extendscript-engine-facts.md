@@ -332,9 +332,11 @@ obdélníku s `geometricBounds` `10,80,60,30` a tahem 10 pt: `visibleBounds` jso
 `5,85,65,25`, tedy 5 pt ven po celém obvodu.
 
 Důsledek: když má vnější hrana tahu ležet na konkrétním obdélníku, musí se
-**cesta nakreslit zmenšená o půl tahu** na každé straně. To dělá
-`TE.Draw.drawTileLine`; naměřená odchylka vnější hrany od cíle je **0 pt** při
-1:1 i 1:10 a pro tloušťky 0,3 i 3 pt.
+**cesta nakreslit zmenšená o půl tahu** na každé straně. Tak to do 2026-09-18
+dělal `TE.Draw.drawTileLine` (naměřená odchylka vnější hrany od cíle 0 pt při
+1:1 i 1:10, pro 0,3 i 3 pt). Od tile-export N13 jde opačně: cesta leží přímo
+na hraně stránky a tah je dvojnásobný, protože vnější polovinu ořízne stránka.
+V PDF to Illustrator navíc sám obalí ořezovou cestou artboardu (`re W n`).
 
 ### Strop nastavení velikosti a jak ho obejít
 

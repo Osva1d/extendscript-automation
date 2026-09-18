@@ -449,7 +449,7 @@ TE.UI = {
         gBtn.alignment = "right";
         var btnCancel = gBtn.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var btnTiles  = gBtn.add("button", undefined, l.BTN_TILES_ONLY);
-        btnTiles.helpTip = l.TIP_LINE;
+        btnTiles.helpTip = l.TIP_TILES_ONLY;
         var btnExport = gBtn.add("button", undefined, l.BTN_TILES_EXPORT, { name: "ok" });
 
         // --- wiring ----------------------------------------------------------
