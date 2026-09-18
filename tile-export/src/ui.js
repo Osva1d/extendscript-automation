@@ -732,13 +732,17 @@ TE.UI = {
             var ext = (s.direction === "horizontal")
                 ? { start: clean[0], end: clean[2] }
                 : { start: clean[3], end: clean[1] };
+            // Document points to displayed millimetres, one decimal.
+            var mm = function (pt) {
+                return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
+            };
             var cuts = TE.Grid.computeCuts(s, ext, ctx.guides);
             var tiles = TE.Grid.computeTiles(cuts, clean, s);
             var v = TE.Validate.check(tiles, ctx.validation, s);
 
             lines.push(l.format(l.INFO_CLEAN,
-                Math.round(TE.Utils.fromDoc(clean[2] - clean[0], s)),
-                Math.round(TE.Utils.fromDoc(clean[1] - clean[3], s))));
+                mm(clean[2] - clean[0]),
+                mm(clean[1] - clean[3])));
             lines.push(l.format(l.INFO_COUNT, tiles.length));
 
             var i, e, cl;
@@ -746,17 +750,17 @@ TE.UI = {
                 cl = tiles[i].clean;
                 e = tiles[i].expanded;
                 lines.push(l.format(l.INFO_TILE, tiles[i].index,
-                    Math.round(TE.Utils.fromDoc(cl[2] - cl[0], s)),
-                    Math.round(TE.Utils.fromDoc(cl[1] - cl[3], s)),
-                    Math.round(TE.Utils.fromDoc(e[2] - e[0], s)),
-                    Math.round(TE.Utils.fromDoc(e[1] - e[3], s))));
+                    mm(cl[2] - cl[0]),
+                    mm(cl[1] - cl[3]),
+                    mm(e[2] - e[0]),
+                    mm(e[1] - e[3])));
             }
 
             lines.push(l.format(l.INFO_OVERHANG,
-                Math.round(TE.Utils.fromDoc(ctx.validation.overhang.left, s)),
-                Math.round(TE.Utils.fromDoc(ctx.validation.overhang.right, s)),
-                Math.round(TE.Utils.fromDoc(ctx.validation.overhang.top, s)),
-                Math.round(TE.Utils.fromDoc(ctx.validation.overhang.bottom, s))));
+                mm(ctx.validation.overhang.left),
+                mm(ctx.validation.overhang.right),
+                mm(ctx.validation.overhang.top),
+                mm(ctx.validation.overhang.bottom)));
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
             for (i = 0; i < v.warnings.length; i++) { alerts.push("! " + v.warnings[i]); }
