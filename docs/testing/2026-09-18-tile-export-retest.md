@@ -79,9 +79,12 @@ Změnilo se, jak se linka škáluje. V náhledu to zvenku ověřit neumím.
 | R2.1 | testovací arch | 1:10 | **0,03 pt** |
 | R2.2 | `lc-6000x1000.ai` | vypnuto | **0,3 pt** |
 
-U R2.2 si nejsem jistý jen tím, jak Large Canvas tloušťku v panelu **zobrazuje**:
-vnitřně je 0,03 pt a Large Canvas ukazuje všechno desetkrát, takže čekám 0,3.
-Kdyby panel ukázal 0,03 nebo 3, napiš — rozhodne ale export v R4, ne panel.
+**Pole v dialogu je vždy tloušťka v tisku** — proto tam je v obou případech
+0,3 pt. **Panel Tah ukazuje tloušťku v měřítku dokumentu:** arch je kreslený
+v 1:10, takže 0,03 pt, a po zvětšení na skutečnou velikost vyjde 0,3. Large
+Canvas je navenek ve skutečné velikosti, takže panel ukáže rovnou 0,3 (vnitřně
+je 0,03 — Large Canvas zobrazuje všechno desetkrát; ověřeno v R2.2). Dialog to
+zatím nikde neříká — nález N12.
 
 **R2.3** Vnější hrana linky sedí na hraně artboardu — ohraničení včetně tahu
 v Okno → Informace (T4.2), na archu i v `lc-6000x1000.ai`.
@@ -200,3 +203,13 @@ rozhodnutí bylo pushnout až produkční nástroj — tohle je ten důkaz.
 
 Stejně jako minule: nastavení dialogu (nebo otisk) a co vyšlo. Nové nálezy
 pokračují v [nálezech](2026-09-15-tile-export-test-findings.md) číslem N12.
+
+---
+
+## Výsledky
+
+| test | datum | výsledek | poznámka |
+|---|---|---|---|
+| R2.1 | 2026-09-18 | ✓ | panel Tah 0,03 pt; dotaz na rozdíl proti dialogu → N12 |
+| R2.2 | 2026-09-18 | ✓ | panel Tah 0,3 pt — potvrzuje, jak Large Canvas tloušťku zobrazuje |
+

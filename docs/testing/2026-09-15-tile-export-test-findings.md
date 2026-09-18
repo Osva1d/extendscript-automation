@@ -259,6 +259,34 @@ dočasného dokumentu výslovně, nečíst aktivní dokument. Nejdřív změřit
 
 ---
 
+### N12 — texty o lince: jeden zastaralý, jeden neúplný
+
+**Test:** přetest R2.1 (2026-09-18). **Druh:** texty, patří do celku 3.
+
+**Příznak.** V dialogu je tloušťka linky 0,3 pt, ale v testovacím archu 1:10 se
+nakreslila 0,03 pt. Chování je správné — pole je tloušťka **v tisku** a panel
+Tah ukazuje tloušťku v měřítku dokumentu, tedy v 1:10 desetinu. Dialog to ale
+nikde neříká, takže to vypadá jako chyba.
+
+Při hledání jsem narazil na horší věc: nápověda k lince **tvrdí nepravdu**.
+
+1. `TIP_LINE` (`tile-export/src/locale.js:110`, `:244`): „Červená linka po
+   obvodu **čistého formátu** plátu…" Linka ale leží na **vnějším** rozměru
+   plátu, na MediaBoxu — přesně podle zadání z v1, aby po ořezu zůstal montážní
+   spad. Text přežil z doby před tou opravou.
+2. `tile-export/README.md:156`: totéž — „se kreslí po obvodu čistého formátu".
+3. `TIP_LINE_WIDTH` (`locale.js:114`, `:248`): „Tloušťka tahu ořezové linky
+   v bodech." — neříká, že jde o tloušťku v tisku, ani že v dokumentu 1:N se
+   nakreslí N× tenčí.
+
+**Oprava.** `TIP_LINE`: linka po obvodu tiskového plátu, vnější hranou přesně na
+jeho okraji. `TIP_LINE_WIDTH`: tloušťka v tisku; v dokumentu 1:N se nakreslí
+N× tenčí (při 1:10 ukáže panel Tah 0,03 pt) a po zvětšení vyjde zadaná. README
+opravit stejně. Ověřit, že spec (`docs/specs/2026-09-13-tile-export-design.md`)
+to má správně.
+
+---
+
 ### N8 — předvolba nedá najevo, že se změnila, a nejde vrátit
 
 **Test:** T7.4. **Kde:** `tile-export/src/ui.js:514–545` (sestavení seznamu
