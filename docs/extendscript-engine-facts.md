@@ -304,3 +304,19 @@ Důsledek: když má vnější hrana tahu ležet na konkrétním obdélníku, mu
 **cesta nakreslit zmenšená o půl tahu** na každé straně. To dělá
 `TE.Draw.drawTileLine`; naměřená odchylka vnější hrany od cíle je **0 pt** při
 1:1 i 1:10 a pro tloušťky 0,3 i 3 pt.
+
+### Strop nastavení velikosti a jak ho obejít
+
+Nastavovač `pageItem.width` (a `.height`) odmítne hodnotu nad **16 347,7 pt
+(≈ 5767 mm)** hláškou `Specified value greater than maximum allowed value` —
+změřeno půlením intervalu, platí pro cestu i umístěné PDF a **nezávisí na poloze**
+objektu. Je to strop nastavovače, ne velikosti objektu: `pageItem.resize(%, %)`
+tentýž objekt zvětší na 18 433 pt bez chyby a dokument se pak normálně uloží
+jako PDF (vykresleno a ověřeno). Horní mez `resize()` změřená není.
+
+**Maskovaná skupina hlásí šířku celého obsahu, ne masky.** Skupina s ořezovou
+cestou 293 pt kolem umístěného PDF o šířce 879 pt má `width = 879`. Nastavení
+`group.width` proto zvětšuje podle obsahu: `group.width = 6153` dá obsah 6153 pt
+a masku jen 2051 pt, ne zamýšlených 6153. Kdo chce masku dostat na přesný rozměr,
+musí počítat poměr z masky sám a zvětšovat přes `resize()`.
+
