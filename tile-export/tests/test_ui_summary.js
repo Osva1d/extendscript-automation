@@ -96,5 +96,31 @@ has(tErr, "Přelep (1000,5 mm) musí být menší než nejkratší plát (1000 m
 var tAdd = summary({ etAddLeft: { text: "52,5" } });
 has(tAdd, "(52,5 mm)", "add error quotes what was typed");
 
+console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
+// Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
+// 10 m tall. The old message named neither, so nobody could tell that more
+// panels would not help — it is the height that overflows.
+app.activeDocument.scaleFactor = 10;
+var lcCtx = {
+    cleanRect: [0, TE.Utils.mm2pt(100), TE.Utils.mm2pt(600), 0],
+    spotNames: ["CutContour"], guides: [],
+    validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
+        graphicCount: 1, scaleFactor: 10, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
+};
+var r63 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" },
+    rbExpScale: [{ value: false }, { value: true }] });
+TE.UI.refresh(null, r63, lcCtx);
+has(r63.stCalc.text,
+    "Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu.",
+    "the message names the panel, its size and the limit");
+eq(r63.btnExport.enabled, false, "and the export stays blocked");
+
+console.log("\n=== T6.2a: Large Canvas at same-as-document now just works (N1) ===");
+var r62 = refs({ cbScale: { value: false, enabled: true } });
+TE.UI.refresh(null, r62, lcCtx);
+eq(r62.btnExport.enabled, true, "no Large Canvas error, export enabled");
+eq(r62.stCalc.text.indexOf("Large Canvas") === -1, true, "and the old message is gone");
+app.activeDocument.scaleFactor = 1;
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

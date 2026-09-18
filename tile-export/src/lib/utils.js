@@ -50,9 +50,63 @@ TE.Utils = {
      * @returns {number} getSF() * scaleN, never 0 or NaN.
      */
     getEffectiveSF: function (s) {
+        return this.getSF() * this.manualScale(s);
+    },
+
+    /**
+     * The user's manual 1:N, clamped: a missing, zero or nonsense value is 1.
+     * @param {Object} s - Settings carrying scaleN.
+     * @returns {number} N >= 1.
+     */
+    manualScale: function (s) {
         var n = (s && s.scaleN) ? Number(s.scaleN) : 1;
         if (isNaN(n) || n < 1) { n = 1; }
-        return this.getSF() * n;
+        return n;
+    },
+
+    /**
+     * Output scale of a panel's temporary document: its points per point of
+     * the source document. THE ONE RULE — the export sizes the panel with it
+     * and the validation measures the panel with it. They used to keep a copy
+     * each, and a change to one would have had validation checking a size the
+     * export never produced.
+     *
+     * "Same as document" means what the rulers show. For an ordinary document
+     * that is its own coordinates, so 1. A Large Canvas is stored at 1/sf and
+     * displayed at full size, so its rulers show sf times the coordinates and
+     * that is what it exports — before N1 it meant the raw coordinates, a size
+     * the user never sees and a temporary document cannot hold. The manual 1:N
+     * is the user's own drawing scale: kept by "same as document", undone by
+     * "1:1 actual size".
+     *
+     * sf is the SOURCE document's Large Canvas factor, passed in rather than
+     * read from app.activeDocument: during an export the active document is the
+     * temporary one, which is never Large Canvas.
+     *
+     * @param {Object} s - Settings (exportScale, scaleN).
+     * @param {number} sf - Large Canvas factor of the source document, 1 if none.
+     * @returns {number} sf, or sf * N for 1:1.
+     */
+    outputScale: function (s, sf) {
+        var f = Number(sf) || 1;
+        return (s.exportScale === "actual") ? f * this.manualScale(s) : f;
+    },
+
+    /**
+     * Stroke points per printed point of trim line, in a panel's temporary
+     * document. At 1:1 the line is its printed width; at the document's own
+     * scale it is printed / N and the RIP scales it back up.
+     *
+     * The Large Canvas factor cancels out, which is the point: the old rule
+     * divided the output scale by the effective factor of the ACTIVE document —
+     * the temporary one, factor 1 — so a Large Canvas panel at 1:1 got a line
+     * ten times too thick (N10).
+     *
+     * @param {Object} s - Settings (exportScale, scaleN).
+     * @returns {number} 1, or 1/N at the document's own scale.
+     */
+    outputLineScale: function (s) {
+        return (s.exportScale === "actual") ? 1 : 1 / this.manualScale(s);
     },
 
     /**

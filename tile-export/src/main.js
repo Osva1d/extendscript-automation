@@ -99,7 +99,8 @@
         var i, item;
         if (s.drawLine) {
             for (i = 0; i < tiles.length; i++) {
-                item = TE.Draw.drawTileLine(doc, tiles[i].expanded, s, 1);
+                item = TE.Draw.drawTileLine(doc, tiles[i].expanded, s,
+                    1 / TE.Utils.getEffectiveSF(s));
                 item.move(lay, ElementPlacement.PLACEATEND);
             }
         }
@@ -135,6 +136,9 @@
         var eCtx = {
             graphicFile: graphics[0].file,
             graphicBounds: gBounds,
+            // The SOURCE's Large Canvas factor, read while the source is still
+            // the active document. exportTile must not read it itself.
+            scaleFactor: ctx.validation.scaleFactor,
             docName: String(doc.name).replace(/\.[^.]+$/, ""),
             outFolder: outFolder,
             total: tiles.length,

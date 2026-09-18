@@ -244,34 +244,32 @@ zapnuté 1:10 z výchozího nastavení, dostaneš čísla z T6.3.
 
 | # | ruční měřítko | měřítko výstupu | čekám v souhrnu | Vytvořit a exportovat |
 |---|---|---|---|---|
-| T6.2a | vypnuto | Stejné jako dokument | chyba Large Canvas; 6000 × 1000, tiskové 2010 \| 2020 \| 2010 | **šedé** |
+| T6.2a | vypnuto | Stejné jako dokument | bez chyby; 6000 × 1000, tiskové 2010 \| 2020 \| 2010 | aktivní |
 | T6.2b | vypnuto | 1:1 skutečná velikost | bez chyby, stejná čísla | aktivní |
-| T6.3a | 1:10 | Stejné jako dokument | chyba Large Canvas; **60000 × 10000**, tiskové 20010 \| 20020 \| 20010 | **šedé** |
-| T6.3b | 1:10 | 1:1 skutečná velikost | chyba „Plát se při tomto měřítku výstupu nevejde do artboardu" | **šedé** |
+| T6.3a | 1:10 | Stejné jako dokument | bez chyby; **60000 × 10000**, tiskové 20010 \| 20020 \| 20010 | aktivní |
+| T6.3b | 1:10 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." | **šedé** |
 
-**T6.2 — proč chyba.** Export staví pro každý plát dočasný dokument a ten
-**nikdy není Large Canvas** (faktor nejde nastavit a selže potichu — naměřeno).
-S výstupem ve zdrojovém měřítku by se plát vyexportoval v desetině skutečné
-velikosti a nikdo by si toho nevšiml až do tisku. Proto chyba a zešedlé tlačítko.
-S výstupem 1:1 se plát do běžného dokumentu desetkrát zvětší — a 2020 mm se
-do artboardu vejde.
+**T6.2 — co se testuje.** „Stejné jako dokument" znamená velikost, jakou ukazují
+pravítka. Large Canvas ukazuje skutečnou velikost, takže u dokumentu kresleného
+1:1 dají obě volby výstupu totéž. Export přitom staví pro každý plát dočasný
+dokument, který **nikdy není Large Canvas**, a musí plát do něj desetkrát
+zvětšit — to je to, co se tu ověřuje. (Do opravy N1 tady nástroj hlásil chybu.)
 
-**T6.2b — ověř i export.** Vyexportuj a otevři prostřední plát: MediaBox musí mít
-**2020 × 1000 mm** (5726,0 × 2834,6 pt). Tím se ověří, že zvětšení z Large Canvas
-do běžného dokumentu sedí.
-
-**Dnes selže — nález N7.** Grafika přes celý dokument 6000 mm je v 1:1 větší, než
-kolik unese nastavení velikosti v Illustratoru, a export spadne na
-`Specified value greater than maximum allowed value`. Dokud N7 nebude opravený,
-zkontroluj v T6.2b jen souhrn a export přeskoč.
+**T6.2 — ověř i export, v obou volbách.** Vyexportuj a otevři prostřední plát:
+MediaBox **2020 × 1000 mm** (5726,0 × 2834,6 pt), linka **0,3 pt**. Grafika přes
+celý dokument je v 1:1 přes 6 m — do opravy N7 tady export padal na
+`Specified value greater than maximum allowed value` a do opravy N10 by linka
+vyšla 3 pt.
 
 **T6.3 — složené měřítko.** Large Canvas × 10 a k tomu ruční 1:10 znamená × 100:
 dokument teď představuje grafiku **60 × 10 metrů**. Souhrn to musí ukázat —
-60000 × 10000, pláty po 20000, i dostupný spad desetkrát větší (500 mm). Oba
-exporty jsou přitom **správně zablokované**: ve zdrojovém měřítku kvůli Large
-Canvas, v 1:1 proto, že plát 20 × 10 m se do artboardu Illustratoru nevejde (strop,
-který nástroj hlídá, je 16 200 pt, asi 5715 mm na stranu). T6.3 tedy ověřuje jen to, že se faktory násobí; šedé
-tlačítko tu není nález.
+60000 × 10000, pláty po 20000, i dostupný spad desetkrát větší (500 mm).
+
+- **T6.3a** vyexportuje **náhled 1:10**: prostřední plát jako PDF 2002 × 1000 mm.
+- **T6.3b** je **správně zablokovaný** — plát 20 × 10 m se do artboardu
+  Illustratoru nevejde (strop, který nástroj hlídá, je 16 200 pt, asi 5715 mm na
+  stranu). Hláška musí říct číslo plátu, jeho rozměr i strop; z ní je vidět, že
+  přetéká i výška, takže víc plátů by nepomohlo.
 
 **Po T6 zavři dokument Large Canvas a vrať se k testovacímu archu z §0.** Jinak
 ponese do dalších sekcí chybu Large Canvas a jiné velikosti plátů — T7.3 v něm

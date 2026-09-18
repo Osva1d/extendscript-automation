@@ -97,14 +97,31 @@ var j10 = job({ scaleN: 10, exportScale: "actual" });
 var r8 = TE.Validate.check(j10.tiles, ctx({ scaleFactor: 1, maxArtboard: 100 }), j10.s);
 assert(has(r8.errors, "artboard-too-big"), "panel beyond the artboard limit is an error");
 
-console.log("\n=== Large Canvas source cannot export at source scale ===");
+console.log("\n=== Large Canvas at \"same as document\" is allowed (N1) ===");
+// It now means what the rulers show — real size on a Large Canvas — which a
+// temporary document can hold. The old rule refused it outright.
 var jLC = job({ exportScale: "source" });
 var r9 = TE.Validate.check(jLC.tiles, ctx({ scaleFactor: 10 }), jLC.s);
-assert(has(r9.errors, "large-canvas-source-scale"),
-    "Large Canvas with source scale is an error");
+assert(!has(r9.errors, "large-canvas-source-scale"),
+    "Large Canvas with same-as-document output is no longer an error");
+// (This fixture is 3000 mm in document coordinates, so at x10 it is a 30 m
+// wall and the artboard check below rightly stops it — that is the next test,
+// not a leftover of the old rule.)
 
 var r10 = TE.Validate.check(jLC.tiles, ctx({ scaleFactor: 1 }), jLC.s);
 assert(r10.errors.length === 0, "a normal document at source scale is fine");
+
+console.log("\n=== the artboard check measures the size the export produces ===");
+// Validation kept its own copy of the output-scale rule. On a Large Canvas at
+// source scale it then measured the panel at a tenth of what got exported.
+// The same panel: 1080 mm tall, 3061 pt at document size, 30 610 pt at x10.
+var r10d = TE.Validate.check(jLC.tiles, ctx({ scaleFactor: 10, maxArtboard: 16200 }),
+    merge(jLC.s, { exportScale: "actual" }));
+assert(has(r10d.errors, "artboard-too-big"), "x10 at 1:1 is measured at real size");
+var jLC10 = job({ exportScale: "source" });
+var r10e = TE.Validate.check(jLC10.tiles, ctx({ scaleFactor: 10, maxArtboard: 16200 }), jLC10.s);
+assert(has(r10e.errors, "artboard-too-big"),
+    "x10 at same-as-document is measured at real size too, not at a tenth");
 
 console.log("\n=== media width is a warning, not an error ===");
 var r11 = TE.Validate.check(j.tiles, ctx({ mediaWidth: 800 }), j.s);

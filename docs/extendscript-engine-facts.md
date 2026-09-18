@@ -311,12 +311,28 @@ Nastavovač `pageItem.width` (a `.height`) odmítne hodnotu nad **16 347,7 pt
 (≈ 5767 mm)** hláškou `Specified value greater than maximum allowed value` —
 změřeno půlením intervalu, platí pro cestu i umístěné PDF a **nezávisí na poloze**
 objektu. Je to strop nastavovače, ne velikosti objektu: `pageItem.resize(%, %)`
-tentýž objekt zvětší na 18 433 pt bez chyby a dokument se pak normálně uloží
-jako PDF (vykresleno a ověřeno). Horní mez `resize()` změřená není.
+tentýž objekt zvětší bez chyby a okamžitě — změřeno až do **200 000 pt (70 m)**,
+mez nenalezena — a dokument se pak normálně uloží jako PDF (ověřeno vykreslením
+při 18 433 pt a v produkčním exportu s grafikou 6,5 m).
+
+`doc.rasterize(skupina, undefined, volby)` v dočasném dokumentu, kde umístěná
+grafika přesahuje artboard, vytvořila obraz přesně o rozměru artboardu:
+11 930 × 5 906 px pro plát 2020 × 1000 mm při 150 dpi. Přesah se nerasterizuje.
 
 **Maskovaná skupina hlásí šířku celého obsahu, ne masky.** Skupina s ořezovou
 cestou 293 pt kolem umístěného PDF o šířce 879 pt má `width = 879`. Nastavení
 `group.width` proto zvětšuje podle obsahu: `group.width = 6153` dá obsah 6153 pt
 a masku jen 2051 pt, ne zamýšlených 6153. Kdo chce masku dostat na přesný rozměr,
 musí počítat poměr z masky sám a zvětšovat přes `resize()`.
+
+### Large Canvas jde založit skriptem
+
+`app.documents.add(DocumentColorSpace.CMYK, w, h)` s rozměrem nad strop běžného
+plátna (16 383 pt ≈ 5779 mm) založí **Large Canvas s `scaleFactor` 10** — bez
+dialogu, za ~0,3 s. Změřeno na 6000 × 1000 mm: artboard vnitřně 600 × 100 mm.
+
+Dřívější sonda, která navíc zkoušela `app.documents.addDocument("Print",
+DocumentPreset)`, vypršela na časový limit a nechala **oba** dokumenty otevřené;
+příčina nezjištěná. V sondách proto jen `documents.add()`, s úklidem ve `finally`
+a s `app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS`.
 

@@ -14,9 +14,6 @@ TE.Export = {
      * @param {Object} s - Settings.
      * @returns {number} Multiplier applied to every coordinate.
      */
-    outputScale: function (s) {
-        return (s.exportScale === "actual") ? TE.Utils.getEffectiveSF(s) : 1;
-    },
 
     /**
      * Maps one panel into its own temporary document. PURE FUNCTION — no DOM,
@@ -27,7 +24,7 @@ TE.Export = {
      *
      * @param {Object} tile - {expanded: [l, t, r, b]} from TE.Grid.
      * @param {Array} g - Graphic bounds [l, t, r, b] in the source document.
-     * @param {number} k - Output scale from outputScale().
+     * @param {number} k - Output scale from TE.Utils.outputScale().
      * @returns {Object} {artboard: [l,t,r,b], position: [x,y], size: [w,h]}
      */
     tileTransform: function (tile, g, k) {
@@ -100,7 +97,12 @@ TE.Export = {
      * @throws {Error} TE_EXPORT:<index>:<message>
      */
     exportTile: function (tile, ctx, s) {
-        var k = this.outputScale(s);
+        // Every scale comes from ctx, never from app.activeDocument: from the
+        // documents.add() below on, the active document is the temporary one,
+        // which is never Large Canvas. Reading it is what made a Large Canvas
+        // line ten times too thick (N10).
+        var k = TE.Utils.outputScale(s, ctx.scaleFactor);
+        var lineScale = TE.Utils.outputLineScale(s);
         var tf = this.tileTransform(tile, ctx.graphicBounds, k);
         var tmp = null;
         var contourPaths = 0;
@@ -112,14 +114,18 @@ TE.Export = {
 
             var pi = tmp.placedItems.add();
             pi.file = ctx.graphicFile;
-            pi.width = tf.size[0];
-            pi.height = tf.size[1];
+            // resize(), not width/height. The .width setter refuses anything
+            // above 16347.7 pt (about 5767 mm), wherever the item sits, and the
+            // WHOLE graphic of a large job passes that at 1:1 long before any
+            // panel does (N7). resize() scales by percentage and has no such
+            // cap — measured, docs/extendscript-engine-facts.md.
+            pi.resize(tf.size[0] / pi.width * 100, tf.size[1] / pi.height * 100);
             pi.position = tf.position;
 
             if (s.drawLine) {
                 // The panel's outer rect maps exactly onto the temporary
                 // artboard, so the line marks the MediaBox of this PDF.
-                TE.Draw.drawTileLine(tmp, tf.artboard, s, k);
+                TE.Draw.drawTileLine(tmp, tf.artboard, s, lineScale);
             }
 
             if (s.zundMode) {
