@@ -169,6 +169,24 @@ další bylo dohledání, ne nové měření.
   }
   ```
 
+  Platí i pro sondu, která si otevírá **kopie** dokumentů: jsou-li otevřené
+  dokumenty uživatele, přerušit a zeptat se.
+- **Globální proměnné přežívají mezi skripty** v jedné relaci Illustratoru
+  (naměřeno 2026-09-18): sonda narazila na `TE.UI` z dřívějšího běhu, starší
+  než kód na disku. Sonda, která nahrává moduly, musí nahrát všechny a ověřit,
+  že v enginu je aktuální kód — třeba hledáním řetězce z poslední změny
+  v `String(funkce)`.
+- **`$.evalFile` uvnitř funkce vyhodnocuje v rozsahu té funkce** (naměřeno
+  2026-09-18): `var` ze souboru zůstane lokální, jen nedeklarované přiřazení
+  uteče do globálu. Moduly s `var TE = TE || {}` nahrané z funkce tak skončí
+  v lokální proměnné a globální `TE` zůstane, jaký byl. Moduly nahrávat na
+  nejvyšší úrovni skriptu.
+- **`copy()` je příkaz Illustratoru** (Úpravy → Kopírovat), dostupný jako
+  globální funkce. Vlastní `function copy()` ho nepřekryje — volání spustí
+  menu příkaz; bez dokumentu skončí „No documents are open". Stejně tak
+  `alert` nejde nahradit přes `$.global.alert = …`. Pomocné funkce v sondách
+  pojmenovávat jinak než příkazy aplikace.
+
 ## Export, artboardy a vodítka (naměřeno 2026-09-13, AI 30.8.1)
 
 Vzniklo při návrhu `tile-export`; platí ale mimo něj.
