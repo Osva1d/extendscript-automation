@@ -824,7 +824,8 @@ TE.UI = {
     describeError: function (err) {
         var code = String(err && err.message);
         if (code === "TE_MIN_TILES") { return TE.L.ERR_MIN_TILES; }
-        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_CUTS_ORDER; }
+        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_BAD_WIDTH; }
+        if (code === "TE_CEILING_OVERLAP") { return TE.L.ERR_CEILING_OVERLAP; }
         if (code === "TE_NO_GUIDES") { return TE.L.ERR_NO_GUIDES; }
         return code;
     },

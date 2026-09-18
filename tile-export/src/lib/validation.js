@@ -29,10 +29,11 @@ TE.Validate = {
         // Adds must be covered by material the supplied PDF actually carries.
         // A bigger add would leave a blank margin that looks fine on screen
         // and is only found on the printed sheet.
-        this.checkAdd(errors, Number(s.addLeft),   ctx.overhang.left,   "left",   s);
-        this.checkAdd(errors, Number(s.addRight),  ctx.overhang.right,  "right",  s);
-        this.checkAdd(errors, Number(s.addTop),    ctx.overhang.top,    "top",    s);
-        this.checkAdd(errors, Number(s.addBottom), ctx.overhang.bottom, "bottom", s);
+        // Edge names come from the locale: they land inside a sentence (N3).
+        this.checkAdd(errors, Number(s.addLeft),   ctx.overhang.left,   TE.L.EDGE_LEFT,   s);
+        this.checkAdd(errors, Number(s.addRight),  ctx.overhang.right,  TE.L.EDGE_RIGHT,  s);
+        this.checkAdd(errors, Number(s.addTop),    ctx.overhang.top,    TE.L.EDGE_TOP,    s);
+        this.checkAdd(errors, Number(s.addBottom), ctx.overhang.bottom, TE.L.EDGE_BOTTOM, s);
 
         // Overlap must stay inside the shortest panel, or a panel would reach
         // past its neighbour entirely.
