@@ -174,7 +174,11 @@ gramaticky seděla: „Přídavek vlevo (60 mm) překračuje přesah grafiky (50
 
 Hodnota je správně a nástroj od opravy desetinné čárky čte čárku i tečku, takže
 jde jen o vzhled. Oprava by byla `String(v).replace(".", TE.L.DECIMAL)` ve všech
-číselných polích. Rozhodnout, jestli za to stojí.
+číselných polích.
+
+**Odloženo jako dluh (2026-09-18).** Uživateli je to jedno; rozhodnuto nechat
+mimo dávku, protože jde čistě o vzhled a každá změna navíc rozšiřuje přetest.
+Udělat, až se bude do `apply()` sahat z jiného důvodu — ne jako samostatný úklid.
 
 ---
 
