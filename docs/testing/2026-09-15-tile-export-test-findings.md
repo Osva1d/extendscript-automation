@@ -428,7 +428,7 @@ Sonda na skutečném `buildDialog`, pro každou uloženou hodnotu:
 (`apply()`) je v pořádku, protože nastavuje každý přepínač zvlášť. Proto šlo
 nastavení spravit přes předvolbu TEST a vada se vracela jen při novém otevření.
 
-**Audit** parserem (espree) přes všech 39 zdrojů všech tří nástrojů
+**Audit** parserem (espree) přes všech 39 zdrojů všech čtyř nástrojů
 a `shared/lib`: nezávorkovaný řetězený ternár je jen tady (2×) a v
 `shared/lib/json2.js:66`, `:87`. V json2 je neškodný — prázdné `[]` a `{}`
 zapíše jako `[\n\n]` a `{\n\n}`, což je platný JSON a načte se zpátky správně
