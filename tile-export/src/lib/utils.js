@@ -208,6 +208,33 @@ TE.Utils = {
     },
 
     /**
+     * Compares two settings objects key by key. Read by the shared
+     * TE.UIState.isModified, which marks a changed preset with an asterisk.
+     *
+     * Values compare as strings: a preset written by the dialog holds
+     * numbers, one edited by hand may hold "20", and those mean the same.
+     * Every key counts, in both directions — the settings are flat, and a key
+     * present on one side only is a difference.
+     *
+     * @param {Object} a - First settings object.
+     * @param {Object} b - Second settings object.
+     * @returns {boolean} True when every key holds the same value.
+     */
+    presetEquals: function (a, b) {
+        if (!a || !b) { return false; }
+        var k;
+        for (k in a) {
+            if (a.hasOwnProperty(k)) {
+                if (!b.hasOwnProperty(k) || String(a[k]) !== String(b[k])) { return false; }
+            }
+        }
+        for (k in b) {
+            if (b.hasOwnProperty(k) && !a.hasOwnProperty(k)) { return false; }
+        }
+        return true;
+    },
+
+    /**
      * Debug log, silent unless TE.Config.debug is on.
      * @param {string} msg - Message to write.
      */
