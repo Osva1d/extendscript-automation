@@ -300,6 +300,9 @@ Aspoň tři pole zadej **s desetinnou čárkou** — tloušťka linky `0,3`, př
 musí sedět**. Tady se našla první vada: čárka se zahazovala, tloušťka se vracela
 jako 1 pt a přelep i přídavky jako nula.
 
+Po změně hodnot dnes předvolba nedá najevo, že se liší od uložené, a zpátky se
+dá načíst jen oklikou přes Default — nález N8. Nehlas znovu.
+
 **T7.5 — poslední nastavení.** Zavři dialog přes Zrušit a spusť znovu — pamatuje
 si poslední hodnoty, ne výchozí.
 
