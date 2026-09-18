@@ -12,6 +12,11 @@ do PDF v tvém prohlížeči, tisk a ostrá zakázka jsou tvoje.
 a 3 (hlášky) zatím nejsou postavené — **sekce R6 a R7 platí až po nich**, zbytek
 jde testovat hned.
 
+**Doplněno během přetestu (2026-09-18):** N14 (dialog otevře uložené „Půl na
+každou stranu" a „Šířku" jinak) patří do celku 2. N13 (linka vystředěná na
+hraně, 1 pt) patří do celku 3 a **mění očekávání u linky** v R2.3, R3–R5
+a R8.2. Rozměry stránek v R3–R5 platí dál.
+
 ---
 
 ## Co jsem ověřil sám — neopakuj
@@ -212,4 +217,8 @@ pokračují v [nálezech](2026-09-15-tile-export-test-findings.md) číslem N12.
 |---|---|---|---|
 | R2.1 | 2026-09-18 | ✓ | panel Tah 0,03 pt; dotaz na rozdíl proti dialogu → N12 |
 | R2.2 | 2026-09-18 | ✓ | panel Tah 0,3 pt — potvrzuje, jak Large Canvas tloušťku zobrazuje |
+| R4.1 | 2026-09-18 | ✓ | proběhl |
+| R4.2 | 2026-09-18 | — | dialog neotevřel umístění přelepu z minulého běhu → N14; výsledek exportu nehlášen |
+| R6.1–R6.5 | 2026-09-18 | — | celek 2 ještě není postavený — výsledek to jen potvrzuje; opakovat po něm |
+| R8.1 (P1) | 2026-09-18 | — | linka dál není vidět po celém obvodu, prohlížeč neuveden; návrh změny → N13 |
 
