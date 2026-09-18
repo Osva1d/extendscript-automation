@@ -123,6 +123,14 @@ Změnil se kód, kterým se grafika vkládá do plátu.
 | R3.2 | 1:1 skutečná velikost | stránky **1010 \| 1020 \| 1010 × 1000 mm**, linka vidět **1 pt** na všech čtyřech hranách |
 | R3.3 | 1:1, **Rastr** 150 dpi | stránky jako R3.2, obsah rastrový |
 
+**Panel Výsledek je u R3.1 i R3.2 stejný** — ukazuje pláty ve skutečných
+milimetrech a měřítko výstupu ho nemění. R3.1 a R3.2 se tedy liší až na
+stránkách PDF. Nápad, jak rozdíl ukázat už v dialogu: N16.
+
+**Pozor na Přeskočit hotové:** R3.1 a R3.2 exportuj do různých složek (nebo
+mezi nimi soubory odstraň). Se stejným vzorem jmen by R3.2 všechny pláty
+přeskočil a na disku by zůstaly stránky z R3.1.
+
 **R3.4** Přeskočit hotové (T5.4): druhý běh do stejné složky nic nepřepíše a řekne,
 kolik přeskočil.
 
@@ -251,4 +259,5 @@ pokračují v [nálezech](2026-09-15-tile-export-test-findings.md) číslem N12.
 | R4.2 | 2026-09-18 | — | dialog neotevřel umístění přelepu z minulého běhu → N14; výsledek exportu nehlášen |
 | R6.1–R6.5 | 2026-09-18 | — | celek 2 ještě není postavený — výsledek to jen potvrzuje; opakovat po něm |
 | R8.1 (P1) | 2026-09-18 | — | linka dál není vidět po celém obvodu, prohlížeč neuveden; návrh změny → N13 |
+| R3.1 | 2026-09-18 | — | Výsledek stejný jako u R3.2 — podle návrhu, souhrn je ve skutečných mm; zobrazení výstupu → N16; stránky PDF zatím nehlášeny |
 

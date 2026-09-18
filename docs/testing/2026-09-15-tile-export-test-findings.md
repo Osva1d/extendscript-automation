@@ -514,6 +514,30 @@ zopakovat sondu pro všech šest hodnot.
 
 ---
 
+### N16 — dialog neukáže, co udělá měřítko výstupu
+
+**Test:** přetest R3.1 (2026-09-18). **Druh:** návrh, ne vada. **Kde:**
+`tile-export/src/ui.js`, `refresh()` — souhrn převádí body dokumentu na
+skutečné milimetry (`fromDoc`) a měřítko výstupu nepoužije; `TE.Utils.outputScale`
+volá jen validace (`src/lib/validation.js:59`).
+
+**Pozorování.** Výsledek u R3.1 (Stejné jako dokument) je stejný jako u R3.2
+(1:1). To je podle návrhu: souhrn popisuje pláty jako fyzické kusy ve
+skutečných milimetrech a ty na měřítku výstupu nezávisí. Měřítko výstupu mění
+jen stránku PDF — u testovacího archu 101 \| 102 \| 101 × 100 mm proti
+1010 \| 1020 \| 1010 × 1000 mm.
+
+**Proč to přesto zapsat.** Dialog nikde neukáže, jak velké PDF vyjdou; volba se
+projeví až po exportu. Na stejném slepém místě vznikl zmatek kolem N1 a N6.
+
+**Návrh.** Jeden řádek ve Výsledku, třeba „Stránky PDF (1:10): 101 × 100 \|
+102 × 100 \| 101 × 100 mm". Poměr je efektivní měřítko dokumentu děleno
+měřítkem výstupu (`getEffectiveSF(s) / outputScale(s, sf)`), rozměr rozšířený
+obdélník plátu krát `outputScale`. Validace ten rozměr už počítá pro kontrolu
+artboardu, takže jde o zobrazení, ne o nový výpočet. Opravit po přetestu.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
