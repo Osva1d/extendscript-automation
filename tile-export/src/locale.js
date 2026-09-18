@@ -36,10 +36,11 @@ TE.L = (function () {
             ERR_OUT_DIR:         "Output folder is not writable: %s",
             ERR_CRITICAL:        "CRITICAL ERROR: ",
             WARN_MEDIA:          "Panel %s mm is wider than the media (%s mm).",
-            WARN_GUIDE_HIDDEN:   "%s guide(s) on hidden layers were ignored.",
-            SUMMARY_DONE:        "%s panels exported to %s",
-            SUMMARY_SKIPPED:     "%s panels skipped, output already existed.",
-            SUMMARY_TILES:       "%s panels created.",
+            WARN_GUIDE_HIDDEN:   "Guides skipped on hidden layers: %s.",
+            SUMMARY_DONE:        "Panels exported: %s. Folder: %s",
+            SUMMARY_SKIPPED:     "Panels skipped (output already existed): %s.",
+            SUMMARY_TILES:       "Panels created: %s.",
+            SUMMARY_TILES_REPLACED: "Panels created: %s (the previous ones replaced).",
             ERR_WRITE_SETTINGS:  "Cannot write the settings file.",
 
             // --- panels ---
@@ -182,10 +183,11 @@ TE.L = (function () {
             ERR_OUT_DIR:         "Do cílové složky nelze zapisovat: %s",
             ERR_CRITICAL:        "KRITICKÁ CHYBA: ",
             WARN_MEDIA:          "Plát %s mm je širší než médium (%s mm).",
-            WARN_GUIDE_HIDDEN:   "%s vodítek na skrytých vrstvách bylo ignorováno.",
-            SUMMARY_DONE:        "Exportováno %s plátů do %s",
-            SUMMARY_SKIPPED:     "%s plátů přeskočeno, výstup už existoval.",
-            SUMMARY_TILES:       "Vytvořeno %s plátů.",
+            WARN_GUIDE_HIDDEN:   "Vynechaná vodítka na skrytých vrstvách: %s.",
+            SUMMARY_DONE:        "Počet exportovaných plátů: %s. Složka: %s",
+            SUMMARY_SKIPPED:     "Počet přeskočených plátů (výstup už existoval): %s.",
+            SUMMARY_TILES:       "Počet vytvořených plátů: %s.",
+            SUMMARY_TILES_REPLACED: "Počet vytvořených plátů: %s (předchozí nahrazeny).",
             ERR_WRITE_SETTINGS:  "Nelze zapsat soubor s nastavením.",
 
             // --- panels ---

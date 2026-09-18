@@ -89,7 +89,7 @@
         var cuts = TE.Grid.computeCuts(s, ext, guides.positions);
         var tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
 
-        TE.Draw.removeTileArtboards(doc);
+        var replaced = TE.Draw.removeTileArtboards(doc);
         // The lines layer exists exactly when lines are drawn: a run without
         // them clears last run's lines and takes the empty layer with it.
         var lay = s.drawLine ? TE.Draw.clearLinesLayer(doc) : null;
@@ -111,7 +111,10 @@
         }
 
         if (res.action === "tiles") {
-            msg.push(TE.L.format(TE.L.SUMMARY_TILES, tiles.length));
+            // A repeat run rebuilds rather than adds; without saying so,
+            // "3 created" reads as three more (N4).
+            msg.push(TE.L.format(replaced > 0 ? TE.L.SUMMARY_TILES_REPLACED
+                                              : TE.L.SUMMARY_TILES, tiles.length));
             alert(msg.join("\n"));
             return;
         }
