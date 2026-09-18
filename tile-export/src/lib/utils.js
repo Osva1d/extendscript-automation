@@ -109,6 +109,32 @@ TE.Utils = {
     },
 
     /**
+     * Millimetres for the dialog: rounded to a tenth, the locale's decimal
+     * separator, and no trailing ",0" on a whole number.
+     *
+     * Whole millimetres were enough while a count divided 3000 into thousands.
+     * Equal panels, guide rounding and decimal input make fractions ordinary,
+     * and rounding them hid real differences — three 1026.67 mm panels showed
+     * as 1027, which adds up to 3081 mm of material instead of 3080.
+     *
+     * Built from integer tenths rather than toFixed() or String(float), so no
+     * engine's float formatting can leak a 1026.7000000001 into the dialog.
+     *
+     * @param {number} v - Millimetres.
+     * @param {string} [sep] - Decimal separator, "." when omitted.
+     * @returns {string} e.g. "1026,7", "1000", "-12,3".
+     */
+    formatMM: function (v, sep) {
+        var n = Number(v);
+        // Round the magnitude, not the signed value: Math.round takes a half
+        // towards +infinity, so -12.25 would show as -12,2 beside 12,3.
+        var t = Math.round(Math.abs(n) * 10);
+        var sign = (n < 0 && t !== 0) ? "-" : "";   // never "-0"
+        var whole = Math.floor(t / 10), tenth = t % 10;
+        return sign + String(whole) + (tenth ? (sep || ".") + String(tenth) : "");
+    },
+
+    /**
      * Validates a numeric input. Normalises the Czech decimal comma and trims
      * whitespace. Returns null rather than a silent zero — Number("") is 0 in
      * JavaScript, which would turn an empty field into a valid measurement.

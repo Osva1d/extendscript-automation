@@ -16,6 +16,7 @@ TE.L = (function () {
 
     var strings = {
         en: {
+            DECIMAL:             ".",
             ERR_NO_DOC:          "No document open.",
             ERR_NO_GRAPHIC:      "No placed graphic found in the document.",
             ERR_MANY_GRAPHICS:   "The document must contain exactly one placed graphic (found %s).",
@@ -150,6 +151,7 @@ TE.L = (function () {
             BTN_CANCEL:          "Cancel"
         },
         cs: {
+            DECIMAL:             ",",
             ERR_NO_DOC:          "Není otevřený žádný dokument.",
             ERR_NO_GRAPHIC:      "V dokumentu není umístěná grafika.",
             ERR_MANY_GRAPHICS:   "Dokument musí obsahovat právě jednu umístěnou grafiku (nalezeno %s).",

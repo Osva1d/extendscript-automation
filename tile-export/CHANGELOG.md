@@ -54,6 +54,13 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Souhrn i chybové hlášky ukazují desetiny milimetru.** Všechna čísla v poli
+  Výsledek šla přes `Math.round`, tedy na celé milimetry. Dokud se 3000 dělilo
+  na tisíce, nevadilo to; s Rovnoměrně vyjdou pláty na 1026,67 mm a dialog
+  ukázal 1027 — třikrát 1027 je 3081 mm materiálu, ne 3080. Hlášky navíc
+  citovaly číslo, které nikdo nezadal: `Přelep (1001 mm)` u zadaných 1000,5.
+  Teď jedna desetina s čárkou (v angličtině s tečkou) a celá čísla bez „,0".
+
 - **Desetinná čárka v dialogu se tiše zahazovala.** Každé číselné pole se četlo
   přes `Number()`, které `0,3` nepřečte, a náhradní hodnota pak nastoupila bez
   jediného slova. U tloušťky linky to byl **1 pt** (i po uložení do předvolby),

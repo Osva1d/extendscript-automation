@@ -40,8 +40,8 @@ TE.Validate = {
         overlapPt = TE.Utils.toDoc(Number(s.overlap) || 0, s);
         if (tiles.length > 1 && overlapPt >= shortest - eps) {
             errors.push(TE.L.format(TE.L.ERR_OVERLAP_BIG,
-                Math.round(Number(s.overlap)),
-                Math.round(TE.Utils.fromDoc(shortest, s))));
+                TE.Utils.formatMM(Number(s.overlap), TE.L.DECIMAL),
+                TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DECIMAL)));
         }
 
         // A temporary document is never Large Canvas (measured: scaleFactor
@@ -77,7 +77,8 @@ TE.Validate = {
                 w = TE.Utils.fromDoc(t[2] - t[0], s);
                 if (w > Number(ctx.mediaWidth) + eps) {
                     warnings.push(TE.L.format(TE.L.WARN_MEDIA,
-                        Math.round(w), Math.round(Number(ctx.mediaWidth))));
+                        TE.Utils.formatMM(w, TE.L.DECIMAL),
+                        TE.Utils.formatMM(Number(ctx.mediaWidth), TE.L.DECIMAL)));
                     break;
                 }
             }
@@ -101,7 +102,8 @@ TE.Validate = {
         var addPt = TE.Utils.toDoc(add, s);
         if (addPt > overhangPt + 1e-6) {
             errors.push(TE.L.format(TE.L.ERR_ADD_OVERHANG, edge,
-                Math.round(add), Math.round(TE.Utils.fromDoc(overhangPt, s))));
+                TE.Utils.formatMM(add, TE.L.DECIMAL),
+                TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
         }
     },
 
