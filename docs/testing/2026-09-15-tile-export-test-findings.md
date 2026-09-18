@@ -311,8 +311,9 @@ psát až podle něj.
 **Stav: hotovo v `bb777c2`** (dávka, celek 3). Ověřeno na produkčním `exportTile`,
 zeď 6 × 1 m v 1:10: v PDF jeden obdélník přesně na hranách MediaBoxu, tah 2 pt
 (0,2 pt v 1:10), Illustrator ho navíc sám obalí ořezem artboardu. Poppler při
-600 dpi: vidět 0,96–1,04 pt na všech čtyřech hranách, v 1:10 0,1 pt, v rastru
-300 dpi taky 1 pt (rastrování ořezává na artboard). Níž původní záznam.
+600 dpi: vidět 0,96–1,04 pt na všech čtyřech hranách, v 1:10 0,1 pt. **V rastru
+je linka schovaná pod obrazem → N19** — dřívější tvrzení „v rastru 300 dpi taky
+1 pt" bylo falešné měření, viz tam. Níž původní záznam.
 
 **Test:** přetest, znovu P1 (2026-09-18). **Druh:** změna zadání — návrh
 uživatele. Patří do celku 3 spolu s N12, protože mění i texty.
@@ -563,6 +564,36 @@ akci, která nic neexportuje.
 Výsledku, aby bylo vidět proč. Validace ji vrátí zvlášť (třeba `exportErrors`)
 a `refresh` podle ní vypne jen export. Přetest R4.4: export šedý, Jen pláty
 aktivní. Opravit po přetestu.
+
+---
+
+### N19 — v rastrovém exportu je linka schovaná pod rastrem
+
+**Test:** přetest R3.3, spuštěný harnessem (2026-09-18). **Druh:** vada, starší
+než dávka — linku v rastrovém režimu nikdo neověřoval. **Kde:**
+`tile-export/src/export.js`, blok `if (s.exportMode === "raster")`.
+
+**Příznak.** Rastrový plát má správný rozměr a jeden obraz (5965 × 5906 px při
+150 dpi, tedy 1010 × 1000 mm), ale červená linka na něm není vidět. V PDF je
+jako vektor s tahem 2 pt přesně na MediaBoxu, jenže **vykreslená před
+obrazem**, a neprůhledný rastr ji zakryje.
+
+**Příčina, naměřená.** Smyčka
+`for (i = tmp.pageItems.length - 1; i >= 0; i--) { … moveToEnd(all) }` prochází
+živou kolekci, kterou sama mění. Na syntetickém dokumentu (grafika a nad ní
+linka) skončila ve skupině **jen grafika**. Linka zůstala venku
+a `rasterize()` položil obraz nad ni. Komentář v kódu „Note this rasterises the
+trim line too" i README („rasterizuje … i ořezovou linku") tak neplatí.
+
+**Návrh opravy.** Rastrovat jen grafiku (`tmp.rasterize(pi, …)`) a linku
+nechat vektorem **nad** rastrem. Zůstane ostrá a přesná — 1 pt při 150 dpi by
+byly dva rozmazané pixely — a odpadne křehká smyčka. Totéž pro značky Zündu.
+Test: pořadí v PDF (linka až po obrazu) a render nejvýš 300 dpi bez varování
+Poppleru.
+
+**Oprava mého tvrzení u N13.** „V rastru 300 dpi taky 1 pt" bylo falešné
+měření: Poppler při 600 dpi obraz nevykreslil („Bogus memory allocation size")
+a prosvitla vektorová linka pod ním. Na výsledek jsem se nepodíval.
 
 ---
 

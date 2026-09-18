@@ -263,3 +263,33 @@ pokračují v [nálezech](2026-09-15-tile-export-test-findings.md) číslem N12.
 | R8.1 (P1) | 2026-09-18 | — | linka dál není vidět po celém obvodu, prohlížeč neuveden; návrh změny → N13 |
 | R3.1 | 2026-09-18 | — | Výsledek stejný jako u R3.2 — podle návrhu, souhrn je ve skutečných mm; zobrazení výstupu → N16; stránky PDF zatím nehlášeny |
 
+**Běh harnessem (Claude, 2026-09-18 večer).** Produkční kód v Illustratoru na
+kopiích testovacích dokumentů, s vlastním souborem nastavení. Odpověď dialogu
+byla podvržená a `alert`/`confirm`/`prompt` přesměrované do záznamu. Dialog se
+stavěl bez zobrazení a tlačítka se volala přímo — **vzhled, Esc a jedno
+proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
+
+| test | výsledek | poznámka |
+|---|---|---|
+| R1.1 | ✓ | Faktor Large Canvas 1; souhrn 1010 \| 1020 \| 1010; tlačítka aktivní |
+| R1.2 | ✓ | nápověda mluví o pravítkách a Large Canvasu |
+| R2.1 | ✓ | arch 1:10: tah 0,2 pt |
+| R2.2 | ✓ | Large Canvas: vnitřně 0,2 pt, panel Tah tedy 2 pt |
+| R2.3 | ✓ | cesta linky na hraně artboardu, odchylka 0,0000 pt |
+| R2.4 | ✓ | třikrát Jen pláty: pořád 4 artboardy a 3 linky; s vypnutou linkou vrstva `TE_lines` není |
+| R3.1 | ✓ | 101 \| 102 \| 101 × 100 mm, jedna linka, tah 0,2 pt na MediaBoxu, vidět 0,10 pt na všech hranách |
+| R3.2 | ✓ | 1010 \| 1020 \| 1010 × 1000 mm, tah 2 pt, vidět 0,96 pt na všech hranách |
+| R3.3 | ✗ | rozměry i obraz 150 dpi v pořádku, **linka schovaná pod rastrem → N19** |
+| R3.4 | ✓ | nic nepřepsáno; „Počet přeskočených plátů (výstup už existoval): 3." |
+| R4.1, R4.2 | ✓ | souhrn bez chyby, spad 250/250/655/655; PDF 2010 \| 2020 \| 2010 × 1000 mm, vidět 0,96 pt |
+| R4.3 | ✓ | 60000 × 10000; PDF 2001 \| 2002 \| 2001 × 1000 mm, tah 0,2 pt, vidět 0,10 pt |
+| R4.4 | ✓ | hláška přesně podle přetestu; šedá obě tlačítka (Jen pláty zbytečně, N17) |
+| R5.1 | ✓ | 201 \| 202 \| 201 × 100 mm, vidět 0,10 pt |
+| R5.2 | ✓ | 2010 \| 2020 \| 2010 × 1000 mm, vidět 0,96 pt |
+| R6.1–R6.4 | ✓ | „TEST *", ↺, Uložit (u [Default] šedé) se zapíše hned a přežije Storno; po běhu s jinými hodnotami „TEST *" a ↺ vrátí uložené |
+| R6.5 | ✓ popisek | „Storno" s `name: cancel`; Esc zkus rukou |
+| R6.6 | ✓ | 0,3 / 12,5 / 2,5 přežijí uložení i načtení (v poli pak s tečkou — N5, dluh) |
+| R6.7 | ✓ | všech šest poloh přepínačů |
+| R6.8 | ✓ | hláška o vyhrazeném jménu; dotaz na přepsání existující předvolby |
+| R7.1–R7.6 | ✓ | hlášky i nápovědy přesně podle přetestu; počty 2, 3, 5 ve tvaru „Počet …: N" |
+
