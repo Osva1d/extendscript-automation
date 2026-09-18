@@ -17,6 +17,8 @@ každou stranu" a „Šířku" jinak) patří do celku 2. N13 (linka vystředěn
 hraně, 1 pt) patří do celku 3 a **mění očekávání u linky** v R2.3, R3–R5
 a R8.2. Rozměry stránek v R3–R5 platí dál.
 
+**Celek 2 hotový** (N14 `830ef43`, N8 `0919ded`, N9 `05a7366`) — R6 platí.
+
 ---
 
 ## Co jsem ověřil sám — neopakuj
@@ -31,6 +33,8 @@ a R8.2. Rozměry stránek v R3–R5 platí dál.
 | rastr u grafiky větší než plát | totéž | obraz jen plátu, 11 930 × 5 906 px |
 | strop `resize()` | sonda | bez chyby až do 70 m |
 | texty souhrnu a hlášek | skutečný `refresh()` s češtinou | čísla v R4 a R5 níž |
+| N14 — obnovení přepínačů | skutečný `buildDialog` ze všech šesti uložených hodnot | každá se otevře i vrátí správně |
+| N8 — předvolby | skutečný dialog z tvého nastavení, zápis nahrazený atrapou | otevření „[Default] *", ↺, přepnutí, „TEST *", Uložit; rozměr 1178 × 825 beze změny |
 
 ## Co potřebuji od tebe
 
@@ -150,21 +154,36 @@ a do opravy N7 tady export padal na každém plátu.
 
 ---
 
-## R6 — Předvolby (až po celku 2: N8, N9)
+## R6 — Předvolby (celek 2: N8, N9, N14)
 
-**R6.1** Změň libovolnou hodnotu → u aktivní předvolby se objeví hvězdička.
+Pravidlo, podle kterého se to celé řídí: **pole po otevření ukazují poslední
+potvrzený běh, seznam aktivní předvolbu, a hvězdička říká, že se ty dvě věci
+liší.** Operace s předvolbou (Uložit, Uložit jako…, Smazat) se zapisují hned;
+Storno zahazuje jen úpravy polí.
 
-**R6.2** **↺** vrátí uložené hodnoty a hvězdička zmizí.
+**R6.1** Načti TEST a změň libovolnou hodnotu → v seznamu „TEST *", ↺ a Uložit
+zaktivní.
 
-**R6.3** **Uložit** přepíše aktivní předvolbu; u [Default] je neaktivní.
+**R6.2** **↺** vrátí uložené hodnoty, hvězdička zmizí, obě tlačítka zešednou.
 
-**R6.4** Změň hodnoty, **Storno**, spusť znovu: seznam ukáže předvolbu
-s hvězdičkou, protože pole drží hodnoty posledního potvrzeného běhu (T7.5).
+**R6.3** Změň hodnotu, **Uložit**, pak **Storno** a spusť znovu → TEST drží
+novou hodnotu (uložilo se hned). U [Default] je Uložit šedé.
+
+**R6.4** Načti TEST, změň přelep na 25 a spusť **Jen pláty**. Spusť znovu → pole
+ukážou přelep 25 a seznam „TEST *", protože poslední běh se od uložené
+předvolby liší (T7.5). ↺ vrátí 20.
 
 **R6.5** Tlačítko se jmenuje **Storno** a Esc dialog zavře.
 
 **R6.6** Regrese T7.4: předvolba s hodnotami zadanými s desetinnou čárkou
 (`0,3`, `12,5`, `2,5`) přežije uložení a načtení.
+
+**R6.7** N14: nastav Dělit podle **Šířky plátu** a Umístění přelepu **Půl na
+každou stranu**, spusť Jen pláty, spusť znovu → obojí zůstane. Pak totéž
+s **Celý na pravý / dolní**.
+
+**R6.8** Uložit jako… s názvem v hranatých závorkách → hláška o vyhrazeném
+názvu. S názvem existující předvolby → dotaz na přepsání.
 
 ---
 

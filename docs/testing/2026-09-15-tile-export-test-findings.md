@@ -351,6 +351,21 @@ vidět 0,1 pt).
 
 ### N8 — předvolba nedá najevo, že se změnila, a nejde vrátit
 
+**Stav: opraveno v `0919ded`** (dávka, celek 2). Ověřeno sondou na skutečném
+dialogu z uživatelova nastavení, se zápisem na disk nahrazeným atrapou:
+otevření ukáže „[Default] *", ↺ vrátí uložené hodnoty, přepnutí na TEST
+nenechá hvězdičku u minulé položky, úprava dá „TEST *", Uložit zapíše. Dialog
+beze změny rozměru, 1178 × 825 px.
+
+**Nalezeno při opravě:** uložení a smazání předvolby šlo na disk až
+s dokončeným během, takže předvolbu uloženou v dialogu Storno zahodilo. Oba
+sourozenecké nástroje zapisují hned — tile-export teď taky. A `apply()` nechával
+u uloženého názvu, který seznam nemá (`""` v [Default]), výběr z minula; stejná
+předvolba tak vypadala pokaždé jinak a hvězdička by nešla spočítat. Srovnáno se
+stavbou dialogu: první položka.
+
+Níž původní záznam.
+
 **Test:** T7.4. **Kde:** `tile-export/src/ui.js:514–545` (sestavení seznamu
 a `ddPreset.onChange`), `:152–155` (řádek předvoleb).
 
@@ -391,6 +406,8 @@ po úpravě změřit dialog.
 
 ### N9 — tlačítko Zrušit místo Storno
 
+**Stav: opraveno v `05a7366`** (dávka, celek 2).
+
 **Nalezeno** při ověřování standardu pro N8, ne testem. **Kde:**
 `tile-export/src/locale.js:286`.
 
@@ -401,6 +418,14 @@ seznam „Storno = Cancel") a Zünd Summa Marks používají **Storno**; tile-ex
 ---
 
 ### N14 — dialog otevře „Půl na každou stranu" jako „Celý na levý" a „Šířku" jako „Vodítka"
+
+**Stav: opraveno v `830ef43`** (dávka, celek 2). Sonda po opravě: všech šest
+uložených hodnot se otevře i vrátí správně. Místo `no-nested-ternary` vlastní
+pravidlo lintu `engine/no-bare-nested-ternary`: vestavěné by hlásilo i devět
+správných závorkovaných tvarů v `grid.js` a sdíleném `ui_state.js`. Změřeno
+navíc: ternár vnořený bez závorek do **první** větve engine vůbec nezparsuje.
+
+Níž původní záznam.
 
 **Test:** přetest R4.1 → R4.2 (2026-09-18). **Kde:** `tile-export/src/ui.js:201`
 (řádek Dělit podle) a `:233` (Umístění přelepu). **Patří do celku 2.**
@@ -440,6 +465,28 @@ zapíše jako `[\n\n]` a `{\n\n}`, což je platný JSON a načte se zpátky spr�
 se tu snadno přehlédne, potřebuje to mechanismus: pravidlo ESLint
 `no-nested-ternary` pro `*/src/**` (json2 je cizí kód, výjimka). Po opravě
 zopakovat sondu pro všech šest hodnot.
+
+---
+
+### N15 — texty, které přežily změnu návrhu
+
+**Nalezeno** při psaní celku 2, ne testem. **Druh:** texty, patří do celku 3.
+
+1. **„Rozpustit zbytek"** — mezistupeň návrhu, ze kterého se stal přepínač
+   Rovnoměrně pro **oba** číselné režimy. Zůstal ve třech textech:
+   - `TIP_COUNT` (`tile-export/src/locale.js:66`, `:207`): stejné tiskové
+     pláty prý dá jen „režim šířky plátu se zaškrtnutým rozpuštěním zbytku".
+     Dnes je dá i počet plátů se zaškrtnutým Rovnoměrně.
+   - `CHANGELOG.md` 1.1.0, Changed, odstavec o režimu počtu plátů: „Stejné
+     tiskové pláty umí od této verze „šířka plátu" + „rozpustit zbytek"…" —
+     v rozporu s odstavcem Added o Rovnoměrně o kus výš.
+   - `CHANGELOG.md` 1.1.0, Fixed, odstavec o nápovědě u šířky plátu: text prý
+     „odkazuje na „rozpustit zbytek"".
+2. **`TIP_PDF_PRESET`** (`locale.js:101`, `:242`): „Prázdné použije vestavěný
+   výchozí." Pole je seznam presetů Illustratoru, prázdné zvolit nejde.
+3. **Tlačítko Jen pláty má nápovědu o lince** (`ui.js:452`,
+   `btnTiles.helpTip = l.TIP_LINE`), ne o tom, co dělá. Standard dialogů chce
+   u každého tlačítka kromě OK a Storno nápovědu, která akci pojmenuje.
 
 ---
 
