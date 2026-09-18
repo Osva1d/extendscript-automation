@@ -210,6 +210,46 @@ Tohle se týká i běžných dokumentů, takže to N1 nevyřeší — opravit sp
 
 ---
 
+### N8 — předvolba nedá najevo, že se změnila, a nejde vrátit
+
+**Test:** T7.4. **Kde:** `tile-export/src/ui.js:514–545` (sestavení seznamu
+a `ddPreset.onChange`), `:152–155` (řádek předvoleb).
+
+**Příznak.** Po uložení předvolby a změně hodnot zůstane v seznamu její jméno
+beze změny — nic neukáže, že se hodnoty od uložených liší. Znovuvybrání téže
+položky nic neudělá. Jediná cesta k uloženým hodnotám: vybrat Default a pak zase
+předvolbu.
+
+**Příčina.** ScriptUI spouští `onChange` jen při *změně* výběru; znovuvybrání
+vybrané položky změnou není. Tile-export si seznam staví ručně jen ze jmen a
+změnu nikdy neoznačí. Přitom sdílené jádro má všechno hotové:
+`shared/lib/ui_state.js` — `isModified()` pozná rozdíl, `formatPresetList()`
+přidá k aktivní předvolbě ` *`. Zünd Summa Marks to používá celé
+(`zund-summa-marks/src/ui.js:765–830`): hvězdička, tlačítko **↺** pro vrácení
+a **Uložit**, obojí aktivní jen když je co ukládat nebo vracet. Tile-export má
+navíc řetězec `BTN_SAVE` („Uložit", `locale.js:142`, `:277`), ale tlačítko, které
+by ho používalo, nikdy nevzniklo.
+
+**Oprava.** Převzít vzor ze ZSM: seznam přes `formatPresetList()`, obnovu
+hvězdičky zavěsit na stávající `refresh` při každé změně pole, přidat **↺**
+(standard dialogů ho jako jediný povolený znak připouští, s `helpTip`) a
+**Uložit** pro přepsání aktivní předvolby (u [Default] neaktivní). Obě tlačítka
+přibudou do stávajícího řádku předvoleb, takže jde o šířku, ne výšku — přesto
+po úpravě změřit dialog.
+
+---
+
+### N9 — tlačítko Zrušit místo Storno
+
+**Nalezeno** při ověřování standardu pro N8, ne testem. **Kde:**
+`tile-export/src/locale.js:286`.
+
+Standard dialogů (`extendscript-ui-standards`, slovník tlačítek i kontrolní
+seznam „Storno = Cancel") a Zünd Summa Marks používají **Storno**; tile-export
+**Zrušit**. Jeden řetězec.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
