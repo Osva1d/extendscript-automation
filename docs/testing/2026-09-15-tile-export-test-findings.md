@@ -13,6 +13,44 @@ testy, které ještě nejsou hotové, a část nálezů se týká stejných mís
 
 ## Čeká na opravu
 
+### N7 — export 1:1 selže, když je celá grafika větší než ~5,77 m
+
+**Test:** T6.2b. **Druh:** vada, blokuje export. **Priorita: nejvyšší v dávce.**
+Stojí první, i když byla nalezena sedmá.
+
+**Příznak.** Pro každý plát hláška `TE_EXPORT:1:Specified value greater than
+maximum allowed value`. Validace přitom prošla a tlačítko bylo aktivní — každý
+plát se do artboardu vejde.
+
+**Příčina, naměřená.** Export vkládá do dočasného dokumentu každého plátu
+**celou grafiku** v měřítku výstupu a velikost jí nastavuje přes `pi.width`
+a `pi.height` (`tile-export/src/export.js:115–116`). Nastavovač `.width` má strop
+**16 347,7 pt ≈ 5767 mm**, nezávisle na tom, kde objekt leží; nad ním vyhodí
+přesně tuhle chybu. Grafika v T6.2b měla při 1:1 **18 433 × 6 541 pt** (umístěná
+navenek 6500 × 2310 mm).
+
+**Není to jen Large Canvas.** Stejně dopadne běžný dokument v 1:10 se zdí, která
+je i se spadávkou širší nebo vyšší než ~5,77 m, exportovaný v 1:1 — tedy právě
+velké zakázky, kvůli kterým nástroj existuje. Validace to nechytí, protože hlídá
+velikost plátu, ne grafiky. Testovací arch z §0 je v 1:1 jen 3100 mm, proto
+exporty v T5 prošly.
+
+**Oprava, ověřená sondou.** Na stejný objekt projde `pi.resize(%, %)`. V sondě:
+zvětšení na 18 433 × 6 541 pt, umístění, uložení PDF plátu — MediaBox přesně
+2020 × 1000 mm a vykreslený obsah správně oříznutý (pravítko, mřížka, blok
+NEŘEZAT, spadávka na svém místě). Strop se týká jen nastavovače, ne velikosti
+objektu.
+
+**Nezměřeno:** kde má `resize()` horní mez. Sonda šla do 18 433 pt; zeď 20 m
+v 1:1 by měla 56 693 pt. Při opravě doměřit. Kdyby mez existovala, patří do
+validace kontrola velikosti **celé grafiky** s čitelnou hláškou — dnes uživatel
+dostane surové `TE_EXPORT:…` až po kliknutí na export.
+
+**Souvislosti:** N1 na N7 závisí (viz tam). Ořez kontury v `cut.js` velikost
+nenastavuje, ale při opravě projít i cestu Zünd režimu.
+
+---
+
 ### N1 — „Stejné jako dokument" u Large Canvasu znamená něco jiného, než slibuje
 
 **Test:** T6.2. **Druh:** návrhová vada, ne chyba výpočtu. **Nahlášeno** jako
@@ -45,6 +83,10 @@ zdrojovém měřítku bere faktor Large Canvas místo jedničky.
 | Large Canvas + ruční 1:10 | dnes chyba → náhled 1:10, plát 2002 mm | beze změny — 20 m se nevejde |
 
 Nic se neztratí: staré chování u Large Canvasu nikdy nic nevyexportovalo.
+
+**Závisí na N7.** Bez něj by oprava jen vyměnila jednu chybu za druhou: „Stejné
+jako dokument" u Large Canvasu by vkládalo grafiku desetkrát zvětšenou (6500 mm)
+a narazilo na stejný strop jako T6.2b. Pořadí v dávce: nejdřív N7, pak N1.
 
 **Kde:**
 - `tile-export/src/export.js:17` — `outputScale()`: pro `"source"` vracet
