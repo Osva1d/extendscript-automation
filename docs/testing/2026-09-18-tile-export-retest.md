@@ -19,7 +19,7 @@ a R8.2. Rozměry stránek v R3–R5 platí dál.
 
 **Celek 2 hotový** (N14 `830ef43`, N8 `0919ded`, N9 `05a7366`) — R6 platí.
 **Celek 3 hotový** (N2 a N3 `a52aab8`, N4 `a8ae9d1`, N13 `bb777c2`, texty N12
-a N15) — R7 platí a **linka má nová čísla**: pole Tloušťka je dál to, co je vidět
+a N15 `4b5e764`) — R7 platí a **linka má nová čísla**: pole Tloušťka je dál to, co je vidět
 v tisku (výchozí 1 pt), ale kreslí se dvojnásobná přes hranu plátu. Očekávání
 níž jsou přepsaná; R2.1 a R2.2 z první várky platily pro starou linku.
 
