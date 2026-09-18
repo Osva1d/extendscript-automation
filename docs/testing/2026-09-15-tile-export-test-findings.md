@@ -1,7 +1,9 @@
 # Nálezy z testu — Tile Export v1.1.0
 
-Patří k [testovacímu plánu](2026-09-15-tile-export-test-plan.md). Běh začal
-2026-09-15 a **ještě probíhá** — záznam se doplňuje průběžně.
+Patří k [testovacímu plánu](2026-09-15-tile-export-test-plan.md). Běh
+**2026-09-15 až 2026-09-18, dokončený**: podle hlášení uživatele vše, co není
+zapsané níž, prošlo. Mimo plán zůstává tisková zkouška linky (§9 plánu)
+a otevřená otázka u P1.
 
 **Rozhodnutí 2026-09-18:** čekající nálezy se neopravují po jednom. Opraví se
 dávkou, až bude plán dojetý celý. Důvod: oprava uprostřed běhu mění vstupy pro
