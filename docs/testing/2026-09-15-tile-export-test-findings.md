@@ -41,6 +41,15 @@ zvětšení na 18 433 × 6 541 pt, umístění, uložení PDF plátu — MediaBo
 NEŘEZAT, spadávka na svém místě). Strop se týká jen nastavovače, ne velikosti
 objektu.
 
+**Ověřeno, že maska plátu to NEvyřeší** (dotaz 2026-09-18, sonda na stejném
+PDF). (A) Maska kolem plátu a velikost nastavená grafice jako dnes → stejná
+chyba: maska jen skryje, co je mimo plát, grafika uvnitř má plnou velikost.
+(B) Velikost nastavená celé maskované skupině → skupina hlásí šířku celého
+obsahu (879 pt), ne masky (293 pt), takže zvětší podle grafiky, ne podle plátu;
+správné zvětšení by znamenalo nastavit ji na 18 459 pt, tedy zase přes strop.
+Cestou je jen `resize()` — funguje na grafiku i na maskovanou skupinu, takže
+s maskami z další etapy se oprava nevylučuje.
+
 **Nezměřeno:** kde má `resize()` horní mez. Sonda šla do 18 433 pt; zeď 20 m
 v 1:1 by měla 56 693 pt. Při opravě doměřit. Kdyby mez existovala, patří do
 validace kontrola velikosti **celé grafiky** s čitelnou hláškou — dnes uživatel
