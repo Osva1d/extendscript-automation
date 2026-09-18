@@ -230,6 +230,17 @@ a **Uložit**, obojí aktivní jen když je co ukládat nebo vracet. Tile-export
 navíc řetězec `BTN_SAVE` („Uložit", `locale.js:142`, `:277`), ale tlačítko, které
 by ho používalo, nikdy nevzniklo.
 
+**Druhý projev** (hlášeno z T7.5). Po otevření dialogu seznam ukazuje aktivní
+předvolbu — třeba „[Default]" — zatímco pole se naplní z `[Last Settings]`,
+tedy z posledního potvrzeného běhu. Nápis tak tvrdí „výchozí" nad hodnotami,
+které výchozí nejsou, a uživatel to přečte jako „načetl default". Ověřeno na
+`settings.json` (2026-09-18 12:13): `activePreset` `[Default]`, `[Last Settings]`
+s jednostranným přelepem, výstupem 1:1 a vypnutým ručním měřítkem. S hvězdičkou
+by seznam hned po otevření ukázal „[Default] *".
+
+Samotné zahazování úprav při Zrušit vada **není** — odpovídá vzoru v
+`docs/persistence.md` §3.2 i oběma sourozeneckým nástrojům.
+
 **Oprava.** Převzít vzor ze ZSM: seznam přes `formatPresetList()`, obnovu
 hvězdičky zavěsit na stávající `refresh` při každé změně pole, přidat **↺**
 (standard dialogů ho jako jediný povolený znak připouští, s `helpTip`) a
