@@ -536,6 +536,13 @@ měřítkem výstupu (`getEffectiveSF(s) / outputScale(s, sf)`), rozměr rozší
 obdélník plátu krát `outputScale`. Validace ten rozměr už počítá pro kontrolu
 artboardu, takže jde o zobrazení, ne o nový výpočet. Opravit po přetestu.
 
+**Doplněno 2026-09-18 (uživatel, s otiskem dialogu):** chce i vysvětlení, že
+měřítko výstupu platí jen pro export. Řádek „Stránky PDF (1:10): …" to ukáže
+sám a řekne víc než text. K němu jedna věta do `TIP_EXPORT_SCALE`: „Týká se jen
+exportovaných PDF — Jen pláty kreslí v měřítku dokumentu a Výsledek ukazuje
+pláty ve skutečné velikosti." Statický text v dialogu ne: přidal by výšku
+i šum.
+
 ---
 
 ### N17 — kontrola velikosti výstupu zašedí i Jen pláty
@@ -556,6 +563,38 @@ akci, která nic neexportuje.
 Výsledku, aby bylo vidět proč. Validace ji vrátí zvlášť (třeba `exportErrors`)
 a `refresh` podle ní vypne jen export. Přetest R4.4: export šedý, Jen pláty
 aktivní. Opravit po přetestu.
+
+---
+
+### N18 — Výsledek do prázdného místa v pravém sloupci
+
+**Návrh uživatele** (2026-09-18, otisk dialogu). **Druh:** rozvržení dialogu.
+**Kde:** `tile-export/src/ui.js`, panel Výsledek (`pCalc`, `stCalc`), dnes přes
+oba sloupce dole.
+
+**Proč.** Se skrytým Zünd panelem zůstává v pravém sloupci pod Exportem prázdné
+místo, zatímco Výsledek je dole stažený na 85 px. Na otisku je v něm pět řádků
+a šestý („Dostupný spad…") je uříznutý.
+
+**Změřeno 2026-09-18** (dialog sestavený bez zobrazení): dialog 1178 × 825 px,
+levý sloupec 630 × 593, pravý 508 × 276 (jen Export), **pod Exportem volných
+317 px**. Výsledek dnes 1148 × 115, pole 1114 × 85. Šířka textu: řádek plátu
+s desetinami 370 px, navrhovaný řádek N16 354 px, nejdelší chybová hláška
+(`ERR_AB_TOO_BIG`) 702 px.
+
+**Co z toho plyne.** V pravém sloupci by pole mělo kolem 270 px výšky, tedy
+zhruba patnáct řádků místo pěti, a dialog by byl nižší o celý pás Výsledku,
+asi o 130 px. Řádky plátů se do šířky sloupce vejdou. Komentář v kódu, že by
+se zalomily, je z dřívějšího rozvržení. **Dlouhé chybové hlášky se zalomit musí**
+— ověřit, že to víceřádkové `edittext` v ScriptUI udělá, a ne že je ořízne.
+Až se vrátí Zünd panel (podle starého měření 165 px), zbude pod ním pro
+Výsledek asi 130 px, pořád víc než dnešních 85, a pravý sloupec nepřeroste levý.
+
+**Jak.** Přesunout panel na konec pravého sloupce a roztáhnout ho na zbytek
+výšky. Ověřit, jestli to ScriptUI udělá samo (`alignment` fill v ose sloupce),
+nebo se výška musí dopočítat po prvním layoutu. Nejmenší výška pole zůstane
+85 px. Po změně změřit dialog. Opravit po přetestu, spolu s N16 a N17 — všechny
+tři mění panel Výsledek nebo tlačítka pod ním.
 
 ---
 
