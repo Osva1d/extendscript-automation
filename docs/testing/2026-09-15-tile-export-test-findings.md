@@ -324,7 +324,7 @@ Viditelná tloušťka se rovná zadané **jen tam, kde tah ořízne hrana strán
 slouží jako řezová. Zvětšený artboard (`export.js`, `geo.ab`) jí proto nevadí.
 N13 tam naopak pomáhá: cesta poleží přesně na hraně plátu, tedy tam, kde má
 řezat stroj — dnes je o půl tahu uvnitř. Tisk v Zünd režimu ohraničí **ořezová
-maska z odsazené cesty** této linky; to je zadání etapy maska/Zünd (spec §10).
+maska z odsazené cesty** této linky; to je zadání etapy maska/Zünd (návrh Zünd režimu §10).
 Dřívější návrh tohoto záznamu „linku dát dovnitř masky" byl chybný — řezová
 linka musí zůstat celá a samostatná.
 

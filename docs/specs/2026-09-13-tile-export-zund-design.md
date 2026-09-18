@@ -248,6 +248,12 @@ Pro každý plát:
 Dva výstupy na plát, ne jeden. Artboard je pro obě stejný, jinak by stroj
 nevěděl, kde je co.
 
+**Potvrzeno uživatelem 2026-09-18:** v Zünd režimu se linka plátu netiskne,
+slouží jako řezová, a klíčové je udělat z ní odsazenou cestu, která poslouží
+jako clipping maska plátu. U rovného plátu je tedy „kontura" z kroku 1 přímo
+obdélník linky plátu. Tile-export N13 ho klade přesně na hranu plátu (dřív
+byl o půl tahu uvnitř), takže řezová cesta i výchozí bod odsazení sedí.
+
 ### Čím se to liší od implementované verze
 
 | | implementováno | reálný postup |
@@ -297,6 +303,9 @@ konturu `jntp 0`.**
 - Jestli je bounding box brát z `visibleBounds` nebo `geometricBounds` oříznuté
   skupiny — u clipnuté skupiny se liší, viz skill `manipulating-illustrator-items`.
 - Chování, když kontura po odsazení přeteče přes sousední plát.
+- Jakou přímou barvu nese řezová cesta v `_cut` PDF. Linka plátu je dnes
+  v `CutContour`, tvarová kontura v `cut`; pro stroj se u linky doporučoval
+  hairline 0,125 pt (hlavní spec §10, bod 3).
 
 ## 11. Dál za tím
 

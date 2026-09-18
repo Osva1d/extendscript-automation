@@ -438,26 +438,10 @@ Pořadí podle toho, jak na sobě stojí:
    což jsou stavy, které se v testu nedají zachytit jinak než spuštěním
    v Illustratoru.
 
-   ### Zadání uživatele 2026-09-18: řezová linka a maska z odsazené cesty
-
-   V Zünd režimu se linka plátu **netiskne** — je to řezová linka (bod 3).
-   Klíčové je z ní vytvořit **odsazenou cestu**, která poslouží jako
-   **clipping maska plátu**: tisk přesáhne řez o odsazení a grafika souseda se
-   do artboardu zvětšeného kvůli regmarkám nedostane.
-
-   To je **jiná role masky**, než jakou průzkum výš odmítl. Tam měla maska dělit
-   konturu pro řezačku, a to neumí, protože geometrii neořízne. Tady ořezává
-   jen tisk. Řezová data zůstávají skutečné, samostatné cesty.
-
-   Otevřené před návrhem etapy:
-   - **Rozsah.** Jen obdélník plátu, nebo i tvarový ořez z vrstvy v přímé
-     barvě? U obdélníku je odsazení prostá aritmetika, přesná a bez
-     Illustratoru. Tvar potřebuje skutečnou odsazenou cestu přes
-     `applyEffect()` (engine facts, `jntp 0`) a k ní dělení Pathfinderem výš.
-   - **Velikost odsazení** a jestli se mění podle materiálu.
-   - **Barva a tloušťka řezové linky.** Nástroj má dvě přímé barvy: linka
-     plátu `CutContour` a kontura `cut`. Bod 3 doporučuje pro stroj hairline
-     0,125 pt.
+   **Pozor na slovo „maska".** Výš odmítnutá maska měla **dělit konturu pro
+   řezačku** — to neumí, geometrii neořízne. Maska z odsazené řezové cesty,
+   která **ořezává tisk**, je naopak jádro další etapy: viz
+   [návrh Zünd režimu](2026-09-13-tile-export-zund-design.md) §10.
 
 3. **Značky a číslování plátů** — vynecháno z v1 vědomě, ne přehlédnuto.
 
