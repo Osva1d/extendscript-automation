@@ -98,16 +98,23 @@ Specifikace i Node sdružují `a ? x : b ? y : z` zprava, tedy
 | `true ? 5 : false ? 2 : 1` | 5 | **2** |
 | `false ? 0 : true ? 2 : 1` | 2 | 2 |
 | `true ? 0 : (false ? 2 : 1)` | 0 | 0 |
+| `true ? false ? 1 : 2 : 3` | 2 | **chyba syntaxe** „Bylo očekáváno: :" |
+| `true ? (false ? 1 : 2) : 3` | 2 | 2 |
 
 Liší se to jen tehdy, když je **první** podmínka pravdivá — proto vada přežije,
 dokud někdo nezvolí první možnost. Rozepsání na víc řádků nepomůže, závorka
-kolem druhého ternáru ano.
+kolem vnořeného ternáru ano, v obou větvích.
 
 Testy v Node to nevidí, protože Node počítá podle specifikace. Tak prošla
 `tile-export` N14: dialog otevíral uložené „Půl na každou stranu" jako „Celý na
 levý" a „Šířku" jako „Vodítka". Audit parserem přes všechny zdroje našel ještě
 `shared/lib/json2.js:66` a `:87` — neškodné, prázdné `[]` a `{}` jen zapíše
-s odřádkováním. Hlídat pravidlem ESLint `no-nested-ternary` (navrženo v N14).
+s odřádkováním.
+
+**Hlídá to lint:** vlastní pravidlo `engine/no-bare-nested-ternary`
+v `eslint.config.mjs` hlásí vnořený ternár bez vlastních závorek. Vestavěné
+`no-nested-ternary` by hlásilo i závorkované tvary, které jsou správně
+a v `tile-export/src/grid.js` a `shared/lib/ui_state.js` jich je devět.
 
 ---
 

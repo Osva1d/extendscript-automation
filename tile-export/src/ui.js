@@ -198,7 +198,11 @@ TE.UI = {
             [l.DIR_HORIZONTAL, l.DIR_VERTICAL],
             (s.direction === "vertical") ? 1 : 0, l.TIP_DIRECTION);
 
-        var modeIdx = (s.divideMode === "width") ? 1 : (s.divideMode === "guides") ? 2 : 0;
+        // No chained ?: here — ExtendScript evaluates it left to right and
+        // reopened a saved "width" as "guides" (N14).
+        var modeIdx = 0;
+        if (s.divideMode === "width") { modeIdx = 1; }
+        if (s.divideMode === "guides") { modeIdx = 2; }
         var rbMode = this.addRadioRow(pSplit, l.LBL_MODE,
             [l.MODE_COUNT, l.MODE_WIDTH, l.MODE_GUIDES], modeIdx, l.TIP_MODE);
 
@@ -230,8 +234,12 @@ TE.UI = {
         // when one-sided, which panel of the seam carries the material. Kept as
         // one row because the second question only exists inside the second
         // answer, and a separate row would be greyed out most of the time.
-        var carrierIdx = (s.overlapMode !== "onesided") ? 0
-                       : (s.overlapCarrier === "second") ? 2 : 1;
+        // Not a chained ?: — see modeIdx; this one reopened "half on each
+        // side" as "all on left" (N14).
+        var carrierIdx = 0;
+        if (s.overlapMode === "onesided") {
+            carrierIdx = (s.overlapCarrier === "second") ? 2 : 1;
+        }
         var rbOverlapMode = this.addRadioRow(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);

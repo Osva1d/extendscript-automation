@@ -73,6 +73,41 @@ const MISSING_STATICS = [
     message: `${object}.${property} neexistuje v ExtendScript enginu (ověřeno v Illustratoru 30.8.1).`
 }));
 
+// A ?: nested inside another ?: without parentheses of its own. Measured in
+// Illustrator 30.8.1 on 2026-09-18: the engine evaluates
+// `a ? x : b ? y : z` LEFT-associatively, as `(a ? x : b) ? y : z` — a silently
+// different result whenever `a` is true — and rejects `a ? b ? c : d : e`
+// outright ("Bylo očekáváno: :"). Parenthesised, both forms are correct. Node
+// follows the spec, so no Node test can catch this; tile-export N14 shipped
+// because of it. The built-in no-nested-ternary would also flag the
+// parenthesised forms, which are correct and sit in tested geometry code.
+const noBareNestedTernary = {
+    meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+            bare: "Vnořený ?: bez vlastních závorek — ExtendScript ho vyhodnotí zleva, nebo nezparsuje (docs/extendscript-engine-facts.md, Syntaxe). Obal ho závorkou, nebo použij if/else."
+        }
+    },
+    create(context) {
+        const source = context.sourceCode;
+        function check(child) {
+            if (child.type !== "ConditionalExpression") return;
+            // A wrapped child starts right after "(". A child whose TEST is
+            // parenthesised, `(b) ? y : z`, starts AT that "(" and is bare.
+            const before = source.getTokenBefore(child);
+            if (before && before.value === "(") return;
+            context.report({ node: child, messageId: "bare" });
+        }
+        return {
+            ConditionalExpression(node) {
+                check(node.consequent);
+                check(node.alternate);
+            }
+        };
+    }
+};
+
 export default [
     {
         ignores: [
@@ -92,7 +127,9 @@ export default [
             globals: EXTENDSCRIPT_GLOBALS
         },
         linterOptions: { reportUnusedDisableDirectives: true },
+        plugins: { engine: { rules: { "no-bare-nested-ternary": noBareNestedTernary } } },
         rules: {
+            "engine/no-bare-nested-ternary": "error",
             "no-restricted-properties": ["error", ...MISSING_METHODS, ...MISSING_STATICS],
             "no-restricted-globals": [
                 "error",
