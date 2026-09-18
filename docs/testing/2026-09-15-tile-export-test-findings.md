@@ -285,6 +285,66 @@ N× tenčí (při 1:10 ukáže panel Tah 0,03 pt) a po zvětšení vyjde zadaná
 opravit stejně. Ověřit, že spec (`docs/specs/2026-09-13-tile-export-design.md`)
 to má správně.
 
+**Pozor na N13** — ten mění, kde linka leží a co ukáže panel Tah. Texty N12
+psát až podle něj.
+
+---
+
+### N13 — linka vystředěná na hraně, dvojnásobný tah, výchozí 1 pt
+
+**Test:** přetest, znovu P1 (2026-09-18). **Druh:** změna zadání — návrh
+uživatele. Patří do celku 3 spolu s N12, protože mění i texty.
+
+**Návrh.** Neposouvat obdélník linky dovnitř, nechat ho přesně na hraně plátu
+a tah zdvojnásobit. Vnější polovina padne za hranu stránky, vnitřní zůstane
+v motivu. Viditelná linka v tisku alespoň 1 pt, tedy tah 2 pt.
+
+**Co garantuje dnešek a co návrh.** Dnes (spec §4, „Tah je posunutý dovnitř
+o svou polovinu") leží vnější hrana tahu přesně na MediaBoxu, celý tah je vidět
+a viditelná tloušťka se rovná zadané **v každém režimu**. Návrh garantuje, že
+cesta leží přesně na hraně plátu a hrana stránky padne **vždy dovnitř tahu**.
+Viditelná tloušťka se rovná zadané **jen tam, kde tah ořízne hrana stránky**.
+
+**Proč ano.**
+- **Tolerance.** Dnes se hrana tahu a hrana stránky potkávají s nulovou rezervou.
+  Posun o zlomek bodu při vykreslení, v RIPu nebo při řezu kus linky uřízne,
+  nebo mezi ní a hranou nechá bílou škvíru. Tah přes hranu je princip spadávky:
+  hrana stránky do něj padne vždy. Asymetrie z P1 může být právě tohle —
+  prohlížeč zaokrouhlí hranu stránky a obsah na pixely každou jinak. **Neověřeno**,
+  tvůj prohlížeč nemám.
+- **Viditelnost.** 1 pt místo 0,3 pt, v náhledu 1:10 0,1 místo 0,03 pt. To P1
+  nejspíš odstraní bez ohledu na příčinu.
+- **Žádná nová závislost.** Nástroj už dnes spoléhá, že stránka ořízne obsah —
+  v PDF plátu je celá grafika včetně sousedů (engine facts, „Illustrator
+  neořezává obsah. Nikdy."). Vnější polovina linky je na tom stejně jako
+  grafika souseda.
+- **Jednodušší kód** — odpadne zmenšování obdélníku.
+
+**Kde to neplatí:** všude, kde stránka neleží na hraně plátu.
+- **Zünd režim** (dnes skrytý) zvětšuje artboard kvůli značkám
+  (`export.js`, `geo.ab`). Vnější polovina by se vytiskla a linka by měla 2 pt.
+  Stejně jako dnes tam ale prosakuje i grafika souseda. Patří do etapy
+  maska/Zünd: linku dát **dovnitř ořezové masky** plátu, maska pak udělá to, co
+  dnes hrana stránky.
+- **PDF předvolba se spadávkou:** vnější polovina se objeví ve spadávce, spolu
+  s grafikou souseda. Ověřit na předvolbách, které používáš.
+
+**Význam pole Tloušťka se nemění** — dál je to tloušťka viditelná v tisku,
+kreslí se dvojnásobná (v 1:N 2/N). Staré předvolby s 0,3 pt tak dál tisknou
+0,3 pt. Panel Tah ale ukáže dvojnásobek, a to musí říct nápověda (N12).
+
+**Kde:** `tile-export/src/draw.js:85–103` (`drawTileLine` — bez zmenšení,
+tah × 2; náhradní `|| 0.3` na `:87`), `src/config.js:83–86` (výchozí 1 pt,
+komentář s důvodem), `src/ui.js:604` (náhradní `|| 0.3`), texty N12, spec §4
+(„Tah je posunutý dovnitř…", „Tloušťka 0,3 pt jako výchozí"), engine facts
+„Tah je vždy na střed cesty" (poslední odstavec o `drawTileLine`),
+`tests/test_export_transform.js`. Plán: §0 a T4.2–T4.3; přetest: R2.3, řádky
+s linkou v R3–R5, R8.2 (tisková zkouška teď s 1 pt).
+
+**Ověřit po opravě** sondou jako u N7: tah 2 pt se středem na hraně MediaBoxu,
+Poppler vykreslí 1 pt na všech čtyřech hranách. Totéž v 1:10 (tah 0,2 pt,
+vidět 0,1 pt).
+
 ---
 
 ### N8 — předvolba nedá najevo, že se změnila, a nejde vrátit
@@ -338,6 +398,49 @@ seznam „Storno = Cancel") a Zünd Summa Marks používají **Storno**; tile-ex
 
 ---
 
+### N14 — dialog otevře „Půl na každou stranu" jako „Celý na levý" a „Šířku" jako „Vodítka"
+
+**Test:** přetest R4.1 → R4.2 (2026-09-18). **Kde:** `tile-export/src/ui.js:201`
+(řádek Dělit podle) a `:233` (Umístění přelepu). **Patří do celku 2.**
+
+**Příznak.** „Při každém novém běhu je umístění přelepu nastaveno na Celý na
+levý", přestože minulý běh jel s „Půl na každou stranu". `settings.json` má
+v `[Last Settings]` správně `symmetric`.
+
+**Příčina je v enginu, ne v logice.** ExtendScript vyhodnocuje řetězený
+ternární operátor **zleva**: `a ? 0 : b ? 2 : 1` počítá jako
+`(a ? 0 : b) ? 2 : 1`. Pro `symmetric` tak vyjde index 1 místo 0. Naměřeno
+2026-09-18 (engine facts → Syntaxe). Node počítá podle specifikace, takže testy
+v Node tuhle vadu vidět nemůžou.
+
+Sonda na skutečném `buildDialog`, pro každou uloženou hodnotu:
+
+| uloženo | dialog ukáže | nepovšimnutý další běh uloží |
+|---|---|---|
+| Půl na každou stranu | **Celý na levý** | jednostranný, levý |
+| Celý na levý | Celý na levý | ✓ |
+| Celý na pravý | Celý na pravý | ✓ |
+| Počet | Počet | ✓ |
+| **Šířka** | **Vodítka** | vodítka |
+| Vodítka | Vodítka | ✓ |
+
+Řádek Šířka → Vodítka nikdo nehlásil, našel ho audit. Načtení předvolby
+(`apply()`) je v pořádku, protože nastavuje každý přepínač zvlášť. Proto šlo
+nastavení spravit přes předvolbu TEST a vada se vracela jen při novém otevření.
+
+**Audit** parserem (espree) přes všech 39 zdrojů všech tří nástrojů
+a `shared/lib`: nezávorkovaný řetězený ternár je jen tady (2×) a v
+`shared/lib/json2.js:66`, `:87`. V json2 je neškodný — prázdné `[]` a `{}`
+zapíše jako `[\n\n]` a `{\n\n}`, což je platný JSON a načte se zpátky správně
+(změřeno).
+
+**Oprava.** Oba indexy přepsat bez řetězení. Protože Node to nevidí a próza
+se tu snadno přehlédne, potřebuje to mechanismus: pravidlo ESLint
+`no-nested-ternary` pro `*/src/**` (json2 je cizí kód, výjimka). Po opravě
+zopakovat sondu pro všech šest hodnot.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
@@ -354,6 +457,9 @@ v barvě CutContour, takže podstata T5.1 prošla.
 **Rozhodne tisk** (§9 plánu). Kdyby se asymetrie ukázala i na vytištěném plátu,
 řešením je linku o chlup zasunout dovnitř — to ale jde proti původnímu zadání mít
 její vnější hranu přesně na MediaBoxu, takže by to bylo rozhodnutí, ne oprava.
+
+**2026-09-18, přetest:** hlášeno znovu, prohlížeč neuveden. Uživatel navrhl
+opak zasunutí: linku vystředit na hranu a tah zdvojnásobit → **N13**.
 
 ---
 

@@ -80,10 +80,34 @@ Vše `typeof`, ověřeno jednotlivě.
 | `{a: 1,}` trailing comma | **přijímá** |
 | `[1, 2,]` trailing comma | **přijímá**, `length === 2` (ne stará IE chyba) |
 | `"use strict"` | přijímá |
+| `a ? x : b ? y : z` | **přijímá, ale počítá zleva** — viz níž |
 
 Trailing comma je důvod, proč `eslint.config.mjs` parsuje jako `ecmaVersion: 5`
 a ne `3`: `grommet-marks/src/illustrator.js:172` jeden má a prokazatelně běží.
 ES3 parser by nahlásil chybu, která žádná není.
+
+### Řetězený ternár se vyhodnocuje zleva (naměřeno 2026-09-18, AI 30.8.1)
+
+Specifikace i Node sdružují `a ? x : b ? y : z` zprava, tedy
+`a ? x : (b ? y : z)`. Engine ho počítá jako `(a ? x : b) ? y : z`:
+
+| výraz | Node | engine |
+|---|---|---|
+| `true ? 0 : false ? 2 : 1` | 0 | **1** |
+| `true ? "x" : false ? "y" : "z"` | x | **y** |
+| `true ? 5 : false ? 2 : 1` | 5 | **2** |
+| `false ? 0 : true ? 2 : 1` | 2 | 2 |
+| `true ? 0 : (false ? 2 : 1)` | 0 | 0 |
+
+Liší se to jen tehdy, když je **první** podmínka pravdivá — proto vada přežije,
+dokud někdo nezvolí první možnost. Rozepsání na víc řádků nepomůže, závorka
+kolem druhého ternáru ano.
+
+Testy v Node to nevidí, protože Node počítá podle specifikace. Tak prošla
+`tile-export` N14: dialog otevíral uložené „Půl na každou stranu" jako „Celý na
+levý" a „Šířku" jako „Vodítka". Audit parserem přes všechny zdroje našel ještě
+`shared/lib/json2.js:66` a `:87` — neškodné, prázdné `[]` a `{}` jen zapíše
+s odřádkováním. Hlídat pravidlem ESLint `no-nested-ternary` (navrženo v N14).
 
 ---
 
