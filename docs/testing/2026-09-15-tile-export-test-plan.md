@@ -260,6 +260,11 @@ do artboardu vejde.
 **2020 × 1000 mm** (5726,0 × 2834,6 pt). Tím se ověří, že zvětšení z Large Canvas
 do běžného dokumentu sedí.
 
+**Dnes selže — nález N7.** Grafika přes celý dokument 6000 mm je v 1:1 větší, než
+kolik unese nastavení velikosti v Illustratoru, a export spadne na
+`Specified value greater than maximum allowed value`. Dokud N7 nebude opravený,
+zkontroluj v T6.2b jen souhrn a export přeskoč.
+
 **T6.3 — složené měřítko.** Large Canvas × 10 a k tomu ruční 1:10 znamená × 100:
 dokument teď představuje grafiku **60 × 10 metrů**. Souhrn to musí ukázat —
 60000 × 10000, pláty po 20000, i dostupný spad desetkrát větší (500 mm). Oba
