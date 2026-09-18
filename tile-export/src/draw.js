@@ -286,19 +286,36 @@ TE.Draw = {
      * @param {Document} doc - Active document.
      * @returns {Layer} The empty layer.
      */
-    clearLinesLayer: function (doc) {
-        var name = TE.Config.layerLines, lay = null, i;
+    /**
+     * The tool's own lines layer, or null when the document has none.
+     * @param {Document} doc - Target document.
+     * @returns {Layer|null} The layer named TE.Config.layerLines.
+     */
+    findLinesLayer: function (doc) {
+        var name = TE.Config.layerLines, i;
         try {
             for (i = 0; i < doc.layers.length; i++) {
-                if (doc.layers[i].name === name) { lay = doc.layers[i]; break; }
+                if (doc.layers[i].name === name) { return doc.layers[i]; }
             }
         } catch (e) {
             TE.Utils.log("layer lookup failed: " + e.message);
         }
+        return null;
+    },
+
+    /**
+     * Get-or-create the lines layer and empty it, ready to draw into.
+     * Call only when lines are about to be drawn — on a run without lines
+     * this would leave an empty layer behind; use removeLinesLayer() there.
+     * @param {Document} doc - Target document.
+     * @returns {Layer} The emptied layer.
+     */
+    clearLinesLayer: function (doc) {
+        var lay = this.findLinesLayer(doc), i;
 
         if (!lay) {
             lay = doc.layers.add();
-            lay.name = name;
+            lay.name = TE.Config.layerLines;
             return lay;
         }
 
@@ -311,6 +328,38 @@ TE.Draw = {
             catch (e2) { TE.Utils.log("cannot remove line item: " + e2.message); }
         }
         return lay;
+    },
+
+    /**
+     * For a run WITHOUT lines: take away what a previous run with lines left.
+     *
+     * Two jobs that used to be one. The old lines must go — otherwise turning
+     * the line off would keep last run's lines on screen. But the layer itself
+     * should not appear just because this ran: a document that never had lines
+     * got an empty TE_lines layer.
+     *
+     * The layer is emptied exactly as clearLinesLayer() would, and then removed
+     * only when that leaves it truly empty. A sublayer someone put there, or a
+     * layer that is the document's last, stays — deleting those would destroy
+     * more than a clear ever did.
+     *
+     * @param {Document} doc - Target document.
+     * @returns {boolean} True when the layer existed and was removed.
+     */
+    removeLinesLayer: function (doc) {
+        var lay = this.findLinesLayer(doc);
+        if (!lay) { return false; }
+
+        this.clearLinesLayer(doc);
+        if (lay.layers.length > 0 || lay.pageItems.length > 0) { return false; }
+        if (doc.layers.length < 2) { return false; }
+        try {
+            lay.remove();
+            return true;
+        } catch (e) {
+            TE.Utils.log("cannot remove lines layer: " + e.message);
+            return false;
+        }
     },
 
     /**
