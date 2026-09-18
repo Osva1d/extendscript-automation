@@ -273,6 +273,10 @@ Canvas, v 1:1 proto, že plát 20 × 10 m se do artboardu Illustratoru nevejde (
 který nástroj hlídá, je 16 200 pt, asi 5715 mm na stranu). T6.3 tedy ověřuje jen to, že se faktory násobí; šedé
 tlačítko tu není nález.
 
+**Po T6 zavři dokument Large Canvas a vrať se k testovacímu archu z §0.** Jinak
+ponese do dalších sekcí chybu Large Canvas a jiné velikosti plátů — T7.3 v něm
+chybu přelepu vůbec nevyvolá, protože pláty mají 2000 mm a přelep 1200 se vejde.
+
 ---
 
 ## 7. Dialog a předvolby (T7)

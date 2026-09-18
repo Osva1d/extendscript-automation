@@ -191,7 +191,13 @@ plát v 1:1 vejde. Při složeném měřítku (× 10 × 10 = × 100) má plát 2
 a to je přes strop artboardu, který nástroj hlídá (16 200 pt, asi 5715 mm na
 stranu).
 
-**Řešení: vyřeší ho N1.** Oprava N1 pravidlo `ERR_LARGE_CANVAS` i s hláškou
+**Druhý případ, kde rada selže** (hlášeno z T7.3, 2026-09-18). I u obyčejného
+Large Canvasu bez ručního měřítka: dokument 6000 mm s grafikou přes celou šířku.
+Po přepnutí na 1:1 dialog projde, ale export pak spadne na N7, protože grafika
+je v 1:1 přes 5,77 m. Rada „Použij výstup 1:1" tak vede do slepé uličky i tady,
+jen ji uživatel odhalí až po kliknutí na export.
+
+**Řešení: vyřeší ho N1 spolu s N7.** Oprava N1 pravidlo `ERR_LARGE_CANVAS` i s hláškou
 odstraní a T6.3a pak vyexportuje náhled 1:10 (plát 2002 mm). Zapsané zvlášť pro
 případ, že by se N1 nepřijala — pak by rada musela být podmíněná: nabízet 1:1
 jen tehdy, když se plát vejde, jinak říct, že neprojde ani jedno měřítko a proč.
