@@ -17,6 +17,8 @@ testy, které ještě nejsou hotové, a část nálezů se týká stejných mís
 
 ### N7 — export 1:1 selže, když je celá grafika větší než ~5,77 m
 
+**Stav: opraveno v `160341a`** (dávka, celek 1). Níž původní záznam.
+
 **Test:** T6.2b. **Druh:** vada, blokuje export. **Priorita: nejvyšší v dávce.**
 Stojí první, i když byla nalezena sedmá.
 
@@ -63,6 +65,8 @@ nenastavuje, ale při opravě projít i cestu Zünd režimu.
 ---
 
 ### N1 — „Stejné jako dokument" u Large Canvasu znamená něco jiného, než slibuje
+
+**Stav: opraveno v `160341a`** (dávka, celek 1). Níž původní záznam.
 
 **Test:** T6.2. **Druh:** návrhová vada, ne chyba výpočtu. **Nahlášeno** jako
 bod k úvaze, ne jako chyba — ale rozbor ukázal, že kód nedělá, co říká vlastní
@@ -184,6 +188,8 @@ Udělat, až se bude do `apply()` sahat z jiného důvodu — ne jako samostatn�
 
 ### N6 — chybová hláška u Large Canvasu radí cestu, která nevede ven
 
+**Stav: opraveno v `160341a`** (dávka, celek 1). Níž původní záznam.
+
 **Test:** T6.3. **Kde:** `tile-export/src/locale.js:30` a `:165`
 (`ERR_LARGE_CANVAS`), `:164` (`ERR_AB_TOO_BIG`).
 
@@ -213,6 +219,41 @@ strop, takže uživatel neví, jestli pomůže víc plátů. V T6.3b nepomůže:
 **výška** 10 m, a tu vodorovné dělení nezmenší. Lepší znění: „Plát
 20 020 × 10 000 mm je větší než artboard Illustratoru (nejvýš 5715 mm na stranu)."
 Tohle se týká i běžných dokumentů, takže to N1 nevyřeší — opravit spolu s ním.
+
+---
+
+### N10 — linka u Large Canvasu desetkrát tlustší
+
+**Stav: opraveno v `160341a`** spolu s N7. **Nalezeno** při opravě N7, ne testem.
+
+`TE.Draw.drawTileLine` počítal tloušťku linky z měřítka `app.activeDocument`.
+Při exportu je aktivní dočasný dokument, který nikdy není Large Canvas, takže
+plát z Large Canvasu v 1:1 dostal místo 0,3 pt linku **3 pt**. Vada byla skrytá:
+export z Large Canvasu vždycky spadl dřív na N7, a oprava N7 by ji odkryla.
+
+Opraveno tak, že se měřítko linky předává (`TE.Utils.outputLineScale`) a export
+aktivní dokument nečte vůbec. Test hlídá zdroják `exportTile` i `drawTileLine`,
+aby se čtení aktivního dokumentu nevrátilo. Ověřeno exportem z Large Canvasu:
+linka 0,3 pt.
+
+---
+
+### N11 — Zünd: značky se měří podle aktivního dokumentu
+
+**Test:** žádný — Zünd režim je v dialogu skrytý. **Nalezeno** čtením kódu při
+opravě N10; **neměřeno**. **Kde:** `shared/lib/cut_marks.js:40`
+(`NS.Utils.getEffectiveSF(s)` v `calculateAll`), `tile-export/src/draw.js:258`
+(`TE.Utils.toDoc` v `drawMarks`).
+
+Stejná třída vady jako N10. Obojí se volá uvnitř `exportTile` až po založení
+dočasného dokumentu, takže měřítko čte z něj. Podle kódu: dokument kreslený
+v 1:N (N > 1) exportovaný v 1:1 by dostal značky, mezery i rozestupy **N× menší**
+— dočasný dokument je ve skutečné velikosti, ale milimetry se v něm dělí N.
+Ve „Stejné jako dokument" a u dokumentů kreslených 1:1 vycházejí správně.
+
+**Kdy opravit:** v etapě, která Zünd režim zpřístupní (spolu s maskou) — ta cesta
+se bude předělávat tak jako tak. Směr stejný jako u N10: předat měřítko
+dočasného dokumentu výslovně, nečíst aktivní dokument. Nejdřív změřit.
 
 ---
 
