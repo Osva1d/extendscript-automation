@@ -125,6 +125,34 @@ jde jen o vzhled. Oprava by byla `String(v).replace(".", TE.L.DECIMAL)` ve všec
 
 ---
 
+### N6 — chybová hláška u Large Canvasu radí cestu, která nevede ven
+
+**Test:** T6.3. **Kde:** `tile-export/src/locale.js:30` a `:165`
+(`ERR_LARGE_CANVAS`), `:164` (`ERR_AB_TOO_BIG`).
+
+**Příznak.** T6.3a (Large Canvas + ruční 1:10, výstup Stejné jako dokument)
+hlásí „…Použij výstup 1:1." Kdo radu poslechne (T6.3b), dostane jinou chybu:
+„Plát se při tomto měřítku výstupu nevejde do artboardu Illustratoru." Obě cesty
+jsou zavřené a hláška poslala uživatele z jedné do druhé.
+
+**Příčina.** Rada v `ERR_LARGE_CANVAS` je bezpodmínečná — neověřuje, jestli se
+plát v 1:1 vejde. Při složeném měřítku (× 10 × 10 = × 100) má plát 20 × 10 m,
+a to je přes strop artboardu, který nástroj hlídá (16 200 pt, asi 5715 mm na
+stranu).
+
+**Řešení: vyřeší ho N1.** Oprava N1 pravidlo `ERR_LARGE_CANVAS` i s hláškou
+odstraní a T6.3a pak vyexportuje náhled 1:10 (plát 2002 mm). Zapsané zvlášť pro
+případ, že by se N1 nepřijala — pak by rada musela být podmíněná: nabízet 1:1
+jen tehdy, když se plát vejde, jinak říct, že neprojde ani jedno měřítko a proč.
+
+**Související — `ERR_AB_TOO_BIG` neříká, co je moc velké.** Neuvádí rozměr ani
+strop, takže uživatel neví, jestli pomůže víc plátů. V T6.3b nepomůže: přetéká
+**výška** 10 m, a tu vodorovné dělení nezmenší. Lepší znění: „Plát
+20 020 × 10 000 mm je větší než artboard Illustratoru (nejvýš 5715 mm na stranu)."
+Tohle se týká i běžných dokumentů, takže to N1 nevyřeší — opravit spolu s ním.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
