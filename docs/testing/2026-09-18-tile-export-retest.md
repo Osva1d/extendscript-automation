@@ -73,6 +73,12 @@ Výchozí nastavení je tabulka z §0 původního plánu a každý test níž uv
 čím se od ní liší. **Dialog si pamatuje poslední stav** — před každou sekcí ho
 vrať.
 
+**Každý export do nové složky** (nebo předchozí PDF odstraň). Přeskočit hotové je
+v §0 zapnuté a jména plátů se mezi testy téhož dokumentu neliší — R3.2 by jinak
+přeskočil všechny pláty z R3.1, R4.2 z R4.1 a R5.2 z R5.1, a na disku by zůstaly
+stránky z předchozího testu. Hlášení po exportu to řekne řádkem „Počet
+přeskočených plátů".
+
 **Předvolba TEST má ještě tloušťku linky 0,3 pt.** Načti ji, přepiš tloušťku na
 1 pt a dej **Uložit** — tím zároveň zkoušíš R6.1 a R6.3.
 
@@ -126,10 +132,6 @@ Změnil se kód, kterým se grafika vkládá do plátu.
 **Panel Výsledek je u R3.1 i R3.2 stejný** — ukazuje pláty ve skutečných
 milimetrech a měřítko výstupu ho nemění. R3.1 a R3.2 se tedy liší až na
 stránkách PDF. Nápad, jak rozdíl ukázat už v dialogu: N16.
-
-**Pozor na Přeskočit hotové:** R3.1 a R3.2 exportuj do různých složek (nebo
-mezi nimi soubory odstraň). Se stejným vzorem jmen by R3.2 všechny pláty
-přeskočil a na disku by zůstaly stránky z R3.1.
 
 **R3.4** Přeskočit hotové (T5.4): druhý běh do stejné složky nic nepřepíše a řekne,
 kolik přeskočil.
