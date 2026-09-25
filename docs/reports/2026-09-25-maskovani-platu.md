@@ -131,6 +131,8 @@ Tentýž poměr už počítá řádek „Stránky PDF" (N16).
 
 ## 5. Chyby nalezené v dnešním Zünd kódu
 
+**Obě opraveny 2026-09-25** (viz nálezy N11, N21).
+
 **N11 — potvrzeno výpočtem.** `calculateAll` si měřítko bere
 z `getEffectiveSF`, tedy z **aktivního** dokumentu. Při exportu je to dočasný
 dokument, který o ručním měřítku nic neví. Chyba se projeví přesně u
@@ -184,6 +186,18 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
   s aktivním dokumentem) **křížová kontrola**: stejný obdélník plátu projde
   ZSM i tile-exportem a polohy značek a artboard se porovnají. Režim Summa
   zůstává mimo.
+
+### Odpovědi uživatele k §7 (2026-09-25)
+
+1. **Přímé barvy řezu:** `Cut`, případně `Thru-cut` a `Kiss-cut` (přesný zápis
+   `Thru-cut` ověřit). Pro rovný plát průřez; výběr ze seznamu, výchozí `Cut`.
+   Dnešní výchozí `cutSpot` je `cut` s malým písmenem — opravit.
+2. **Spad za řezem** podle místa na materiálu: běžně 3 nebo 5 mm, u velkých
+   plátů až 10 mm. Jedno číselné pole, výchozí 5 mm.
+3. **Jména:** řezový soubor se suffixem `_cut`. Vzor pojmenování později rozšířit
+   o rozměr plátu a čistého formátu po ořezu.
+4. Orientační bod: navrženo na každém plátu (zakládají se jednotlivě); bez
+   námitky.
 
 ## 9. Doporučené pořadí
 

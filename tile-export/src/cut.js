@@ -104,8 +104,10 @@ TE.Cut = {
             if (copies.length === 0) { return 0; }
 
             // 3. Covering frame: outer rectangle with the panel as a hole.
-            var ab = tmpDoc.artboards[0].artboardRect;
-            var fr = this.frameRects(ab, 20000);
+            //    The PANEL rect, not the artboard: by now exportTile has grown
+            //    the artboard for the marks, and cutting against it put the
+            //    cut data a mark-width into the neighbour (N21).
+            var fr = this.frameRects(tf.artboard, 20000);
             var outer = tmpDoc.pathItems.rectangle(
                 fr.outer[1], fr.outer[0],
                 fr.outer[2] - fr.outer[0], fr.outer[1] - fr.outer[3]);

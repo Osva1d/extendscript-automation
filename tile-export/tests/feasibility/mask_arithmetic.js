@@ -12,8 +12,9 @@
  * What it checks, on the exported PDF page (in page millimetres):
  *  1. proposed: the mask reaches exactly `bleed` real mm past the cut,
  *  2. proposed: marks sit `gap` real mm clear of the mask, sized `mark` mm,
- *  3. today:    the shared geometry, reading the ACTIVE (temporary) document,
- *               sizes the marks — this is N11, now made concrete.
+ *  3. before N11: the shared geometry called WITHOUT the page ratio reads the
+ *               ACTIVE (temporary) document — how the export called it until
+ *               N11 was fixed. Kept to show what went wrong.
  */
 var fs = require("fs"), path = require("path");
 var BASE = path.join(__dirname, "..", "..", "..") + "/";

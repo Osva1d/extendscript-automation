@@ -28,16 +28,20 @@ function buildCutMarks(NS) {
          *
          * @param {Object} s - Settings from UI (mode, gaps, sizes, etc.)
          * @param {Array}  b - Graphic bounds [L, T, R, B] in document points.
+         * @param {number} [scale] - Real mm per document mm. Omitted, it is
+         *        NS.Utils.getEffectiveSF(s), which reads the ACTIVE document —
+         *        right for zund-summa-marks, wrong for tile-export, which
+         *        draws into a temporary document and passes it (N11).
          * @returns {Object} Geometry: { marksZ[], marksS[], barS, red[], ab[], warnings[] }
          */
-        calculateAll: function (s, b) {
+        calculateAll: function (s, b, scale) {
             var cfg = NS.Config;
             // Effective scale factor — see NS.Utils.getEffectiveSF() for the
             // single source of truth. Routes through that helper so core.js and
             // draw.js cannot drift apart again (the bug class fixed in v26.4.0
             // manual test: draw.js used raw getSF(), missed scaleN, marks
             // didn't shrink).
-            var sf  = NS.Utils.getEffectiveSF(s);
+            var sf  = (Number(scale) > 0) ? Number(scale) : NS.Utils.getEffectiveSF(s);
 
             // Convert physical constants to document-space values
             var rZ    = (s.markSizeZ / 2) / sf;
