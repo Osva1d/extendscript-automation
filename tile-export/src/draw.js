@@ -253,7 +253,7 @@ TE.Draw = {
      *        document, from TE.Draw.readSpotDef(). Null means registration.
      * @returns {number} How many marks were drawn.
      */
-    drawMarks: function (doc, geo, s, markDef, pageRatio) {
+    drawMarks: function (doc, geo, s, markDef, pageRatio, target) {
         var spot = this.resolveMarkColor(doc, s.markColor, markDef);
         // Radius in the temporary document. Passed in, never read from the
         // active document: that one is the temporary document and lost the
@@ -271,7 +271,7 @@ TE.Draw = {
             try {
                 // pathItems.ellipse(top, left, width, height) — the mark is
                 // centred on m, so the box starts half a diameter away.
-                c = doc.pathItems.ellipse(m.cy + r, m.cx - r, r * 2, r * 2);
+                c = (target || doc).pathItems.ellipse(m.cy + r, m.cx - r, r * 2, r * 2);
                 c.filled = true;
                 c.fillColor = spot;
                 // Overprint, as zund-summa-marks does: the mark must not knock

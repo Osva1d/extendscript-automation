@@ -74,7 +74,124 @@ TE.Export = {
      */
     outputExists: function (tile, ctx, s) {
         var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
-        return new File(ctx.outFolder.fsName + "/" + name + ".pdf").exists;
+        var dir = ctx.outFolder.fsName + "/";
+        if (!new File(dir + name + ".pdf").exists) { return false; }
+        // Zünd writes two files; a panel is finished only when both are there.
+        return !s.zundMode || new File(dir + this.cutName(name) + ".pdf").exists;
+    },
+
+    /**
+     * Name of the cut file for a panel's print file name (without extension).
+     * @param {string} name - Print file name.
+     * @returns {string} Cut file name.
+     */
+    cutName: function (name) {
+        return name + "_cut";
+    },
+
+    /**
+     * Zünd layout of one panel in its temporary document. PURE FUNCTION.
+     *
+     * The cut is the panel rectangle — the MediaBox the trim line used to
+     * mark. The mask is the cut grown by the bleed past it, converted from
+     * real millimetres with the page ratio (N11): 5 mm real is 0.5 mm on a
+     * 1:10 page.
+     *
+     * @param {Object} tf - From tileTransform().
+     * @param {Object} s - Settings (cutBleed).
+     * @param {number} ratio - TE.Utils.pageRatio().
+     * @returns {Object} {cut: [l,t,r,b], mask: [l,t,r,b]} in temp doc points.
+     */
+    zundLayout: function (tf, s, ratio) {
+        var c = tf.artboard;
+        var b = TE.Utils.mm2pt(Number(s.cutBleed) || 0) / (Number(ratio) || 1);
+        return { cut: c, mask: [c[0] - b, c[1] + b, c[2] + b, c[3] - b] };
+    },
+
+    /**
+     * Builds a Zünd panel in its temporary document: three layers, the cut,
+     * the marks measured from the mask, the page grown to fit them, and the
+     * artwork clipped by the mask. See the study,
+     * docs/reports/2026-09-25-maskovani-platu.md §3.
+     *
+     *   TE_print — artwork in the mask     (print PDF)
+     *   TE_marks — registration marks      (both PDFs)
+     *   TE_cut   — cut path in cutSpot     (_cut PDF)
+     *
+     * Order matters: a raster is made after the page has grown, because
+     * rasterize() crops to the artboard and the bleed lies outside the panel.
+     *
+     * @param {Document} tmp - The panel's temporary document.
+     * @param {PlacedItem} pi - The placed artwork, already positioned.
+     * @param {Object} tf - From tileTransform().
+     * @param {Object} ctx - Export context (scaleFactor, markDef).
+     * @param {Object} s - Settings.
+     * @returns {Object} {cutPaths, layPrint, layCut}.
+     */
+    buildZundPanel: function (tmp, pi, tf, ctx, s) {
+        var ratio = TE.Utils.pageRatio(s, ctx.scaleFactor);
+        var zl = this.zundLayout(tf, s, ratio);
+        var layPrint = tmp.layers[0];
+        layPrint.name = "TE_print";
+        var layMarks = tmp.layers.add();
+        layMarks.name = "TE_marks";
+        var layCut = tmp.layers.add();
+        layCut.name = "TE_cut";
+
+        // 1. The cut: the panel rectangle. A shaped contour is the next stage
+        //    — TE.Cut.renderTileContour is kept for it but not called: on a
+        //    panel the contour does not reach it leaves the covering frame
+        //    behind and turns it into cut paths (N24, measured 2026-09-26).
+        var r = layCut.pathItems.rectangle(zl.cut[1], zl.cut[0],
+            zl.cut[2] - zl.cut[0], zl.cut[1] - zl.cut[3]);
+        r.filled = false;
+        r.stroked = true;
+        r.strokeColor = TE.Draw.getOrCreateSpot(tmp, s.cutSpot);
+        // Read by the machine, not the eye: a hairline.
+        r.strokeWidth = 0.125;
+        r.name = "TE_cut";
+        var cutPaths = 1;
+
+        // 2. Marks from the MASK, the end of the printed artwork: the gap is
+        //    clear space around a mark whatever the bleed. The page ratio is
+        //    passed, or the shared geometry reads the temporary document (N11).
+        var geo = TE.Core.calculateAll(s, zl.mask, ratio);
+        TE.Draw.drawMarks(tmp, geo, s, ctx.markDef, ratio, layMarks);
+        if (geo.ab) { tmp.artboards[0].artboardRect = geo.ab; }
+
+        // 3. Raster mode: the artwork only, now that the page has grown.
+        var art = pi;
+        if (s.exportMode === "raster") { art = this.rasterizeArt(tmp, pi, s); }
+
+        // 4. The mask. A plain path, so the DOM can clip — a compound path
+        //    could not (measured; the shaped mask will need makeMask).
+        var m = layPrint.pathItems.rectangle(zl.mask[1], zl.mask[0],
+            zl.mask[2] - zl.mask[0], zl.mask[1] - zl.mask[3]);
+        m.filled = true;
+        m.stroked = false;
+        var g = layPrint.groupItems.add();
+        art.move(g, ElementPlacement.PLACEATEND);
+        m.move(g, ElementPlacement.PLACEATBEGINNING);
+        g.clipped = true;
+
+        return { cutPaths: cutPaths, layPrint: layPrint, layCut: layCut };
+    },
+
+    /**
+     * Rasterises the placed artwork only (N19): whatever is drawn on top
+     * stays vector. rasterize() replaces the item in place and crops it to
+     * the artboard (measured).
+     * @param {Document} tmp - Temporary document.
+     * @param {PlacedItem} pi - Placed artwork.
+     * @param {Object} s - Settings (rasterDPI).
+     * @returns {RasterItem} The raster.
+     */
+    rasterizeArt: function (tmp, pi, s) {
+        var ro = new RasterizeOptions();
+        ro.resolution = Number(s.rasterDPI) || 150;
+        ro.antiAliasing = true;
+        ro.transparency = false;
+        return tmp.rasterize(pi, undefined, ro);
     },
 
     /**
@@ -91,9 +208,10 @@ TE.Export = {
      * @param {Object} ctx - {graphicFile, graphicBounds, docName, outFolder,
      *        total, pdfOptions, contour, markDef}.
      * @param {Object} s - Settings.
-     * @returns {Object} {file: File, contourPaths: number}. contourPaths is 0
-     *          when the cut contour does not reach this panel, which is not an
-     *          error but belongs in the summary.
+     * @returns {Object} {file: File, cutFile: File|undefined, contourPaths:
+     *          number}. cutFile only in Zünd mode. contourPaths counts the cut
+     *          paths; 0 when a contour exists but does not reach this panel,
+     *          which is not an error but belongs in the summary.
      * @throws {Error} TE_EXPORT:<index>:<message>
      */
     exportTile: function (tile, ctx, s) {
@@ -122,53 +240,35 @@ TE.Export = {
             pi.resize(tf.size[0] / pi.width * 100, tf.size[1] / pi.height * 100);
             pi.position = tf.position;
 
+            if (s.zundMode) {
+                // The trim line is not printed in Zünd mode: the cut path in
+                // the _cut PDF takes its place.
+                var zp = this.buildZundPanel(tmp, pi, tf, ctx, s);
+                contourPaths = zp.cutPaths;
+                var zName = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
+                var zDir = ctx.outFolder.fsName + "/";
+                // Hidden layers are left out of the PDF only because main.js
+                // sets acrobatLayers = false; otherwise they travel as an
+                // optional-content layer, cut data and all (measured).
+                zp.layCut.visible = false;
+                tmp.saveAs(new File(zDir + zName + ".pdf"), ctx.pdfOptions);
+                zp.layCut.visible = true;
+                zp.layPrint.visible = false;
+                var zCut = new File(zDir + this.cutName(zName) + ".pdf");
+                tmp.saveAs(zCut, ctx.pdfOptions);
+                return { file: new File(zDir + zName + ".pdf"), cutFile: zCut, contourPaths: contourPaths };
+            }
+
             if (s.drawLine) {
                 // The panel's outer rect maps exactly onto the temporary
                 // artboard, so the line marks the MediaBox of this PDF.
                 TE.Draw.drawTileLine(tmp, tf.artboard, s, lineScale);
             }
 
-            if (s.zundMode) {
-                // Marks are computed from THIS panel's rect, so they sit on
-                // the panel rather than on the whole graphic. The page ratio
-                // is passed: left to itself the shared geometry reads the
-                // active — temporary — document's scale (N11).
-                var ratio = TE.Utils.pageRatio(s, ctx.scaleFactor);
-                var geo = TE.Core.calculateAll(s, tf.artboard, ratio);
-                // markDef carries the spot definition from the source document;
-                // a temporary document starts with only the default swatches.
-                TE.Draw.drawMarks(tmp, geo, s, ctx.markDef, ratio);
-
-                // Marks sit OUTSIDE the panel — measured: with a 10 mm gap and
-                // a 5 mm mark, they reach 42.5 pt past each edge. The shared
-                // geometry returns the artboard that fits them, and the panel
-                // must grow to it or the marks never reach the PDF. The trim
-                // line stays where it was, now inside a larger MediaBox.
-                if (geo.ab) { tmp.artboards[0].artboardRect = geo.ab; }
-
-                if (ctx.contour && ctx.contour.length) {
-                    // Zero back means the contour does not reach this panel —
-                    // not an error (a middle panel of a rectangular cut-out
-                    // legitimately has none), but the caller reports it.
-                    contourPaths = TE.Cut.renderTileContour(tmp, ctx.contour, tf, s);
-                }
-            }
-
             if (s.exportMode === "raster") {
-                // Rasterising here is free — the document is thrown away
-                // anyway, so there is nothing to protect and no duplication
-                // needed. Only the GRAPHIC is rasterised: the trim line, Zünd
-                // marks and cut paths stay vector, sharp and on top. Measured:
-                // rasterize(pi) replaces the graphic in place in the stacking
-                // order and crops it to the artboard. It used to gather every
-                // page item into a group first, walking the live collection
-                // it changed; the line fell out of the group and the opaque
-                // raster covered it (N19).
-                var ro = new RasterizeOptions();
-                ro.resolution = Number(s.rasterDPI) || 150;
-                ro.antiAliasing = true;
-                ro.transparency = false;
-                tmp.rasterize(pi, undefined, ro);
+                // Only the GRAPHIC is rasterised; the trim line stays vector
+                // on top (N19). See rasterizeArt().
+                this.rasterizeArt(tmp, pi, s);
             }
 
             var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);

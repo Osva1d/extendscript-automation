@@ -63,6 +63,17 @@ eq(TE.UI.collect(refs({ etAddRight: "2,5" })).addRight, 2.5, "add right");
 eq(TE.UI.collect(refs({ etWidth: "1000,5" })).tileWidth, 1000.5, "panel width with a comma");
 eq(TE.UI.collect(refs({ etRound: "2,5" })).guideRound, 2.5, "guide rounding with a comma");
 
+console.log("\n=== Zünd: bleed past the cut is read with a comma too ===");
+var rzc = refs({});
+rzc.cbZund = { value: true }; rzc.ddCutSpot = { selection: { text: "Thru-cut" } };
+rzc.ddMarkColor = { selection: null }; rzc.etMarkSize = { text: "5" }; rzc.etGapInner = { text: "5" };
+rzc.etMaxDist = { text: "500" }; rzc.etOrient = { text: "100" }; rzc.etBleed = { text: "2,5" };
+var cz = TE.UI.collect(rzc);
+eq(cz.cutBleed, 2.5, "bleed 2,5");
+eq(cz.cutSpot, "Thru-cut", "cut colour from the list");
+rzc.etBleed.text = "";
+eq(TE.UI.collect(rzc).cutBleed, TE.Config.getDefaults().cutBleed, "empty bleed falls back to the default");
+
 console.log("\n=== fallbacks are unchanged — only the parsing moved ===");
 // Empty, zero and garbage still take the same fallback each field always had.
 // The one fallback that changed is the line width's: it disagreed with the

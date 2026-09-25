@@ -14,8 +14,11 @@ global.TE = TE;
 load("src/locale.js");
 load("src/lib/utils.js");
 load("src/lib/validation.js");
+load("../shared/lib/cut_marks.js");
+global.buildCutMarks(TE);
 load("src/config.js");
 load("src/grid.js");
+load("src/export.js");
 load("src/ui.js");
 
 var pass = 0, fail = 0, total = 0;
@@ -121,6 +124,28 @@ has(summary({}), "Stránky PDF (1:10): 101 × 100 | 102 × 100 | 101 × 100 mm",
 has(summary({ rbExpScale: [{ value: false }, { value: true }] }),
     "Stránky PDF: skutečná velikost, stejná jako s přídavky.", "1:1 output repeats no sizes");
 has(summary({ etScaleN: { text: "12,5", enabled: true } }), "Stránky PDF (1:12,5):", "a decimal scale keeps its comma");
+
+console.log("\n=== Zünd: pages carry the marks, and the cut is named ===");
+// Defaults: bleed 5 past the cut, marks 5 mm, 5 mm clear of the mask, so
+// the page grows by 15 mm per side. The test sheet is 1:10.
+function zund(extra) {
+    var o = { cbZund: { value: true, enabled: true },
+        ddCutSpot: { selection: { text: "Cut" } }, ddMarkColor: { selection: { text: "[Registration]" } },
+        etMarkSize: { text: "5" }, etGapInner: { text: "5" }, etMaxDist: { text: "500" },
+        etOrient: { text: "100" }, etBleed: { text: "5" } };
+    var k; for (k in extra) { if (extra.hasOwnProperty(k)) { o[k] = extra[k]; } }
+    return o;
+}
+ctx.contourSpots = [];
+var tz = summary(zund({}));
+has(tz, "Stránky PDF (1:10) se značkami: 104 × 103 | 105 × 103 | 104 × 103 mm", "pages with marks");
+has(tz, "Řez: obdélník plátu v barvě Cut.", "no contour: the panel rectangle is cut");
+ctx.contourSpots = ["Cut"];
+var tzc = summary(zund({}));
+has(tzc, "! Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
+has(tzc, "Řez: obdélník plátu v barvě Cut.", "and the rectangle is still what gets cut");
+ctx.contourSpots = [];
+has(summary(zund({ etBleed: { text: "10" } })), "se značkami: 105 × 104 |", "bleed 10 grows the page by 1 mm a side at 1:10");
 
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and

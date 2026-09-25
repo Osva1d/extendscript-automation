@@ -92,10 +92,11 @@ function body(file, start, end) {
     var a = src.indexOf(start);
     return src.slice(a, end ? src.indexOf(end, a + start.length) : undefined);
 }
-var ex = body("src/export.js", "exportTile: function");
-assert(/calculateAll\(\s*s\s*,\s*tf\.artboard\s*,\s*\w+\s*\)/.test(ex), "exportTile passes the page ratio to calculateAll");
-assert(/drawMarks\([^)]*,\s*\w+\s*\)/.test(ex) && /drawMarks\(\s*tmp\s*,\s*geo\s*,\s*s\s*,\s*ctx\.markDef\s*,\s*\w+\s*\)/.test(ex),
-    "exportTile passes the page ratio to drawMarks");
+var ex = body("src/export.js", "buildZundPanel: function", "\n    },");
+assert(/calculateAll\(\s*s\s*,\s*zl\.mask\s*,\s*ratio\s*\)/.test(ex), "the panel passes the page ratio to calculateAll");
+assert(/drawMarks\(\s*tmp\s*,\s*geo\s*,\s*s\s*,\s*ctx\.markDef\s*,\s*ratio\b/.test(ex),
+    "the panel passes the page ratio to drawMarks");
+assert(!/getSF|getEffectiveSF|activeDocument/.test(ex), "the panel builder reads no document scale");
 var dm = body("src/draw.js", "drawMarks: function", "\n    },");
 assert(!/toDoc|getSF|getEffectiveSF|activeDocument/.test(dm), "drawMarks reads no document scale");
 
@@ -105,6 +106,11 @@ console.log("\n=== N21: the contour is cut against the panel, not the enlarged a
 var rc = body("src/cut.js", "renderTileContour: function", "\n    },");
 assert(!/artboardRect/.test(rc), "renderTileContour does not read the artboard");
 assert(/frameRects\(\s*tf\.artboard/.test(rc), "the covering frame is built on the panel rect");
+
+console.log("\n=== N22: the contour is scaled with the artwork ===");
+// A 1:10 document exported 1:1 placed the contour at the right spot but ten
+// times too small: it was moved by k, never scaled by it.
+assert(/\.resize\(\s*tf\.k\s*\*\s*100\s*,\s*tf\.k\s*\*\s*100/.test(rc), "renderTileContour scales the copy by the output scale");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

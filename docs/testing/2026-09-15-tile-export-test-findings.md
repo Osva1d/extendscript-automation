@@ -695,6 +695,51 @@ měla 0,5 mm místo 5 mm.
 
 ---
 
+### N22 — Zünd: kontura se nezvětšovala s měřítkem výstupu
+
+**Nalezeno** exportem v harnessu (2026-09-26), zeď 1:10 exportovaná 1:1 s
+elipsou v barvě `Cut`. **Stav: opraveno**, ale v této verzi se kontura
+nepoužívá (N24).
+
+`renderTileContour` konturu do dočasného dokumentu **posunul** o měřítko
+výstupu, ale **nezvětšil** — elipsa 1000 × 600 mm vyšla 100 × 60 mm. Teď
+`resize(k × 100 %)` před posunem; test v `test_zund_scale` hlídá zdroják,
+render po opravě ukázal elipsu ve správné velikosti, rozdělenou přes šev.
+
+---
+
+### N23 — rozlišení rastru pod 72 DPI selže až při exportu
+
+**Nalezeno** harnessem (2026-09-26). **Druh:** chybějící validace, starší než
+dávka. **Kde:** `tile-export/src/ui.js` (`collect`, `rasterDPI`),
+`src/lib/validation.js`.
+
+Illustrator přijme rozlišení rastru od **72 DPI** (naměřeno: 71 selže, 72
+projde). Dialog pustí i menší číslo a export pak na každém plátu vrátí surové
+`Specified value less than minimum allowed value`. **Oprava:** validační chyba
+v rastrovém režimu pod 72, s hláškou, co je minimum.
+
+---
+
+### N24 — Zünd: kontura, která do plátu nezasahuje, nechá rám jako řez
+
+**Nalezeno** harnessem (2026-09-26), **naměřeno**. **Druh:** vada tvarového
+ořezu — patří do jeho etapy. **Kde:** `tile-export/src/cut.js`,
+`renderTileContour`.
+
+Na plátu, kam kontura nezasahuje, Pathfinder nemá co odečíst a zakrývající rám
+zůstane. Krok 5 pak obarví jako řez **každou cestu v dokumentu**: obdélník plátu
+(díru rámu), vnější rám a kopii kontury mimo stránku. Funkce vrátí 3 místo 0,
+souhrn plát bez řezu neohlásí a `_cut` PDF nese řez, který tam nepatří.
+
+**V této verzi obejito:** Zünd režim řeže vždy obdélník plátu, kontura se
+nepoužívá a dialog cesty v barvě řezu ohlásí varováním. **Oprava v etapě
+tvarového ořezu:** předem vyřadit kopie, které panel neprotínají; po Pathfinderu
+brát jen výsledné kusy, ne všechny cesty dokumentu; a sondou ověřit i případ
+„kontura obkružuje plát" (ohraničení se protíná, tvar ne).
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
