@@ -131,6 +131,7 @@ has(r63.stCalc.text,
     "Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu.",
     "the message names the panel, its size and the limit");
 eq(r63.btnExport.enabled, false, "and the export stays blocked");
+eq(r63.btnTiles.enabled, true, "Panels only stays available: it draws at the document's own scale (N17)");
 
 console.log("\n=== T6.2a: Large Canvas at same-as-document now just works (N1) ===");
 var r62 = refs({ cbScale: { value: false, enabled: true } });

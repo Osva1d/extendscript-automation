@@ -847,7 +847,7 @@ TE.UI = {
         var s = this.collect(r);
         var lines = [];
         var alerts = [];   // errors and warnings, rendered ABOVE the geometry
-        var ok = true;
+        var ok = true, exportOk = true;
 
         // Mode-dependent fields: show the one that applies, grey the rest.
         r.etCount.enabled = (s.divideMode === "count");
@@ -900,8 +900,10 @@ TE.UI = {
                 mm(ctx.validation.overhang.bottom)));
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
+            for (i = 0; i < v.exportErrors.length; i++) { alerts.push("✗ " + v.exportErrors[i]); }
             for (i = 0; i < v.warnings.length; i++) { alerts.push("! " + v.warnings[i]); }
             ok = (v.errors.length === 0);
+            exportOk = (v.exportErrors.length === 0);
         } catch (err) {
             alerts.push("✗ " + this.describeError(err));
             ok = false;
@@ -912,7 +914,7 @@ TE.UI = {
         // to sit at the BOTTOM, below one line per panel.
         r.stCalc.text = alerts.concat(lines).join("\n");
         r.btnTiles.enabled = ok;
-        r.btnExport.enabled = ok;
+        r.btnExport.enabled = ok && exportOk;
     },
 
     /**
