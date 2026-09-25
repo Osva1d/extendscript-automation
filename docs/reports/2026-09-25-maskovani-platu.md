@@ -171,7 +171,21 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
 3. **Orientační bod** na každém plátu, nebo jen na prvním (spec §9)?
 4. **Pojmenování výstupů:** `{doc}_{n}.pdf` a `{doc}_{n}_cut.pdf`?
 
-## 8. Doporučené pořadí
+## 8. Rozhodnutí (2026-09-25)
+
+- **Nejdřív rovný ořez, tvarový až potom** (uživatel). Rovný plát pokryje běžnou
+  plátovanou zakázku, jeho maska je aritmetika pod testy a nepotřebuje reálnou
+  konturu, která zatím chybí. Postup ze §3 se na tvar jen rozšíří (krok 2
+  a 3), vrstvy ani výstupy se nemění.
+- **Zünd Summa Marks jako knihovna, ne jako druhý běh.** Druhý běh by znamenal
+  otevírat každé PDF plátu v Illustratoru, spouštět skript a ukládat dvakrát
+  ručně. Geometrie značek je už sdílená (`shared/lib/cut_marks.js`), kreslení
+  zůstane v tile-exportu. Místo převzetí `ZSM.Draw.render` (370 řádků svázaných
+  s aktivním dokumentem) **křížová kontrola**: stejný obdélník plátu projde
+  ZSM i tile-exportem a polohy značek a artboard se porovnají. Režim Summa
+  zůstává mimo.
+
+## 9. Doporučené pořadí
 
 1. Opravit N11 a N21 (malé, s testy). Bez nich nemá smysl dál stavět.
 2. Rovný plát: aritmetická maska, tři vrstvy, dva výstupy, značky od masky,
