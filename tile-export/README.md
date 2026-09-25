@@ -256,8 +256,8 @@ jinak by výstup vyšel desetinásobně zmenšený a vypadal by správně.
   Měření je v [../docs/specs/2026-09-13-tile-export-design.md](../docs/specs/2026-09-13-tile-export-design.md) §3.
   Když na velikosti záleží, použij **rastrový** režim — velikost plátu pak
   závisí na jeho ploše a DPI, ne na zdroji.
-- **Rastrový režim rasterizuje celý plát**, tedy i text, vektorová loga
-  a ořezovou linku.
+- **Rastrový režim rasterizuje celou grafiku plátu**, tedy i text a vektorová
+  loga. Ořezová linka zůstává navrchu jako vektor.
 - **Dělení jen jedním směrem.** 2D mřížka pro desky zatím není.
 - **Zünd není podporován.** Regmarky a rozdělení tvarové ořezové kontury mezi
   pláty jsou samostatná etapa; průzkum, co pro ni funguje a co ne, je ve specu

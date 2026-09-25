@@ -134,6 +134,17 @@ line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: "" }, 1);
 assertClose(line.strokeWidth, 2, 1e-9, "no width given: the 1 pt default, doubled");
 assertClose(TE.Config.getDefaults().lineWidth, 1, 1e-9, "the default is 1 pt visible");
 
+console.log("\n=== raster mode rasterises the graphic only (N19) ===");
+// Everything drawn on top — trim line, Zünd marks, cut paths — must stay
+// vector and above the image. The old code gathered all page items into a
+// group by walking the live pageItems collection it was changing; the line
+// was left out and the opaque raster covered it. Measured: rasterize(pi)
+// replaces the graphic in place and crops it to the artboard.
+var rasterBlock = exBody.slice(exBody.indexOf('s.exportMode === "raster"'));
+rasterBlock = rasterBlock.slice(0, rasterBlock.indexOf("buildName"));
+assert(/\.rasterize\(\s*pi\s*,/.test(rasterBlock), "rasterize() is given the placed graphic");
+assert(!/moveToEnd|groupItems\.add/.test(rasterBlock), "no gathering of page items into a group");
+
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",
     "index is zero-padded to the width of the total");

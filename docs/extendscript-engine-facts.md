@@ -189,6 +189,25 @@ další bylo dohledání, ne nové měření.
 
 ## Export, artboardy a vodítka (naměřeno 2026-09-13, AI 30.8.1)
 
+### `rasterize(item)` nahradí objekt na místě (naměřeno 2026-09-25)
+
+`doc.rasterize(placedItem, undefined, opts)` vrátí `RasterItem`, který stojí
+v pořadí vrstev **tam, kde byl původní objekt**, a je oříznutý na artboard
+(grafika přesahující artboard na všech stranách → rastr přesně na artboard).
+Co leží nad ním, zůstane nad ním. Proto tile-export rastruje jen grafiku
+a linku nechá vektorem navrchu (N19). Sbírat objekty do skupiny smyčkou přes
+živou kolekci `pageItems` je naopak past: linka ze skupiny vypadla.
+
+### Neexistující PDF preset selže až při uložení (naměřeno 2026-09-25)
+
+`pdfOptions.pDFPreset = "neexistuje"` **nevyhodí**. Chyba přijde až
+v `saveAs`: `an Illustrator error occurred: 1129270854 ('FNOC')`. Try/catch
+kolem přiřazení tak nic nechytí. Názvy presetů jsou lokalizované
+(`[Výchozí Illustratoru]`, ne `[Illustrator Default]`) — anglický název na
+české instalaci je „neexistující". A soubor sondy bez BOM, který český název
+obsahuje, ho přečte s rozbitou diakritikou a skončí stejně; v sondách psát
+`\u00fd` apod.
+
 Vzniklo při návrhu `tile-export`; platí ale mimo něj.
 
 ### Illustrator neořezává obsah. Nikdy.
