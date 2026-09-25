@@ -244,6 +244,26 @@ rozhodnutí bylo pushnout až produkční nástroj — tohle je ten důkaz.
 
 ---
 
+## R10 — Zünd, rovný ořez (2026-09-26)
+
+Nový režim: maska o spad za řezem, dva výstupy. `zed-6000x1000-1ku10.ai`,
+§0, zapni **Zünd režim**. Výchozí: barva řezu `Cut`, spad 5 mm, odstup od motivu
+5 mm, značka 5 mm. **Předvolba TEST** má z doby před touto verzí barvu `cut`
+a odstup 10 — načti ji a přepiš, nebo začni z [Default].
+
+| # | co | čekám |
+|---|---|---|
+| R10.1 | dialog, výstup 1:1 | Zünd panel viditelný; „Stránky PDF (1:1) se značkami: 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030 mm", „Řez: obdélník plátu v barvě Cut." |
+| R10.2 | export 1:1 do čisté složky | na každý plát `…_n.pdf` a `…_n_cut.pdf`, obě 2050 × 1030 (prostřední) |
+| R10.3 | tiskové PDF v Acrobatu | grafika končí 5 mm za řezem, kolem volný pás se značkami; **žádná** řezová cesta, ani ve vrstvách (panel Vrstvy prázdný) |
+| R10.4 | `_cut` PDF v Acrobatu | jen značky a obdélník v přímé barvě `Cut` (Výstup → Náhled separací) |
+| R10.5 | spad 60 mm (dokument má na bocích 250 mm, nahoře a dole 655) | projde; přídavek vlevo 200 + spad 60 → chyba exportu, Jen pláty zůstane aktivní |
+| R10.6 | nakresli do dokumentu cestu v barvě `Cut` | varování „Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není…" |
+| R10.7 | **u stroje** | Cut Center načte `_cut`, najde značky na vytištěném plátu a ořízne po obdélníku; na hraně žádná bílá |
+
+R10.7 je jediný test, který rozhodne, jestli režim funguje. Ostatní jsem ověřil
+harnessem (výsledky níž).
+
 ## Jak hlásit
 
 Stejně jako minule: nastavení dialogu (nebo otisk) a co vyšlo. Nové nálezy
@@ -302,4 +322,15 @@ proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
 | R4.1, R4.3 | ✓ | „skutečná velikost", resp. „(1:10): 2001 × 1000 \| 2002 × 1000 \| 2001 × 1000 mm" |
 | R4.4 | ✓ | export šedý, Jen pláty aktivní a vytvoří 3 pláty (N17) |
 | dialog | ✓ čísla | 1178 × 695 px, Výsledek v pravém sloupci, pole 474 × 277 px (N18); **vzhled a zalomení dlouhé hlášky zkontroluj okem** |
+
+**Zünd, rovný ořez (2026-09-26, harness):**
+
+| test | výsledek | poznámka |
+|---|---|---|
+| R10.1 | ✓ | řádky stránek a řezu přesně podle tabulky |
+| R10.2 | ✓ | zeď 1:1: 2040 \| 2050 \| 2040 × 1030 mm; náhled 1:10: 204 \| 205 \| 204 × 103 mm; Large Canvas jako 1:1 |
+| R10.3 | ✓ data | tiskové PDF: maska 10 mm od okraje, 2030 × 1010 mm (řez + 5 mm), žádná řezová cesta, žádné vrstvy (OCG 0); rastrový režim: obraz v masce |
+| R10.4 | ✓ data | `_cut`: jeden obdélník 2020 × 1000 mm, 0,125 pt, přímá barva, žádná grafika; značka 4,9 mm v rohu |
+| R10.6 | ✓ | varování v souhrnu; `_cut` i s konturou v dokumentu jen obdélník |
+| R10.7 | — | u stroje |
 

@@ -8,16 +8,17 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Added
 
-- **Zünd režim** — registrační značky na každém plátu a ořezová data plátu.
-  **V dialogu je zatím skrytý** (`TE.Config.ZUND_ENABLED`), protože neposlouží
-  plátované zakázce — viz poznámky níž. Kód je hotový a otestovaný; další
-  etapa na něm staví.
-- Ořezová kontura se hledá podle **přímé barvy**, nezávisle na vrstvě.
-- Kontura se ořezává **odečtením zakrývajícího rámu** — toutéž operací, jakou
-  se to dělá rukama. Compound path si přitom zachová díry, na rozdíl od průniku.
+- **Zünd režim s rovným ořezem.** Každý plát dostane dvě PDF se stejnou
+  stránkou: tiskové, kde grafiku ořízne maska o **spad za řezem** (výchozí
+  5 mm), a `_cut` s řezovou cestou — obdélníkem plátu v přímé barvě řezu
+  (výchozí `Cut`, seznam nabízí i `Thru-cut` a `Kiss-cut`) — a stejnými
+  registračními značkami. Značky se měří od konce grafiky (odstup 5 mm), jak
+  se to dělá ručně. Kontrola hlídá, že PDF na vnějších hranách unese přídavek
+  + spad. Skryté vrstvy se do PDF nedostanou (`acrobatLayers = false`), takže
+  tiskové PDF nenese řezová data. Tvarový ořez podle kontury je další etapa;
+  cesty v barvě řezu dialog ohlásí a řeže se obdélník.
 - Geometrie značek je sdílená se `zund-summa-marks` (`shared/lib/cut_marks.js`),
   takže chyba v pozici značky je chyba na jednom místě, ne na dvou.
-- Pláty, do kterých kontura nezasahuje, se hlásí v souhrnu.
 - **Barva značek je vlastní nastavení**, oddělené od barvy kontury — značka
   v barvě řezu by na stroji od řezu nešla rozeznat. Výchozí je registrační,
   na výběr jsou přímé barvy dokumentu (typicky bílá `Spot 1` na černý a čirý
@@ -180,22 +181,17 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Notes
 
-- **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně
-  plátu — při odstupu 10 mm a značce 5 mm sahají 42,5 pt za každou hranu —
-  a stránka musí vyrůst, aby se do ní vešly.
-- Dělení kontury stojí na `executeMenuCommand`, takže **není pod Node testy**.
-  Ověřuje se sondami s vizuální kontrolou. Proti v1 je to vědomé oslabení.
+- **V Zünd režimu je stránka větší než plát:** maska + odstup + značka na
+  každé straně (2020 × 1000 mm → 2050 × 1030 mm s výchozími hodnotami).
+- Dělení tvarové kontury (Pathfinder) je v kódu, ale v této verzi se
+  nepoužívá: na plátu, kam kontura nezasahuje, nechávalo zakrývající rám jako
+  řezová data, a kontura se u dokumentu 1:N exportovaného 1:1 nezvětšovala
+  (druhé opraveno). Vrátí se s tvarovým ořezem.
 - Skrývání Zünd panelu dialog **nezmenší** — ScriptUI drží místo i pro
   neviditelnou skupinu. Výšku řeší rozložení sloupců, ne viditelnost.
 - Víc řezacích vrstev najednou (proříz, ryl, děrování) tato verze neumí.
-- **Zünd režim je v dialogu skrytý a nepokryje plátovanou zakázku.** Na
-  rozděleném plátu pokračuje motiv přes šev, takže na té straně není kam
-  umístit značky. Odsazená cesta jako maska, která motiv ukončí, je potřeba
-  i pro rovný ořez. Panel se vrátí přepnutím `ZUND_ENABLED` v `src/config.js`,
-  až bude maska hotová.
-- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Postup používaný v praxi ořezává grafiku konturou plus spadem a ukládá tiskové i `_cut` PDF
-  zvlášť — popsané ve specu §10, včetně vyřešené překážky s parametrickou
-  odsazenou cestou.
+- **Tvarový ořez** (maska podle kontury) je další etapa — návrh a měření
+  v `docs/reports/2026-09-25-maskovani-platu.md`.
 
 
 ## [1.0.0] — 2026-09-13

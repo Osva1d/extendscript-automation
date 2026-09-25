@@ -217,6 +217,12 @@ Ze studie maskování plátu (`docs/reports/2026-09-25-maskovani-platu.md`):
   takže čtení nic neříká. Nastavovat výslovně; pořadí vůči `pDFPreset` je
   jedno.
 
+### Rozlišení rastru od 72 DPI (naměřeno 2026-09-26)
+
+`RasterizeOptions.resolution` pod 72 (71, 50) přijme, ale `rasterize()` pak
+vyhodí „Specified value less than minimum allowed value". 72 a víc projde.
+Horní mez neměřena — 2400 DPI na malém objektu vyčerpalo časový limit mostu.
+
 ### Neexistující PDF preset selže až při uložení (naměřeno 2026-09-25)
 
 `pdfOptions.pDFPreset = "neexistuje"` **nevyhodí**. Chyba přijde až

@@ -129,18 +129,27 @@ var r11 = TE.Validate.check(j.tiles, ctx({ mediaWidth: 800 }), j.s);
 assert(r11.errors.length === 0, "narrow media does not stop the run");
 assert(has(r11.warnings, "media-too-narrow"), "narrow media warns");
 
-console.log("\n=== Zünd: přímá barva kontury musí existovat ===");
-TE.L.ERR_NO_CUT_SPOT = "cut-spot-missing";
-var jz = job({ zundMode: true, cutSpot: "cut" });
-var rz = TE.Validate.check(jz.tiles, ctx({ hasCutSpot: false }), jz.s);
-assert(has(rz.errors, "cut-spot-missing"), "chybějící přímá barva je chyba");
+console.log("\n=== Zünd: barva řezu nemusí v dokumentu být ===");
+// Without a contour in that colour the cut is the panel rectangle, and the
+// export creates the spot in each panel document. Its absence is no error.
+var jz = job({ zundMode: true, cutSpot: "Cut", cutBleed: 5 });
+var rz = TE.Validate.check(jz.tiles, ctx(), jz.s);
+assert(rz.errors.length === 0 && rz.exportErrors.length === 0, "rovný řez bez kontury projde");
 
-var rz2 = TE.Validate.check(jz.tiles, ctx({ hasCutSpot: true }), jz.s);
-assert(rz2.errors.length === 0, "existující přímá barva projde");
-
-var jn = job({ zundMode: false, cutSpot: "cut" });
-var rz3 = TE.Validate.check(jn.tiles, ctx({ hasCutSpot: false }), jn.s);
-assert(rz3.errors.length === 0, "mimo Zünd režim se barva nekontroluje");
+console.log("\n=== Zünd: PDF musí na vnějších hranách unést přídavek + spad za řezem ===");
+TE.L.ERR_BLEED_OVERHANG = "bleed-beyond-overhang";
+// job(): adds top 40, bottom 40, right 40, left 0; ctx(): 50 mm everywhere.
+var rb1 = TE.Validate.check(jz.tiles, ctx(), jz.s);
+assert(!has(rb1.exportErrors, "bleed-beyond-overhang"), "40 + 5 <= 50: projde");
+var jz15 = job({ zundMode: true, cutBleed: 15 });
+var rb2 = TE.Validate.check(jz15.tiles, ctx(), jz15.s);
+assert(has(rb2.exportErrors, "bleed-beyond-overhang"), "40 + 15 > 50: chyba exportu");
+assert(!has(rb2.errors, "bleed-beyond-overhang"), "Jen pláty tím blokované není — masku kreslí export");
+var rb3 = TE.Validate.check(jz.tiles, ctx({ overhang: { left: mm(3), right: mm(50), top: mm(50), bottom: mm(50) } }), jz.s);
+assert(has(rb3.exportErrors, "bleed-beyond-overhang"), "hrana načisto potřebuje aspoň spad: 0 + 5 > 3");
+var jn = job({ zundMode: false, cutBleed: 15 });
+var rb4 = TE.Validate.check(jn.tiles, ctx(), jn.s);
+assert(!has(rb4.exportErrors, "bleed-beyond-overhang"), "mimo Zünd režim se spad nekontroluje");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

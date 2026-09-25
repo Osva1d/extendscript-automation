@@ -199,7 +199,18 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
 4. Orientační bod: navrženo na každém plátu (zakládají se jednotlivě); bez
    námitky.
 
-## 9. Doporučené pořadí
+## 9. Stav
+
+- **2026-09-25:** N11 a N21 opravené.
+- **2026-09-26: rovný plát hotový** (krok 2). Zünd panel je zpět v dialogu.
+  Ověřeno exportem přes produkční kód: zeď 1:10 v 1:1 i jako náhled, rastr,
+  Large Canvas. Cestou nalezeno a zapsáno: N22 (kontura se nezvětšovala —
+  opraveno), N23 (rozlišení pod 72 DPI), N24 (kontura mimo plát nechá rám jako
+  řez). **Tvarový ořez má víc děr, než tahle studie čekala** — kromě masky
+  (§3 krok 3–4) i samotné dělení kontury (N24). V této verzi se kontura
+  nepoužívá a dialog ji ohlásí.
+
+## 10. Doporučené pořadí
 
 1. Opravit N11 a N21 (malé, s testy). Bez nich nemá smysl dál stavět.
 2. Rovný plát: aritmetická maska, tři vrstvy, dva výstupy, značky od masky,

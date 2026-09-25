@@ -16,8 +16,8 @@ zamaskovat a naskládat artboardy ručně. Kromě času to má měřitelný vedl
 celou grafiku. Dvanáct plátů znamená dvanáctinásobek dat v dokumentu i ve všech
 výstupech.
 
-Strojní ořez na Zündu (druhý případ) zatím nástroj neumí — viz
-[Známá omezení](#známá-omezení).
+Strojní ořez na Zündu (druhý případ) nástroj umí zatím **rovný** — viz
+[Zünd režim](#zünd-režim).
 
 ## Požadavky
 
@@ -177,64 +177,53 @@ svislá, při vertikálním vodorovná.
 
 ## Zünd režim
 
-> **Zatím skrytý.** Panel se v dialogu nezobrazuje, protože režim neposlouží
-> plátované zakázce — viz [Na co si dát pozor](#na-co-si-dát-pozor). Kód je
-> hotový a otestovaný; zapíná se přepnutím `ZUND_ENABLED` v `src/config.js`
-> a další etapa na něm staví.
+Pro strojní přesný ořez na Zündu, **zatím rovný**: řeže se obdélník plátu.
+Tvarový ořez podle kontury přijde v další verzi.
 
-Pro strojní přesný ořez.
+Zapnutý udělá z každého plátu **dvě PDF se stejnou stránkou**:
 
-Zapnutý přidá do každého exportovaného plátu dvě věci:
+| soubor | obsah |
+|---|---|
+| `{doc}_{n}.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky |
+| `{doc}_{n}_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt |
 
-- **Registrační značky** — kulaté, v přímé barvě, na všech čtyřech hranách plus
-  orientační bod, který stroji říká, jak je plát otočený. Na dlouhých hranách
-  se interpolují, aby rozteč nepřesáhla zadané maximum.
-- **Ořezová data plátu** — tvarová kontura oříznutá na rozměr plátu.
+Na materiál se tiskne první, do Cut Center se načte druhý. Kamera najde
+značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. Spad za
+řezem pokryje drobnou nepřesnost, takže na hraně nezůstane bílá.
 
-### Barva značek
+Červená linka se v tomto režimu **netiskne** — jejím místem je řezová cesta.
 
-**Vlastní nastavení, oddělené od barvy kontury** — značka v barvě řezu by na
-stroji od řezu nešla rozeznat. Výchozí je registrační; v dropdownu jsou přímé
-barvy dokumentu, takže na černý a čirý materiál s čirým linerem zvolíš bílou
-`Spot 1`.
+### Nastavení
 
-Neznámá barva spadne na registrační. Nástroj přímou barvu **nikdy nevytvoří
-sám** — když ji chceš, musí být v dokumentu.
+- **Barva řezu** — přímá barva řezové cesty. Seznam nabízí barvy dokumentu
+  a `Cut`, `Thru-cut`, `Kiss-cut`; výchozí `Cut`. V dokumentu být nemusí,
+  export ji v PDF vytvoří. Stroj rozlišuje velká a malá písmena.
+- **Spad za řezem** — o kolik grafika přesahuje řez. Běžně 3 nebo 5 mm,
+  u velkých plátů s místem na materiálu až 10 mm.
+- **Odstup od motivu** — volné místo mezi koncem grafiky a značkou (výchozí
+  5 mm), aby stroj značku přečetl.
+- **Barva značek** — oddělená od barvy řezu, značka v barvě řezu by na stroji
+  od řezu nešla rozeznat. Výchozí registrační; na černý a čirý materiál bílá
+  `Spot 1`. Neznámá barva spadne na registrační, nástroj ji sám nevytvoří.
+- **Průměr značky, max. rozteč, orientační bod** — jako v Zünd Summa Marks,
+  se kterými tile-export sdílí výpočet polohy značek.
 
-### Jak označit konturu
-
-**Přímou barvou, na vrstvě nezáleží.** V dialogu vybereš barvu ze seznamu
-přímých barev dokumentu; všechny cesty s tou barvou se považují za konturu,
-včetně compound paths s dírami.
-
-### Co kontura dělá na švu
-
-Nic zvláštního — **řídí to přelep**, který už znáš z tiskových plátů. Přelep 0
-dá pláty natupo, přelep 20 mm dá překryv. Žádné další nastavení.
-
-**Spad za konturou nástroj neřeší.** Musí být v dodaných datech; nekontroluje
-se a nedokresluje.
+Stránka je maska plus odstup a značka na každé straně: plát 2020 × 1000 mm
+se spadem 5, odstupem 5 a značkou 5 mm dá stránku 2050 × 1030 mm. Výsledek
+v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
 
 ### Na co si dát pozor
 
-- **MediaBox plátu je větší než plát.** Značky leží vně plátu — při odstupu
-  10 mm a značce 5 mm sahají 42,5 pt za každou hranu — takže stránka musí
-  vyrůst, aby se do ní vešly. Červená ořezová linka zůstává na hranici plátu,
-  tedy uvnitř většího MediaBoxu — a ten ji neořízne, takže je vidět v plné,
-  dvojnásobné tloušťce. V Zünd režimu je to řezová linka, která se nemá
-  tisknout; tisk od řezu oddělí až etapa s maskou.
-- **Plát, do kterého kontura nezasahuje**, se v souhrnu nahlásí. Není to chyba
-  (prostřední plát obdélníkového výřezu ho legitimně nemá), ale plát, který
-  tiše dojede ke stroji bez ořezových dat, je tam nepříjemné překvapení.
+- **Na vnějších hranách musí PDF nést přídavek + spad za řezem.** Jinak by maska
+  sáhla za konec grafiky; dialog to hlásí a export zablokuje. Na švech se to
+  nekontroluje, tam grafika pokračuje.
+- **Cesty v barvě řezu v dokumentu se zatím nepoužijí.** Dialog na ně upozorní
+  a řeže se obdélník plátu.
+- **Starší předvolby** mají barvu `cut` s malým písmenem a odstup 10 mm, který
+  se dřív měřil od okraje plátu. Po načtení zkontroluj.
 - **Jedna řezací barva.** Proříz, ryl a děrování zvlášť tahle verze neumí.
-- **Zünd režim je zatím nepoužitelný pro plátovanou zakázku.** Na rozděleném
-  plátu pokračuje motiv přes šev, takže grafika sahá až k hraně a na té straně
-  **není kam dát značky** — registrační značka potřebuje kolem sebe volné místo.
-  Vyřeší to až odsazená cesta jako maska, která motiv na švu ukončí; ta je
-  potřeba i pro **rovný** ořez, nejen pro tvarový.
-- **Pláty jsou obdélníkové a výstup je jeden PDF na plát.** Postup používaný v praxi ořezává grafiku konturou rozšířenou o spad a ukládá dva PDF — tiskové
-  a `_cut`. Postup i naměřené podklady jsou ve specu
-  [`docs/specs/2026-09-13-tile-export-zund-design.md`](../docs/specs/2026-09-13-tile-export-zund-design.md) §10.
+- Návrh a naměřené podklady:
+  [`docs/reports/2026-09-25-maskovani-platu.md`](../docs/reports/2026-09-25-maskovani-platu.md).
 
 ## Měřítko výstupu
 
@@ -259,14 +248,12 @@ jinak by výstup vyšel desetinásobně zmenšený a vypadal by správně.
 - **Rastrový režim rasterizuje celou grafiku plátu**, tedy i text a vektorová
   loga. Ořezová linka zůstává navrchu jako vektor.
 - **Dělení jen jedním směrem.** 2D mřížka pro desky zatím není.
-- **Zünd není podporován.** Regmarky a rozdělení tvarové ořezové kontury mezi
-  pláty jsou samostatná etapa; průzkum, co pro ni funguje a co ne, je ve specu
-  v sekci „Co přijde po v1".
+- **Zünd jen s rovným ořezem.** Tvarový ořez podle kontury je další etapa.
 - Velký plát se při výstupu 1:1 nemusí vejít do artboardu Illustratoru
   (mez leží mezi 16 200 a 16 300 pt, tedy okolo 5,7 m).
-- **Dělení ořezové kontury není pod automatickými testy.** Stojí na
-  `executeMenuCommand`, tedy na běžícím Illustratoru, a ověřuje se sondami
-  s vizuální kontrolou. Geometrie plátů pod testy je, kontura ne.
+- **Uložení dvou PDF v Zünd režimu není pod automatickými testy** — stojí na
+  skrývání vrstev při ukládání, ověřuje se exportem v Illustratoru. Geometrie
+  masky a značek pod testy je.
 - Zünd režim zvládne **jednu** řezací přímou barvu. Summa není podporovaná.
 
 ## Řešení problémů

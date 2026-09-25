@@ -17,17 +17,18 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
-    // Zünd mode is finished and tested but NOT usable for a tiled job: on a
-    // split panel the artwork continues across the seam, reaches the panel
-    // edge, and leaves no clear space for a registration mark on that side.
-    // The fix is the offset-path mask (spec 2026-09-13-tile-export-zund §10),
-    // which also ends the artwork at the seam.
-    //
-    // Until then the panel stays out of the dialog. The code is kept, not
-    // commented out — contour splitting, marks and the colour cascade are all
-    // verified and are what the next stage builds on. Flip this to true to
-    // bring the panel back.
-    ZUND_ENABLED: false,
+    // Zünd mode is in the dialog again since the print mask (2026-09-25,
+    // docs/reports/2026-09-25-maskovani-platu.md): the artwork now ends a
+    // bleed past the cut, which frees the space the marks need on a split
+    // panel. The mask is the panel rectangle; a shaped mask follows the
+    // contour in a later stage. False hides the panel and the mode with it.
+    ZUND_ENABLED: true,
+
+    // Spot colours the shop's Zünd setup reads as cut paths (user, 2026-09-25).
+    // Offered in the cut colour list even when the document has none of them:
+    // for a straight cut the colour only has to exist in the output, and the
+    // export creates it there.
+    CUT_SPOTS: ["Cut", "Thru-cut", "Kiss-cut"],
 
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
@@ -98,14 +99,23 @@ TE.Config = {
 
             // --- Zünd mode ---
             zundMode:    false,         // master switch
-            cutSpot:     "cut",         // spot colour identifying the contour
+            // Spot colour of the cut path in the _cut PDF, and of a shaped
+            // contour in the source when there is one. Names are case-
+            // sensitive to the machine; the old default "cut" matched none.
+            cutSpot:     "Cut",
+            // mm of print past the cut: the mask. 3 or 5 mm usually, up to
+            // 10 on large panels with room on the material (user, 2026-09-25).
+            cutBleed:    5,
             markSizeZ:   5,             // mm, Zünd mark diameter
             // Marks get their OWN colour, never the contour's — otherwise the
             // machine cannot tell a mark from a cut. Registration is the
             // standard; white Spot 1 is used on black and clear material with
             // a clear liner.
             markColor:   "[Registration]",
-            gapInner:    10,            // mm, gap from panel edge to mark
+            // mm clear between the END OF THE ARTWORK (the mask) and a mark,
+            // as the shop does it by hand: 5 mm gap plus a 5 mm mark. It was
+            // 10 mm from the panel edge before the mask existed.
+            gapInner:    5,
             gapOuter:    0,             // mm, extra artboard margin
             maxDist:     500,           // mm, maximum spacing between marks
             orientDist:  100,           // mm, orientation dot from the corner

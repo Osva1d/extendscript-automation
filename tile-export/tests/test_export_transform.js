@@ -142,8 +142,24 @@ console.log("\n=== raster mode rasterises the graphic only (N19) ===");
 // replaces the graphic in place and crops it to the artboard.
 var rasterBlock = exBody.slice(exBody.indexOf('s.exportMode === "raster"'));
 rasterBlock = rasterBlock.slice(0, rasterBlock.indexOf("buildName"));
-assert(/\.rasterize\(\s*pi\s*,/.test(rasterBlock), "rasterize() is given the placed graphic");
+assert(/rasterizeArt\(\s*tmp\s*,\s*pi\s*,/.test(rasterBlock), "the raster step is handed the placed graphic");
+var raHelper = exSrc.slice(exSrc.indexOf("rasterizeArt: function"), exSrc.indexOf("exportTile: function"));
+assert(/\.rasterize\(\s*pi\s*,/.test(raHelper), "rasterizeArt() rasterises that graphic and nothing else");
 assert(!/moveToEnd|groupItems\.add/.test(rasterBlock), "no gathering of page items into a group");
+
+console.log("\n=== Zünd layout: cut, mask (pure) ===");
+// The cut is the panel rect in the temporary document; the mask is the cut
+// grown by the bleed past the cut, converted with the page ratio.
+var zt = TE.Export.tileTransform(TILE, GRAPHIC, 1);
+var zl = TE.Export.zundLayout(zt, { cutBleed: 5 }, 1);
+assert(zl.cut === zt.artboard, "the cut is the panel rect");
+assertClose(zl.mask[0], zt.artboard[0] - U.mm2pt(5), 1e-9, "mask left: 5 mm past the cut");
+assertClose(zl.mask[1], zt.artboard[1] + U.mm2pt(5), 1e-9, "mask top");
+assertClose(zl.mask[2], zt.artboard[2] + U.mm2pt(5), 1e-9, "mask right");
+assertClose(zl.mask[3], zt.artboard[3] - U.mm2pt(5), 1e-9, "mask bottom");
+var zl10 = TE.Export.zundLayout(zt, { cutBleed: 5 }, 10);
+assertClose(zl10.mask[2] - zt.artboard[2], U.mm2pt(0.5), 1e-9, "1:10 page: 5 mm real is 0.5 mm on the page");
+assert(TE.Export.cutName("zed_02") === "zed_02_cut", "the cut file carries the _cut suffix");
 
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",

@@ -30,10 +30,15 @@
         if (graphics.length === 0) { alert(TE.L.ERR_NO_GRAPHIC); return; }
         var gBounds = graphics[0].geometricBounds;
 
-        // Spot names feed the dialog's contour dropdown and its validation.
-        var spotNames = [], si;
+        // Spot names feed the dialog's cut colour list; contourSpots are the
+        // ones that colour at least one path, so the dialog can warn that a
+        // contour in the cut colour is not cut yet (shaped cut: next stage).
+        var spotNames = [], contourSpots = [], si;
         try {
             for (si = 0; si < doc.spots.length; si++) { spotNames.push(doc.spots[si].name); }
+            for (si = 0; si < spotNames.length; si++) {
+                if (TE.Cut.findContour(doc, spotNames[si]).length > 0) { contourSpots.push(spotNames[si]); }
+            }
         } catch (spotErr) { TE.Utils.log("spots unreadable: " + spotErr.message); }
 
         var pData = TE.Storage.load();
@@ -51,6 +56,7 @@
         var ctx = {
             cleanRect: clean.rect,
             spotNames: spotNames,
+            contourSpots: contourSpots,
             markColors: TE.Draw.listMarkColors(doc),
             guides: guidesH.positions,
             guidesByDirection: { horizontal: guidesH, vertical: guidesV },
@@ -61,10 +67,7 @@
                 mediaWidth: null,
                 // Measured ceiling; the try/catch around artboards.add is the
                 // real guard, because this number ages with the application.
-                maxArtboard: 16200,
-                // TE.UI.refresh() rewrites this on every keystroke from the
-                // spot the user currently has selected.
-                hasCutSpot: true
+                maxArtboard: 16200
             }
         };
 
@@ -76,8 +79,6 @@
              || res.wrapper.presets[res.wrapper.activePreset];
 
         // --- phase 1: rebuild the panels from the clean artboard -------------
-        // Contour is read once and handed to every panel's export.
-        var contour = s.zundMode ? TE.Cut.findContour(doc, s.cutSpot) : [];
         // Mark colour definition, read once from the source document so each
         // temporary document can recreate it.
         var markDef = s.zundMode ? TE.Draw.readSpotDef(doc, s.markColor) : null;
@@ -135,6 +136,11 @@
             try { pdfOpts.pDFPreset = s.pdfPreset; }
             catch (presetErr) { TE.Utils.log("PDF preset rejected: " + presetErr.message); }
         }
+        // Hidden layers stay out of the PDF only with this set explicitly —
+        // otherwise they travel as optional content, and a Zünd print PDF
+        // would carry the cut data (measured 2026-09-25). Reading the
+        // property says false either way, so it is set, not checked.
+        pdfOpts.acrobatLayers = false;
 
         var eCtx = {
             graphicFile: graphics[0].file,
@@ -146,11 +152,10 @@
             outFolder: outFolder,
             total: tiles.length,
             pdfOptions: pdfOpts,
-            contour: contour,
             markDef: markDef
         };
 
-        var done = 0, skipped = 0, failed = [], noContour = [], res;
+        var done = 0, skipped = 0, failed = [], res;
         for (i = 0; i < tiles.length; i++) {
             try {
                 if (s.skipExisting && TE.Export.outputExists(tiles[i], eCtx, s)) {
@@ -158,11 +163,6 @@
                     continue;
                 }
                 res = TE.Export.exportTile(tiles[i], eCtx, s);
-                // Zero cut paths means the contour does not reach this panel.
-                // Legitimate for a middle panel of a rectangular cut-out, but
-                // a panel that quietly arrives at the machine without cut data
-                // is an unpleasant surprise there.
-                if (s.zundMode && res.contourPaths === 0) { noContour.push(tiles[i].index); }
                 done++;
             } catch (expErr) {
                 failed.push(tiles[i].index + ": " + expErr.message);
@@ -171,9 +171,6 @@
 
         msg.push(TE.L.format(TE.L.SUMMARY_DONE, done, outFolder.fsName));
         if (skipped > 0) { msg.push(TE.L.format(TE.L.SUMMARY_SKIPPED, skipped)); }
-        if (s.zundMode && noContour.length > 0) {
-            msg.push(TE.L.format(TE.L.WARN_NO_CONTOUR, noContour.join(", ")));
-        }
         if (failed.length > 0) { msg.push(failed.join("\n")); }
         alert(msg.join("\n"));
 

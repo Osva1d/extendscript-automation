@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: TE.UI — dialog, live preview, preset handling
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Doc, TE.Grid, TE.L, TE.Storage, TE.Utils,
-//             TE.Validate, TE.UIState
+// Depends on: TE.Config, TE.Core, TE.Doc, TE.Export, TE.Grid, TE.L,
+//             TE.Storage, TE.Utils, TE.Validate, TE.UIState
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -121,8 +121,8 @@ TE.UI = {
 
         // Two columns, balanced by measured heights (2026-09-25): left
         // 593 px, right Export 276 + Result filling the rest; the dialog is
-        // 695 px. With the Zünd panel built (247 px) the Result drops to its
-        // 85 px floor and the dialog to 760 px. Stacked in one column the
+        // 695 px. With the Zünd panel built (280 px) the Result drops to its
+        // 85 px floor and the dialog grows to 793 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -347,6 +347,7 @@ TE.UI = {
         // difference).
         var cbZund = null, ddCutSpot = null, ddMarkColor = null;
         var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
+        var etBleed = null;
 
         if (c.ZUND_ENABLED) {
         var pZund = colR.add("panel", undefined, l.PANEL_ZUND);
@@ -378,10 +379,17 @@ TE.UI = {
         ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
         ddCutSpot.alignment = ["fill", "center"];
         ddCutSpot.helpTip = l.TIP_CUT_SPOT;
-        var spotList = ctx.spotNames || [];
-        var zj;
+        // The document's spots plus the shop's cut colours and the stored
+        // one: a straight cut needs no contour, so its colour need not be in
+        // the document yet — the export creates it.
+        var spotList = [], zj;
+        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
+        for (zj = 0; zj < candidates.length; zj++) {
+            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
+                spotList.push(candidates[zj]);
+            }
+        }
         for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
-        if (ddCutSpot.items.length === 0) { ddCutSpot.add("item", s.cutSpot); }
         ddCutSpot.selection = 0;
         for (zj = 0; zj < ddCutSpot.items.length; zj++) {
             if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
@@ -404,6 +412,7 @@ TE.UI = {
             if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
         }
 
+        etBleed    = this.addRow(gZundBody, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
         etMarkSize = this.addRow(gZundBody, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
         etGapInner = this.addRow(gZundBody, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
         etMaxDist  = this.addRow(gZundBody, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
@@ -413,7 +422,7 @@ TE.UI = {
         // ScriptUI keeps the space reserved for an invisible group, and capping
         // maximumSize.height does not change that either — both measured, both
         // moved the dialog by 0 px. It does not matter: with the columns
-        // balanced the dialog is 760 px in either state, inside the usable
+        // balanced the dialog is 793 px in either state, inside the usable
         // height. Hiding stays because seeing greyed-out Zünd fields while the
         // mode is off is noise.
         gZundBody.visible = cbZund.value;
@@ -475,7 +484,7 @@ TE.UI = {
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
             cbZund: cbZund, ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
-            etMarkSize: etMarkSize,
+            etMarkSize: etMarkSize, etBleed: etBleed,
             etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
@@ -498,7 +507,7 @@ TE.UI = {
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
-                      etMarkSize, etGapInner, etMaxDist, etOrient, ddCutSpot,
+                      etMarkSize, etGapInner, etMaxDist, etOrient, etBleed, ddCutSpot,
                       ddMarkColor];
         // Zünd controls are null when the panel is not built.
         var wired = [];
@@ -518,7 +527,7 @@ TE.UI = {
                 // ScriptUI reserves space for an invisible group and capping
                 // maximumSize.height changes nothing — both measured at 0 px.
                 // It does not matter; the balanced columns keep the dialog at
-                // 760 px either way. Hiding stays so the fields do not clutter
+                // 793 px either way. Hiding stays so the fields do not clutter
                 // the panel while the mode is off.
                 gZundBody.visible = cbZund.value;
                 refresh();
@@ -746,10 +755,14 @@ TE.UI = {
         s.skipExisting = r.cbSkip.value;
         if (r.cbZund) {
             s.zundMode    = r.cbZund.value;
-            s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : "cut";
+            s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : s.cutSpot;
+            s.cutBleed    = TE.Utils.toNumber(r.etBleed.text);
+            if (isNaN(s.cutBleed) || String(r.etBleed.text).replace(/\s/g, "") === "") {
+                s.cutBleed = TE.Config.getDefaults().cutBleed;
+            }
             s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
             s.markSizeZ   = TE.Utils.toNumber(r.etMarkSize.text) || 5;
-            s.gapInner    = TE.Utils.toNumber(r.etGapInner.text) || 10;
+            s.gapInner    = TE.Utils.toNumber(r.etGapInner.text) || 5;
             s.maxDist     = TE.Utils.toNumber(r.etMaxDist.text) || 500;
             s.orientDist  = TE.Utils.toNumber(r.etOrient.text) || 100;
         } else {
@@ -823,6 +836,7 @@ TE.UI = {
         r.etGapInner.text = String(s.gapInner);
         r.etMaxDist.text = String(s.maxDist);
         r.etOrient.text = String(s.orientDist);
+        r.etBleed.text = String(s.cutBleed);
     },
 
     /**
@@ -867,11 +881,6 @@ TE.UI = {
         r.etSpot.enabled  = s.drawLine;
         r.etLineW.enabled = s.drawLine;
 
-        // The dialog re-reads this on every keystroke, so validation checks the
-        // spot the user has selected now, not the one in saved settings.
-        ctx.validation.hasCutSpot = !s.zundMode
-            || TE.Utils.indexOf(ctx.spotNames || [], s.cutSpot) !== -1;
-
         var clean = this.resolveClean(r, ctx, s);
 
         try {
@@ -909,7 +918,24 @@ TE.UI = {
             var sf = ctx.validation.scaleFactor;
             var k = TE.Utils.outputScale(s, sf);
             var ratio = TE.Utils.pageRatio(s, sf);
-            if (Math.abs(ratio - 1) < 1e-9) {
+            if (s.zundMode) {
+                // Zünd pages are the mask plus gap and mark on every side —
+                // computed exactly as the export does it (buildZundPanel).
+                var zPages = [];
+                for (i = 0; i < tiles.length; i++) {
+                    var ztf = TE.Export.tileTransform(tiles[i], [0, 0, 0, 0], k);
+                    var zab = TE.Core.calculateAll(s, TE.Export.zundLayout(ztf, s, ratio).mask, ratio).ab;
+                    zPages.push(TE.Utils.formatMM(TE.Utils.pt2mm(zab[2] - zab[0]), l.DECIMAL) + " \u00d7 "
+                        + TE.Utils.formatMM(TE.Utils.pt2mm(zab[1] - zab[3]), l.DECIMAL));
+                }
+                lines.push(l.format(l.INFO_PAGES_ZUND, TE.Utils.formatMM(ratio, l.DECIMAL), zPages.join(" | ")));
+                lines.push(l.format(l.INFO_CUT_RECT, s.cutSpot));
+                // Paths in the cut colour look like a shaped contour the user
+                // expects to be cut. Say plainly that it is not, yet.
+                if (TE.Utils.indexOf(ctx.contourSpots || [], s.cutSpot) !== -1) {
+                    alerts.push("! " + l.format(l.WARN_CONTOUR_IGNORED, s.cutSpot));
+                }
+            } else if (Math.abs(ratio - 1) < 1e-9) {
                 lines.push(l.INFO_PAGES_ACTUAL);
             } else {
                 var pages = [];

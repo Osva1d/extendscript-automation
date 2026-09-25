@@ -93,6 +93,10 @@ TE.Cut = {
                 srcB = sourceItems[i].geometricBounds;
                 dup = sourceItems[i].duplicate(tmpDoc.layers[0],
                                                ElementPlacement.PLACEATEND);
+                // Scale with the artwork. It used to be only MOVED by k, so a
+                // 1:10 document exported 1:1 got a contour ten times too small
+                // (N22). resize(), not width/height — no size cap (N7).
+                if (tf.k !== 1) { dup.resize(tf.k * 100, tf.k * 100); }
                 dupB = dup.geometricBounds;
                 wantX = (srcB[0] - tf.tileOrigin[0]) * tf.k;
                 wantY = (srcB[1] - tf.tileOrigin[1]) * tf.k;

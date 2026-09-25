@@ -46,10 +46,16 @@ TE.Validate = {
                 TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DECIMAL)));
         }
 
-        // Zünd mode needs the contour's spot colour to exist. Checking it up
-        // front beats discovering it on panel five, half way through a batch.
-        if (s.zundMode && !ctx.hasCutSpot) {
-            errors.push(TE.L.format(TE.L.ERR_NO_CUT_SPOT, s.cutSpot));
+        // Zünd: the print mask reaches a bleed past the cut, and on the OUTER
+        // edges there is only as much artwork as the placed PDF carries. Add
+        // plus bleed beyond that is a white strip on the printed panel. An
+        // export error: Panels only draws no mask. Seams need no check, the
+        // artwork continues there.
+        if (s.zundMode) {
+            this.checkBleed(exportErrors, Number(s.addLeft),   ctx.overhang.left,   TE.L.EDGE_LEFT,   s);
+            this.checkBleed(exportErrors, Number(s.addRight),  ctx.overhang.right,  TE.L.EDGE_RIGHT,  s);
+            this.checkBleed(exportErrors, Number(s.addTop),    ctx.overhang.top,    TE.L.EDGE_TOP,    s);
+            this.checkBleed(exportErrors, Number(s.addBottom), ctx.overhang.bottom, TE.L.EDGE_BOTTOM, s);
         }
 
         // Panel must fit an Illustrator artboard once the output scale applies.
@@ -107,6 +113,27 @@ TE.Validate = {
         if (addPt > overhangPt + 1e-6) {
             errors.push(TE.L.format(TE.L.ERR_ADD_OVERHANG, edge,
                 TE.Utils.formatMM(add, TE.L.DECIMAL),
+                TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
+        }
+    },
+
+    /**
+     * One outer edge in Zünd mode: add plus bleed past the cut must be
+     * covered by the placed PDF's overhang there.
+     * @param {Array} out - Collected export errors, mutated in place.
+     * @param {number} addMm - Add on this edge, mm.
+     * @param {number} overhangPt - Graphic overhang on this edge, doc points.
+     * @param {string} edge - Localized edge name.
+     * @param {Object} s - Settings (cutBleed).
+     */
+    checkBleed: function (out, addMm, overhangPt, edge, s) {
+        var add = Number(addMm) || 0;
+        var bleed = Number(s.cutBleed) || 0;
+        if (TE.Utils.toDoc(add + bleed, s) > overhangPt + 1e-6) {
+            out.push(TE.L.format(TE.L.ERR_BLEED_OVERHANG,
+                TE.Utils.formatMM(bleed, TE.L.DECIMAL), edge,
+                TE.Utils.formatMM(add, TE.L.DECIMAL),
+                TE.Utils.formatMM(add + bleed, TE.L.DECIMAL),
                 TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
         }
     },
