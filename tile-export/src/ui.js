@@ -119,17 +119,18 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns, balanced by measured panel heights: left carries
-        // Presets 57 + Document 86 + Split 177 + Overlap 214 = 534 px, right
-        // Export 276 + Zünd 165 = 441 px. Stacked in one column the dialog
-        // measured 932 px tall,
-        // which does not fit a 1512 x 982 logical screen once the menu bar and
-        // Dock are gone. ScriptUI has no scrollable container — scrollbar is a
+        // Two columns, balanced by measured heights (2026-09-25): left
+        // 593 px, right Export 276 + Result filling the rest; the dialog is
+        // 695 px. With the Zünd panel built (247 px) the Result drops to its
+        // 85 px floor and the dialog to 760 px. Stacked in one column the
+        // dialog once measured 932 px tall, which does not fit a 1512 x 982
+        // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
-        // Left column: what gets split. Right column: how it comes out.
+        // Left column: what gets split. Right column: how it comes out, and
+        // the Result under it, stretched to the left column's height (N18).
         var gCols = w.add("group");
         gCols.orientation = "row";
-        gCols.alignChildren = ["fill", "top"];
+        gCols.alignChildren = ["fill", "fill"];   // columns share one height
         gCols.alignment = ["fill", "top"];
 
         var colL = gCols.add("group");
@@ -140,7 +141,7 @@ TE.UI = {
         var colR = gCols.add("group");
         colR.orientation = "column";
         colR.alignChildren = ["fill", "top"];
-        colR.alignment = ["fill", "top"];
+        colR.alignment = ["fill", "fill"];   // as tall as the left column (N18)
 
         // --- Presets ---------------------------------------------------------
         var pPreset = colL.add("panel", undefined, l.PANEL_PRESET);
@@ -412,30 +413,38 @@ TE.UI = {
         // ScriptUI keeps the space reserved for an invisible group, and capping
         // maximumSize.height does not change that either — both measured, both
         // moved the dialog by 0 px. It does not matter: with the columns
-        // balanced the dialog is 796 px in either state, inside the usable
+        // balanced the dialog is 760 px in either state, inside the usable
         // height. Hiding stays because seeing greyed-out Zünd fields while the
         // mode is off is noise.
         gZundBody.visible = cbZund.value;
         }   // end ZUND_ENABLED
 
         // --- Result ----------------------------------------------------------
-        // Spans both columns: the per-panel lines run to about 60 characters
-        // and would wrap inside a single column.
-        var pCalc = w.add("panel", undefined, l.PANEL_CALC);
-        pCalc.alignChildren = ["fill", "top"];
+        // At the foot of the right column, filling what the left column leaves
+        // (N18). It used to span both columns at the bottom, at 85 px, while
+        // the right column stood half empty: five lines showed and the sixth
+        // was cut. Panel lines measure ~370 px and fit the column; longer
+        // messages wrap.
+        var pCalc = colR.add("panel", undefined, l.PANEL_CALC);
+        pCalc.alignment = ["fill", "fill"];
+        pCalc.alignChildren = ["fill", "fill"];
         // [deviation] readonly edittext, not statictext. The summary is as long
         // as the job needs — a line per panel plus the bleed line plus any
         // warnings — and a fixed-height statictext CLIPS the rest with no sign
         // that anything is missing: at 85 px a five-panel job showed panels 1-3
         // and swallowed 4, 5, the bleed line and every error. An edittext with
         // scrolling keeps the content reachable, and readonly keeps it from
-        // being edited. 85 px stays because the dialog has to fit the usable
-        // screen height with the Zünd panel open. Selectable text is a bonus:
-        // the panel sizes can be copied straight into a job sheet.
+        // being edited. 85 px is the floor, what is left under the Zünd panel
+        // when that panel is built. Selectable text is a bonus: the panel
+        // sizes can be copied straight into a job sheet.
         var stCalc = pCalc.add("edittext", undefined, "",
             { multiline: true, scrolling: true, readonly: true });
+        // preferredSize, not just a minimum: an edittext otherwise sizes
+        // itself to its text, and a twelve-panel job grew the dialog to
+        // 932 px (measured). The fill alignment then stretches it into the
+        // space the left column leaves.
         stCalc.preferredSize.height = 85;
-        stCalc.alignment = ["fill", "top"];
+        stCalc.alignment = ["fill", "fill"];
 
         // --- Footer ----------------------------------------------------------
         var gFooter = w.add("group");
@@ -509,7 +518,7 @@ TE.UI = {
                 // ScriptUI reserves space for an invisible group and capping
                 // maximumSize.height changes nothing — both measured at 0 px.
                 // It does not matter; the balanced columns keep the dialog at
-                // 796 px either way. Hiding stays so the fields do not clutter
+                // 760 px either way. Hiding stays so the fields do not clutter
                 // the panel while the mode is off.
                 gZundBody.visible = cbZund.value;
                 refresh();
