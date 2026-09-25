@@ -893,6 +893,25 @@ TE.UI = {
                     mm(e[1] - e[3])));
             }
 
+            // The panel lines above are real millimetres and do not move with
+            // the output scale; only the PDF page does. Say what it will be,
+            // or the choice is invisible until the export (N16). Same k as
+            // the export and the artboard check, TE.Utils.outputScale.
+            var sf = ctx.validation.scaleFactor;
+            var k = TE.Utils.outputScale(s, sf);
+            var ratio = sf * TE.Utils.manualScale(s) / k;
+            if (Math.abs(ratio - 1) < 1e-9) {
+                lines.push(l.INFO_PAGES_ACTUAL);
+            } else {
+                var pages = [];
+                for (i = 0; i < tiles.length; i++) {
+                    e = tiles[i].expanded;
+                    pages.push(TE.Utils.formatMM(TE.Utils.pt2mm((e[2] - e[0]) * k), l.DECIMAL) + " \u00d7 "
+                        + TE.Utils.formatMM(TE.Utils.pt2mm((e[1] - e[3]) * k), l.DECIMAL));
+                }
+                lines.push(l.format(l.INFO_PAGES, TE.Utils.formatMM(ratio, l.DECIMAL), pages.join(" | ")));
+            }
+
             lines.push(l.format(l.INFO_OVERHANG,
                 mm(ctx.validation.overhang.left),
                 mm(ctx.validation.overhang.right),

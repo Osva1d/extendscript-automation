@@ -100,7 +100,7 @@ TE.L = (function () {
             LBL_EXPORT_SCALE:    "Output scale",
             SCALE_SOURCE:        "Same as document",
             SCALE_ACTUAL:        "1:1 actual size",
-            TIP_EXPORT_SCALE:    "Same as document writes the size the rulers show: a canvas drawn 1:10 stays 1:10 and the RIP scales up; a Large Canvas comes out at real size. 1:1 writes real size, which a large panel may exceed.",
+            TIP_EXPORT_SCALE:    "Same as document writes the size the rulers show: a canvas drawn 1:10 stays 1:10 and the RIP scales up; a Large Canvas comes out at real size. 1:1 writes real size, which a large panel may exceed. It applies to the exported PDFs only: Panels only draws at the document's scale and the Result lists panels at real size — the PDF pages line shows what the export writes.",
             LBL_DPI:             "Resolution",
             TIP_DPI:             "Raster resolution in DPI. Only used in raster mode.",
             LBL_PDF_PRESET:      "PDF preset",
@@ -123,6 +123,8 @@ TE.L = (function () {
             INFO_CLEAN:          "Clean format: %s \u00d7 %s mm",
             INFO_COUNT:          "Panels: %s",
             INFO_TILE:           "  %s: clean %s \u00d7 %s mm, with adds %s \u00d7 %s mm",
+            INFO_PAGES:          "PDF pages (1:%s): %s mm",
+            INFO_PAGES_ACTUAL:   "PDF pages: real size, same as with adds.",
             INFO_OVERHANG:       "Available bleed: left %s, right %s, top %s, bottom %s mm",
 
             // --- presets ---
@@ -248,7 +250,7 @@ TE.L = (function () {
             LBL_EXPORT_SCALE:    "Měřítko výstupu",
             SCALE_SOURCE:        "Stejné jako dokument",
             SCALE_ACTUAL:        "1:1 skutečná velikost",
-            TIP_EXPORT_SCALE:    "Stejné jako dokument zapíše velikost, jakou ukazují pravítka: plátno kreslené v 1:10 zůstane v 1:10 a zvětšuje až RIP, Large Canvas vyjde ve skutečné velikosti. 1:1 zapíše skutečnou velikost, kterou velký plát může přerůst.",
+            TIP_EXPORT_SCALE:    "Stejné jako dokument zapíše velikost, jakou ukazují pravítka: plátno kreslené v 1:10 zůstane v 1:10 a zvětšuje až RIP, Large Canvas vyjde ve skutečné velikosti. 1:1 zapíše skutečnou velikost, kterou velký plát může přerůst. Týká se jen exportovaných PDF: Jen pláty kreslí v měřítku dokumentu a Výsledek ukazuje pláty ve skutečné velikosti — co zapíše export, říká řádek Stránky PDF.",
             LBL_DPI:             "Rozlišení",
             TIP_DPI:             "Rozlišení rastru v DPI. Používá se jen v rastrovém režimu.",
             LBL_PDF_PRESET:      "PDF preset",
@@ -271,6 +273,8 @@ TE.L = (function () {
             INFO_CLEAN:          "Čistý formát: %s \u00d7 %s mm",
             INFO_COUNT:          "Počet plátů: %s",
             INFO_TILE:           "  %s: načisto %s \u00d7 %s mm, s přídavky %s \u00d7 %s mm",
+            INFO_PAGES:          "Stránky PDF (1:%s): %s mm",
+            INFO_PAGES_ACTUAL:   "Stránky PDF: skutečná velikost, stejná jako s přídavky.",
             INFO_OVERHANG:       "Dostupný spad: vlevo %s, vpravo %s, nahoře %s, dole %s mm",
 
             // --- presets ---

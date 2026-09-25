@@ -113,6 +113,15 @@ has(summary({ etAddBottom: { text: "60" } }), "Přídavek dole (60 mm)", "bottom
 has(summary({ etAddRight: { text: "60" } }), "Přídavek vpravo (60 mm)", "right");
 has(summary({ etAddTop: { text: "60" } }), "Přídavek nahoře (60 mm)", "top");
 
+console.log("\n=== N16: the summary shows what the output scale does ===");
+// The panel lines are in real millimetres and do not move with the output
+// scale; only the PDF page does. Without this line the choice was invisible
+// until the export (R3.1 looked exactly like R3.2).
+has(summary({}), "Stránky PDF (1:10): 101 × 100 | 102 × 100 | 101 × 100 mm", "1:10 sheet, same as document");
+has(summary({ rbExpScale: [{ value: false }, { value: true }] }),
+    "Stránky PDF: skutečná velikost, stejná jako s přídavky.", "1:1 output repeats no sizes");
+has(summary({ etScaleN: { text: "12,5", enabled: true } }), "Stránky PDF (1:12,5):", "a decimal scale keeps its comma");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more
@@ -138,6 +147,11 @@ var r62 = refs({ cbScale: { value: false, enabled: true } });
 TE.UI.refresh(null, r62, lcCtx);
 eq(r62.btnExport.enabled, true, "no Large Canvas error, export enabled");
 eq(r62.stCalc.text.indexOf("Large Canvas") === -1, true, "and the old message is gone");
+has(r62.stCalc.text, "Stránky PDF: skutečná velikost", "Large Canvas at same-as-document prints real size (N16)");
+var r43 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" } });
+TE.UI.refresh(null, r43, lcCtx);
+has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 × 1000 mm",
+    "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");
 app.activeDocument.scaleFactor = 1;
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
