@@ -198,6 +198,25 @@ Co leží nad ním, zůstane nad ním. Proto tile-export rastruje jen grafiku
 a linku nechá vektorem navrchu (N19). Sbírat objekty do skupiny smyčkou přes
 živou kolekci `pageItems` je naopak past: linka ze skupiny vypadla.
 
+### Odsazená cesta, maska a skryté vrstvy v PDF (naměřeno 2026-09-25)
+
+Ze studie maskování plátu (`docs/reports/2026-09-25-maskovani-platu.md`):
+
+- **Offset objektu s tahem** vrátí po `expandStyle` **skupinu dvou cest**
+  (výplň a tah). Pro jednu cestu odsazovat kopii s výplní a bez tahu.
+- **Offset otevřené cesty** dá uzavřený obrys kolem čáry, ne plochu.
+- **Složená cesta nejde jako maska přes DOM:** `group.clipped = true` hlásí
+  „The top item in the group must be a path item", i s `clipping = true`
+  na podcestě. `executeMenuCommand("makeMask")` nad výběrem funguje, díra
+  zůstane prázdná.
+- **Maska na `RasterItem`** funguje. Rastrování maskované skupiny dá rastr přes
+  celý artboard, mimo masku bílý.
+- **Skrytá vrstva jde do PDF jako vypnutá vrstva (OCG), data zůstanou uvnitř**,
+  pokud se nenastaví `acrobatLayers = false`. Nová instance `PDFSaveOptions`
+  přitom čte `acrobatLayers` jako `false` — i po nastavení presetu PDF/X-4 —
+  takže čtení nic neříká. Nastavovat výslovně; pořadí vůči `pDFPreset` je
+  jedno.
+
 ### Neexistující PDF preset selže až při uložení (naměřeno 2026-09-25)
 
 `pdfOptions.pDFPreset = "neexistuje"` **nevyhodí**. Chyba přijde až

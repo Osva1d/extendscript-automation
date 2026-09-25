@@ -667,6 +667,22 @@ nefunguje. Náhradní položku v dialogu vynechat.
 
 ---
 
+### N21 — Zünd: kontura se ořezává podle zvětšeného artboardu, ne podle plátu
+
+**Nalezeno** čtením kódu při studii maskování (2026-09-25), **neměřeno**.
+**Kde:** `tile-export/src/export.js:144` (artboard se zvětší pro značky) před
+`:150` (`renderTileContour`), `src/cut.js` (`frameRects` bere artboard).
+
+Hranice ořezu kontury má být obdélník plátu (spec Zünd §4). Protože se artboard
+zvětší dřív, sahala by řezová data o odstup + značku do souseda. Zünd režim je
+skrytý, takže se to zatím neprojevilo. **Oprava** v etapě maska/Zünd: předat
+obdélník plátu výslovně. Viz [studie](../reports/2026-09-25-maskovani-platu.md) §5.
+
+**N11 potvrzen výpočtem** tamtéž: u dokumentu 1:10 s exportem 1:1 by značka
+měla 0,5 mm místo 5 mm.
+
+---
+
 ## Pozorování bez vady
 
 ### P1 — linka na hraně stránky je v prohlížeči vidět jen dole a vpravo
