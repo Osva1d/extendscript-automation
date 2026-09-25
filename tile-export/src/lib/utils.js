@@ -110,6 +110,22 @@ TE.Utils = {
     },
 
     /**
+     * Real millimetres per millimetre of the exported PDF page: 10 for a 1:10
+     * preview, 1 for real size. The one scale a temporary panel document
+     * needs — it is never Large Canvas and does not know the manual 1:N, so
+     * nothing drawn there may read its scale from the active document (N10,
+     * N11). A real length L mm is mm2pt(L) / pageRatio points in it. Equal to
+     * 1 / outputLineScale in every supported case.
+     * @param {Object} s - Settings (scaleN, exportScale).
+     * @param {number} sf - The SOURCE document's Large Canvas factor.
+     * @returns {number} Page ratio.
+     */
+    pageRatio: function (s, sf) {
+        var f = Number(sf) || 1;
+        return f * this.manualScale(s) / this.outputScale(s, f);
+    },
+
+    /**
      * Real-world millimetres to document points.
      * @param {number} mm - Real-world millimetres.
      * @param {Object} s - Settings.

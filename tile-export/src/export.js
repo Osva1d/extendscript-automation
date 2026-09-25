@@ -130,11 +130,14 @@ TE.Export = {
 
             if (s.zundMode) {
                 // Marks are computed from THIS panel's rect, so they sit on
-                // the panel rather than on the whole graphic.
-                var geo = TE.Core.calculateAll(s, tf.artboard);
+                // the panel rather than on the whole graphic. The page ratio
+                // is passed: left to itself the shared geometry reads the
+                // active — temporary — document's scale (N11).
+                var ratio = TE.Utils.pageRatio(s, ctx.scaleFactor);
+                var geo = TE.Core.calculateAll(s, tf.artboard, ratio);
                 // markDef carries the spot definition from the source document;
                 // a temporary document starts with only the default swatches.
-                TE.Draw.drawMarks(tmp, geo, s, ctx.markDef);
+                TE.Draw.drawMarks(tmp, geo, s, ctx.markDef, ratio);
 
                 // Marks sit OUTSIDE the panel — measured: with a 10 mm gap and
                 // a 5 mm mark, they reach 42.5 pt past each edge. The shared

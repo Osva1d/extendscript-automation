@@ -253,9 +253,12 @@ TE.Draw = {
      *        document, from TE.Draw.readSpotDef(). Null means registration.
      * @returns {number} How many marks were drawn.
      */
-    drawMarks: function (doc, geo, s, markDef) {
+    drawMarks: function (doc, geo, s, markDef, pageRatio) {
         var spot = this.resolveMarkColor(doc, s.markColor, markDef);
-        var r = TE.Utils.toDoc(Number(s.markSizeZ) / 2, s);
+        // Radius in the temporary document. Passed in, never read from the
+        // active document: that one is the temporary document and lost the
+        // manual 1:N, so a 1:10 job exported 1:1 got 0.5 mm marks (N11).
+        var r = TE.Utils.mm2pt(Number(s.markSizeZ) / 2) / (Number(pageRatio) || 1);
         var i, m, c, n = 0;
 
         for (i = 0; i < geo.marksZ.length; i++) {

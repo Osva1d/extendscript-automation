@@ -908,7 +908,7 @@ TE.UI = {
             // the export and the artboard check, TE.Utils.outputScale.
             var sf = ctx.validation.scaleFactor;
             var k = TE.Utils.outputScale(s, sf);
-            var ratio = sf * TE.Utils.manualScale(s) / k;
+            var ratio = TE.Utils.pageRatio(s, sf);
             if (Math.abs(ratio - 1) < 1e-9) {
                 lines.push(l.INFO_PAGES_ACTUAL);
             } else {

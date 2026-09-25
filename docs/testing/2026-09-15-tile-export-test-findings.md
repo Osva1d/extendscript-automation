@@ -257,6 +257,13 @@ linka 0,3 pt.
 
 ### N11 — Zünd: značky se měří podle aktivního dokumentu
 
+**Stav: opraveno 2026-09-25** (etapa maska/Zünd, krok 1). Poměr stránky
+`TE.Utils.pageRatio` jde do `calculateAll` (nový volitelný parametr sdíleného
+jádra, ZSM ho nepředává a chová se po staru) i do `drawMarks`. Test
+`test_zund_scale` pro pět měřítkových situací. Ověřeno exportem dokumentu 1:10
+v 1:1: stránka prostředního plátu 2050 × 1030 mm, značka 4,9 mm (měřeno
+z renderu při 150 dpi), linka plátu 15 mm od hrany. Níž původní záznam.
+
 **Test:** žádný — Zünd režim je v dialogu skrytý. **Nalezeno** čtením kódu při
 opravě N10; **neměřeno**. **Kde:** `shared/lib/cut_marks.js:40`
 (`NS.Utils.getEffectiveSF(s)` v `calculateAll`), `tile-export/src/draw.js:258`
@@ -668,6 +675,11 @@ nefunguje. Náhradní položku v dialogu vynechat.
 ---
 
 ### N21 — Zünd: kontura se ořezává podle zvětšeného artboardu, ne podle plátu
+
+**Stav: opraveno 2026-09-25** (etapa maska/Zünd, krok 1). Zakrývající rám se
+staví na `tf.artboard`, obdélníku plátu; test hlídá, že `renderTileContour`
+artboard nečte. S reálnou konturou neověřeno — přijde s tvarovým ořezem.
+Níž původní záznam.
 
 **Nalezeno** čtením kódu při studii maskování (2026-09-25), **neměřeno**.
 **Kde:** `tile-export/src/export.js:144` (artboard se zvětší pro značky) před
