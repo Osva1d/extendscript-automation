@@ -127,7 +127,7 @@ Změnil se kód, kterým se grafika vkládá do plátu.
 |---|---|---|
 | R3.1 | Stejné jako dokument | 3 PDF, stránky **101 \| 102 \| 101 × 100 mm**, v každém právě jedna linka, vidět 0,1 pt |
 | R3.2 | 1:1 skutečná velikost | stránky **1010 \| 1020 \| 1010 × 1000 mm**, linka vidět **1 pt** na všech čtyřech hranách |
-| R3.3 | 1:1, **Rastr** 150 dpi | stránky jako R3.2, obsah rastrový |
+| R3.3 | 1:1, **Rastr** 150 dpi | stránky jako R3.2, obsah rastrový, **linka navrchu jako vektor** (N19) |
 
 **Panel Výsledek je u R3.1 i R3.2 stejný** — ukazuje pláty ve skutečných
 milimetrech a měřítko výstupu ho nemění. R3.1 a R3.2 se tedy liší až na
@@ -152,7 +152,7 @@ Pak ruční měřítko **1:10** (složené × 100 — dokument představuje zeď
 | # | měřítko výstupu | čekám v souhrnu | čekám z exportu |
 |---|---|---|---|
 | R4.3 | Stejné jako dokument | bez chyby; 60000 × 10000; tiskové 20010 \| 20020 \| 20010 | **náhled 1:10**: stránky 2001 \| 2002 \| 2001 × 1000 mm, linka vidět 0,1 pt |
-| R4.4 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." Vytvořit a exportovat **šedé**; Jen pláty zatím taky, i když nic neexportuje (N17). | — |
+| R4.4 | 1:1 skutečná velikost | „Plát 1 by při tomto měřítku výstupu měřil 20010 × 10000 mm; artboard Illustratoru unese nejvýš 5715 mm na stranu." Vytvořit a exportovat **šedé**, Jen pláty **aktivní** (N17). Hláška se v poli zalomí, neuřízne se (N18). | — |
 
 Do opravy: R4.1 hlásil chybu Large Canvasu, R4.2 padal při exportu
 (`Specified value greater than maximum allowed value`), a kdyby prošel, linka by
@@ -292,4 +292,14 @@ proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
 | R6.7 | ✓ | všech šest poloh přepínačů |
 | R6.8 | ✓ | hláška o vyhrazeném jménu; dotaz na přepsání existující předvolby |
 | R7.1–R7.6 | ✓ | hlášky i nápovědy přesně podle přetestu; počty 2, 3, 5 ve tvaru „Počet …: N" |
+
+**Celek 4 (2026-09-25, harness):**
+
+| test | výsledek | poznámka |
+|---|---|---|
+| R3.3 | ✓ | po N19: tři rastrové pláty 1010 \| 1020 \| 1010 × 1000 mm, obraz 150 dpi jen plátu, linka 2 pt kreslená po obrazu, v renderu navrchu |
+| R3.1, R3.2 | ✓ | Výsledek: „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100 mm", u 1:1 „skutečná velikost" (N16) |
+| R4.1, R4.3 | ✓ | „skutečná velikost", resp. „(1:10): 2001 × 1000 \| 2002 × 1000 \| 2001 × 1000 mm" |
+| R4.4 | ✓ | export šedý, Jen pláty aktivní a vytvoří 3 pláty (N17) |
+| dialog | ✓ čísla | 1178 × 695 px, Výsledek v pravém sloupci, pole 474 × 277 px (N18); **vzhled a zalomení dlouhé hlášky zkontroluj okem** |
 
