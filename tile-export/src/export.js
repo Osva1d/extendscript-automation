@@ -154,17 +154,18 @@ TE.Export = {
             if (s.exportMode === "raster") {
                 // Rasterising here is free — the document is thrown away
                 // anyway, so there is nothing to protect and no duplication
-                // needed. Note this rasterises the trim line too.
+                // needed. Only the GRAPHIC is rasterised: the trim line, Zünd
+                // marks and cut paths stay vector, sharp and on top. Measured:
+                // rasterize(pi) replaces the graphic in place in the stacking
+                // order and crops it to the artboard. It used to gather every
+                // page item into a group first, walking the live collection
+                // it changed; the line fell out of the group and the opaque
+                // raster covered it (N19).
                 var ro = new RasterizeOptions();
                 ro.resolution = Number(s.rasterDPI) || 150;
                 ro.antiAliasing = true;
                 ro.transparency = false;
-                var all = tmp.groupItems.add();
-                var i;
-                for (i = tmp.pageItems.length - 1; i >= 0; i--) {
-                    if (tmp.pageItems[i] !== all) { tmp.pageItems[i].moveToEnd(all); }
-                }
-                tmp.rasterize(all, undefined, ro);
+                tmp.rasterize(pi, undefined, ro);
             }
 
             var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);

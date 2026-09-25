@@ -13,8 +13,9 @@ testy, které ještě nejsou hotové, a část nálezů se týká stejných mís
 
 Číslování je stálé — na nález se odkazuj jeho číslem, i když se mezitím opraví.
 
-**Dávka hotová 2026-09-18:** celky 1–3 opravené. Otevřené zůstávají N5 (dluh)
-a N11 (patří do etapy maska/Zünd); P1 rozhodne přetest R8.1.
+**Dávka hotová 2026-09-18:** celky 1–3 opravené. **Celek 4 (N16–N19)
+2026-09-25.** Otevřené zůstávají N5 (dluh), N11 (patří do etapy maska/Zünd)
+a N20 (drobnost); P1 rozhodne přetest R8.1.
 
 ---
 
@@ -517,6 +518,9 @@ zopakovat sondu pro všech šest hodnot.
 
 ### N16 — dialog neukáže, co udělá měřítko výstupu
 
+**Stav: hotovo v `619ffbc`** (dávka, celek 4). Řádek „Stránky PDF (1:N): …", u 1:1
+„skutečná velikost, stejná jako s přídavky". Níž původní záznam.
+
 **Test:** přetest R3.1 (2026-09-18). **Druh:** návrh, ne vada. **Kde:**
 `tile-export/src/ui.js`, `refresh()` — souhrn převádí body dokumentu na
 skutečné milimetry (`fromDoc`) a měřítko výstupu nepoužije; `TE.Utils.outputScale`
@@ -548,6 +552,10 @@ i šum.
 
 ### N17 — kontrola velikosti výstupu zašedí i Jen pláty
 
+**Stav: opraveno v `66a6f40`** (dávka, celek 4). Validace vrací chybu velikosti
+zvlášť (`exportErrors`). Ověřeno harnessem: v R4.4 Jen pláty aktivní a vytvoří
+3 pláty. Níž původní záznam.
+
 **Test:** dotaz k přetestu (2026-09-18), týká se R4.4. **Druh:** vada, drobná.
 **Kde:** `tile-export/src/ui.js:914–915` (obě tlačítka z jednoho `ok`),
 `src/lib/validation.js:54–71` (`ERR_AB_TOO_BIG` měří plát v měřítku výstupu).
@@ -568,6 +576,10 @@ aktivní. Opravit po přetestu.
 ---
 
 ### N19 — v rastrovém exportu je linka schovaná pod rastrem
+
+**Stav: opraveno v `dd14cc7`** (dávka, celek 4). Ověřeno: PDF kreslí linku až po
+obrazu, render rohů při 300 dpi bez varování Poppleru ukazuje linku navrchu.
+Níž původní záznam.
 
 **Test:** přetest R3.3, spuštěný harnessem (2026-09-18). **Druh:** vada, starší
 než dávka — linku v rastrovém režimu nikdo neověřoval. **Kde:**
@@ -599,6 +611,12 @@ a prosvitla vektorová linka pod ním. Na výsledek jsem se nepodíval.
 
 ### N18 — Výsledek do prázdného místa v pravém sloupci
 
+**Stav: hotovo v `ae7d81d`** (dávka, celek 4). Dialog 1178 × 695 px (dřív 825), pole
+474 × 277 px. Pravý sloupec potřeboval vlastní `alignment` fill a pole pevnou
+`preferredSize` — jinak se `edittext` roztáhne podle textu (12 plátů: 932 px).
+**Neověřeno:** zalomení dlouhé hlášky (R4.4) — zvenku nejde vidět. Níž původní
+záznam.
+
 **Návrh uživatele** (2026-09-18, otisk dialogu). **Druh:** rozvržení dialogu.
 **Kde:** `tile-export/src/ui.js`, panel Výsledek (`pCalc`, `stCalc`), dnes přes
 oba sloupce dole.
@@ -626,6 +644,26 @@ výšky. Ověřit, jestli to ScriptUI udělá samo (`alignment` fill v ose sloup
 nebo se výška musí dopočítat po prvním layoutu. Nejmenší výška pole zůstane
 85 px. Po změně změřit dialog. Opravit po přetestu, spolu s N16 a N17 — všechny
 tři mění panel Výsledek nebo tlačítka pod ním.
+
+---
+
+### N20 — neexistující PDF preset spadne až při uložení, na každém plátu
+
+**Nalezeno** při ladění harnessu (2026-09-25). **Druh:** drobná vada, dnes
+těžko dosažitelná. **Kde:** `tile-export/src/main.js` (`try { pdfOpts.pDFPreset
+= … } catch`), `src/ui.js` (náhradní položka `[High Quality Print]`, když
+Illustrator nevrátí seznam presetů).
+
+Naměřeno: přiřazení neznámého názvu nevyhodí, chyba přijde až v `saveAs` jako
+`FNOC` — pro každý plát zvlášť, surovou hláškou. Try/catch v `main.js` tak nic
+nechytí. V běžném provozu se to nestane, dialog nabízí jen presety, které
+Illustrator vrátí. Cesty, kudy to přijde: náhradní anglický název na české
+instalaci (`[High Quality Print]` tu neexistuje, je `[Kvalitní tisk]`)
+a předvolba ručně upravená v `settings.json`.
+
+**Oprava**, až se bude sahat do `main.js`: před exportem ověřit název proti
+`app.PDFPresetsList` a neznámý nepoužít (s varováním), místo try/catch, který
+nefunguje. Náhradní položku v dialogu vynechat.
 
 ---
 

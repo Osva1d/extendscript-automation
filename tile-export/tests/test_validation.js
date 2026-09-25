@@ -95,7 +95,8 @@ assert(has(r7.errors, "wrong-graphic-count"), "several graphics is an error");
 console.log("\n=== panel must fit an artboard at the output scale ===");
 var j10 = job({ scaleN: 10, exportScale: "actual" });
 var r8 = TE.Validate.check(j10.tiles, ctx({ scaleFactor: 1, maxArtboard: 100 }), j10.s);
-assert(has(r8.errors, "artboard-too-big"), "panel beyond the artboard limit is an error");
+assert(has(r8.exportErrors, "artboard-too-big"), "panel beyond the artboard limit blocks the export");
+assert(!has(r8.errors, "artboard-too-big"), "but not Panels only, which never uses the output scale (N17)");
 
 console.log("\n=== Large Canvas at \"same as document\" is allowed (N1) ===");
 // It now means what the rulers show — real size on a Large Canvas — which a
@@ -117,10 +118,10 @@ console.log("\n=== the artboard check measures the size the export produces ==="
 // The same panel: 1080 mm tall, 3061 pt at document size, 30 610 pt at x10.
 var r10d = TE.Validate.check(jLC.tiles, ctx({ scaleFactor: 10, maxArtboard: 16200 }),
     merge(jLC.s, { exportScale: "actual" }));
-assert(has(r10d.errors, "artboard-too-big"), "x10 at 1:1 is measured at real size");
+assert(has(r10d.exportErrors, "artboard-too-big"), "x10 at 1:1 is measured at real size");
 var jLC10 = job({ exportScale: "source" });
 var r10e = TE.Validate.check(jLC10.tiles, ctx({ scaleFactor: 10, maxArtboard: 16200 }), jLC10.s);
-assert(has(r10e.errors, "artboard-too-big"),
+assert(has(r10e.exportErrors, "artboard-too-big"),
     "x10 at same-as-document is measured at real size too, not at a tenth");
 
 console.log("\n=== media width is a warning, not an error ===");

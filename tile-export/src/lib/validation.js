@@ -13,10 +13,11 @@ TE.Validate = {
      * @param {Object} ctx - {overhang:{left,right,top,bottom} in doc points,
      *        graphicCount, scaleFactor, mediaWidth (mm or null), maxArtboard (pt)}.
      * @param {Object} s - Settings.
-     * @returns {Object} {errors: Array, warnings: Array}. Empty errors means go.
+     * @returns {Object} {errors, exportErrors, warnings}. errors stop every
+     *          action; exportErrors stop the export only (N17).
      */
     check: function (tiles, ctx, s) {
-        var errors = [], warnings = [];
+        var errors = [], exportErrors = [], warnings = [];
         var eps = 1e-6;
         var i, t, w, h, k, shortest, overlapPt;
 
@@ -56,13 +57,15 @@ TE.Validate = {
         // size the export will actually produce. The message names the panel,
         // its size and the limit: without them nobody could tell whether more
         // panels would help — they do not when it is the height that overflows.
+        // An EXPORT error: Panels only draws in the document at its own scale
+        // and never meets this limit, so it must not be blocked by it (N17).
         k = TE.Utils.outputScale(s, ctx.scaleFactor);
         for (i = 0; i < tiles.length; i++) {
             t = tiles[i].expanded;
             w = (t[2] - t[0]) * k;
             h = (t[1] - t[3]) * k;
             if (w > ctx.maxArtboard || h > ctx.maxArtboard) {
-                errors.push(TE.L.format(TE.L.ERR_AB_TOO_BIG, tiles[i].index,
+                exportErrors.push(TE.L.format(TE.L.ERR_AB_TOO_BIG, tiles[i].index,
                     TE.Utils.formatMM(TE.Utils.pt2mm(w), TE.L.DECIMAL),
                     TE.Utils.formatMM(TE.Utils.pt2mm(h), TE.L.DECIMAL),
                     TE.Utils.formatMM(TE.Utils.pt2mm(ctx.maxArtboard), TE.L.DECIMAL)));
@@ -85,7 +88,7 @@ TE.Validate = {
             }
         }
 
-        return { errors: errors, warnings: warnings };
+        return { errors: errors, exportErrors: exportErrors, warnings: warnings };
     },
 
     /**

@@ -159,6 +159,25 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   kterou seznam nemá, a tlačítko Jen pláty mělo nápovědu o lince místo o tom,
   co dělá.
 
+- **Rastrový export schovával linku pod obraz.** Před rastrováním se všechny
+  objekty sbíraly do skupiny smyčkou přes kolekci, kterou ta smyčka sama
+  měnila; linka ze skupiny vypadla a neprůhledný rastr ji zakryl. Teď se
+  rastruje jen grafika a linka zůstane navrchu jako vektor, ostrá.
+
+- **Chyba „plát se nevejde do artboardu" už neblokuje Jen pláty.** Týká se
+  měřítka výstupu, tedy jen exportu; Jen pláty kreslí v měřítku dokumentu.
+  Šedne jen Vytvořit a exportovat.
+
+### Added (během přetestu)
+
+- **Výsledek ukazuje velikost stránek PDF** — „Stránky PDF (1:10): 101 × 100 |
+  102 × 100 | 101 × 100 mm", nebo že jsou ve skutečné velikosti. Řádky plátů
+  jsou ve skutečných milimetrech a měřítko výstupu s nimi nehne, takže se volba
+  dřív projevila až po exportu. Nápověda k měřítku výstupu říká, že se týká jen
+  exportu.
+- **Výsledek je v pravém sloupci** a zabere volné místo pod Exportem: asi
+  patnáct řádků místo pěti, dialog o 130 px nižší (695 px).
+
 ### Notes
 
 - **V Zünd režimu je MediaBox plátu větší než plát sám.** Značky leží vně
