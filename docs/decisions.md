@@ -186,3 +186,11 @@ PROPERTY 24/24.
 
 **Bilance sdíleného jádra po této změně:** 3 moduly — `json2.js`,
 `ui_state.js`, `cut_marks.js`.
+
+**Doplněno 2026-09-25:** `calculateAll(s, b, scale)` má volitelný třetí
+parametr — měřítko stránky. Tile-export kreslí značky do dočasného dokumentu,
+který o ručním 1:N neví, a bez něj by značky u dokumentu 1:10 exportovaného 1:1
+vyšly desetkrát menší (tile-export N11). ZSM parametr nepředává a měřítko si
+dál bere z aktivního dokumentu, což je v něm správně. Zünd Summa Marks se do
+tile-exportu nezapojuje jako druhý běh, ale přes tohle sdílené jádro
+(rozhodnuto s uživatelem, `docs/reports/2026-09-25-maskovani-platu.md` §8).

@@ -3,7 +3,15 @@
 Rozšíření `tile-export` o přípravu plátů pro strojní přesný ořez na Zündu.
 Navazuje na [v1](2026-09-13-tile-export-design.md).
 
-Datum: 2026-09-13 · Stav: návrh, neschválený k implementaci
+Datum: 2026-09-13 · Stav: **částečně nahrazeno** (2026-09-26)
+
+> Rovný ořez je implementovaný **jinak**, než popisují §3–§8: tisková maska
+> o spad za řezem, dva výstupy (tiskový a `_cut`), značky měřené od masky,
+> vrstvy jako v Zünd Summa Marks. Platný návrh a měření jsou ve
+> [studii maskování](../reports/2026-09-25-maskovani-platu.md), chování
+> v [README](../../tile-export/README.md). Dělení kontury z §4 v kódu je, ale
+> nepoužívá se — má známé vady N22 a N24 a vrátí se s tvarovým ořezem.
+> §2 (naměřená fakta o Pathfinderu) a §10 (postup z praxe) platí dál.
 
 ---
 
