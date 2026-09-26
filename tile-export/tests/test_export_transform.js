@@ -161,6 +161,22 @@ var zl10 = TE.Export.zundLayout(zt, { cutBleed: 5 }, 10);
 assertClose(zl10.mask[2] - zt.artboard[2], U.mm2pt(0.5), 1e-9, "1:10 page: 5 mm real is 0.5 mm on the page");
 assert(TE.Export.cutName("zed_02") === "zed_02_cut", "the cut file carries the _cut suffix");
 
+console.log("\n=== Zünd files: layers as in zund-summa-marks, editable PDF ===");
+// User, 2026-09-26: the print and the cut file are editable PDFs with a cut
+// layer named after the cut colour and a Regmarks layer; the cut layer is
+// hidden in the print file, the graphics layer is gone from the cut file.
+assert(TE.Config.layerGraphics === "Graphics" && TE.Config.layerRegmarks === "Regmarks",
+    "layer names match zund-summa-marks");
+var zb = exSrc.slice(exSrc.indexOf("buildZundPanel: function"), exSrc.indexOf("rasterizeArt: function"));
+assert(/layCut\.name\s*=\s*s\.cutSpot/.test(zb), "the cut layer is named after the cut colour");
+var ex2 = exSrc.slice(exSrc.indexOf("exportTile: function"));
+assert(/layPrint\.remove\(\)/.test(ex2) && ex2.indexOf("layPrint.remove()") > ex2.indexOf("layCut.visible = false"),
+    "the graphics layer is removed only after the print file is saved");
+var mainSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8"));
+assert(/if\s*\(\s*s\.zundMode\s*\)\s*\{?\s*pdfOpts\.preserveEditability\s*=\s*true/.test(mainSrc),
+    "Zünd files keep Illustrator editing capabilities");
+assert(TE.Utils.indexOf(TE.Config.CUT_SPOTS, "Cut") !== -1 && TE.Config.CUT_SPOTS.length === 1, "the offered cut colour is Cut");
+
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",
     "index is zero-padded to the width of the total");

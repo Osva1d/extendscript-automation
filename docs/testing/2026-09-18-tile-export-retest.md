@@ -257,6 +257,7 @@ a odstup 10 — načti ji a přepiš, nebo začni z [Default].
 | R10.2 | export 1:1 do čisté složky | na každý plát `…_n.pdf` a `…_n_cut.pdf`, obě 2050 × 1030 (prostřední) |
 | R10.3 | tiskové PDF v Acrobatu | grafika končí 5 mm za řezem, kolem volný pás se značkami; **žádná** řezová cesta, ani ve vrstvách (panel Vrstvy prázdný) |
 | R10.4 | `_cut` PDF v Acrobatu | jen značky a obdélník v přímé barvě `Cut` (Výstup → Náhled separací) |
+| R10.4b | obě PDF otevřít v **Illustratoru** | tiskové: vrstvy `Cut` (vypnutá), `Regmarks`, `Graphics` s grafikou v masce; řezové: `Cut`, `Regmarks`, žádná grafika |
 | R10.5 | spad 60 mm (dokument má na bocích 250 mm, nahoře a dole 655) | projde; přídavek vlevo 200 + spad 60 → chyba exportu, Jen pláty zůstane aktivní |
 | R10.6 | nakresli do dokumentu cestu v barvě `Cut` | varování „Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není…" |
 | R10.7 | **u stroje** | Cut Center načte `_cut`, najde značky na vytištěném plátu a ořízne po obdélníku; na hraně žádná bílá |
@@ -332,5 +333,6 @@ proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
 | R10.3 | ✓ data | tiskové PDF: maska 10 mm od okraje, 2030 × 1010 mm (řez + 5 mm), žádná řezová cesta, žádné vrstvy (OCG 0); rastrový režim: obraz v masce |
 | R10.4 | ✓ data | `_cut`: jeden obdélník 2020 × 1000 mm, 0,125 pt, přímá barva, žádná grafika; značka 4,9 mm v rohu |
 | R10.6 | ✓ | varování v souhrnu; `_cut` i s konturou v dokumentu jen obdélník |
+| R10.4b | ✓ | (2026-09-26) znovu otevřené v Illustratoru: tiskové `Cut` (skrytá) / `Regmarks` / `Graphics`, řezové `Cut` / `Regmarks`; tisková stránka bez řezu, žádné OCG; ~380 a ~365 KB na plát |
 | R10.7 | — | u stroje |
 

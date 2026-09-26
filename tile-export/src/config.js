@@ -24,11 +24,16 @@ TE.Config = {
     // contour in a later stage. False hides the panel and the mode with it.
     ZUND_ENABLED: true,
 
-    // Spot colours the shop's Zünd setup reads as cut paths (user, 2026-09-25).
-    // Offered in the cut colour list even when the document has none of them:
-    // for a straight cut the colour only has to exist in the output, and the
-    // export creates it there.
-    CUT_SPOTS: ["Cut", "Thru-cut", "Kiss-cut"],
+    // The spot colour the shop's Zünd setup reads as a cut path (user,
+    // 2026-09-26: "Cut" is enough). Offered in the cut colour list even when
+    // the document lacks it: the export creates it in the output.
+    CUT_SPOTS: ["Cut"],
+
+    // Layer names of a Zünd panel file, the same as zund-summa-marks uses
+    // (its src/config.js), so a file from either tool looks the same when
+    // opened. The cut layer is named after the cut colour. Not localized.
+    layerGraphics: "Graphics",
+    layerRegmarks: "Regmarks",
 
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.

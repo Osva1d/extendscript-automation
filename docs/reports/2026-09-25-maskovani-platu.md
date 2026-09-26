@@ -209,6 +209,12 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
   řez). **Tvarový ořez má víc děr, než tahle studie čekala** — kromě masky
   (§3 krok 3–4) i samotné dělení kontury (N24). V této verzi se kontura
   nepoužívá a dialog ji ohlásí.
+- **2026-09-26: editovatelné PDF a vrstvy jako ZSM** (uživatel). Barva řezu jen
+  `Cut`. Obě PDF se zachovanou editovatelností, vrstvy `Graphics`, `Regmarks`
+  a vrstva řezu podle barvy; v tiskovém vypnutá, v řezovém grafika smazaná.
+  Naměřeno: editovatelnost stojí pevných ~320 KB na soubor (malá i 6× větší
+  grafika), skrytý řez není v tisknutém obsahu, grafika zůstává propojená
+  absolutní cestou.
 
 ## 10. Doporučené pořadí
 

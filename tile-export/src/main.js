@@ -141,6 +141,12 @@
         // would carry the cut data (measured 2026-09-25). Reading the
         // property says false either way, so it is set, not checked.
         pdfOpts.acrobatLayers = false;
+        // Zünd files are editable PDFs (user, 2026-09-26): reopened in
+        // Illustrator they show the Graphics, Regmarks and cut layers, like a
+        // zund-summa-marks file. Cost measured: a fixed ~320 KB per file; the
+        // placed artwork stays linked, not duplicated. Other exports stay
+        // plain, as before.
+        if (s.zundMode) { pdfOpts.preserveEditability = true; }
 
         var eCtx = {
             graphicFile: graphics[0].file,

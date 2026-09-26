@@ -114,9 +114,12 @@ TE.Export = {
      * artwork clipped by the mask. See the study,
      * docs/reports/2026-09-25-maskovani-platu.md §3.
      *
-     *   TE_print — artwork in the mask     (print PDF)
-     *   TE_marks — registration marks      (both PDFs)
-     *   TE_cut   — cut path in cutSpot     (_cut PDF)
+     *   Graphics — artwork in the mask     (print PDF; removed from _cut)
+     *   Regmarks — registration marks      (both PDFs)
+     *   <cutSpot> — cut path, e.g. "Cut"   (hidden in print, shown in _cut)
+
+     * Names as in zund-summa-marks. Both files are editable PDFs (main.js),
+     * so these layers are what an operator sees on reopening.
      *
      * Order matters: a raster is made after the page has grown, because
      * rasterize() crops to the artboard and the bleed lies outside the panel.
@@ -132,11 +135,11 @@ TE.Export = {
         var ratio = TE.Utils.pageRatio(s, ctx.scaleFactor);
         var zl = this.zundLayout(tf, s, ratio);
         var layPrint = tmp.layers[0];
-        layPrint.name = "TE_print";
+        layPrint.name = TE.Config.layerGraphics;
         var layMarks = tmp.layers.add();
-        layMarks.name = "TE_marks";
+        layMarks.name = TE.Config.layerRegmarks;
         var layCut = tmp.layers.add();
-        layCut.name = "TE_cut";
+        layCut.name = s.cutSpot;
 
         // 1. The cut: the panel rectangle. A shaped contour is the next stage
         //    — TE.Cut.renderTileContour is kept for it but not called: on a
@@ -247,13 +250,16 @@ TE.Export = {
                 contourPaths = zp.cutPaths;
                 var zName = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
                 var zDir = ctx.outFolder.fsName + "/";
-                // Hidden layers are left out of the PDF only because main.js
-                // sets acrobatLayers = false; otherwise they travel as an
-                // optional-content layer, cut data and all (measured).
+                // Print file: the cut layer hidden, not removed — it is there
+                // on reopening. Hidden layers stay out of the printed page
+                // because main.js sets acrobatLayers = false; otherwise they
+                // travel as an optional-content layer (measured).
                 zp.layCut.visible = false;
                 tmp.saveAs(new File(zDir + zName + ".pdf"), ctx.pdfOptions);
+                // Cut file: the cut layer shown, the graphics layer removed.
+                // The temporary document is thrown away after this anyway.
                 zp.layCut.visible = true;
-                zp.layPrint.visible = false;
+                zp.layPrint.remove();
                 var zCut = new File(zDir + this.cutName(zName) + ".pdf");
                 tmp.saveAs(zCut, ctx.pdfOptions);
                 return { file: new File(zDir + zName + ".pdf"), cutFile: zCut, contourPaths: contourPaths };

@@ -11,8 +11,10 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Zünd režim s rovným ořezem.** Každý plát dostane dvě PDF se stejnou
   stránkou: tiskové, kde grafiku ořízne maska o **spad za řezem** (výchozí
   5 mm), a `_cut` s řezovou cestou — obdélníkem plátu v přímé barvě řezu
-  (výchozí `Cut`, seznam nabízí i `Thru-cut` a `Kiss-cut`) — a stejnými
-  registračními značkami. Značky se měří od konce grafiky (odstup 5 mm), jak
+  (výchozí `Cut`) — a stejnými registračními značkami. Obě se ukládají se
+  zachovanou editovatelností v Illustratoru a vrstvami jako ze Zünd Summa
+  Marks: `Graphics`, `Regmarks` a vrstva řezu podle barvy; v tiskovém souboru
+  je vrstva řezu vypnutá, z řezového je vrstva grafiky odstraněná. Značky se měří od konce grafiky (odstup 5 mm), jak
   se to dělá ručně. Kontrola hlídá, že PDF na vnějších hranách unese přídavek
   + spad. Skryté vrstvy se do PDF nedostanou (`acrobatLayers = false`), takže
   tiskové PDF nenese řezová data. Tvarový ořez podle kontury je další etapa;
