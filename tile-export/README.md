@@ -184,8 +184,16 @@ Zapnutý udělá z každého plátu **dvě PDF se stejnou stránkou**:
 
 | soubor | obsah |
 |---|---|
-| `{doc}_{n}.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky |
-| `{doc}_{n}_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt |
+| `{doc}_{n}.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky; vrstva řezu je v souboru **vypnutá** |
+| `{doc}_{n}_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
+
+Obě PDF se ukládají **se zachovanou editovatelností v Illustratoru**. Otevřené
+mají vrstvy jako soubor ze Zünd Summa Marks: `Graphics` (grafika v masce),
+`Regmarks` a vrstvu řezu pojmenovanou podle barvy (`Cut`). Stojí to zhruba
+320 KB navíc na soubor (naměřeno; data grafiky se nezdvojují). Grafika zůstává
+**propojená** s původním PDF — tisk to neovlivní, ale na počítači, kde původní
+soubor na stejné cestě není, Illustrator při otevření ohlásí chybějící
+propojení.
 
 Na materiál se tiskne první, do Cut Center se načte druhý. Kamera najde
 značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. Spad za
@@ -195,9 +203,9 @@ značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. S
 
 ### Nastavení
 
-- **Barva řezu** — přímá barva řezové cesty. Seznam nabízí barvy dokumentu
-  a `Cut`, `Thru-cut`, `Kiss-cut`; výchozí `Cut`. V dokumentu být nemusí,
-  export ji v PDF vytvoří. Stroj rozlišuje velká a malá písmena.
+- **Barva řezu** — přímá barva řezové cesty, výchozí `Cut`. Seznam nabízí
+  `Cut` a přímé barvy dokumentu. V dokumentu být nemusí, export ji v PDF
+  vytvoří. Stroj rozlišuje velká a malá písmena.
 - **Spad za řezem** — o kolik grafika přesahuje řez. Běžně 3 nebo 5 mm,
   u velkých plátů s místem na materiálu až 10 mm.
 - **Odstup od motivu** — volné místo mezi koncem grafiky a značkou (výchozí
