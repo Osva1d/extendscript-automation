@@ -7,7 +7,8 @@ udělat skriptem.
 
 Nic z toho zatím není v nástroji. Všechno naměřené běželo v Illustratoru 30.8.1
 ve vlastních dočasných dokumentech. Aritmetika běžela jako virtuální test
-nad skutečným kódem nástroje, `tile-export/tests/feasibility/mask_arithmetic.js`.
+nad skutečným kódem nástroje (skript byl odstraněn 2026-09-26, jeho úlohu
+převzala sada `tile-export/tests/test_zund_scale.js`; původní je v historii gitu).
 
 ---
 

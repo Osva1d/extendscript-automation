@@ -6,7 +6,7 @@ Datum: 2026-09-13 · Stav: **implementováno** (tile-export 1.1.0, nevydáno)
 
 Záznam návrhu, ne popis dnešního chování — ten drží [README](../../tile-export/README.md).
 Pozdější změny jsou zapsané v textu tam, kde se návrh změnil; seznam oprav
-z ručního testu je v [nálezech](../testing/2026-09-15-tile-export-test-findings.md).
+z ručního testu je v [nálezech](../testing/tile-export-findings.md).
 
 ---
 
