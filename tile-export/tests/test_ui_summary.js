@@ -146,6 +146,12 @@ has(tzc, "! Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ješt�
 has(tzc, "Řez: obdélník plátu v barvě Cut.", "and the rectangle is still what gets cut");
 ctx.contourSpots = [];
 has(summary(zund({ etBleed: { text: "10" } })), "se značkami: 105 × 104 |", "bleed 10 grows the page by 1 mm a side at 1:10");
+// Adds are part of the panel, so they are part of the cut: the cut is the
+// printed panel (clean + adds + overlap), where the red line lies in the
+// ordinary mode, and the bleed past the cut comes on top. Add right 40 and
+// top 40 at 1:10: panel 3 cuts 1050 x 1040, its page is 1080 x 1070 = 108 x 107.
+has(summary(zund({ etAddRight: { text: "40" }, etAddTop: { text: "40" } })),
+    "Stránky PDF (1:10) se značkami: 104 × 107 | 105 × 107 | 108 × 107 mm", "adds widen the cut and the page");
 
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and

@@ -261,6 +261,7 @@ a odstup 10 — načti ji a přepiš, nebo začni z [Default].
 | R10.5 | spad 60 mm (dokument má na bocích 250 mm, nahoře a dole 655) | projde; přídavek vlevo 200 + spad 60 → chyba exportu, Jen pláty zůstane aktivní |
 | R10.6 | nakresli do dokumentu cestu v barvě `Cut` | varování „Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není…" |
 | R10.7 | **u stroje** | Cut Center načte `_cut`, najde značky na vytištěném plátu a ořízne po obdélníku; na hraně žádná bílá |
+| R10.8 | přídavek vpravo 40 a nahoře 40, export 1:1 | řez **zahrnuje přídavky** (a přelep): plát 3 řeže 2050 × 1040 mm, stránka 2080 × 1070; grafika sahá 5 mm za řez i na hraně s přídavkem |
 
 R10.7 je jediný test, který rozhodne, jestli režim funguje. Ostatní jsem ověřil
 harnessem (výsledky níž).
@@ -335,6 +336,7 @@ proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
 | R10.6 | ✓ | varování v souhrnu; `_cut` i s konturou v dokumentu jen obdélník |
 | R10.4b | ✓ | (2026-09-26) znovu otevřené v Illustratoru: tiskové `Cut` (skrytá) / `Regmarks` / `Graphics`, řezové `Cut` / `Regmarks`; tisková stránka bez řezu, žádné OCG; ~380 a ~365 KB na plát |
 | R10.7 | — | u stroje |
+| R10.8 | ✓ | (2026-09-26) plát 1 řez 2010 × 1040, plát 3 řez 2050 × 1040 mm; maska 5,000 mm za řezem na všech stranách; tiskový a řezový soubor shodné na 0,0000 mm |
 
 **Shoda tiskového a řezového souboru (2026-09-26).** Oba soubory znovu otevřené
 v Illustratoru a porovnané vůči artboardu, pláty 1 a 2, výchozí preset:
