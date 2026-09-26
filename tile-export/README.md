@@ -229,6 +229,9 @@ v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
   a řeže se obdélník plátu.
 - **Starší předvolby** mají barvu `cut` s malým písmenem a odstup 10 mm, který
   se dřív měřil od okraje plátu. Po načtení zkontroluj.
+- **PDF preset platí pro oba soubory.** Preset s tiskovými značkami nebo
+  spadávkou (třeba `pass4press`) je přidá i do `_cut`. Posun to nezpůsobí,
+  stránky se zvětší stejně; pro Zünd ale vyber preset bez tiskových značek.
 - **Jedna řezací barva.** Proříz, ryl a děrování zvlášť tahle verze neumí.
 - Návrh a naměřené podklady:
   [`docs/reports/2026-09-25-maskovani-platu.md`](../docs/reports/2026-09-25-maskovani-platu.md).
