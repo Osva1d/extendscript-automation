@@ -217,8 +217,12 @@
     app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
     var out = [];
     try {
-        // $.global.TE_TESTDATA_DIR overrides the folder (development runs).
-        var folder = new Folder($.global.TE_TESTDATA_DIR || (Folder.desktop + "/tile-export-test/data"));
+        // $.global.TE_TESTDATA_DIR overrides the folder for one run, then is
+        // forgotten: globals outlive a script in an Illustrator session, and a
+        // leftover once sent a real run into a development folder.
+        var devDir = $.global.TE_TESTDATA_DIR;
+        $.global.TE_TESTDATA_DIR = undefined;
+        var folder = new Folder(devDir || (Folder.desktop + "/tile-export-test/data"));
         if (!folder.exists) { folder.create(); }
         var s3 = buildSource(3000, 1000, folder);
         var s6 = buildSource(6000, 1000, folder);
