@@ -179,8 +179,11 @@
      */
     function buildWorking(W, H, srcFile, largeCanvas, folder, base) {
         // Both kinds hold the clean format at 1/10 in internal points: a 1:10
-        // drawing does so by the user's convention, a Large Canvas because it
-        // stores everything at 1/scaleFactor. So the source goes in at 100 %.
+        // drawing by the user's convention, a Large Canvas because it stores
+        // everything at 1/scaleFactor. The source is sized to that explicitly:
+        // Illustrator places a PDF into a Large Canvas at its real size, ten
+        // times too small here (measured 2026-09-26 — the first version of
+        // this script assumed 100 % and covered a tenth of the wall).
         var CW = mm(W), CH = mm(H);
         var doc = largeCanvas
             ? app.documents.add(DocumentColorSpace.CMYK, W * PT, H * PT)
@@ -189,6 +192,8 @@
         doc.artboards[0].artboardRect = [0, 0, CW, -CH];
         var pi = doc.placedItems.add();
         pi.file = srcFile;
+        var tw = mm(W + 2 * BLEED), th = mm(H + 2 * BLEED);
+        pi.resize(tw / pi.width * 100, th / pi.height * 100);
         pi.position = [-mm(BLEED), mm(BLEED)];
 
         var seam = W / 3;
