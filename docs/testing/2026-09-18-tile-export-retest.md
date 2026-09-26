@@ -336,3 +336,20 @@ proklikání myší zůstávají na tobě**, stejně jako R8 a R9.
 | R10.4b | ✓ | (2026-09-26) znovu otevřené v Illustratoru: tiskové `Cut` (skrytá) / `Regmarks` / `Graphics`, řezové `Cut` / `Regmarks`; tisková stránka bez řezu, žádné OCG; ~380 a ~365 KB na plát |
 | R10.7 | — | u stroje |
 
+**Shoda tiskového a řezového souboru (2026-09-26).** Oba soubory znovu otevřené
+v Illustratoru a porovnané vůči artboardu, pláty 1 a 2, výchozí preset:
+
+| co | rozdíl mezi soubory |
+|---|---|
+| artboard | 0 (2040 resp. 2050 × 1030 mm) |
+| 17 značek — středy i průměry | 0,0000 mm |
+| řezová cesta (v tiskovém skrytá) | 0,0000 mm; řez od 15,000 mm, 2020 × 1000 mm |
+| maska za řezem | 5,000 mm na všech čtyřech stranách |
+| rohová značka | střed 2,5 / 2,5 mm, Ø 5,000, 5,000 mm volna k masce |
+| PDF rámečky (Media, Trim, Bleed) | shodné |
+
+S presetem `pass4press` totéž — ale preset přidá **do obou** souborů 3 mm
+spadávky a **tiskové ořezové značky** (stránka o 12,5 mm větší na stranu,
+TrimBox = artboard). Posun to nezpůsobí; otázka je, co s ořezovými čarami
+v `_cut` udělá Cut Center.
+

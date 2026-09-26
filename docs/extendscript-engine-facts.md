@@ -217,6 +217,14 @@ Ze studie maskování plátu (`docs/reports/2026-09-25-maskovani-platu.md`):
   takže čtení nic neříká. Nastavovat výslovně; pořadí vůči `pDFPreset` je
   jedno.
 
+### Přečtené `PDFSaveOptions` neodpovídají presetu (naměřeno 2026-09-26)
+
+Po `o.pDFPreset = "pass4press"` čte `bleedOffsetRect` `0,0,0,0`, `trimMarks`
+i `registrationMarks` `false` — a uložené PDF přesto má 3 mm spadávky
+a ořezové značky (MediaBox o 35,5 pt větší na každé straně, TrimBox na
+artboardu). Stejně jako u `acrobatLayers`: vlastnosti po nastavení presetu
+nic neříkají o tom, co preset udělá. Ověřovat na uloženém PDF (`pdfinfo -box`).
+
 ### Rozlišení rastru od 72 DPI (naměřeno 2026-09-26)
 
 `RasterizeOptions.resolution` pod 72 (71, 50) přijme, ale `rasterize()` pak
