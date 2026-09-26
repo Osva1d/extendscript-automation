@@ -2,7 +2,7 @@
 
 Podklad k rozhodnutí, jestli a jak do `tile-export` doplnit dělení na **stejně
 široké pláty**. Datum: 2026-09-14. **Stav: rozhodnuto a implementováno** —
-přepínač „Rovnoměrně — stejné tiskové pláty" v tile-export 1.1.0 (viz §7, §8).
+přepínač „Rovnoměrně — stejné tiskové pláty" v tile-export 1.0.0 (viz §7, §8).
 
 ---
 
