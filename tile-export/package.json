@@ -1,6 +1,6 @@
 {
   "name": "tile-export",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "Splits large graphics into printable panels for manual trimming (Adobe Illustrator ExtendScript).",
   "private": true,
   "scripts": {

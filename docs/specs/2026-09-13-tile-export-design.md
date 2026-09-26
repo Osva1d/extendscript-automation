@@ -2,7 +2,11 @@
 
 Nástroj: `tile-export`, namespace `TE`.
 
-Datum: 2026-09-13 · Stav: návrh, neschválený k implementaci
+Datum: 2026-09-13 · Stav: **implementováno** (tile-export 1.0.0, nevydáno)
+
+Záznam návrhu, ne popis dnešního chování — ten drží [README](../../tile-export/README.md).
+Pozdější změny jsou zapsané v textu tam, kde se návrh změnil; seznam oprav
+z ručního testu je v [nálezech](../testing/tile-export-findings.md).
 
 ---
 
@@ -278,7 +282,7 @@ Dialog nabízí obě fáze naráz, takže jistý běh nezdržuje.
 - **Export** — režim vektor / rastr, **měřítko výstupu** (měřítko zdroje / 1:1),
   DPI (aktivní jen u rastru), PDF preset,
   cílová složka, vzor pojmenování s placeholdery jako v `batch-relink-export`
-- **Tlačítka** — Zrušit vlevo, „Jen pláty", vpravo „Vytvořit a exportovat"
+- **Tlačítka** — Storno vlevo, „Jen pláty", vpravo „Vytvořit a exportovat"
 
 Po každé změně dopočtu `win.layout.layout(true)`.
 
