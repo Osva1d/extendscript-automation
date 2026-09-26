@@ -19,13 +19,23 @@ T1–T8 a přetest R1–R10 s poznámkami o opravách jsou v historii gitu
 cd ~/Dev/extendscript-automation/tile-export && npm run verify
 ```
 
-Dokumenty v `~/Desktop/tile-export-test/`:
+Testovací data vyrobí `tools/make-test-document.jsx` (spustit bez otevřeného
+dokumentu) do `~/Desktop/tile-export-test/data/`; existující soubory nepřepíše.
 
 | soubor | co to je |
 |---|---|
-| testovací arch (`tools/make-test-document.jsx`) | 3000 × 1000 mm při 1:10, spad 50 mm, blok NEŘEZAT na 850–1450 mm, vodítka na 800 a 1900 mm |
-| `lc-6000x1000.ai` | Large Canvas (faktor 10), 6000 × 1000 mm |
-| `zed-6000x1000-1ku10.ai` | běžný dokument 1:10, zeď 6 × 1 m |
+| `arch-3000x1000-1ku10.ai` | 3000 × 1000 mm při 1:10; NEŘEZAT na 850–1450 mm, vodítka 800 a 1900 mm |
+| `zed-6000x1000-1ku10.ai` | zeď 6000 × 1000 mm při 1:10; NEŘEZAT 1850–2450, vodítka 1800 a 3900 |
+| `lc-6000x1000.ai` | stejná zeď jako Large Canvas (faktor 10), ruční měřítko vypnout |
+
+Všechny mají spad 50 mm na každé hraně. **Jak číst plát:** čistý formát je
+šachovnice 100 × 100 mm, velké číslo pole je jeho vodorovná poloha v mm, „y"
+svislá — na kraji plátu tedy přečteš, kde začíná a končí, a v přelepu uvidíš
+stejná čísla jako u souseda. Spad za hranou je v pásech **tmavě šedá 0–5,
+šedá 5–10, modrá 10–20, zelená 20–40, žlutá 40–50 mm**: barva na vnějším okraji
+plátu říká, kolik spadu nese (přídavek 40 mm končí zelenou, v Zünd režimu
+přidá maska 5 mm proužek žluté). Bílá uvnitř grafiky je vždycky chyba, kromě
+rámečku s legendou.
 
 **Výchozí nastavení** — dialog si pamatuje poslední běh, před každou sekcí ho
 vrať (nebo ulož jako předvolbu):
@@ -89,12 +99,12 @@ v milimetrech.
 | arch, §0 | tiskové 1010 \| 1020 \| 1010 × 1000; „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100" | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka |
 | arch, výstup 1:1 | „Stránky PDF: skutečná velikost…" | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
 | arch, 1:1, Rastr 150 DPI | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu |
-| Large Canvas, výstup jako dokument | faktor 10; spad 250/250/655/655 | 2010 \| 2020 \| 2010 × 1000 |
+| Large Canvas, výstup jako dokument | faktor 10; spad 50/50/50/50 | 2010 \| 2020 \| 2010 × 1000 |
 | Large Canvas + ruční 1:10 | „(1:10): 2001 × 1000 \| …" | náhled 2001 \| 2002 \| 2001 × 1000 |
 | Large Canvas + 1:10, výstup 1:1 | „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
-| zeď 1:10, výstup 1:1 | tiskové 2010 \| 2020 \| 2010 | 2010 \| 2020 \| 2010 × 1000 |
+| zeď 1:10, výstup 1:1 | tiskové 2010 \| 2020 \| 2010 | 2010 \| 2020 \| 2010 × 1000; plát 2 začíná polem 1990 (přelep), končí 4010 |
 | zeď, Zünd, 1:1 | „se značkami: 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030"; „Řez: obdélník plátu v barvě Cut." | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
-| zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070 |
+| zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
 
 **Hlášky** (česky): šířka 0 → „Šířka plátu musí být kladné číslo."; Rovnoměrně
 se stropem 15 a přelepem 20 → „…musí být větší než přelep."; přídavek vlevo 60
