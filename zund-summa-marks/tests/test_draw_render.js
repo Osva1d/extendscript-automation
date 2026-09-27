@@ -54,6 +54,9 @@ ZSM.L = {
     WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
     WARN_REG_ROUTING: "regskip %s",
     WARN_TRIM_FOREIGN: "trimforeign",
+    ERR_MARKS_ORIENT: "marks orient %s %s",
+    ERR_MARKS_OVERLAP: "marks overlap %s %s",
+    ERR_MARKS_OUTSIDE: "marks outside %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -1157,6 +1160,48 @@ for (var li11 = 0; li11 < logK11.length; li11++) if (logK11[li11].op === "artboa
 assert(iAb >= 0, "artboard assignment logged");
 assert(iAb > 0 && logK11[iAb - 1].op === "redraw", "redraw right before the artboard change");
 assert(iAb >= 0 && iAb + 1 < logK11.length && logK11[iAb + 1].op === "redraw", "redraw right after the artboard change");
+
+
+// =====================================================
+// TEST 33 (review K7): conflicting marks stop the run before any change
+// =====================================================
+// 90 mm wide artwork with the defaults puts the orientation mark exactly on the
+// bottom-right corner mark; a 100 mm Fixed artboard leaves it 10 mm off the
+// artboard. Both used to render without a word.
+console.log("\n=== TEST 33 (review K7): overlapping or off-artboard marks block the run ===");
+function artboardOps(doc) {
+    var n = 0;
+    for (var i = 0; i < doc._mutationLog.length; i++) if (doc._mutationLog[i].op === "artboard") n++;
+    return n;
+}
+var alertsK7 = [], origAlertK7 = global.alert;
+global.alert = function (m) { alertsK7.push(String(m)); };
+
+var docK7 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(90), 0] }] }] });
+var sK7 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7, ZSM.Draw.getBounds(sK7)), sK7);
+assert(findLayer(docK7, "Regmarks") === null, "orientation conflict: no marks, no Regmarks layer");
+assertEq(artboardOps(docK7), 0, "orientation conflict: artboard untouched");
+assert(alertsK7.join("\n").indexOf("marks orient 0 5") >= 0,
+    "orientation conflict: distance and mark size reported (got: " + alertsK7.join(" | ") + ")");
+
+alertsK7 = [];
+var docK7f = setupDoc({
+    artboardRect: [0, ZSM.Utils.mm2pt(100), ZSM.Utils.mm2pt(100), 0],
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [20, 200, 200, 20] }] }]
+});
+var sK7f = makeSettings({ mode: "ZUND", useArtboardBounds: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7f, ZSM.Draw.getBounds(sK7f)), sK7f);
+assert(findLayer(docK7f, "Regmarks") === null, "mark off the Fixed artboard: nothing drawn");
+assert(alertsK7.join("\n").indexOf("marks outside 10") >= 0,
+    "mark off the Fixed artboard: overhang reported (got: " + alertsK7.join(" | ") + ")");
+
+alertsK7 = [];
+var docK7ok = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(120), 0] }] }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7, ZSM.Draw.getBounds(sK7)), sK7);
+assertEq(countItems(findLayer(docK7ok, "Regmarks"), "PathItem"), 5, "120 mm artwork: 4 corners + orientation mark drawn");
+assertEq(alertsK7.length, 0, "120 mm artwork: no message (got: " + alertsK7.join(" | ") + ")");
+global.alert = origAlertK7;
 
 
 // =====================================================

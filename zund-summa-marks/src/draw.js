@@ -97,6 +97,18 @@ ZSM.Draw = {
                 ZSM.Utils.error(ZSM.L.ERR_GEOMETRY_INVALID);
                 return;
             }
+            // Nor when marks would print as one shape or partly off the
+            // artboard. With the defaults the orientation mark lands on the
+            // bottom-right corner mark for 85–95 mm wide artwork, and nothing
+            // said so (review K7).
+            var conflict = ZSM.Core.findMarkConflict(geo, s);
+            if (conflict) {
+                var conflictMsg = { overlap: ZSM.L.ERR_MARKS_OVERLAP, orient: ZSM.L.ERR_MARKS_ORIENT,
+                                    outside: ZSM.L.ERR_MARKS_OUTSIDE }[conflict.type];
+                ZSM.Utils.error(ZSM.L.format(conflictMsg, Math.round(conflict.dist * 10) / 10,
+                    (s.mode === "SUMMA") ? s.markSizeS : s.markSizeZ));
+                return;
+            }
 
             // 0. Deselect all — removing or reordering items/layers while
             //    Illustrator holds references to selected objects can crash

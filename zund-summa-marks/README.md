@@ -52,6 +52,8 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 
 **Dle Artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu. Nevyžaduje výběr.
 
+Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
+
 ### Správa vrstev
 
 Panel *Přiřazení vrstev k barvám* obsahuje tabulku řezacích vrstev. Každý řádek má:

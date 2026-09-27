@@ -197,6 +197,66 @@ function buildCutMarks(NS) {
         },
 
         /**
+         * Finds marks that would print as one shape, or partly off the
+         * artboard. Only overlap and touch count: that two such marks merge is
+         * certain, how much clear space the camera needs between marks is not
+         * known (review K7).
+         *
+         * @param {Object} geo - Geometry from calculateAll().
+         * @param {Object} s   - Settings (mode, markSizeZ, markSizeS).
+         * @param {number} [scale] - Real mm per document mm, as in calculateAll().
+         * @returns {Object|null} The first conflict, { type, dist } with dist in
+         *          real mm: "overlap" and "orient" (the orientation mark against
+         *          another mark) give the centre distance, "outside" how far the
+         *          worst mark sticks out of the artboard.
+         */
+        findMarkConflict: function (geo, s, scale) {
+            var sf     = (Number(scale) > 0) ? Number(scale) : NS.Utils.getEffectiveSF(s);
+            var zund   = (s.mode === "ZUND");
+            var marks  = (zund ? geo.marksZ : geo.marksS) || [];
+            var size   = zund ? s.markSizeZ : s.markSizeS;
+            var tol    = 0.01;   // mm; "touching" comes out a hair either side of size
+            // calculateAll pushes the orientation mark right after the four corners
+            var orient = (zund && marks.length > 4) ? 4 : -1;
+            var i, j, d;
+
+            function distMm(a, b) {
+                var dx = a.cx - b.cx, dy = a.cy - b.cy;
+                return NS.Utils.pt2mm(Math.sqrt(dx * dx + dy * dy)) * sf;
+            }
+
+            // Spacing too tight for any mark is the root cause — report it
+            // before the orientation mark's own conflicts.
+            for (i = 0; i < marks.length; i++) {
+                if (i === orient) continue;
+                for (j = i + 1; j < marks.length; j++) {
+                    if (j === orient) continue;
+                    d = distMm(marks[i], marks[j]);
+                    if (d < size + tol) return { type: "overlap", dist: d };
+                }
+            }
+            if (orient >= 0) {
+                for (i = 0; i < marks.length; i++) {
+                    if (i === orient) continue;
+                    d = distMm(marks[orient], marks[i]);
+                    if (d < size + tol) return { type: "orient", dist: d };
+                }
+            }
+
+            // Auto-fit sizes the artboard around the marks; a Fixed artboard
+            // can be too small for the orientation mark.
+            var ab = geo.ab, r = size / 2, worst = 0;
+            for (i = 0; i < marks.length; i++) {
+                worst = Math.max(worst,
+                    NS.Utils.pt2mm(ab[0] - marks[i].cx) * sf + r,
+                    NS.Utils.pt2mm(marks[i].cx - ab[2]) * sf + r,
+                    NS.Utils.pt2mm(marks[i].cy - ab[1]) * sf + r,
+                    NS.Utils.pt2mm(ab[3] - marks[i].cy) * sf + r);
+            }
+            return (worst > tol) ? { type: "outside", dist: worst } : null;
+        },
+
+        /**
          * Inserts intermediate mark points along a segment if length exceeds max.
          * Endpoints are NOT pushed (they are already in the array from corner marks).
          * @param {Array}  arr - Target array to push {cx, cy} marks into.

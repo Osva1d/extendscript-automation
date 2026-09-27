@@ -126,6 +126,13 @@ a CHANGELOG. Tady zůstává jen to, co sonda nedokáže.
     ✅ artboard se vrátí na původní rozměr jako samostatný krok
        (přes most: 4 kroky pro SUMMA s mapováním a linkami)
     ✅ další Zpět už vrací vaši úpravu před spuštěním skriptu, ne zbytek běhu
+[ ] K7 — na stroji Zünd (kameru sonda neověří): výchozí předvolba, dva archy —
+    grafika 96 mm (orientační značka 1 mm od pravé dolní rohové) a 80 mm
+    (orientační značka 5 mm za pravou dolní rohovou, mimo obdélník značek);
+    vytisknout, načíst kamerou
+    ✅ stroj najde všechny značky a pozná orientaci archu
+    ✗ když ne: kontrola v jádře (findMarkConflict) blokuje zatím jen dotyk
+      a překryv — doplnit minimální mezeru, kterou stroj potřebuje
 ```
 
 ## P1 — důležité, ne blokující deploy

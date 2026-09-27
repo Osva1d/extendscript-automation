@@ -60,6 +60,15 @@ Opravy z code review 2026-09-26
   a značky se vrátily, artboard zůstal zvětšený. Teď má vlastní krok — celý běh
   se vrátí několika kroky Zpět (SUMMA s mapováním a ořezovými linkami: 4)
   a další krok už vrací až úpravy před spuštěním skriptu.
+- **Značky, které by splynuly nebo se nevešly na artboard, zastaví běh (K7).**
+  Orientační značka stojí vždy o odsazení a velikost značky vpravo od levé
+  dolní rohové, ať je grafika jakkoli široká. S výchozím nastavením tak
+  u grafiky široké 85–95 mm padla na pravou dolní rohovou značku (u 90 mm
+  přesně na ni), na dlouhých hranách se mohla dotknout mezilehlé a ve Fixed
+  módu s artboardem užším než 110 mm ležela mimo artboard — bez jakékoli
+  hlášky. Teď běh skončí dřív, než se dokument změní, a hláška řekne, kterou
+  hodnotu upravit. Blokuje se dotyk a překryv; značky s i malou mezerou
+  projdou, protože jakou mezeru potřebuje kamera, zatím ověřené není.
 
 ## [1.0.0] — 2026-06-28
 
