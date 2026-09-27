@@ -92,8 +92,11 @@ runProp("mm2pt is monotonically increasing",
         fc.double({ min: -1000, max: 1000, noNaN: true, noDefaultInfinity: true }),
         fc.double({ min: -1000, max: 1000, noNaN: true, noDefaultInfinity: true }),
         function (a, b) {
-            if (a < b) return ZSM.Utils.mm2pt(a) < ZSM.Utils.mm2pt(b);
-            if (a > b) return ZSM.Utils.mm2pt(a) > ZSM.Utils.mm2pt(b);
+            // Non-strict: multiplication can round adjacent doubles to the same
+            // product (-999.9999999999992 and -999.9999999999991 both give
+            // -2834.6456699999976), so a strict < failed about once in 10 000 runs.
+            if (a < b) return ZSM.Utils.mm2pt(a) <= ZSM.Utils.mm2pt(b);
+            if (a > b) return ZSM.Utils.mm2pt(a) >= ZSM.Utils.mm2pt(b);
             return ZSM.Utils.mm2pt(a) === ZSM.Utils.mm2pt(b);
         }
     )
