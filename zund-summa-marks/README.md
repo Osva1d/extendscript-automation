@@ -61,7 +61,7 @@ Panel *Přiřazení vrstev k barvám* obsahuje tabulku řezacích vrstev. Každ�
 
 Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
-Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky.
+Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk.
 
 ### Presets
 

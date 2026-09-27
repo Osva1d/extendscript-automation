@@ -17,6 +17,12 @@ Opravy z code review 2026-09-26
   Skript teď skryté vrstvy, do kterých zapisuje, zviditelní a oznámí to. Objekt,
   který se přesto nepodaří vykreslit (značka, OPOS pruh, ořezová linka), ohlásí
   jako chybu s počtem.
+- **Přesun řezových cest už nemění tisk (K1).** Objekt, který měl vedle řezové
+  barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým
+  tahem), se přesunul do řezové vrstvy nad grafiku a jeho výplň dostala přetisk —
+  grafika pod ním zmizela, nebo změnila barvu. Takový objekt teď zůstane na místě
+  a skript ho ohlásí s výzvou k rozdělení; přesouvají se jen cesty čistě v řezové
+  barvě.
 
 ## [1.0.0] — 2026-06-28
 

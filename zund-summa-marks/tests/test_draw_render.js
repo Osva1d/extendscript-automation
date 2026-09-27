@@ -47,6 +47,7 @@ ZSM.L = {
     WARN_PREFIX: "WARN: ",
     WARN_LAYERS_UNHIDDEN: "unhidden %s",
     ERR_MARKS_FAILED: "marks failed %s",
+    WARN_MIXED_PAINT: "mixed %s %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -357,7 +358,7 @@ doc = setupDoc({
         items: [
             { type: "path", bounds: [0, 100, 100, 0] },                                            // no spot
             { type: "path", bounds: [10, 90, 90, 10], spot: "Cut" },                               // spot Cut on fill
-            { type: "path", bounds: [20, 80, 80, 20], strokeSpot: "Cut", stroked: true }           // spot Cut on stroke
+            { type: "path", bounds: [20, 80, 80, 20], strokeSpot: "Cut", stroked: true, filled: false }  // spot Cut on stroke (no fill)
         ]
     }]
 });
@@ -866,6 +867,54 @@ assert(alertsK12.join("\n").indexOf("ERR: marks failed 5") >= 0,
     "draw failures reported as an error with the count (got: " + alertsK12.join(" | ") + ")");
 
 global.alert = origAlertK12;
+
+
+// =====================================================
+// TEST 25 (review K1): objects with printable paint are not routed
+// =====================================================
+// A cut stroke on a shape that also has a printable fill (sticker background)
+// used to move the whole shape onto the cut layer — ABOVE the artwork — and set
+// fillOverprint on the printable fill. Rendered in AI 30.8.1: the art under it
+// disappeared (no overprint simulation) or changed colour (with it).
+console.log("\n=== TEST 25 (review K1): mixed paint stays, pure cut paths move ===");
+var alertsK1 = [];
+var origAlertK1 = global.alert;
+global.alert = function (m) { alertsK1.push(String(m)); };
+var WHITE = { typename: "CMYKColor", cyan: 0, magenta: 0, yellow: 0, black: 0 };
+var docK1 = setupDoc({
+    layers: [{
+        name: "Art",
+        items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            { type: "path", name: "pure", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+            { type: "path", name: "whiteFillCutStroke", bounds: [20, 80, 80, 20], fillColor: WHITE, strokeSpot: "Cut", stroked: true },
+            { type: "path", name: "cutFillBlackStroke", bounds: [30, 70, 70, 30], spot: "Cut", stroked: true },
+            { type: "compound", name: "mixedCompound", bounds: [40, 60, 60, 40], children: [
+                { type: "path", bounds: [40, 60, 60, 40], fillColor: WHITE, strokeSpot: "Cut", stroked: true }
+            ]}
+        ]
+    }]
+});
+var artK1 = docK1._layers[0];
+function itemNamed(lay, nm) {
+    for (var i = 0; i < lay._items.length; i++) if (lay._items[i].name === nm) return lay._items[i];
+    return null;
+}
+var mixedK1 = itemNamed(artK1, "whiteFillCutStroke");
+var sK1 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK1, ZSM.Draw.getBounds(sK1)), sK1);
+
+var cutK1 = findLayer(docK1, "Cut");
+assert(cutK1 !== null && itemNamed(cutK1, "pure") !== null, "pure cut path (stroke only) moved to Cut");
+assert(itemNamed(cutK1, "pure").strokeOverprint === true, "pure cut path: stroke overprint set");
+var artAfterK1 = findLayer(docK1, "Graphics") || findLayer(docK1, "Art");
+assert(itemNamed(artAfterK1, "whiteFillCutStroke") !== null, "white fill + cut stroke stays with the artwork");
+assert(mixedK1.fillOverprint === false, "white fill does NOT get overprint");
+assert(itemNamed(artAfterK1, "cutFillBlackStroke") !== null, "cut fill + printable stroke stays with the artwork");
+assert(itemNamed(artAfterK1, "mixedCompound") !== null, "mixed compound path stays with the artwork");
+assert(alertsK1.join("\n").indexOf("mixed Cut 3") >= 0,
+    "operator is told how many objects were left and why (got: " + alertsK1.join(" | ") + ")");
+global.alert = origAlertK1;
 
 
 // =====================================================

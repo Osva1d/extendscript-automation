@@ -211,9 +211,12 @@ ZSM.Draw = {
                         seenTargets["l_" + layDef.name] = true;
 
                         var targetLay = this.getLay(layDef.name, unhidden);
-                        var hit = this.movePaths(targetLay, [layDef.color]);
-                        if (!hit) {
+                        var routed = this.movePaths(targetLay, [layDef.color]);
+                        if (routed.moved === 0 && routed.mixed === 0) {
                             geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
+                        }
+                        if (routed.mixed > 0) {
+                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, layDef.color, routed.mixed));
                         }
                         // Guard against self-move (would happen if getLay
                         // resolved to the same Layer instance as refLayer,
@@ -641,17 +644,20 @@ ZSM.Draw = {
 
     /**
      * Moves all paths whose fill or stroke matches any of the given spot color
-     * names (case-insensitive) to the target layer.
+     * names (case-insensitive) to the target layer — but only paths painted
+     * EXCLUSIVELY in those colours. A path that also carries printable paint
+     * (see _hasOtherPaint) stays with the artwork and is only counted.
      * Uses a snapshot to avoid live-collection issues during iteration.
      *
      * @param {Layer}  targetLayer - Destination layer.
      * @param {Array}  names       - Spot color names to match.
-     * @returns {boolean} True if at least one path was moved.
+     * @returns {Object} {moved, mixed} — paths moved, and matching paths left
+     *                   in place because they also carry printable paint.
      */
     movePaths: function (targetLayer, names) {
+        var moved = 0, mixed = 0;
         try {
             var doc = app.activeDocument;
-            var found = false;
 
             // --- 1. CompoundPathItems (move as atomic units) ---
             var compounds = doc.compoundPathItems;
@@ -675,14 +681,17 @@ ZSM.Draw = {
                 // Match by first sub-path color (all sub-paths share the same color)
                 var first = cp.pathItems[0];
                 if (this._matchesSpotColor(first, names)) {
+                    if (this._hasOtherPaint(first, names)) { mixed++; continue; }
                     try {
                         cp.move(targetLayer, ElementPlacement.PLACEATEND);
+                        // Only cut-colour paint reaches this point, so the
+                        // overprint cannot hit a printable fill or stroke.
                         for (var sp = 0; sp < cp.pathItems.length; sp++) {
                             if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
                             if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
                         }
                         movedCompounds.push(cp);
-                        found = true;
+                        moved++;
                     } catch (e) {}
                 }
             }
@@ -715,19 +724,43 @@ ZSM.Draw = {
                 if (alreadyMoved) continue;
 
                 if (this._matchesSpotColor(item, names)) {
+                    if (this._hasOtherPaint(item, names)) { mixed++; continue; }
                     try {
                         item.move(targetLayer, ElementPlacement.PLACEATEND);
                         if (item.filled)  item.fillOverprint   = true;
                         if (item.stroked) item.strokeOverprint = true;
-                        found = true;
+                        moved++;
                     } catch (e) {}
                 }
             }
-            return found;
         } catch (e) {
             ZSM.Utils.log("movePaths error: " + e.message);
-            return false;
         }
+        return { moved: moved, mixed: mixed };
+    },
+
+    /**
+     * True if a path carries paint OTHER than the given spot colours: a
+     * printable fill under a cut stroke (the typical sticker background shape
+     * with a CutContour stroke), or a cut fill with a printable stroke. Moving
+     * such a path to the cut layer puts its printable paint ABOVE the artwork,
+     * and the overprint set there changes the print (rendered in AI 30.8.1:
+     * the art underneath vanished, or changed colour with overprint on).
+     * @param {PathItem} item  - Path to test (first sub-path of a compound).
+     * @param {Array}    names - Spot color names (case-insensitive).
+     * @returns {boolean}
+     * @private
+     */
+    _hasOtherPaint: function (item, names) {
+        var isCut = function (color) {
+            if (color.typename !== "SpotColor") return false;
+            var n = color.spot.name.toLowerCase();
+            for (var i = 0; i < names.length; i++) {
+                if (n === names[i].toLowerCase()) return true;
+            }
+            return false;
+        };
+        return (item.filled && !isCut(item.fillColor)) || (item.stroked && !isCut(item.strokeColor));
     },
 
     /**
