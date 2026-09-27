@@ -439,3 +439,126 @@ DocumentPreset)`, vypršela na časový limit a nechala **oba** dokumenty otevř
 příčina nezjištěná. V sondách proto jen `documents.add()`, s úklidem ve `finally`
 a s `app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS`.
 
+## Undo, kolekce, skryté vrstvy a masky (naměřeno 2026-09-26, AI 30.8.1)
+
+Zdroj: code review zund-summa-marks
+([`reports/2026-09-26-code-review-zund-summa-marks.md`](reports/2026-09-26-code-review-zund-summa-marks.md)).
+Vše běželo přes `tools/ai-eval.sh`, tedy AppleScript `do javascript`, ve
+vlastních dočasných dokumentech. **Běh přes Soubor › Skripty neměřen** — u undo
+se to může lišit.
+
+### `app.redraw()` dělí historii Zpět
+
+Skript vytvořil šest cest ve třech dvojicích a mezi dvojice vložil
+`app.redraw()`. Každé Zpět jako samostatné volání mostu: **6 → 4 → 2 → 0** cest.
+Kontrola: čtyři cesty bez redraw, jedno Zpět → 0. Skript bez redraw je tedy
+jeden krok a každé `app.redraw()` krok uzavře.
+
+Skutečný běh zund-summa-marks (SUMMA s mapováním a ořezovými linkami) = 3 kroky
+Zpět.
+
+### Změnu artboardu spolu s jinými změnami Zpět nevrátí
+
+| obsah skriptu | Zpět #1 | Zpět #2 |
+|---|---|---|
+| jen `artboardRect` | artboard zpět | předchozí akce |
+| `artboardRect` + nová vrstva + cesta | vrstva a cesta zpět, **artboard ne** | předchozí akce zpět, **artboard ne** |
+| `rulerOrigin` + `artboardRect` + vrstva + cesta | vrstva a cesta zpět, **artboard ne** | — |
+| vrstva + cesta · `redraw` · `artboardRect` · `redraw` · cesta | cesta zpět | **artboard zpět** |
+
+V běhu zund-summa-marks vrátily tři kroky Zpět vrstvy i cesty a artboard zůstal
+zvětšený. Čtvrtý krok ho vrátil — spolu s akcí provedenou **před** spuštěním
+skriptu. Chování tedy není ani stálé: jednou se artboard vrátil s předchozím
+krokem, jindy ani tak.
+
+**Důsledek:** změna artboardu patří do vlastního kroku, tedy mezi dvě
+`app.redraw()` (poslední řádek tabulky).
+
+### Kolekce na úrovni dokumentu se aktualizují až po `app.redraw()`
+
+Uvnitř jednoho skriptu:
+
+```
+doc.pathItems.length    0 → (2 nové cesty) 0 → redraw → 2 → (2 další) 2 → redraw → 4
+layer.pathItems.length  po 2 nových cestách hned 2
+doc.layers.length       po add() hned 2, po remove() hned 1
+```
+
+Skript, který vytvořil šest cest se dvěma redraw, vrátil `doc.pathItems.length`
+4. Samostatné čtení hned potom vrátilo 6. Kdo po změně ve stejném skriptu počítá
+nebo prochází `doc.pathItems`, potřebuje předtím `app.redraw()` — nebo kolekci
+vrstvy, ta je aktuální. Nejspíš proto nástroje volají redraw jako „commit".
+Cena je, že každý takový redraw přidá krok Zpět.
+
+### Skrytá vrstva je pro zápis zamčená
+
+| operace | výsledek |
+|---|---|
+| nová cesta ve skryté vrstvě | „Cannot modify a layer that is locked" |
+| nová podvrstva ve skryté vrstvě | projde |
+| nová cesta v podvrstvě skryté vrstvy | „Cannot modify a layer that is locked" |
+| `move()` do skryté vrstvy | „Cannot modify a layer that is locked" |
+| `move()` do zamčené vrstvy | „Cannot modify a layer that is locked" |
+| `move()` ze skryté vrstvy | „Target layer cannot be modified" |
+| `move()` ze zamčené podvrstvy (nadřazená vrstva odemčená) | „Target layer cannot be modified" |
+| `move()` objektu s vlastním `locked = true` | projde, zámek zůstane |
+| `move()` objektu s vlastním `hidden = true` | projde, objekt zůstane skrytý |
+| `move()` cesty z ořezové skupiny ven | projde |
+| `remove()` podvrstvy uvnitř skryté vrstvy (podvrstva sama viditelná) | projde |
+
+Hlášky klamou dvakrát. Skrytá vrstva se hlásí jako „locked" a u přesunu ze
+zdrojové vrstvy mluví hláška o cíli. Kdo do vrstvy zapisuje, musí ji nejdřív
+**zviditelnit i odemknout**, jinak zápis selže. Když selhání spolkne tichý catch,
+nezůstane po něm stopa (zund-summa-marks K12: žádné značky, žádná hláška).
+
+### Přímí potomci, nebo všechno
+
+- `layer.pageItems`, `layer.pathItems` i `group.pageItems` vracejí **jen přímé
+  potomky**. Změřeno na vrstvě se skupinou (3 cesty + vnořená skupina se 2),
+  podvrstvou (2 cesty) a jednou volnou cestou:
+
+  | kolekce | délka |
+  |---|---|
+  | `layer.pageItems` | 2 |
+  | `layer.pathItems` | 1 |
+  | `group.pageItems` | 4 |
+
+- `doc.pathItems` vrací **všechno**: cesty vnořené ve skupinách i v ořezových
+  maskách, ve skrytých vrstvách, v zamčených podvrstvách i skryté objekty
+  (15 z 15).
+- `doc.layers.add()` vkládá novou vrstvu na **index 0** (nahoru).
+- DOM objekty jde porovnat přes `===`. `item.parent === layer`,
+  `doc.layers[0] === doc.layers[0]` i `layer.layers[0] === podvrstva` vrátí `true`.
+
+### Registrace v české lokalizaci a `remove()` bez účinku
+
+Swatch registrace je `swatches[1]` s názvem **`[Registrační]`**
+(`spot.colorType === ColorModel.REGISTRATION`). Stejný název vrací i
+`strokeColor.spot.name` cesty v registrační barvě. Že
+`getByName("[Registration]")` hází `No such element`, je výš v „Chybové hlášky
+mají dva jazyky".
+
+`remove()` na registraci — přes `swatches[1]`, přes `getByName` i přes spot
+v `doc.spots` — projde **bez chyby a bez účinku**, seznam swatchů zůstane beze
+změny. Skript registraci smazat nemůže. Jestli jde smazat v UI, neověřeno.
+
+### Ořezová cesta nemusí být `pageItems[0]`
+
+`item.move(clipGroup, ElementPlacement.PLACEATBEGINNING)` vloží běžný objekt
+**nad** ořezovou cestu. `pageItems[0]` je pak on (`clipping === false`),
+`clipped` zůstane `true` a Illustrator dál ořezává původní cestou (vykresleno:
+vidět je jen okno 20 mm). `group.visibleBounds` ale hlásí 60 mm, tedy rozměr
+vloženého objektu. Masku hledat přes `clipping === true`, ne podle indexu.
+
+Skupina, kde má `clipping = true` spodní cesta, po `group.clipped = true` udělá
+ořezovou cestou tu **horní**, která ztratí barvu. Spodní hlásí `clipping === true`,
+ale vykreslí se jako běžný obsah.
+
+Viz i „Maskovaná skupina hlásí šířku celého obsahu" výš.
+
+### `pageItem.note`
+
+Existuje (`typeof` vrací `string`) a jde zapsat i přečíst. Hodí se jako značka
+objektů, které vytvořil skript: mazat pak jde jen je, ne celou vrstvu podle
+jména.
+
