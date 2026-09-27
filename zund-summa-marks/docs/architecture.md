@@ -37,32 +37,35 @@ src/
 │   ├── validation.js     ZSM.Validation — schema-based validace numerických polí
 │   ├── storage.js        ZSM.Storage — load/save JSON settings + migrace v26.0→v27
 │   └── bounds.js         ZSM.Bounds — měření bounds Illustrator obsahu (clip-aware)
-(../shared/lib/json2.js a ../shared/lib/ui_state.js — sdílené jádro, viz ../../docs/decisions.md)
 ├── locale.js             ZSM.L — EN/CS stringtable, app.locale detekce, format()
-├── config.js             ZSM.Config — konstanty, getDefaults() (Storage moved to lib/)
-├── core.js               ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
+├── config.js             ZSM.Config — konstanty, getDefaults()
 ├── draw.js               ZSM.Draw — DOM mutace: render(), beginSession(), movePaths()
 │                          getBounds() je tenký wrapper přes ZSM.Bounds.get()
 ├── ui.js                 ZSM.UI — ScriptUI dialog, preset logika, event handling
-└── main.js              Entry point — IIFE, orchestrace
+└── main.js               Entry point — IIFE, orchestrace
+
+../shared/lib/            ← sdílené jádro, viz ../../docs/decisions.md
+├── json2.js              JSON polyfill
+├── ui_state.js           buildUIState(ZSM) → ZSM.UIState — přechody presetů
+└── cut_marks.js          buildCutMarks(ZSM) → ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
 ```
 
 **`src/lib/` vs `src/` boundary:**
 - `lib/` = pure utility moduly bez DOM přístupu. Testovatelné s `eval()` + Node.js mocks (žádný Illustrator).
-- `src/` root = doménové moduly. `core.js` je čistá matematika (taky offline-testable). `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.js` orchestrace.
+- `src/` root = doménové moduly. `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.js` orchestrace. Čistá matematika (`ZSM.Core`) je ve sdíleném `../shared/lib/cut_marks.js` — testovatelná offline a sdílená s tile-exportem.
 - `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`) protože jsou sdílené mezi bounds výpočtem a render-side `movePaths()`/`beginSession()`. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
 
 **Invariant — efektivní měřítko (`ZSM.Utils.getEffectiveSF(s)`):**
-Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt". Skládá Adobe Large Canvas `scaleFactor` × manuální `s.scaleN` (1–10). **Každé** místo, které převádí rozměry (pozice i velikosti značek), MUSÍ jít přes tento helper — `core.js` (matematika) i `draw.js` (render). Historicky draw.js použil syrový `getSF()` bez `scaleN`, takže se v 1:10 workflow škálovaly pozice, ale ne velikosti značek (oprava v26.4.0). Regrese hlídána v `tests/test_draw_render.js` (TEST 16).
+Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt". Skládá Adobe Large Canvas `scaleFactor` × manuální `s.scaleN` (1–10). **Každé** místo, které převádí rozměry (pozice i velikosti značek), MUSÍ jít přes tento helper — `ZSM.Core` (matematika v `cut_marks.js`) i `draw.js` (render). Historicky draw.js použil syrový `getSF()` bez `scaleN`, takže se v 1:10 workflow škálovaly pozice, ale ne velikosti značek (oprava v26.4.0). Regrese hlídána v `tests/test_draw_render.js` (TEST 16).
 
 **Invariant — barva nikdy auto-vytvořena:** `getCol` resolvuje existující swatch, jinak fallback `[Registration]` (+ varování v render). NIKDY netvoří náhradní spot — tichá mutace dokumentu + arbitrární barva jsou v prepressu nebezpečné. Viz `getCol` / `registrationColor` / `swatchExists`.
 
-**Load order (NELZE měnit):**
+**Load order (NELZE měnit; zdroj pravdy je `tools/build.sh`):**
 ```
-../shared/lib/json2.js → locale.js → utils.js → validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js → core.js → bounds.js → draw.js → ui.js → main.js
+../shared/lib/json2.js → locale.js → lib/utils.js → lib/validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → lib/storage.js → ../shared/lib/cut_marks.js (buildCutMarks(ZSM)) → lib/bounds.js → draw.js → ui.js → main.js
 ```
 
-`locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`).
+`locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`). `cut_marks.js` musí být po `utils.js` a `config.js` (factory čte `ZSM.Utils` a `ZSM.Config`).
 
 **Build:**
 ```bash
@@ -100,7 +103,10 @@ Sjednocené pravidlo pro error handling napříč moduly:
     useArtboardBounds: false,            // bool — Fixed mód
     markSizeZ:         5,                // mm — průměr Zünd značky
     markSizeS:         3,                // mm — strana Summa značky
+    orientDist:        100,              // mm — odsazení orientační značky (ZUND)
     markColor:         "[Registration]", // string — přímá barva značek
+    scaleN:            1,                // 1–10 — práce v měřítku 1:N (1 = vypnuto)
+    marksOnly:         false,            // bool — jen značky, vrstvy beze změny
     layers: [
         { name: "Cut", color: "[Registration]" }
     ]
@@ -133,7 +139,7 @@ Sjednocené pravidlo pro error handling napříč moduly:
 }
 ```
 
-Vše v `ZSM.Core` je v **document points** — konverze mm↔pt přes `ZSM.Utils.mm2pt()` / `ZSM.Utils.pt2mm()`. Large Canvas: všechny fyzické konstanty se dělí `ZSM.Utils.getSF()` (vrací 1 nebo 10).
+Vše v `ZSM.Core` je v **document points** — konverze mm↔pt přes `ZSM.Utils.mm2pt()` / `ZSM.Utils.pt2mm()`. Fyzické konstanty (mm) se dělí efektivním měřítkem `ZSM.Utils.getEffectiveSF(s)` — Large Canvas × 1:N, viz invariant výš.
 
 ---
 
@@ -166,7 +172,8 @@ Draw.endSession()            → obnoví zámky a viditelnost vrstev
 | `ZSM.Core` | Počítat, volat `ZSM.Utils` | DOM, alert, UI |
 | `ZSM.Draw` | DOM, volat `ZSM.Utils`, `ZSM.Config` | UI, počítání geometrie |
 | `ZSM.UI` | ScriptUI, volat `ZSM.Draw` (getSwatchNames/getLayerNames), validovat. Dva mód-specifické dialogy (ZUND/SUMMA), mode-switch loop. | DOM rendering, core math |
-| `ZSM.Config` | Konstanty, Storage, getDefaults | DOM, UI, math |
+| `ZSM.Config` | Konstanty, getDefaults | DOM, UI, math |
+| `ZSM.Storage` | File I/O, migrace nastavení | DOM, UI, math |
 
 Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 
@@ -174,21 +181,19 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 
 ## Kritická pravidla
 
-**ES3 only** — žádné `const`, `let`, arrow functions, template literals, `forEach`, `map`. Jen `var` a `function`.
+Pravidla celého repa — ES3, namespace, kódování, živé kolekce DOM — jsou
+v [`../../docs/conventions.md`](../../docs/conventions.md). Tady jen to, co je
+specifické pro ZSM.
 
-**Namespace** — žádné globální proměnné. Vše v `ZSM.*`.
-
-**Lokalizace** — žádné hardcoded české řetězce v src/ souborech. Vždy `ZSM.L.KLIC` nebo `ZSM.L.format(ZSM.L.KLIC, arg1)`. Zdrojové soubory i dist používají **UTF-8 with BOM** — build skript (`tools/build.sh`) automaticky přidává BOM. České znaky v `locale.js` jsou jako literály (ne `\uXXXX` escape), proto je BOM povinný pro správnou interpretaci v ExtendScript.
+**Lokalizace** — žádné hardcoded české řetězce v src/ souborech. Vždy `ZSM.L.KLIC` nebo `ZSM.L.format(ZSM.L.KLIC, arg1)`.
 
 **Přidat nový string:**
 1. Do `src/locale.js` — sekce `en` i `cs`
 2. Použít jako `ZSM.L.MOJ_KLIC`
 
-**Layer management** — před DOM operacemi vždy `Draw.beginSession()`, po skončení `Draw.endSession()`. Endession volá `finally` blok v main.js — vždy se provede i při chybě.
+**Layer management** — před DOM operacemi vždy `Draw.beginSession()`, po skončení `Draw.endSession()`. `endSession()` volá `finally` blok v main.js — vždy se provede i při chybě.
 
-**Storage** — soubor: `~/Library/Application Support/ZSM/settings_v26_3.json`. Migrace ze starých formátů (`thruActive/kissActive` → `layers[]`, flat → wrapper, `layers[].active` → row existence, localized preset key → `[Default]`) je v `Storage.load()`.
-
-**Iterace nad live DOM kolekcemi** — vždy udělat snapshot pole před iterací, jinak se kolekce mění za běhu. Viz vzor v `Draw.movePaths()` a `Draw.render()`.
+**Storage** — soubor `Folder.userData/ZSM/settings.json` (na macOS `~/Library/Application Support/ZSM/`). `Storage.load()` přejmenuje starší `settings_v26_3.json` a migruje staré formáty (`thruActive/kissActive` → `layers[]`, flat → wrapper, `layers[].active` → row existence, localized preset key → `[Default]`).
 
 ---
 
@@ -197,17 +202,19 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 | Potřebuješ změnit | Soubor |
 |-------------------|--------|
 | Výchozí hodnoty parametrů | `src/config.js` → `getDefaults()` |
-| Fyzické konstanty (bar offset, bar width) | `src/core.js` → `SUMMA_BAR_OFFSET`, `SUMMA_BAR_WIDTH` |
-| Výpočet pozic značek | `src/core.js` → `calculateAll()` |
-| Interpolaci intermediate marks | `src/core.js` → `addSteps()` |
+| Fyzické konstanty (bar offset, bar width) | `../shared/lib/cut_marks.js` → `SUMMA_BAR_OFFSET`, `SUMMA_BAR_WIDTH` |
+| Výpočet pozic značek | `../shared/lib/cut_marks.js` → `calculateAll()` |
+| Interpolaci intermediate marks | `../shared/lib/cut_marks.js` → `addSteps()` |
 | Vykreslování v Illustratoru | `src/draw.js` → `render()` |
-| Detekci bounds (výběr / artboard) | `src/draw.js` → `getBounds()` |
+| Detekci bounds (výběr / artboard) | `src/lib/bounds.js` → `ZSM.Bounds.get()` |
 | Přesun cest na vrstvy | `src/draw.js` → `movePaths()` |
 | Barvu ze swatche | `src/draw.js` → `getCol()` |
 | Dialog a presety | `src/ui.js` → `ZSM.UI.show()` → `ZSM.UI.buildDialog(mode, ...)` |
 | Lokalizaci | `src/locale.js` |
-| Ukládání nastavení | `src/config.js` → `Storage` |
+| Ukládání nastavení | `src/lib/storage.js` → `ZSM.Storage` |
 | Build systém | `tools/build.sh` |
+
+`cut_marks.js` sdílí tile-export — po změně pusť i jeho testy (`npm test` v `tile-export/`).
 
 ---
 
@@ -215,32 +222,9 @@ Tato separace je záměrná — Core je testovatelné bez Illustratoru.
 
 | Soubor | Obsah |
 |--------|-------|
-| `README.md` | Uživatelská + vývojářská dokumentace |
+| `README.md` | Uživatelská dokumentace + stručný vývojářský úvod |
+| `CHANGELOG.md` | Změny z pohledu uživatele |
 | `docs/architecture.md` | Tento technický brief |
 | `docs/manual-test.md` | Jediný manuální test plán (deploy gate, P0/P1) |
-| `tests/test_core_math.js` | Jednotkové testy pro `ZSM.Core` (81 testů) |
-
----
-
-## Aktuální stav projektu
-
-**Větev:** `_incubator/zund-summa-marks`  
-**Fáze:** Refaktorizace dokončena, čeká na manuální test a deploy do `Projects/applescript-automation`
-
-**Co je hotovo:**
-- Všechny src/ moduly přepsány (ZSM namespace, locale, dynamické vrstvy, presety)
-- Code review: všechny nalezené bugy opraveny (C1–C2, W2–W7)
-- UI: dva mód-specifické dialogy (ZUND/SUMMA) místo jednoho s hidden panely
-  - Eliminuje ghost spacing (BUG-3), pFeedWrap wrapper odstraněn
-  - Mode-switch loop: přepnutí módu → uloží stav → zavře → otevře nový dialog
-  - Žádné visible/maximumSize hacky, čistý ScriptUI layout
-- BUG-1: symetrické vertikální okraje v ZUND (snapCeil celkové výšky, centrování)
-- BUG-2: konzistentní šířka artboardu — 0.01mm tolerance v zaokrouhlení (snapCeil/snapFloor)
-- Guides: vodítka ignorována v getBounds()
-- Copyright a proprietární licence přidány
-- dist/ = build z src/ (synchronizovaný)
-- Test coverage: 81 testů včetně BUG-1 symetrie a BUG-2 cliff-effect
-
-**Otevřené úkoly:**
-- Manuální testování dle docs/manual-test.md (deploy gate P0)
-- Deploy do `Projects/extendscript-automation` po PASS na P0
+| `tests/` | Node.js sady bez Illustratoru — `npm test`; `npm run verify` = build + testy |
+| `../docs/` | Konvence repa, rozhodnutí, naměřené chování enginu, reporty z review |
