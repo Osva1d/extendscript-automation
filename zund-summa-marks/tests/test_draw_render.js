@@ -48,6 +48,7 @@ ZSM.L = {
     WARN_LAYERS_UNHIDDEN: "unhidden %s",
     ERR_MARKS_FAILED: "marks failed %s",
     WARN_MIXED_PAINT: "mixed %s %s",
+    WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -936,6 +937,44 @@ var tplK3 = findLayer(docK3, "Template");
 assert(tplK3 !== null, "hidden bottom layer keeps its name (not renamed to Graphics)");
 assert(tplK3 !== null && tplK3.visible === false, "hidden bottom layer stays hidden");
 assert(findLayer(docK3, "Graphics") === null, "no layer renamed to Graphics in this document");
+
+
+// =====================================================
+// TEST 27 (review K2): cut paths left in place are reported
+// =====================================================
+// Paths inside a clipping mask are skipped by design; paths on a locked
+// sublayer or a hidden layer cannot be moved (move() throws — measured). Both
+// were silent: with one path moved the run looked complete, and the cutter
+// then missed the rest.
+console.log("\n=== TEST 27 (review K2): skipped cut paths are reported with reasons ===");
+var alertsK2 = [];
+var origAlertK2 = global.alert;
+global.alert = function (m) { alertsK2.push(String(m)); };
+var CUTS = { strokeSpot: "Cut", stroked: true, filled: false };
+function cutPath(nm, b) { return { type: "path", name: nm, bounds: b, strokeSpot: CUTS.strokeSpot, stroked: true, filled: false }; }
+var docK2 = setupDoc({
+    layers: [
+        { name: "Hid", visible: false, items: [cutPath("onHidden", [5, 95, 95, 5])] },
+        { name: "Art", items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            cutPath("free", [10, 90, 90, 10]),
+            { type: "group", clipped: true, bounds: [20, 80, 80, 20], children: [
+                { type: "path", bounds: [20, 80, 80, 20] },            // clip path
+                cutPath("inClip", [25, 75, 75, 25])
+            ]}
+        ], sublayers: [
+            { name: "SubL", locked: true, items: [cutPath("inLockedSub", [30, 70, 70, 30])] }
+        ]}
+    ]
+});
+var sK2 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK2, ZSM.Draw.getBounds(sK2)), sK2);
+assertEq(countItems(findLayer(docK2, "Cut"), "PathItem"), 1, "the free cut path moved");
+assert(alertsK2.join("\n").indexOf("skipped Cut Cut 1 2") >= 0,
+    "left-in-place paths reported: 1 in a clipping mask, 2 on locked/hidden layers (got: " + alertsK2.join(" | ") + ")");
+assert(alertsK2.join("\n").indexOf("missing color") < 0,
+    "no misleading 'colour not found' warning when paths of that colour exist");
+global.alert = origAlertK2;
 
 
 // =====================================================

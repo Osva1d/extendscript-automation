@@ -212,11 +212,16 @@ ZSM.Draw = {
 
                         var targetLay = this.getLay(layDef.name, unhidden);
                         var routed = this.movePaths(targetLay, [layDef.color]);
-                        if (routed.moved === 0 && routed.mixed === 0) {
+                        var leftInPlace = routed.clipped + routed.blocked;
+                        if (routed.moved === 0 && routed.mixed === 0 && leftInPlace === 0) {
                             geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
                         }
                         if (routed.mixed > 0) {
                             geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, layDef.color, routed.mixed));
+                        }
+                        if (leftInPlace > 0) {
+                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_PATHS_SKIPPED,
+                                layDef.name, layDef.color, routed.clipped, routed.blocked));
                         }
                         // Guard against self-move (would happen if getLay
                         // resolved to the same Layer instance as refLayer,
@@ -652,13 +657,18 @@ ZSM.Draw = {
      * (see _hasOtherPaint) stays with the artwork and is only counted.
      * Uses a snapshot to avoid live-collection issues during iteration.
      *
+     * Every matching path that stays behind is counted, so the caller can
+     * tell the operator — a cut layer that silently misses paths is a bad cut.
+     *
      * @param {Layer}  targetLayer - Destination layer.
      * @param {Array}  names       - Spot color names to match.
-     * @returns {Object} {moved, mixed} — paths moved, and matching paths left
-     *                   in place because they also carry printable paint.
+     * @returns {Object} {moved, mixed, clipped, blocked} — paths moved; matching
+     *   paths left in place because they also carry printable paint (mixed),
+     *   sit inside a clipping mask or on an artifact layer (clipped), or could
+     *   not be moved off a locked sublayer / hidden layer (blocked).
      */
     movePaths: function (targetLayer, names) {
-        var moved = 0, mixed = 0;
+        var moved = 0, mixed = 0, clipped = 0, blocked = 0;
         try {
             var doc = app.activeDocument;
 
@@ -672,30 +682,36 @@ ZSM.Draw = {
 
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
+                if (cp.pathItems.length === 0) continue;
+
+                // Match by first sub-path color (all sub-paths share the same
+                // color). Colour first: only matching paths are worth the
+                // checks below, and only they belong in the report.
+                var first = cp.pathItems[0];
+                if (!this._matchesSpotColor(first, names)) continue;
+                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
+
                 // Skip items on artifact layers — moving them could crash AI.
                 // isArtifactLayer treats an unreadable layer name as artifact
                 // (returns true) so a transient/broken layer item is skipped
                 // rather than risked — the safe default for a mutating op.
-                if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
-                if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
-                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
-                if (cp.pathItems.length === 0) continue;
-
-                // Match by first sub-path color (all sub-paths share the same color)
-                var first = cp.pathItems[0];
-                if (this._matchesSpotColor(first, names)) {
-                    if (this._hasOtherPaint(first, names)) { mixed++; continue; }
-                    try {
-                        cp.move(targetLayer, ElementPlacement.PLACEATEND);
-                        // Only cut-colour paint reaches this point, so the
-                        // overprint cannot hit a printable fill or stroke.
-                        for (var sp = 0; sp < cp.pathItems.length; sp++) {
-                            if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
-                            if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
-                        }
-                        movedCompounds.push(cp);
-                        moved++;
-                    } catch (e) {}
+                if (ZSM.Bounds.isArtifactLayer(cp.layer) || ZSM.Bounds.isInsideClippedGroup(cp)) {
+                    clipped++;
+                    continue;
+                }
+                if (this._hasOtherPaint(first, names)) { mixed++; continue; }
+                try {
+                    cp.move(targetLayer, ElementPlacement.PLACEATEND);
+                    // Only cut-colour paint reaches this point, so the
+                    // overprint cannot hit a printable fill or stroke.
+                    for (var sp = 0; sp < cp.pathItems.length; sp++) {
+                        if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
+                        if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
+                    }
+                    movedCompounds.push(cp);
+                    moved++;
+                } catch (e) {
+                    blocked++;   // locked sublayer / hidden layer (see below)
                 }
             }
 
@@ -707,13 +723,8 @@ ZSM.Draw = {
             for (var i = 0; i < snapshot.length; i++) {
                 var item = snapshot[i];
 
-                // Skip items on artifact layers — moving them could crash AI
-                // (see compound-path loop above for the unreadable-name rationale).
-                if (ZSM.Bounds.isArtifactLayer(item.layer)) continue;
-
-                // Skip items nested inside clipped groups — moving them out
-                // would break the group structure and trigger MRAP errors.
-                if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
+                // Colour first (see the compound loop).
+                if (!this._matchesSpotColor(item, names)) continue;
 
                 // Never route FROM the marks (Regmarks) or Trim layers — they
                 // legitimately share the user's spot colours (see _isOnReservedLayer).
@@ -726,20 +737,32 @@ ZSM.Draw = {
                 } catch (e) {}
                 if (alreadyMoved) continue;
 
-                if (this._matchesSpotColor(item, names)) {
-                    if (this._hasOtherPaint(item, names)) { mixed++; continue; }
-                    try {
-                        item.move(targetLayer, ElementPlacement.PLACEATEND);
-                        if (item.filled)  item.fillOverprint   = true;
-                        if (item.stroked) item.strokeOverprint = true;
-                        moved++;
-                    } catch (e) {}
+                // Skip items on artifact layers — moving them could crash AI
+                // (see compound-path loop above for the unreadable-name
+                // rationale) — and items nested inside clipped groups — moving
+                // them out would break the group structure and trigger MRAP
+                // errors. Both are reported.
+                if (ZSM.Bounds.isArtifactLayer(item.layer) || ZSM.Bounds.isInsideClippedGroup(item)) {
+                    clipped++;
+                    continue;
+                }
+
+                if (this._hasOtherPaint(item, names)) { mixed++; continue; }
+                try {
+                    item.move(targetLayer, ElementPlacement.PLACEATEND);
+                    if (item.filled)  item.fillOverprint   = true;
+                    if (item.stroked) item.strokeOverprint = true;
+                    moved++;
+                } catch (e) {
+                    // A path on a locked sublayer or a hidden layer cannot be
+                    // moved: "Target layer cannot be modified" (measured).
+                    blocked++;
                 }
             }
         } catch (e) {
             ZSM.Utils.log("movePaths error: " + e.message);
         }
-        return { moved: moved, mixed: mixed };
+        return { moved: moved, mixed: mixed, clipped: clipped, blocked: blocked };
     },
 
     /**

@@ -27,6 +27,11 @@ Opravy z code review 2026-09-26
   přejmenoval na „Graphics" a zviditelnil, i když byla skrytá (šablona, náhled od
   zákazníka, stará verze) — a ta se pak tiskla. Skrytou spodní vrstvu teď nechá
   beze změny; přejmenovává jen viditelnou.
+- **Nepřesunuté řezové cesty se hlásí (K2).** Cesty v řezové barvě uvnitř
+  ořezové masky, v zamčené podvrstvě nebo ve skryté vrstvě zůstaly tiše na místě;
+  stačilo, aby se přesunula jediná, a běh vypadal úplný. Skript je teď spočítá
+  a ohlásí i s důvodem. Hláška „barva nebyla nalezena" se v takovém případě už
+  neobjeví.
 
 ## [1.0.0] — 2026-06-28
 
