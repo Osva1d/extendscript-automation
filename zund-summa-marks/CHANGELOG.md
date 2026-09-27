@@ -42,6 +42,12 @@ Opravy z code review 2026-09-26
   jako zamrznutí. Teď se dokument projde jednou pro všechny řádky — na 3900
   cestách a třech řádcích klesl celý běh z 2,4 s na 1,1 s a rozdíl roste
   s počtem řádků.
+- **Vrstva „Trim" od uživatele už nepřijde o obsah (K6).** Skript považoval každou
+  vrstvu „Trim" za svou: při obnově ořezových linek smazal celý její obsah a při
+  vypnutých linkách celou vrstvu. Řádek mapování s názvem „Trim" tak přišel
+  o právě přesunuté řezové cesty. Mapování na vrstvy Regmarks a Trim se teď
+  odmítne dřív, než se dokument změní, a ve vrstvě Trim skript maže jen své
+  vlastní linky (nově je označuje; linky ze starších verzí pozná podle vzhledu).
 
 ## [1.0.0] — 2026-06-28
 

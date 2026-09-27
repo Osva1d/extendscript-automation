@@ -50,6 +50,7 @@ ZSM.L = {
     WARN_MIXED_PAINT: "mixed %s %s",
     WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
     WARN_REG_ROUTING: "regskip %s",
+    WARN_TRIM_FOREIGN: "trimforeign",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -61,6 +62,7 @@ ZSM.Config = {
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
     layerTrim:     "Trim",
+    trimNote:      "ZSM trim line",
     summaXCenter: 10,    // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,    // mm: gap from graphic edge to Summa mark outer edge (Y)
     redLineWidth: 1,
@@ -1053,6 +1055,54 @@ var kissK13 = findLayer(docK13, "Kiss-cut");
 assert(itemNamed(kissK13, "k") !== null && itemNamed(kissK13, "cc") !== null,
     "Kiss-cut path and compound routed");
 assertEq(countItems(findLayer(docK13, "Crease"), "PathItem"), 1, "Crease path routed");
+
+
+// =====================================================
+// TEST 30 (review K6): the script's own layer names vs. user content
+// =====================================================
+// Regmarks and Trim are the script's output layers: it rewrites their content.
+// A mapping row named "Trim" had its freshly routed cut paths deleted by the
+// trim-line refresh in the same run; a user's own "Trim" layer (e.g. in a
+// pre-separated marks-only document) lost its content, or the whole layer.
+console.log("\n=== TEST 30 (review K6): reserved mapping names and foreign Trim content ===");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Trim", color: "Cut" }] })), "Trim",
+    "mapping row 'Trim' is detected");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Cut", color: "Cut" }, { name: "Regmarks", color: "X" }] })),
+    "Regmarks", "mapping row 'Regmarks' is detected");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] })), null,
+    "ordinary names pass");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ marksOnly: true, layers: [{ name: "Trim", color: "Cut" }] })), null,
+    "marks-only ignores the mapping, so there is nothing to refuse");
+
+var alertsK6 = [];
+var origAlertK6 = global.alert;
+global.alert = function (m) { alertsK6.push(String(m)); };
+var RED = { typename: "CMYKColor", cyan: 0, magenta: 100, yellow: 100, black: 0 };
+var docK6 = setupDoc({
+    layers: [
+        { name: "Trim", items: [
+            { type: "path", name: "userContour", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+            { type: "path", name: "legacyLine", points: [[-50, 150], [150, 150]], bounds: [-50, 150, 150, 150],
+              strokeColor: RED, stroked: true, filled: false }
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+function ownTrimLines(lay) { return lay._items.filter(function (it) { return it.note === "ZSM trim line"; }).length; }
+var sK6 = makeSettings({ mode: "SUMMA", drawRed: true, marksOnly: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK6, ZSM.Draw.getBounds(sK6)), sK6);
+var trimK6 = findLayer(docK6, "Trim");
+assert(itemNamed(trimK6, "userContour") !== null, "user's contour on 'Trim' survives the refresh");
+assert(itemNamed(trimK6, "legacyLine") === null, "an old unmarked trim line of the script is replaced");
+assertEq(ownTrimLines(trimK6), 2, "two new trim lines, marked as the script's own");
+assert(alertsK6.join("\n").indexOf("trimforeign") >= 0, "operator told the Trim layer holds foreign objects");
+
+var sK6b = makeSettings({ mode: "SUMMA", drawRed: false, marksOnly: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK6b, ZSM.Draw.getBounds(sK6b)), sK6b);
+trimK6 = findLayer(docK6, "Trim");
+assert(trimK6 !== null && itemNamed(trimK6, "userContour") !== null, "trim lines off: user content and layer kept");
+assertEq(trimK6 ? ownTrimLines(trimK6) : -1, 0, "trim lines off: the script's own lines removed");
+global.alert = origAlertK6;
 
 
 // =====================================================

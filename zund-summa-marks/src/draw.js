@@ -363,9 +363,9 @@ ZSM.Draw = {
             //     would mislead the operator. ZUND leaves an existing Trim
             //     alone (it belongs to the SUMMA layout, not ours to delete).
             if (geo.red && geo.red.length > 0) {
-                drawFailures += this._drawTrimTopLevel(geo.red);
+                drawFailures += this._drawTrimTopLevel(geo.red, geo.warnings);
             } else if (s.mode === "SUMMA") {
-                this._removeTrimLayer();
+                this._removeTrimLayer(geo.warnings);
             }
 
             // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
@@ -439,10 +439,12 @@ ZSM.Draw = {
      * operator). Refreshes the layer if it already exists (idempotent re-runs).
      * No-op when there are no trim lines.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @param {Array} warnings - Optional; receives a notice when the layer
+     *                           holds objects the script did not create.
      * @returns {number} Trim lines that could not be drawn.
      * @private
      */
-    _drawTrimTopLevel: function (redLines) {
+    _drawTrimTopLevel: function (redLines, warnings) {
         if (!redLines || redLines.length === 0) return 0;
         var doc = app.activeDocument;
         // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
@@ -458,7 +460,8 @@ ZSM.Draw = {
         try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { trimLayer = null; }
         if (trimLayer) {
             try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
-            this._clearLayer(trimLayer);          // refresh — drop old trim lines
+            // Refresh: drop only the script's own lines — foreign content stays.
+            if (this._clearOwnTrimLines(trimLayer) > 0 && warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
             try { app.redraw(); } catch (rd) {}
         } else {
             try {
@@ -478,9 +481,12 @@ ZSM.Draw = {
      * has trim lines OFF — stale lines from a previous run sit at outdated
      * artboard edges. Same C++ crash guard as _drawTrimTopLevel: deselect,
      * move activeLayer OFF the layer being removed, commit, then remove.
+     * Only the script's own lines are removed; a layer that still holds
+     * foreign content (a user's own "Trim" layer) is kept as it was found.
+     * @param {Array} warnings - Optional; receives a notice when kept.
      * @private
      */
-    _removeTrimLayer: function () {
+    _removeTrimLayer: function (warnings) {
         var doc = app.activeDocument;
         var trimLayer = null;
         try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { return; }
@@ -494,8 +500,15 @@ ZSM.Draw = {
         } catch (e2) {}
         try { app.redraw(); } catch (e3) {}
         try {
+            var wasVisible = trimLayer.visible, wasLocked = trimLayer.locked;
             trimLayer.locked = false; trimLayer.visible = true;
-            trimLayer.remove();
+            if (this._clearOwnTrimLines(trimLayer) > 0) {
+                trimLayer.visible = wasVisible;   // a user's layer — leave it as found
+                trimLayer.locked  = wasLocked;
+                if (warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
+            } else {
+                trimLayer.remove();
+            }
             try { app.redraw(); } catch (rd) {}
         } catch (e4) {
             ZSM.Utils.log("trim: stale layer remove failed — " + e4.message);
@@ -570,12 +583,59 @@ ZSM.Draw = {
                 line.strokeColor = redColor;
                 line.strokeWidth = redLines[r].w;
                 line.filled      = false;
+                line.note        = ZSM.Config.trimNote;
             } catch (e) {
                 failed++;
                 ZSM.Utils.log("render: failed to draw trim line at index " + r);
             }
         }
         return failed;
+    },
+
+    /**
+     * Removes the script's own trim lines from a layer and leaves everything
+     * else: a user's own layer called "Trim" (a pre-separated cut layer, say)
+     * used to be cleared wholesale. Own = stamped with ZSM.Config.trimNote, or
+     * an unmarked line from an older version (see _isOwnTrimLine).
+     * @param {Layer} layer - The Trim layer (unlocked and visible).
+     * @returns {number} Items and sublayers left that are not the script's.
+     * @private
+     */
+    _clearOwnTrimLines: function (layer) {
+        var foreign = 0;
+        try {
+            var items = layer.pageItems;
+            for (var i = items.length - 1; i >= 0; i--) {
+                if (!this._isOwnTrimLine(items[i])) { foreign++; continue; }
+                try { items[i].remove(); } catch (e) { foreign++; }
+            }
+            foreign += layer.layers.length;
+        } catch (e) {
+            ZSM.Utils.log("_clearOwnTrimLines: " + e.message);
+        }
+        return foreign;
+    },
+
+    /**
+     * True for a trim line drawn by this script: stamped with the trim note,
+     * or — drawn before the stamp existed — exactly what _paintRedLines draws:
+     * an open two-point horizontal path, no fill, stroked C0 M100 Y100 K0.
+     * @param {PageItem} item
+     * @returns {boolean}
+     * @private
+     */
+    _isOwnTrimLine: function (item) {
+        try {
+            if (item.note === ZSM.Config.trimNote) return true;
+            if (item.typename !== "PathItem" || item.filled || !item.stroked || item.closed) return false;
+            var pp = item.pathPoints;
+            if (pp.length !== 2 || pp[0].anchor[1] !== pp[1].anchor[1]) return false;
+            var c = item.strokeColor;
+            return c.typename === "CMYKColor" && Math.round(c.cyan) === 0 && Math.round(c.magenta) === 100
+                && Math.round(c.yellow) === 100 && Math.round(c.black) === 0;
+        } catch (e) {
+            return false;
+        }
     },
 
     /**
@@ -609,6 +669,23 @@ ZSM.Draw = {
     // moved to ZSM.Bounds (src/lib/bounds.js). Render code in this file
     // now references them as ZSM.Bounds.isArtifactLayer / .isInsideClippedGroup
     // directly (see callers in beginSession, render, movePaths).
+
+    /**
+     * The first mapping-row layer name that is one of the script's own output
+     * layers (Regmarks, Trim), or null. The script rewrites those layers'
+     * content, so paths routed there were deleted in the same run. Rows the
+     * run ignores (no name or colour; marks-only mode) don't count.
+     * @param {Object} s - Settings.
+     * @returns {string|null}
+     */
+    reservedMappingName: function (s) {
+        if (!s || s.marksOnly || !s.layers) return null;
+        for (var i = 0; i < s.layers.length; i++) {
+            var n = s.layers[i].name;
+            if (n && s.layers[i].color && (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerTrim)) return n;
+        }
+        return null;
+    },
 
     /**
      * Gets an existing layer by name or creates it if it doesn't exist.

@@ -58,6 +58,15 @@
         var res = resultWrapper.presets["[Last Settings]"]
                || resultWrapper.presets[resultWrapper.activePreset];
 
+        // A mapping row onto the script's own output layer (Regmarks, Trim)
+        // would get its routed paths deleted in the same run — refuse before
+        // anything in the document changes.
+        var reserved = draw.reservedMappingName(res);
+        if (reserved) {
+            alert(ZSM.L.format(ZSM.L.ERR_RESERVED_LAYER, reserved));
+            return;
+        }
+
         // Unlock layers, set ruler origin. The [0,0] origin is intentional and
         // NOT restored afterwards — all geometry math assumes it, and a restored
         // custom origin would visually desync the rulers from the marks just

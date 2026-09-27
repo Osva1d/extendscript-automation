@@ -267,6 +267,9 @@
         this.fillOverprint = false;
         this.strokeOverprint = false;
         this.strokeWidth = spec.strokeWidth || 0;
+        this.note = spec.note || "";
+        this.closed = !!spec.closed;
+        this._points = spec.points || null;   // [[x, y], ...] for pathPoints
         // Default colors: CMYK black if no spot specified — never null, since
         // production code reads .typename without null-checks (matches AI behavior).
         this.fillColor = spec.fillColor
@@ -300,9 +303,15 @@
         if (this.parent && this.parent._items) arrayRemove(this.parent._items, this);
         logMutation(findDoc(this.parent), { op: "remove-item", layer: this.parent && this.parent.name });
     };
+    Object.defineProperty(MockPathItem.prototype, "pathPoints", {
+        get: function () {
+            return (this._points || []).map(function (pt) { return { anchor: [pt[0], pt[1]] }; });
+        }
+    });
     MockPathItem.prototype.setEntirePath = function (points) {
         // Update bounds from points
         if (!points || !points.length) return;
+        this._points = points.slice();
         var l = points[0][0], t = points[0][1], r = l, b = t;
         for (var i = 1; i < points.length; i++) {
             var x = points[i][0], y = points[i][1];
