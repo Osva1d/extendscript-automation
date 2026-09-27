@@ -157,7 +157,15 @@ vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
 `docs/decisions.md` (architektonická rozhodnutí a proč).
 
 **Per-nástroj:** `README.md` (česky), `CHANGELOG.md`, volitelně
-`docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; BRE ne — menší nástroj).
+`docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; tile-export má
+`docs/manual-test.md` a k němu `docs/findings.md`; BRE nic — menší nástroj).
+
+**Kam s dokumentem:** živý dokument jednoho nástroje — ruční testy, architektura,
+otevřené nálezy — patří do `<nástroj>/docs/`, ať má nástroj své dokumenty
+pohromadě. Datovaný snímek — code review, studie, návrh — patří do kořenového
+`docs/reports/` nebo `docs/specs/` s datem v názvu: popisuje jeden okamžik,
+cituje se z kódu a z `decisions.md` a často přesahuje jeden nástroj (review ZSM
+zahrnuje i `shared/lib/`). Snímky se po vzniku nepřesouvají.
 
 **CHANGELOG** — Keep a Changelog, česky, **z pohledu uživatele skriptu**.
 Jeden zdroj pravdy: README na něj jen odkazuje. Interní řadu před veřejným vydáním

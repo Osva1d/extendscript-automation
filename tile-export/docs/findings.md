@@ -5,7 +5,7 @@ Vady a návrhy z ručního testu (2026-09-15 až 18), přetestu a běhů harness
 opravený. Plné znění uzavřených nálezů, s příčinou a měřením, je v historii
 gitu — soubor `docs/testing/2026-09-15-tile-export-test-findings.md`.
 
-Postup testu: [ruční testy](tile-export-manual-tests.md).
+Postup testu: [ruční testy](manual-test.md).
 
 ---
 
