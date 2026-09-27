@@ -186,6 +186,12 @@ další bylo dohledání, ne nové měření.
   menu příkaz; bez dokumentu skončí „No documents are open". Stejně tak
   `alert` nejde nahradit přes `$.global.alert = …`. Pomocné funkce v sondách
   pojmenovávat jinak než příkazy aplikace.
+- **Zavření posledního dokumentu může vrátit `-1712`, i když proběhlo**
+  (naměřeno 2026-09-26). Samostatné volání `close(SaveOptions.DONOTSAVECHANGES)`
+  bez `DONTDISPLAYALERTS` skončilo timeoutem AppleEventu, dokument se přesto
+  zavřel a další volání odpovědělo normálně. Příčina neprokázaná; zavírání
+  ve `finally` se `DONTDISPLAYALERTS` proběhlo v tomtéž sezení bez potíží.
+  Po timeoutu nejdřív čtecím dotazem zjistit stav, nic dalšího nespouštět.
 
 ## Export, artboardy a vodítka (naměřeno 2026-09-13, AI 30.8.1)
 
@@ -561,4 +567,93 @@ Viz i „Maskovaná skupina hlásí šířku celého obsahu" výš.
 Existuje (`typeof` vrací `string`) a jde zapsat i přečíst. Hodí se jako značka
 objektů, které vytvořil skript: mazat pak jde jen je, ne celou vrstvu podle
 jména.
+
+## Styl nových cest, Large Canvas a geometrie cest (naměřeno 2026-09-26, AI 30.8.1)
+
+Zdroj: code review grommet-marks
+([`reports/2026-09-26-code-review-grommet-marks.md`](reports/2026-09-26-code-review-grommet-marks.md)).
+Stejný kontext jako předchozí sekce: `tools/ai-eval.sh`, vlastní dočasné
+dokumenty, **běh přes Soubor › Skripty neměřen**. Moduly grommet-marks se
+nahrály přes `$.evalFile` do funkce, která si předtím založila lokální
+`var GM = {}`. Celý kód tak běžel nad lokálním `GM` a v enginu žádný globál
+nezůstal (viz „`$.evalFile` uvnitř funkce" výš).
+
+### Nová cesta dědí výchozí styl tahu — a výběr ho mění
+
+Cesta vytvořená skriptem (`pathItems.add()`, `pathItems.ellipse()`) přebírá
+`strokeDashes`, `strokeCap` a `strokeJoin` z výchozího stylu dokumentu
+(`doc.defaultStrokeDashes`, `defaultStrokeCap`, `defaultStrokeJoin`). Barvu,
+šířku a přetisk skripty obvykle nastaví, tyhle tři ne — a zdědí je. Změřeno na
+značce grommet-marks: po nastavení výchozího stylu na `[6,3]`, kulaté konce
+a zkosené spoje mělo totéž všech šest cest značky.
+
+Výchozí styl se mění výběrem:
+
+| krok | `doc.defaultStrokeDashes` | `doc.defaultStrokeCap` |
+|---|---|---|
+| nový dokument | `[]` | BUTTENDCAP |
+| vytvořit cestu `[8,4]` s kulatými konci, nic nevybráno | `[]` | nečteno |
+| `cesta.selected = true` | `[8,4]` | ROUNDENDCAP |
+
+Značky vytvořené potom (režim „Vybraná cesta") byly čárkované — registrační
+kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší a stav po zrušení
+výběru neměřen, dědění `opacity` a `blendingMode` taky ne.
+
+**Důsledek:** cesta ze skriptu, na jejímž vzhledu záleží, si musí
+`strokeDashes = []`, `strokeCap` a `strokeJoin` nastavit výslovně.
+
+### Large Canvas: všechno v bodech ×`scaleFactor`, PDF s `/UserUnit`
+
+Stejná značka ve fyzicky stejném artboardu 300 × 300 mm — v normálním
+dokumentu a v dokumentu se `scaleFactor` 10 (založen jako 6000 × 1000 mm, pak
+`artboardRect` zmenšen na vnitřních 30 × 30 mm). PDF obou vykreslená vedle
+sebe a prohlédnutá:
+
+| zapsáno | normální | Large Canvas |
+|---|---|---|
+| průměr 8,5 pt (3 mm) | 3 mm | 30 mm |
+| střed 7 mm od rohu, v bodech | 7 mm | 70 mm |
+| tahy 1 a 3 pt | 1 a 3 pt | 10 a 30 pt |
+
+Každá hodnota v bodech, kterou skript zapíše — pozice, rozměr i `strokeWidth` —
+je fyzicky `scaleFactor`krát větší. Fyzické míry se musí dělit
+`doc.scaleFactor`; `zund-summa-marks` a `tile-export` to dělají, grommet-marks
+ne (review G1).
+
+PDF uložené z takového dokumentu má MediaBox ve vnitřních jednotkách
+(85,04 pt) a `/UserUnit 10.0`. `pdfinfo` hlásí nezvětšenou velikost 85 × 85 pt;
+fyzickou velikost prozradí až `/UserUnit` (`grep -a /UserUnit soubor.pdf`).
+`pdftoppm -scale-to` stránku vykreslí správně, takže normální a Large Canvas
+výstup jde porovnat vedle sebe.
+
+### Geometrie cest
+
+- `setEntirePath()` s posledním bodem shodným s prvním a `closed = true` nechá
+  **5** `pathPoints` — Illustrator bod nesloučí. Segment nulové délky má
+  nulovou tečnu a detekce rohů podle odchylky tečen ten roh nevidí
+  (grommet-marks G6: 3 rohy ze 4).
+- `pathItems.rectangle()` = 4 body. `pathItems.roundedRectangle()` = 8 bodů,
+  rohy jsou hladké oblouky (detekce rohů jich najde 0) a první kotva leží na
+  levé hraně na začátku levého dolního oblouku (200 × 100 mm, R 20: 80 mm od
+  horní hrany).
+
+### Rychlost a undo při tvorbě značek
+
+- Skupina + 2 cesty (kruh s halem) **0,1 ms**, skupina + 6 cest (kruh a kříž
+  s halem) **0,2 ms**; 200 kusů za sebou, bez `app.redraw()`. Tisíce objektů
+  jsou otázka sekund.
+- Odemknout vrstvu, vytvořit 8 značek, vrstvu zamknout, `app.redraw()` na konci:
+  **jedno Zpět** vrátí značky i zámek. `app.redraw()` na úplném konci skriptu
+  tedy prázdný krok nepřidá.
+
+### Drobnosti
+
+- `doc.layers.getByName()` hledá jen vrstvy nejvyšší úrovně; podvrstvu stejného
+  jména nenajde a vyhodí výjimku.
+- `app.coordinateSystem` přepnutý na ARTBOARD v jednom volání mostu byl
+  v dalším volání zase DOCUMENT (bez otevřeného dokumentu). Že by nastavení
+  přežívalo mezi skripty, se neprojevilo; s otevřeným dokumentem a přes
+  Soubor › Skripty neměřeno.
+- ScriptUI: `edittext.text = null` zobrazí text „null", `undefined` text
+  „undefined", bez výjimky. `parseFloat` z nich dá `NaN`.
 
