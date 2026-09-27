@@ -6,7 +6,7 @@ hlášky, předvolby a výpočty měřítek kryje 14 automatických sad
 přes produkční kód na kopiích testovacích dokumentů. Tady zůstává to, co
 automat nevidí: jak dialog vypadá, co ukáže prohlížeč, tisk a stroj.
 
-Nálezy: [tile-export-findings.md](tile-export-findings.md). Dřívější plán
+Nálezy: [findings.md](findings.md). Dřívější plán
 T1–T8 a přetest R1–R10 s poznámkami o opravách jsou v historii gitu
 (`docs/testing/2026-09-15-tile-export-test-plan.md`,
 `2026-09-18-tile-export-retest.md`).
@@ -116,4 +116,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](tile-export-findings.md), naposledy N24.
+další číslo v [nálezech](findings.md), naposledy N24.

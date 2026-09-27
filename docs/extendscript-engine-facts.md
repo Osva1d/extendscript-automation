@@ -755,3 +755,36 @@ i Umístit s dialogem možností importu, neměřeno. Vlastnost se jmenuje
   `[PDF/X-4:2008]`, `[Tisková kvalita]`. Podle pořadí odpovídají anglickým
   High Quality Print (druhý) a Press Quality (poslední); EN instalace neměřena.
 
+
+---
+
+## Kódování zdroje a živé kolekce (naměřeno 2026-09-27, AI 30.8.2)
+
+Zdroj: úklid dokumentace. Kódování přes `$.evalFile` a přes AppleScript
+`do javascript` se souborem, kolekce přes `tools/ai-eval.sh` ve vlastním
+dočasném dokumentu. Locale `cs_CZ`.
+
+### Čeština se přečte i bez BOM
+
+Soubor s řádkem `var s = "čřž";`, jednou jako UTF-8 s BOM, jednou bez něj.
+Výsledek je délka řetězce a kódy prvních dvou znaků (`č` = 269, `ř` = 345):
+
+| načtení | s BOM | bez BOM |
+|---|---|---|
+| `$.evalFile(file)` | `3:269:345` | `3:269:345` |
+| `do javascript (POSIX file …)` | `3:269:345` | `3:269:345` |
+
+Komentáře v `tools/build.sh` u GM, ZSM a tile-exportu tvrdily, že BOM je pro
+Illustrator nutný, a totéž psala `zund-summa-marks/docs/architecture.md`.
+V AI 30.8.2 to neplatí. Zdrojové soubory v `src/` BOM nemají, dist ho dostane
+od buildu. Běh z menu Soubor › Skripty a starší verze (skripty cílí na CC 2020+)
+změřené nejsou, proto BOM v distu zůstává jako pojistka.
+
+### Dopředná smyčka nad živou kolekcí přeskakuje
+
+Čtyři cesty ve vrstvě a smyčka
+`for (i = 0; i < src.pathItems.length; i++) src.pathItems[i].move(dst, …)`:
+přesunuly se **2 ze 4**. Kolekce se po každém `move` přečísluje a index přeskočí
+následující prvek. Zbylé dvě cesty, zkopírované předem do pole, se přesunuly
+obě. Kolekce na úrovni dokumentu se navíc aktualizují až po `app.redraw()`
+(viz „Kolekce na úrovni dokumentu…" výš).

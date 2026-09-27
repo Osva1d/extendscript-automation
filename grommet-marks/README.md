@@ -64,16 +64,16 @@ npm test          # spustí testovací suity (Node.js)
 npm run verify    # build + test
 ```
 
-Testy (`tests/`) pokrývají čisté moduly v Node.js: core math, storage migrace, ui_state, validace. UI a DOM se ověřují manuálně — viz [docs/manual-test.md](docs/manual-test.md).
+Testy (`tests/`) běží v Node.js bez Illustratoru: core math a obvod, storage migrace, ui_state, validace, utils a dialog přes mock ScriptUI. DOM se ověřuje ručně — viz [docs/manual-test.md](docs/manual-test.md).
 
 Build čte verzi z `package.json` a ověřuje shodu s `src/constants.js` (selže při rozporu).
 
-### ES3 Compliance
+### Konvence
 
-Veškerý kód je kompatibilní s ExtendScript ES3:
-- Pouze `var` (ne `const`, `let`)
-- Pouze `function` (ne arrow functions `=>`)
-- Žádné template literals ani ES5+ array metody (`.forEach`, `.map`, `.filter`)
+Pravidla celého repa (ES3, namespace, kódování, živé kolekce DOM) jsou
+v [../docs/conventions.md](../docs/conventions.md). ES3 hlídá `npm run lint`
+v kořeni repa.
+
 ---
 
 ## Changelog

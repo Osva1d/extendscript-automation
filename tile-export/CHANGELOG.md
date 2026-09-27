@@ -88,4 +88,4 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
 - **Tvarový ořez podle kontury** zatím není: cesty v barvě řezu dialog ohlásí
   a řeže se obdélník plátu. Dále mimo tuto verzi: víc řezacích barev, Summa,
   2D mřížka.
-- Otevřené drobnosti jsou v `docs/testing/tile-export-findings.md`.
+- Otevřené drobnosti jsou v `tile-export/docs/findings.md`.

@@ -29,7 +29,8 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
   `src/` **a** `shared/lib/` na zakázané konstrukce (`let`/`const`/arrow/`Array.map`…).
   Vendorovaný `json2.js` je vyloučen (cizí kód nelintujeme).
   ⚠ GM a BRE zatím scanner nemají — viz `decisions.md`.
-- **Testy** — `npm test` (GM 7 suit, ZSM 13 suit); `npm run verify` = build + test.
+- **Testy** — `npm test` v adresáři nástroje (GM, ZSM, tile-export; BRE testy nemá);
+  `npm run verify` = build + test.
 
 ## TEMPLATE — kopíruj z `templates/`
 
@@ -72,7 +73,7 @@ takže nemůže driftovat → nekontroluje se**.
 // ------------------------------------------------------------------------
 ```
 
-**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`), guard `var NS = NS || {};`
+**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`, `TE`), guard `var NS = NS || {};`
 v každém modulu, žádné globální proměnné mimo namespace.
 
 **Struktura `src/`** — `config.js` (uživatelská nastavení, `getDefaults()`),
@@ -93,6 +94,17 @@ nenesla informaci.
 
 **ES3 only** — `var`, `function`. Žádné `let`/`const`/arrow/template literals/
 `Array.prototype.map`. JSON polyfill je v `shared/lib/json2.js`, v build orderu vždy první.
+
+**Kódování** — zdroj je UTF-8 bez BOM, build distu předřadí BOM a
+`#target illustrator`. České texty patří do `locale.js` jako literály, ne
+`\uXXXX`. BOM je pojistka, ne podmínka: AI 30.8.2 čte češtinu správně i bez
+něj, běh z menu a starší verze ale změřené nejsou — z distu ho neodstraňuj.
+
+**Živé kolekce DOM** — smyčka, která kolekci mění (`move`, `remove`), jde přes
+pole zkopírované předem, ne přímo přes kolekci: dopředná smyčka přeskočí každý
+druhý prvek. Kolekce na úrovni dokumentu (`doc.pathItems`…) navíc zaostávají
+do `app.redraw()`. Obojí je změřené v
+[`extendscript-engine-facts.md`](extendscript-engine-facts.md).
 
 ## GUIDANCE — Sdílené jádro (`shared/lib/`)
 
@@ -157,7 +169,15 @@ vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
 `docs/decisions.md` (architektonická rozhodnutí a proč).
 
 **Per-nástroj:** `README.md` (česky), `CHANGELOG.md`, volitelně
-`docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; BRE ne — menší nástroj).
+`docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; tile-export má
+`docs/manual-test.md` a k němu `docs/findings.md`; BRE nic — menší nástroj).
+
+**Kam s dokumentem:** živý dokument jednoho nástroje — ruční testy, architektura,
+otevřené nálezy — patří do `<nástroj>/docs/`, ať má nástroj své dokumenty
+pohromadě. Datovaný snímek — code review, studie, návrh — patří do kořenového
+`docs/reports/` nebo `docs/specs/` s datem v názvu: popisuje jeden okamžik,
+cituje se z kódu a z `decisions.md` a často přesahuje jeden nástroj (review ZSM
+zahrnuje i `shared/lib/`). Snímky se po vzniku nepřesouvají.
 
 **CHANGELOG** — Keep a Changelog, česky, **z pohledu uživatele skriptu**.
 Jeden zdroj pravdy: README na něj jen odkazuje. Interní řadu před veřejným vydáním

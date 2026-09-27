@@ -49,7 +49,9 @@ fi
 mkdir -p "$DIST_DIR"
 OUTPUT="$DIST_DIR/$SCRIPT_NAME"
 
-# UTF-8 BOM (required for Illustrator Unicode strings)
+# UTF-8 BOM. Insurance, not a requirement: AI 30.8.2 reads UTF-8 without it;
+# the File > Scripts path and older versions are unmeasured
+# (docs/extendscript-engine-facts.md).
 printf '\xEF\xBB\xBF' > "$OUTPUT"
 
 # Deterministic build: stamp the last src commit date, not today. Using date(1)

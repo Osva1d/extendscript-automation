@@ -175,6 +175,7 @@ tests/
 ├── test_core_circuit.js        GM.Core: detectCorners, distributeOnSpan, distributeOnCircuit
 ├── test_storage_migrations.js  GM.Storage: celý migrační řetěz (vč. v5 forward-fill)
 ├── test_ui_state.js            GM.UIState: validate/save/saveAs/delete/select/list
+├── test_utils.js               GM.Utils: deepCopy, log, error (charakterizační testy)
 ├── test_validation.js          GM.Validation: validateNumber + validate (vč. v5 pravidel)
 └── test_ui_dialog.js           GM.UI: ScriptUI dialog (mock ScriptUI, gather/apply, radio excl.)
 ```
@@ -186,9 +187,11 @@ Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock obj
 
 ## Kritická pravidla
 
-**ES3 only** — žádné `const`, `let`, arrow functions, template literals, `.forEach`/`.map`.
+Pravidla celého repa — ES3, namespace, kódování, živé kolekce DOM — jsou
+v [`../../docs/conventions.md`](../../docs/conventions.md). Tady jen to, co je
+specifické pro GM.
 
-**Namespace** — žádné globální proměnné. `var GM = {}` je deklarováno buildem (vloženo po json2.js). Každý modul má guard `var GM = GM || {};`.
+**Namespace** — `var GM = {}` deklaruje build (hned za `json2.js`); guard `var GM = GM || {};` v každém modulu je pojistka navíc.
 
 **Sentinels** — nikdy neukládat lokalizované display stringy na disk. Disk = interní klíče. UI = `GM.UI.toDisplay()` / `GM.UI.toStorage()` pro konverzi.
 
@@ -243,23 +246,3 @@ Window("dialog")
  ├─ Group: Footer               šedý copyright
  └─ Group: Tlačítka             Storno · Generovat (vpravo)
 ```
-
----
-
-## Aktuální stav projektu
-
-**Verze:** 6.0.0
-**Fáze:** Cyklus 5 kompletní — jednotný Esko vzhled značky + kompaktní layout; testy green; připraveno k manuálnímu P0 testu.
-
-**Co je hotovo (v6.0.0 — cyklus 5):**
-- `placeMarkGroup()`: GroupItem s halo tahy (bílé, knockout) + reg. tahy ([Registration], overprint); kruh a/nebo kříž dle `markCircle`/`markCross` flagů.
-- Vrstva napevno `GM.CONSTANTS.LAYER_NAME` ("Grommet Marks"); `getOrCreateLayer()` bez argumentů; zamčená vrstva se dočasně odemkne a zase zamkne.
-- Panel Vzhled odstraněn; panel Značka rozšířen o checkboxy Kruh/Kříž a pole Reg. tah / Bílé halo.
-- Schema: odstraněno 9 polí (isRound, markLayerName, fill/stroke sada), přidáno 4 (markCircle, markCross, regWeight, haloWeight); forward-fill migrace.
-- Validace: pravidla strokeWeight/fill-stroke nahrazena circle/cross + regWeight/haloWeight; „oba tvary OFF" blokuje Generovat.
-- `buildDialog(pData, pathInfo)` — `layerInfo`/`swatchInfo` argumenty odstraněny.
-- Testy: 6 suitů green.
-
-**Otevřené úkoly:**
-- Manuální P0 test v Illustratoru (viz `docs/manual-test.md` sekce G + regresní C1/C2, E1, F1)
-- TD-002: undo grouping (odloženo — chybí spolehlivé cross-version API)

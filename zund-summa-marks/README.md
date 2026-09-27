@@ -71,100 +71,6 @@ Nastavení se ukládají jako pojmenované presety. Speciální presety:
 
 ---
 
-## Adresářová struktura
-
-```
-zund-summa-marks/
-├── src/
-│   ├── lib/
-│   │   └── utils.js        # ZSM.Utils — konverze, validace, logging
-│   ├── locale.js           # ZSM.L — lokalizace (cs/en), format helper
-│   ├── config.js           # ZSM.Config — konstanta, defaults, Storage
-│   ├── core.js             # ZSM.Core — čistá matematika (testovatelné bez DOM)
-│   ├── draw.js             # ZSM.Draw — Illustrator DOM, vrstvy, renderování
-│   ├── ui.js               # ZSM.UI — ScriptUI dialog, presety, validace
-│   └── main.js            # Entry point — IIFE, orchestrace
-├── dist/
-│   └── illustrator-zund-summa-marks.jsx   # Build output (single file)
-├── docs/
-│   ├── architecture.md
-│   └── manual-test.md
-├── tests/
-│   └── test_core_math.js
-├── tools/
-│   └── build.sh
-└── README.md
-```
-
-### Load order
-
-```
-../shared/lib/json2.js → locale.js → utils.js → validation.js →
-../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → storage.js →
-core.js → bounds.js → draw.js → ui.js → main.js
-```
-
-`locale.js` musí být před `utils.js`, protože `ZSM.Utils` volá `ZSM.L.format()`.
-Sdílené jádro `json2.js` a `ui_state.js` žije v `../shared/lib/` v kořeni repozitáře
-(viz [../docs/decisions.md](../docs/decisions.md)); build je vkládá přímo, resp.
-přes `buildUIState(ZSM)`.
-
----
-
-## Build
-
-```bash
-cd zund-summa-marks
-bash tools/build.sh
-```
-
-Output: `dist/illustrator-zund-summa-marks.jsx`
-
-Soubory v `src/` jsou master. Soubor v `dist/` je build output — **needitovat ručně**.
-
----
-
-## Architektura
-
-```
-ZSM.L        — lokalizace, načte se jako první, dostupná všem modulům
-ZSM.Utils    — helper funkce (mm↔pt, validace, log, error alert)
-ZSM.Config   — konfigurace, Storage (save/load/migrate), getDefaults()
-ZSM.Core     — calculateAll() — pure math, žádný DOM, testovatelné
-ZSM.Draw     — renderování, getBounds(), layer management, swatch/layer helpers
-ZSM.UI       — ScriptUI dialog, preset logika, event handling
-```
-
-Separace je záměrná: Core nepracuje s DOM, Draw nevytváří UI, UI nepočítá geometrii.
-
-### Datový tok
-
-```
-Storage.load()
-    → UI.show(presetWrapper)
-        → Core.calculateAll(settings, bounds)
-            → Draw.render(geometry, settings)
-                → Draw.beginSession() / endSession()
-    → Storage.save(presetWrapper)
-```
-
-### Preset wrapper
-
-Skript interně pracuje s wrapperem, ne s flat objektem nastavení:
-
-```javascript
-{
-    activePreset: "[Last Settings]",
-    presets: {
-        "[Default]":       { mode: "ZUND", gapInner: 5, layers: [...], ... },
-        "[Last Settings]": { mode: "SUMMA", gapInner: 8, layers: [...], ... },
-        "Moje předvolba": { ... }
-    }
-}
-```
-
----
-
 ## Nastavení vrstev — datová struktura
 
 Každá vrstva je objekt:
@@ -193,11 +99,14 @@ layers: [
 | `maxDist` | `500` mm | Maximální rozteč — při překročení se vkládají mezilehlé body |
 | `markSizeZ` | `5` mm | Průměr značky Zünd |
 | `markSizeS` | `3` mm | Strana značky Summa |
+| `orientDist` | `100` mm | Mezera mezi levou dolní rohovou a orientační značkou (ZUND) |
 | `markColor` | `[Registration]` | Přímá barva značek |
 | `feedTop` | `70` mm | Horní přesah materiálu (SUMMA) |
 | `feedBottom` | `50` mm | Spodní přesah materiálu (SUMMA) |
 | `drawRed` | `true` | Kreslit červené ořezové linky (SUMMA) |
 | `useArtboardBounds` | `false` | Mód Dle Artboardu (Fixed) |
+| `scaleN` | `1` | Práce v měřítku 1:N (1–10); rozměry se zadávají v reálných mm |
+| `marksOnly` | `false` | Pouze značky — vrstvy a cesty beze změny |
 
 ---
 
@@ -217,23 +126,49 @@ Skript automaticky migruje starší formáty:
 
 ## Vývoj
 
-### Konvence
+### Struktura
 
-- ES3 only — `var`, `function`, žádné `const/let/arrow functions/template literals`
-- Namespace: `ZSM.*` — žádné globální proměnné
-- Komentáře v kódu anglicky, UI texty česky (nebo přes `ZSM.L`)
-- České řetězce v `locale.js` jako literály (UTF-8 with BOM zajišťuje správnou interpretaci v ExtendScript)
+```
+zund-summa-marks/
+├── src/
+│   ├── lib/
+│   │   ├── utils.js        # ZSM.Utils — mm↔pt, měřítko, validace čísla, log, hlášky
+│   │   ├── validation.js   # ZSM.Validation — validace nastavení
+│   │   ├── storage.js      # ZSM.Storage — nastavení na disk + migrace
+│   │   └── bounds.js       # ZSM.Bounds — měření grafiky (clip-aware)
+│   ├── locale.js           # ZSM.L — lokalizace (cs/en), format helper
+│   ├── config.js           # ZSM.Config — konstanty, getDefaults()
+│   ├── draw.js             # ZSM.Draw — Illustrator DOM, vrstvy, renderování
+│   ├── ui.js               # ZSM.UI — ScriptUI dialog, presety
+│   └── main.js             # Entry point — IIFE, orchestrace
+├── docs/                   # architecture.md, manual-test.md
+├── tests/                  # Node.js sady test_*.js, mocky v tests/lib/
+├── tools/build.sh
+└── dist/                   # build output (gitignored)
+```
+
+Matematiku značek (`ZSM.Core`) a další sdílené moduly vkládá build
+z `../shared/lib/` (viz [../docs/decisions.md](../docs/decisions.md)). Moduly,
+pořadí v buildu, datový tok a formát uložených presetů popisuje
+[docs/architecture.md](docs/architecture.md), pravidla celého repa (ES3,
+namespace, kódování) [../docs/conventions.md](../docs/conventions.md).
+
+### Build a testy
+
+```bash
+npm run build     # = bash tools/build.sh → dist/illustrator-zund-summa-marks.jsx
+npm test          # všechny sady v tests/ (Node.js, bez Illustratoru)
+npm run verify    # build + testy
+```
+
+`src/` je master, `dist/` je build output — needitovat ručně. Co automat nevidí,
+je v [docs/manual-test.md](docs/manual-test.md).
 
 ### Přidání nového lokalizovaného stringu
 
 1. Přidat klíč do `ZSM.L` v `src/locale.js` — do obou sekcí `en` a `cs`
 2. Použít jako `ZSM.L.KLIC` nebo `ZSM.L.format(ZSM.L.KLIC, arg1, arg2)`
 
-### Testování
-
-Jednotkové testy pro `ZSM.Core` (pure math): `tests/test_core_math.js`
-
-Manuální testy: viz `docs/manual-test.md`
 ---
 
 ## Changelog
