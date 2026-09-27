@@ -1141,6 +1141,25 @@ global.alert = origAlertK10;
 
 
 // =====================================================
+// TEST 32 (review K11): the artboard change is its own undo step
+// =====================================================
+// Each app.redraw() closes an undo step, and an artboard change made in the
+// same step as other edits is NOT reverted by Undo (measured, AI 30.8.1): after
+// undoing a run the layers came back but the artboard stayed enlarged. Isolated
+// between two redraws it reverts on its own (measured). Guard the isolation.
+console.log("\n=== TEST 32 (review K11): artboard change fenced by redraws ===");
+var docK11 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+var sK11 = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK11, ZSM.Draw.getBounds(sK11)), sK11);
+var logK11 = docK11._mutationLog;
+var iAb = -1;
+for (var li11 = 0; li11 < logK11.length; li11++) if (logK11[li11].op === "artboard") { iAb = li11; break; }
+assert(iAb >= 0, "artboard assignment logged");
+assert(iAb > 0 && logK11[iAb - 1].op === "redraw", "redraw right before the artboard change");
+assert(iAb >= 0 && iAb + 1 < logK11.length && logK11[iAb + 1].op === "redraw", "redraw right after the artboard change");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

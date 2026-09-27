@@ -414,6 +414,7 @@
         // Artboards
         // An artboard wider or taller than ~16 300 pt is refused at assignment
         // ("CoOA", measured — docs/extendscript-engine-facts.md "Mez artboardu").
+        var self = this;
         var ab = { _rect: (spec.artboardRect || [0, 100, 100, 0]).slice() };
         Object.defineProperty(ab, "artboardRect", {
             get: function () { return this._rect.slice(); },
@@ -422,6 +423,7 @@
                     throw new Error("an Illustrator error occurred: 1095724867 ('CoOA')");
                 }
                 this._rect = r.slice();
+                logMutation(self, { op: "artboard" });
             }
         });
         this.artboards = [ab];
@@ -512,7 +514,11 @@
             documents: { length: 1 },
             activeDocument: null,
             executeMenuCommand: function () {},
-            redraw: function () {},
+            // Logged so tests can check where undo checkpoints fall: each
+            // redraw closes an undo step in Illustrator (measured).
+            redraw: function () {
+                if (global.app.activeDocument) logMutation(global.app.activeDocument, { op: "redraw" });
+            },
             locale: "en_US"
         };
         global.ZOrderMethod = {

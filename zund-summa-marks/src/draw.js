@@ -119,8 +119,14 @@ ZSM.Draw = {
             //    surfaced as a generic error after the Summa output was gone.
             if (!s.useArtboardBounds) {
                 var activeIdx = doc.artboards.getActiveArtboardIndex();
+                // The artboard change gets an undo step of its own. Made in
+                // the same step as other edits, Undo does not revert it
+                // (measured: the layers came back, the artboard stayed
+                // enlarged); fenced by redraws it reverts on its own.
+                try { app.redraw(); } catch (rdA) {}
                 try {
                     doc.artboards[activeIdx].artboardRect = geo.ab;
+                    try { app.redraw(); } catch (rdB) {}
                 } catch (abErr) {
                     ZSM.Utils.log("render: artboardRect refused — " + abErr.message);
                     var sfAb = ZSM.Utils.getEffectiveSF(s);

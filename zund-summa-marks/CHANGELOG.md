@@ -55,6 +55,11 @@ Opravy z code review 2026-09-26
   a artboard a výstup Summa se odstraní až potom; příliš velký artboard ohlásí
   svůj rozměr a dokument nechá beze změny. Kritická chyba během vykreslování
   upozorní, že dokument může být částečně změněný.
+- **Běh skriptu jde vrátit přes Zpět (K11).** Změna artboardu se zapsala do
+  stejného kroku historie jako ostatní změny a Zpět ji nevrátilo: vrstvy
+  a značky se vrátily, artboard zůstal zvětšený. Teď má vlastní krok — celý běh
+  se vrátí několika kroky Zpět (SUMMA s mapováním a ořezovými linkami: 4)
+  a další krok už vrací až úpravy před spuštěním skriptu.
 
 ## [1.0.0] — 2026-06-28
 

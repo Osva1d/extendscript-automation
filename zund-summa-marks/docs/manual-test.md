@@ -120,6 +120,12 @@ a CHANGELOG. Tady zůstává jen to, co sonda nedokáže.
     (Object ▸ Create Trim Marks), výchozí předvolba, Generovat
     ✅ ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne
     ✅ upozornění, že registrační barvou nejde rozpoznat řezové cesty
+[ ] K11 — běh z menu Soubor ▸ Skripty (sonda běžela přes AppleScript, ne z menu):
+    dokument s grafikou a řezovou cestou, SUMMA s ořezovými linkami, Generovat;
+    pak Úpravy ▸ Zpět po jednom kroku
+    ✅ artboard se vrátí na původní rozměr jako samostatný krok
+       (přes most: 4 kroky pro SUMMA s mapováním a linkami)
+    ✅ další Zpět už vrací vaši úpravu před spuštěním skriptu, ne zbytek běhu
 ```
 
 ## P1 — důležité, ne blokující deploy
