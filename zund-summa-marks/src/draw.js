@@ -102,6 +102,14 @@ ZSM.Draw = {
             //    at C++ level. Clearing selection first prevents this.
             try { doc.selection = null; } catch (ds) {}
 
+            // Layers this run had to unhide to write into (reported at the
+            // end) and output objects that failed to draw. A hidden layer
+            // rejects writes exactly like a locked one, so both used to fail
+            // silently — a re-run with Regmarks hidden deleted the old marks
+            // and drew none.
+            var unhidden = [];
+            var drawFailures = 0;
+
             // 1. Resize artboard (Auto-fit mode only)
             // Validate bounds before setting — see ZSM.Draw.MAX_ARTBOARD_COORD.
             if (!s.useArtboardBounds) {
@@ -124,7 +132,7 @@ ZSM.Draw = {
             //    so running one mode does not destroy the other's marks.
             //    This supports the intended workflow: run ZUND first,
             //    then run SUMMA second — both sets of marks coexist.
-            var reg = this.getLay(ZSM.Config.layerRegmarks);
+            var reg = this.getLay(ZSM.Config.layerRegmarks, unhidden);
 
             var modeSubName = (s.mode === "SUMMA") ? "Summa" : "Zünd";
             var zundSub = null, summaSub = null;
@@ -202,7 +210,7 @@ ZSM.Draw = {
                         if (seenTargets["l_" + layDef.name]) continue; // dedupe
                         seenTargets["l_" + layDef.name] = true;
 
-                        var targetLay = this.getLay(layDef.name);
+                        var targetLay = this.getLay(layDef.name, unhidden);
                         var hit = this.movePaths(targetLay, [layDef.color]);
                         if (!hit) {
                             geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
@@ -284,6 +292,7 @@ ZSM.Draw = {
                     circle.fillOverprint = true;
                     circle.stroked       = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
                 }
             }
@@ -302,6 +311,7 @@ ZSM.Draw = {
                     sq.fillOverprint = true;
                     sq.stroked       = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
                 }
             }
@@ -316,6 +326,7 @@ ZSM.Draw = {
                     bar.strokeWidth     = geo.barS.w;
                     bar.filled          = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw OPOS bar");
                 }
             }
@@ -328,7 +339,7 @@ ZSM.Draw = {
             //     would mislead the operator. ZUND leaves an existing Trim
             //     alone (it belongs to the SUMMA layout, not ours to delete).
             if (geo.red && geo.red.length > 0) {
-                this._drawTrimTopLevel(geo.red);
+                drawFailures += this._drawTrimTopLevel(geo.red);
             } else if (s.mode === "SUMMA") {
                 this._removeTrimLayer();
             }
@@ -368,9 +379,21 @@ ZSM.Draw = {
                 }
             }
 
-            // Non-fatal notices (missing colour → fallback, unmatched layer
-            // colour) — surface as a WARNING, not an error: the marks rendered.
-            if (geo.warnings.length > 0) ZSM.Utils.warn(geo.warnings.join("\n"));
+            if (unhidden.length > 0) {
+                geo.warnings.push(ZSM.L.format(ZSM.L.WARN_LAYERS_UNHIDDEN, unhidden.join(", ")));
+            }
+
+            // A mark that failed to draw leaves a sheet the cutter cannot
+            // register — that is an ERROR, not a debug-log line. Non-fatal
+            // notices (missing colour → fallback, unmatched layer colour,
+            // unhidden layers) ride along; on their own they are a WARNING.
+            if (drawFailures > 0) {
+                var failMsg = ZSM.L.format(ZSM.L.ERR_MARKS_FAILED, drawFailures);
+                if (geo.warnings.length > 0) failMsg += "\n\n" + geo.warnings.join("\n");
+                ZSM.Utils.error(failMsg);
+            } else if (geo.warnings.length > 0) {
+                ZSM.Utils.warn(geo.warnings.join("\n"));
+            }
             app.redraw();
 
         } catch (e) {
@@ -389,10 +412,11 @@ ZSM.Draw = {
      * operator). Refreshes the layer if it already exists (idempotent re-runs).
      * No-op when there are no trim lines.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @returns {number} Trim lines that could not be drawn.
      * @private
      */
     _drawTrimTopLevel: function (redLines) {
-        if (!redLines || redLines.length === 0) return;
+        if (!redLines || redLines.length === 0) return 0;
         var doc = app.activeDocument;
         // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
         // at a SUBLAYER (the mode sublayer). Calling doc.layers.add() to create a
@@ -416,10 +440,10 @@ ZSM.Draw = {
                 try { app.redraw(); } catch (rd2) {}   // commit layer creation
             } catch (eAdd) {
                 ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
-                return;
+                return redLines.length;
             }
         }
-        this._paintRedLines(trimLayer, redLines);
+        return this._paintRedLines(trimLayer, redLines);
     },
 
     /**
@@ -501,12 +525,14 @@ ZSM.Draw = {
      * Draws red trim lines as direct children of the given layer.
      * @param {Layer} layer    - Host layer.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @returns {number} Lines that could not be drawn.
      * @private
      */
     _paintRedLines: function (layer, redLines) {
         var redColor = new CMYKColor();
         redColor.magenta = 100;
         redColor.yellow  = 100;
+        var failed = 0;
         for (var r = 0; r < redLines.length; r++) {
             try {
                 var line = layer.pathItems.add();
@@ -518,9 +544,11 @@ ZSM.Draw = {
                 line.strokeWidth = redLines[r].w;
                 line.filled      = false;
             } catch (e) {
+                failed++;
                 ZSM.Utils.log("render: failed to draw trim line at index " + r);
             }
         }
+        return failed;
     },
 
     /**
@@ -557,17 +585,27 @@ ZSM.Draw = {
 
     /**
      * Gets an existing layer by name or creates it if it doesn't exist.
-     * @param {string} name - Layer name.
+     * An existing HIDDEN layer is made visible: Illustrator rejects writes
+     * into a hidden layer exactly like into a locked one ("Cannot modify a
+     * layer that is locked", measured), so marks or moved paths would fail.
+     * @param {string} name     - Layer name.
+     * @param {Array}  unhidden - Optional collector; receives `name` when the
+     *                            layer had to be made visible.
      * @returns {Layer} Illustrator Layer object.
      */
-    getLay: function (name) {
-        try {
-            return app.activeDocument.layers.getByName(name);
-        } catch (e) {
-            var layer = app.activeDocument.layers.add();
+    getLay: function (name, unhidden) {
+        var layer = null;
+        try { layer = app.activeDocument.layers.getByName(name); } catch (e) { layer = null; }
+        if (!layer) {
+            layer = app.activeDocument.layers.add();
             layer.name = name;
             return layer;
         }
+        if (!layer.visible) {
+            layer.visible = true;
+            if (unhidden) unhidden.push(name);
+        }
+        return layer;
     },
 
     /**

@@ -44,6 +44,9 @@ ZSM.L = {
     ERR_RENDER_CRITICAL: "render error: ",
     ERR_GENERIC: "err: %s",
     ERR_COLOR_MISSING: "missing color %s",
+    WARN_PREFIX: "WARN: ",
+    WARN_LAYERS_UNHIDDEN: "unhidden %s",
+    ERR_MARKS_FAILED: "marks failed %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -798,6 +801,71 @@ var sS3 = makeSettings({ mode: "SUMMA" });
 ZSM.Draw.render(ZSM.Core.calculateAll(sS3, ZSM.Draw.getBounds(sS3)), sS3);
 assert(findSublayer(findLayer(docSZ, "Regmarks"), "Zünd") !== null,
     "SUMMA after ZUND still preserves the Zünd sublayer");
+
+
+// =====================================================
+// TEST 24 (review K12): hidden output / target layers
+// =====================================================
+// A hidden layer rejects writes like a locked one (measured, AI 30.8.1). An
+// operator who hid Regmarks to check the artwork and re-ran the script got the
+// old marks removed and NO new marks — without any message. A hidden mapped
+// layer silently kept the cut paths where they were.
+console.log("\n=== TEST 24 (review K12): hidden Regmarks / hidden target layer ===");
+var alertsK12 = [];
+var origAlertK12 = global.alert;
+global.alert = function (m) { alertsK12.push(String(m)); };
+
+var docH1 = setupDoc({
+    layers: [
+        { name: "Regmarks", visible: false, sublayers: [
+            { name: "Zünd", items: [{ type: "path", bounds: [-20, 120, -15, 115] }] }   // old mark
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sH1 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH1, ZSM.Draw.getBounds(sH1)), sH1);
+var regH1 = findLayer(docH1, "Regmarks");
+assertEq(countItems(findSublayer(regH1, "Zünd"), "PathItem"), 5,
+    "hidden Regmarks: 5 new marks drawn (not silently lost)");
+assert(regH1.visible === true, "hidden Regmarks: made visible so the marks can be drawn");
+assert(alertsK12.join("\n").indexOf("unhidden Regmarks") >= 0,
+    "hidden Regmarks: operator is told the layer was made visible");
+
+alertsK12.length = 0;
+var docH2 = setupDoc({
+    layers: [
+        { name: "Cut", visible: false, items: [] },
+        { name: "Art", items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            { type: "path", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false }
+        ]}
+    ]
+});
+var sH2 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH2, ZSM.Draw.getBounds(sH2)), sH2);
+var cutH2 = findLayer(docH2, "Cut");
+assertEq(countItems(cutH2, "PathItem"), 1, "hidden target: cut path moved into 'Cut'");
+assert(cutH2.visible === true, "hidden target: 'Cut' made visible");
+assert(alertsK12.join("\n").indexOf("unhidden Cut") >= 0, "hidden target: operator is told");
+
+// Anything that still cannot be drawn is reported as an ERROR (was a
+// debug-log line only). Locked Regmarks + render() without beginSession.
+alertsK12.length = 0;
+var docH3 = setupDoc({
+    layers: [
+        { name: "Regmarks", locked: true, items: [] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sH3 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH3, ZSM.Draw.getBounds(sH3)), sH3);
+assertEq(countItems(findLayer(docH3, "Regmarks"), "PathItem"), 0,
+    "precondition: locked Regmarks blocks drawing");
+assert(alertsK12.join("\n").indexOf("ERR: marks failed 5") >= 0,
+    "draw failures reported as an error with the count (got: " + alertsK12.join(" | ") + ")");
+
+global.alert = origAlertK12;
 
 
 // =====================================================

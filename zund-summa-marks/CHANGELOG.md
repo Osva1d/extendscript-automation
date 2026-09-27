@@ -4,6 +4,20 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+Opravy z code review 2026-09-26
+([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)).
+
+### Opraveno
+
+- **Skrytá vrstva Regmarks už nezpůsobí tiché ztracení značek (K12).** Opakovaný
+  běh se skrytou vrstvou Regmarks smazal staré značky a nové nevykreslil, bez
+  jakékoli hlášky; skrytá mapovaná vrstva zase tiše nechala řezové cesty na místě.
+  Skript teď skryté vrstvy, do kterých zapisuje, zviditelní a oznámí to. Objekt,
+  který se přesto nepodaří vykreslit (značka, OPOS pruh, ořezová linka), ohlásí
+  jako chybu s počtem.
+
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline). Sjednocení verzí napříč sadou pro open-source
