@@ -37,6 +37,11 @@ Opravy z code review 2026-09-26
   v registrační barvě (ořezové značky, značky jiných nástrojů), v české verzi
   nepřesunulo nic a ohlásilo nenalezenou barvu. Řádek s registrační barvou teď
   skript přeskočí a vysvětlí proč.
+- **Rychlejší přesun cest na velkých dokumentech (K13).** Každý řádek mapování
+  procházel celý dokument znovu; na velkém dokumentu s několika řádky to vypadalo
+  jako zamrznutí. Teď se dokument projde jednou pro všechny řádky — na 3900
+  cestách a třech řádcích klesl celý běh z 2,4 s na 1,1 s a rozdíl roste
+  s počtem řádků.
 
 ## [1.0.0] — 2026-06-28
 

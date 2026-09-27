@@ -202,6 +202,7 @@ ZSM.Draw = {
                 // attempt a self-move (`targetLay.move(targetLay)` would
                 // self-reference and can crash AI at C++ level).
                 var seenTargets = {};
+                var routes = [];
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
@@ -220,18 +221,6 @@ ZSM.Draw = {
                         seenTargets["l_" + layDef.name] = true;
 
                         var targetLay = this.getLay(layDef.name, unhidden);
-                        var routed = this.movePaths(targetLay, [layDef.color]);
-                        var leftInPlace = routed.clipped + routed.blocked;
-                        if (routed.moved === 0 && routed.mixed === 0 && leftInPlace === 0) {
-                            geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
-                        }
-                        if (routed.mixed > 0) {
-                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, layDef.color, routed.mixed));
-                        }
-                        if (leftInPlace > 0) {
-                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_PATHS_SKIPPED,
-                                layDef.name, layDef.color, routed.clipped, routed.blocked));
-                        }
                         // Guard against self-move (would happen if getLay
                         // resolved to the same Layer instance as refLayer,
                         // e.g. on the first iteration when targetLay is
@@ -241,6 +230,24 @@ ZSM.Draw = {
                             catch (mvErr) { ZSM.Utils.log("layer move failed: " + mvErr.message); }
                         }
                         refLayer = targetLay;
+                        routes.push({ name: layDef.name, color: layDef.color, layer: targetLay });
+                    }
+                }
+
+                // All rows in ONE pass over the document (was one per row).
+                var routed = this.movePaths(routes);
+                for (var ri = 0; ri < routes.length; ri++) {
+                    var st = routed[ri];
+                    var leftInPlace = st.clipped + st.blocked;
+                    if (st.moved === 0 && st.mixed === 0 && leftInPlace === 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].color));
+                    }
+                    if (st.mixed > 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, routes[ri].color, st.mixed));
+                    }
+                    if (leftInPlace > 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.WARN_PATHS_SKIPPED,
+                            routes[ri].name, routes[ri].color, st.clipped, st.blocked));
                     }
                 }
             }
@@ -660,24 +667,48 @@ ZSM.Draw = {
     },
 
     /**
-     * Moves all paths whose fill or stroke matches any of the given spot color
-     * names (case-insensitive) to the target layer — but only paths painted
-     * EXCLUSIVELY in those colours. A path that also carries printable paint
-     * (see _hasOtherPaint) stays with the artwork and is only counted.
-     * Uses a snapshot to avoid live-collection issues during iteration.
+     * Routes spot-coloured paths to their mapped layers in ONE pass over the
+     * document. It used to rescan every path once per mapping row, with
+     * several DOM reads per path each time — on a large document that
+     * multiplied tens of thousands of DOM calls by the number of rows.
      *
-     * Every matching path that stays behind is counted, so the caller can
-     * tell the operator — a cut layer that silently misses paths is a bad cut.
+     * A path is moved only when it is painted EXCLUSIVELY in its route's
+     * colour; a path that also carries printable paint (see _hasOtherPaint)
+     * stays with the artwork. Every matching path that stays behind is
+     * counted, so the caller can tell the operator — a cut layer that
+     * silently misses paths is a bad cut. Uses a snapshot to avoid
+     * live-collection issues during iteration.
      *
-     * @param {Layer}  targetLayer - Destination layer.
-     * @param {Array}  names       - Spot color names to match.
-     * @returns {Object} {moved, mixed, clipped, blocked} — paths moved; matching
-     *   paths left in place because they also carry printable paint (mixed),
-     *   sit inside a clipping mask or on an artifact layer (clipped), or could
-     *   not be moved off a locked sublayer / hidden layer (blocked).
+     * @param {Array} routes - [{color: spot name (case-insensitive), layer: Layer}]
+     * @returns {Array} Per route, same order: {moved, mixed, clipped, blocked} —
+     *   paths moved; matching paths left in place because they also carry
+     *   printable paint (mixed), sit inside a clipping mask or on an artifact
+     *   layer (clipped), or could not be moved off a locked sublayer / hidden
+     *   layer (blocked).
      */
-    movePaths: function (targetLayer, names) {
-        var moved = 0, mixed = 0, clipped = 0, blocked = 0;
+    movePaths: function (routes) {
+        var stats = [], byKey = {};
+        for (var r = 0; r < routes.length; r++) {
+            stats.push({ moved: 0, mixed: 0, clipped: 0, blocked: 0 });
+            // "c_" prefix keeps colour names like "toString" from colliding
+            // with inherited Object.prototype members. First row wins (the
+            // dialog blocks two rows with the same colour).
+            var key = "c_" + String(routes[r].color).toLowerCase();
+            if (byKey[key] === undefined) byKey[key] = r;
+        }
+        // Route index of a path by its spot paint (stroke or fill), -1 if none.
+        var routeOf = function (p) {
+            var ri = -1, k;
+            if (p.stroked && p.strokeColor.typename === "SpotColor") {
+                k = byKey["c_" + p.strokeColor.spot.name.toLowerCase()];
+                if (k !== undefined) ri = k;
+            }
+            if (p.filled && p.fillColor.typename === "SpotColor") {
+                k = byKey["c_" + p.fillColor.spot.name.toLowerCase()];
+                if (k !== undefined && (ri < 0 || k < ri)) ri = k;
+            }
+            return ri;
+        };
         try {
             var doc = app.activeDocument;
 
@@ -685,9 +716,6 @@ ZSM.Draw = {
             var compounds = doc.compoundPathItems;
             var cpSnap = [];
             for (var ci = 0; ci < compounds.length; ci++) cpSnap.push(compounds[ci]);
-
-            // Track moved compound parents so we skip their children in step 2
-            var movedCompounds = [];
 
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
@@ -697,7 +725,8 @@ ZSM.Draw = {
                 // color). Colour first: only matching paths are worth the
                 // checks below, and only they belong in the report.
                 var first = cp.pathItems[0];
-                if (!this._matchesSpotColor(first, names)) continue;
+                var cri = routeOf(first);
+                if (cri < 0) continue;
                 if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
 
                 // Skip items on artifact layers — moving them could crash AI.
@@ -705,22 +734,21 @@ ZSM.Draw = {
                 // (returns true) so a transient/broken layer item is skipped
                 // rather than risked — the safe default for a mutating op.
                 if (ZSM.Bounds.isArtifactLayer(cp.layer) || ZSM.Bounds.isInsideClippedGroup(cp)) {
-                    clipped++;
+                    stats[cri].clipped++;
                     continue;
                 }
-                if (this._hasOtherPaint(first, names)) { mixed++; continue; }
+                if (this._hasOtherPaint(first, [routes[cri].color])) { stats[cri].mixed++; continue; }
                 try {
-                    cp.move(targetLayer, ElementPlacement.PLACEATEND);
+                    cp.move(routes[cri].layer, ElementPlacement.PLACEATEND);
                     // Only cut-colour paint reaches this point, so the
                     // overprint cannot hit a printable fill or stroke.
                     for (var sp = 0; sp < cp.pathItems.length; sp++) {
                         if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
                         if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
                     }
-                    movedCompounds.push(cp);
-                    moved++;
+                    stats[cri].moved++;
                 } catch (e) {
-                    blocked++;   // locked sublayer / hidden layer (see below)
+                    stats[cri].blocked++;   // locked sublayer / hidden layer (see below)
                 }
             }
 
@@ -733,18 +761,19 @@ ZSM.Draw = {
                 var item = snapshot[i];
 
                 // Colour first (see the compound loop).
-                if (!this._matchesSpotColor(item, names)) continue;
+                var ri = routeOf(item);
+                if (ri < 0) continue;
 
                 // Never route FROM the marks (Regmarks) or Trim layers — they
                 // legitimately share the user's spot colours (see _isOnReservedLayer).
                 if (this._isOnReservedLayer(item)) continue;
 
-                // Skip items already moved as part of a CompoundPathItem
-                var alreadyMoved = false;
+                // Skip sub-paths of a CompoundPathItem — handled as a unit above
+                var inCompound = false;
                 try {
-                    if (item.parent && item.parent.typename === "CompoundPathItem") alreadyMoved = true;
+                    if (item.parent && item.parent.typename === "CompoundPathItem") inCompound = true;
                 } catch (e) {}
-                if (alreadyMoved) continue;
+                if (inCompound) continue;
 
                 // Skip items on artifact layers — moving them could crash AI
                 // (see compound-path loop above for the unreadable-name
@@ -752,26 +781,26 @@ ZSM.Draw = {
                 // them out would break the group structure and trigger MRAP
                 // errors. Both are reported.
                 if (ZSM.Bounds.isArtifactLayer(item.layer) || ZSM.Bounds.isInsideClippedGroup(item)) {
-                    clipped++;
+                    stats[ri].clipped++;
                     continue;
                 }
 
-                if (this._hasOtherPaint(item, names)) { mixed++; continue; }
+                if (this._hasOtherPaint(item, [routes[ri].color])) { stats[ri].mixed++; continue; }
                 try {
-                    item.move(targetLayer, ElementPlacement.PLACEATEND);
+                    item.move(routes[ri].layer, ElementPlacement.PLACEATEND);
                     if (item.filled)  item.fillOverprint   = true;
                     if (item.stroked) item.strokeOverprint = true;
-                    moved++;
+                    stats[ri].moved++;
                 } catch (e) {
                     // A path on a locked sublayer or a hidden layer cannot be
                     // moved: "Target layer cannot be modified" (measured).
-                    blocked++;
+                    stats[ri].blocked++;
                 }
             }
         } catch (e) {
             ZSM.Utils.log("movePaths error: " + e.message);
         }
-        return { moved: moved, mixed: mixed, clipped: clipped, blocked: blocked };
+        return stats;
     },
 
     /**
@@ -796,26 +825,6 @@ ZSM.Draw = {
             return false;
         };
         return (item.filled && !isCut(item.fillColor)) || (item.stroked && !isCut(item.strokeColor));
-    },
-
-    /**
-     * Checks if a path's fill or stroke matches any of the given spot color names.
-     * @param {PathItem} item  - Path to test.
-     * @param {Array}    names - Spot color names (case-insensitive).
-     * @returns {boolean} True if match found.
-     * @private
-     */
-    _matchesSpotColor: function (item, names) {
-        for (var n = 0; n < names.length; n++) {
-            var target = names[n].toLowerCase();
-            if (item.stroked && item.strokeColor.typename === "SpotColor") {
-                if (item.strokeColor.spot.name.toLowerCase() === target) return true;
-            }
-            if (item.filled && item.fillColor.typename === "SpotColor") {
-                if (item.fillColor.spot.name.toLowerCase() === target) return true;
-            }
-        }
-        return false;
     },
 
     /**

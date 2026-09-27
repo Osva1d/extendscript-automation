@@ -723,7 +723,7 @@ var regCan   = findLayer(docCan, "Regmarks");
 var zundCan  = regCan ? findSublayer(regCan, "Zünd") : null;
 var trimCan  = findLayer(docCan, "Trim");
 
-ZSM.Draw.movePaths(whiteLay, ["Spot 1"]);
+ZSM.Draw.movePaths([{ color: "Spot 1", layer: whiteLay }]);
 
 assert(countItems(whiteLay, "PathItem") === 1,
     "movePaths: user artwork (Spot 1) routed to White");
@@ -1016,6 +1016,43 @@ assert(findLayer(docK8cs, "Cut") === null, "CS: no 'Cut' layer created");
 assert(alertsK8.join("\n").indexOf("regskip Cut") >= 0, "CS: the same clear warning");
 assert(alertsK8.join("\n").indexOf("missing color") < 0, "CS: no misleading 'colour not found'");
 global.alert = origAlertK8;
+
+
+// =====================================================
+// TEST 29 (review K13): one routing pass over the document
+// =====================================================
+// movePaths ran once per mapping row, each time snapshotting doc.pathItems and
+// doing several DOM reads per path — on a large document with a few rows that
+// is hundreds of thousands of calls and looks like a hang.
+console.log("\n=== TEST 29 (review K13): all rows routed in one pass ===");
+var docK13 = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", name: "c", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+        { type: "path", name: "k", bounds: [20, 80, 80, 20], strokeSpot: "Kiss-cut", stroked: true, filled: false },
+        { type: "path", name: "r", bounds: [30, 70, 70, 30], strokeSpot: "Crease", stroked: true, filled: false },
+        { type: "compound", name: "cc", bounds: [40, 60, 60, 40], children: [
+            { type: "path", bounds: [40, 60, 60, 40], strokeSpot: "Kiss-cut", stroked: true, filled: false }
+        ]}
+    ]}]
+});
+var passes = { paths: 0, compounds: 0 };
+var protoK13 = Object.getPrototypeOf(docK13);
+var getPaths = Object.getOwnPropertyDescriptor(protoK13, "pathItems").get;
+var getComps = Object.getOwnPropertyDescriptor(protoK13, "compoundPathItems").get;
+Object.defineProperty(docK13, "pathItems", { get: function () { passes.paths++; return getPaths.call(this); } });
+Object.defineProperty(docK13, "compoundPathItems", { get: function () { passes.compounds++; return getComps.call(this); } });
+var sK13 = makeSettings({ mode: "ZUND", layers: [
+    { name: "Cut", color: "Cut" }, { name: "Kiss-cut", color: "Kiss-cut" }, { name: "Crease", color: "Crease" }
+]});
+ZSM.Draw.render(ZSM.Core.calculateAll(sK13, ZSM.Draw.getBounds(sK13)), sK13);
+assertEq(passes.paths, 1, "doc.pathItems enumerated once for three rows");
+assertEq(passes.compounds, 1, "doc.compoundPathItems enumerated once for three rows");
+assertEq(countItems(findLayer(docK13, "Cut"), "PathItem"), 1, "Cut path routed");
+var kissK13 = findLayer(docK13, "Kiss-cut");
+assert(itemNamed(kissK13, "k") !== null && itemNamed(kissK13, "cc") !== null,
+    "Kiss-cut path and compound routed");
+assertEq(countItems(findLayer(docK13, "Crease"), "PathItem"), 1, "Crease path routed");
 
 
 // =====================================================
