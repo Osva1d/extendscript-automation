@@ -32,6 +32,11 @@ Opravy z code review 2026-09-26
   stačilo, aby se přesunula jediná, a běh vypadal úplný. Skript je teď spočítá
   a ohlásí i s důvodem. Hláška „barva nebyla nalezena" se v takovém případě už
   neobjeví.
+- **Registrační barva už neurčuje řezové cesty (K8).** Výchozí mapování
+  „Cut ← [Registration]" v anglickém Illustratoru přesunulo do vrstvy Cut všechno
+  v registrační barvě (ořezové značky, značky jiných nástrojů), v české verzi
+  nepřesunulo nic a ohlásilo nenalezenou barvu. Řádek s registrační barvou teď
+  skript přeskočí a vysvětlí proč.
 
 ## [1.0.0] — 2026-06-28
 

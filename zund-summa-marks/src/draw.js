@@ -205,6 +205,15 @@ ZSM.Draw = {
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
+                        // [Registration] prints on every separation, so it can
+                        // never identify cut paths. Routing by it moved trim
+                        // marks and other tools' marks onto the cut layer in an
+                        // English Illustrator, and matched nothing under a
+                        // localized swatch name. Skip the row and say why.
+                        if (layDef.color === "[Registration]" || layDef.color === this.getRegistrationName()) {
+                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_REG_ROUTING, layDef.name));
+                            continue;
+                        }
                         // "l_" prefix keeps user layer names like "toString"
                         // from colliding with inherited Object.prototype members.
                         if (seenTargets["l_" + layDef.name]) continue; // dedupe

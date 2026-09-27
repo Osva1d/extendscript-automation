@@ -109,6 +109,19 @@ Legenda: `[ ]` krok · ✅ PASS · ❌ FAIL signál · ⚠️ riziko
 
 ---
 
+### L — Opravy z code review 2026-09-26 (jen co nešlo ověřit sondou)
+
+Ostatní opravy jsou ověřené během skriptu v Illustratoru přes `tools/ai-eval.sh`
+— viz [report](../../docs/reports/2026-09-26-code-review-zund-summa-marks.md)
+a CHANGELOG. Tady zůstává jen to, co sonda nedokáže.
+
+```
+[ ] K8 — ANGLICKÁ verze Illustratoru: dokument s ořezovými značkami
+    (Object ▸ Create Trim Marks), výchozí předvolba, Generovat
+    ✅ ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne
+    ✅ upozornění, že registrační barvou nejde rozpoznat řezové cesty
+```
+
 ## P1 — důležité, ne blokující deploy
 
 ### H — Měřítko 1:N (sekundární use case — zmenšené doky)

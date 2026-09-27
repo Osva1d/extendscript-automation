@@ -49,6 +49,7 @@ ZSM.L = {
     ERR_MARKS_FAILED: "marks failed %s",
     WARN_MIXED_PAINT: "mixed %s %s",
     WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
+    WARN_REG_ROUTING: "regskip %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -975,6 +976,46 @@ assert(alertsK2.join("\n").indexOf("skipped Cut Cut 1 2") >= 0,
 assert(alertsK2.join("\n").indexOf("missing color") < 0,
     "no misleading 'colour not found' warning when paths of that colour exist");
 global.alert = origAlertK2;
+
+
+// =====================================================
+// TEST 28 (review K8): the registration colour never routes paths
+// =====================================================
+// [Registration] prints on every separation, so it cannot identify cut paths.
+// The default row "Cut ← [Registration]" moved every registration-coloured
+// path (trim marks, other tools' marks) onto the cut layer in an English
+// Illustrator, and matched nothing (misleading warning) in a localized one.
+console.log("\n=== TEST 28 (review K8): registration mapping row is skipped with a warning ===");
+var alertsK8 = [];
+var origAlertK8 = global.alert;
+global.alert = function (m) { alertsK8.push(String(m)); };
+var sK8 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "[Registration]" }] });
+
+var docK8en = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", name: "trimMark", bounds: [-10, 110, -5, 105], strokeSpot: "[Registration]", stroked: true, filled: false }
+    ]}]
+});
+ZSM.Draw.render(ZSM.Core.calculateAll(sK8, ZSM.Draw.getBounds(sK8)), sK8);
+assert(findLayer(docK8en, "Cut") === null, "EN: no 'Cut' layer created from a registration row");
+assertEq(countItems(findLayer(docK8en, "Graphics") || findLayer(docK8en, "Art"), "PathItem"), 2,
+    "EN: registration-coloured path stays with the artwork");
+assert(alertsK8.join("\n").indexOf("regskip Cut") >= 0, "EN: operator told why the row was skipped");
+
+alertsK8.length = 0;
+var docK8cs = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", bounds: [-10, 110, -5, 105], strokeSpot: "[Registrační]", stroked: true, filled: false }
+    ]}]
+});
+docK8cs.swatches[1].name = "[Registrační]";   // localized Illustrator
+ZSM.Draw.render(ZSM.Core.calculateAll(sK8, ZSM.Draw.getBounds(sK8)), sK8);
+assert(findLayer(docK8cs, "Cut") === null, "CS: no 'Cut' layer created");
+assert(alertsK8.join("\n").indexOf("regskip Cut") >= 0, "CS: the same clear warning");
+assert(alertsK8.join("\n").indexOf("missing color") < 0, "CS: no misleading 'colour not found'");
+global.alert = origAlertK8;
 
 
 // =====================================================
