@@ -6,13 +6,6 @@
 var ZSM = ZSM || {};
 
 ZSM.Draw = {
-    /**
-     * Illustrator hard coordinate limit. Anything beyond this in artboardRect or
-     * pathItem positions crashes at C++ level (no JS try/catch can intercept).
-     * 16383 pt ≈ 227 in ≈ 5765 mm — Large Canvas Mode upper bound.
-     */
-    MAX_ARTBOARD_COORD: 16383,
-
     /** @private Storage for layers locked at session start {idx, name}, restored on end. */
     _lockedLayers: [],
 
@@ -97,6 +90,14 @@ ZSM.Draw = {
         var doc = app.activeDocument;
 
         try {
+            // Nothing is changed unless the whole geometry is usable. A
+            // non-finite mark used to be skipped silently — an incomplete mark
+            // set is worse than none.
+            if (!this._geometryIsFinite(geo, s)) {
+                ZSM.Utils.error(ZSM.L.ERR_GEOMETRY_INVALID);
+                return;
+            }
+
             // 0. Deselect all — removing or reordering items/layers while
             //    Illustrator holds references to selected objects can crash
             //    at C++ level. Clearing selection first prevents this.
@@ -110,21 +111,24 @@ ZSM.Draw = {
             var unhidden = [];
             var drawFailures = 0;
 
-            // 1. Resize artboard (Auto-fit mode only)
-            // Validate bounds before setting — see ZSM.Draw.MAX_ARTBOARD_COORD.
+            // 1. Resize artboard (Auto-fit mode only). This is the FIRST change
+            //    of the run: if Illustrator refuses the rectangle (wider or
+            //    taller than ~16 300 pt: "CoOA"/"MRAP", measured) the document
+            //    is still untouched. The old |coordinate| > 16383 check never
+            //    fired — no canvas coordinate gets that large — and the refusal
+            //    surfaced as a generic error after the Summa output was gone.
             if (!s.useArtboardBounds) {
-                var abMax = this.MAX_ARTBOARD_COORD;
-                if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
-                    Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
-                    ZSM.Utils.log("render: artboard rect " + geo.ab.join(",") +
-                        " exceeds MAX_ARTBOARD_COORD=" + abMax + "pt — aborting.");
-                    ZSM.Utils.error(ZSM.L.ERR_GENERIC
-                        ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
-                        : "Artboard exceeds maximum size.");
+                var activeIdx = doc.artboards.getActiveArtboardIndex();
+                try {
+                    doc.artboards[activeIdx].artboardRect = geo.ab;
+                } catch (abErr) {
+                    ZSM.Utils.log("render: artboardRect refused — " + abErr.message);
+                    var sfAb = ZSM.Utils.getEffectiveSF(s);
+                    ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_ARTBOARD_TOO_LARGE,
+                        Math.round(ZSM.Utils.pt2mm(geo.ab[2] - geo.ab[0]) * sfAb),
+                        Math.round(ZSM.Utils.pt2mm(geo.ab[1] - geo.ab[3]) * sfAb)));
                     return;
                 }
-                var activeIdx = doc.artboards.getActiveArtboardIndex();
-                doc.artboards[activeIdx].artboardRect = geo.ab;
             }
 
             // 2. Prepare Regmarks layer — mode-specific sublayers.
@@ -157,9 +161,8 @@ ZSM.Draw = {
                 }
                 // A Zünd run invalidates any existing Summa output (artboard
                 // recompute + OPOS-outermost violation — see removeSummaOutput).
-                // The main flow already removed it before measuring bounds, so
-                // this is normally a no-op; it fires only for direct render()
-                // callers, and then also surfaces the operator warning.
+                // Removed here, after the new artboard was accepted; the bounds
+                // measurement already left it out.
                 if (this.removeSummaOutput()) {
                     geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
                     summaSub = null;
@@ -303,13 +306,9 @@ ZSM.Draw = {
             var zSize = (Number(s.markSizeZ) || 5.0) / sf;
             var rZ   = ZSM.Utils.mm2pt(zSize / 2);
 
-            // Validate mark coords against Illustrator's hard limit before drawing.
-            var MAX_COORD = this.MAX_ARTBOARD_COORD;
-
             var marksZ = geo.marksZ;
             for (var z = 0; z < marksZ.length; z++) {
                 var m = marksZ[z];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var circle = modeSub.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
                     circle.fillColor     = col;
@@ -328,7 +327,6 @@ ZSM.Draw = {
             var marksS = geo.marksS;
             for (var sm = 0; sm < marksS.length; sm++) {
                 var m = marksS[sm];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var sq = modeSub.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
                     sq.fillColor     = col;
@@ -424,8 +422,36 @@ ZSM.Draw = {
             app.redraw();
 
         } catch (e) {
-            ZSM.Utils.error(ZSM.L.ERR_RENDER_CRITICAL + e.message);
+            ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_RENDER_CRITICAL, e.message));
         }
+    },
+
+    /**
+     * True if every coordinate the render would use is a finite number.
+     * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
+     * @param {Object} s   - Settings (useArtboardBounds decides if geo.ab is used).
+     * @returns {boolean}
+     * @private
+     */
+    _geometryIsFinite: function (geo, s) {
+        var ok = function (v) { return typeof v === "number" && isFinite(v); };
+        var lists = [geo.marksZ || [], geo.marksS || []];
+        for (var l = 0; l < lists.length; l++) {
+            for (var i = 0; i < lists[l].length; i++) {
+                if (!ok(lists[l][i].cx) || !ok(lists[l][i].cy)) return false;
+            }
+        }
+        if (geo.barS && !(ok(geo.barS.x1) && ok(geo.barS.x2) && ok(geo.barS.y) && ok(geo.barS.w))) return false;
+        var red = geo.red || [];
+        for (var r = 0; r < red.length; r++) {
+            if (!(ok(red[r].x1) && ok(red[r].y1) && ok(red[r].x2) && ok(red[r].y2) && ok(red[r].w))) return false;
+        }
+        if (!s.useArtboardBounds) {
+            for (var a = 0; a < 4; a++) {
+                if (!ok(geo.ab[a])) return false;
+            }
+        }
+        return true;
     },
 
     // -------------------------------------------------------------------------

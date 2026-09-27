@@ -9,7 +9,7 @@
  *   - Correct sublayer structure (Regmarks/Zünd, Regmarks/Summa) + top-level Trim
  *   - Mode-specific sublayer cleanup (Zünd run removes Zünd sub, preserves Summa)
  *   - Bottom-most layer renamed to Graphics
- *   - Coordinate validation prevents creation beyond AI's 16383pt limit
+ *   - Invalid geometry and a refused artboard stop the run before any change
  *   - movePaths semantics
  *
  * NOT covered: C++ crashes, app.redraw timing, real ScriptUI behavior.
@@ -41,7 +41,10 @@ Mock.install();
 var ZSM = {};
 ZSM.L = {
     ERROR_PREFIX: "ERR: ",
-    ERR_RENDER_CRITICAL: "render error: ",
+    ERR_RENDER_CRITICAL: "render error: %s",
+    ERR_ARTBOARD_TOO_LARGE: "artboard too large %s %s",
+    ERR_GEOMETRY_INVALID: "geometry invalid",
+    WARN_SUMMA_REMOVED: "summa removed",
     ERR_GENERIC: "err: %s",
     ERR_COLOR_MISSING: "missing color %s",
     WARN_PREFIX: "WARN: ",
@@ -255,23 +258,20 @@ console.log("\n=== TEST 5: Coordinate overflow protection ===");
 doc = setupDoc({
     layers: [{ name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
 });
-// Inject extreme coordinates that exceed AI's 16383pt limit
+// A non-finite mark used to be skipped silently — an incomplete mark set is
+// worse than none (review K10). Now the run stops before changing anything.
 settings = makeSettings({ mode: "ZUND" });
 bounds = ZSM.Draw.getBounds(settings);
 geo = ZSM.Core.calculateAll(settings, bounds);
-// Manually inflate one mark to trigger validation
-geo.marksZ.push({ cx: 99999, cy: 99999 });
 geo.marksZ.push({ cx: NaN, cy: 0 });
-
+var alerts5 = [], origAlert5 = global.alert;
+global.alert = function (m) { alerts5.push(String(m)); };
 var threwError = false;
 try { ZSM.Draw.render(geo, settings); } catch (e) { threwError = true; }
-assert(!threwError, "Coordinate overflow: render() does not throw");
-
-regmarks = findLayer(doc, "Regmarks");
-zundSub = findSublayer(regmarks, "Zünd");
-markCount = countItems(zundSub, "PathItem");
-// Original 5 marks valid + 2 invalid (skipped) = 5
-assertEq(markCount, 5, "Coordinate overflow: invalid marks skipped (got " + markCount + ")");
+global.alert = origAlert5;
+assert(!threwError, "Invalid geometry: render() does not throw");
+assert(findLayer(doc, "Regmarks") === null, "Invalid geometry: nothing drawn, no layer created");
+assert(alerts5.join("\n").indexOf("geometry invalid") >= 0, "Invalid geometry: reported as an error");
 
 
 // =====================================================
@@ -443,6 +443,7 @@ geo.marksZ[1].cy = Infinity;
 threwError = false;
 try { ZSM.Draw.render(geo, settings); } catch (e) { threwError = true; }
 assert(!threwError, "NaN/Infinity in geo: render() doesn't throw");
+assert(findLayer(doc, "Regmarks") === null, "NaN/Infinity in geo: nothing drawn");
 
 
 // =====================================================
@@ -1103,6 +1104,40 @@ trimK6 = findLayer(docK6, "Trim");
 assert(trimK6 !== null && itemNamed(trimK6, "userContour") !== null, "trim lines off: user content and layer kept");
 assertEq(trimK6 ? ownTrimLines(trimK6) : -1, 0, "trim lines off: the script's own lines removed");
 global.alert = origAlertK6;
+
+
+// =====================================================
+// TEST 31 (review K10): validate before changing the document
+// =====================================================
+// main.js deleted the Summa output BEFORE anything was validated, and an
+// artboard Illustrator refuses (wider than ~16 300 pt, measured) surfaced as a
+// generic render error after that — the Summa set was gone, nothing new drawn.
+console.log("\n=== TEST 31 (review K10): nothing changes when the artboard cannot be set ===");
+// (a) a ZUND run's bounds ignore the Summa sublayer (the run removes it),
+//     so the main flow no longer has to delete it before validating
+var docK10a = setupDoc({ layers: [
+    { name: "Regmarks", sublayers: [{ name: "Summa", items: [{ type: "path", bounds: [-100, 300, -90, 290] }] }] },
+    { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+]});
+var bK10 = ZSM.Draw.getBounds(makeSettings({ mode: "ZUND" }));
+assert(bK10[0] === 0 && bK10[1] === 100 && bK10[2] === 100 && bK10[3] === 0,
+    "ZUND bounds ignore the Summa sublayer (got " + bK10.join(",") + ")");
+
+// (b) artboard refused → specific message with the size; Summa output kept
+var alertsK10 = [], origAlertK10 = global.alert;
+global.alert = function (m) { alertsK10.push(String(m)); };
+var docK10b = setupDoc({ layers: [
+    { name: "Regmarks", sublayers: [{ name: "Summa", items: [{ type: "path", bounds: [-8170, 120, -8160, 110] }] }] },
+    { name: "Art", items: [{ type: "path", bounds: [-8160, 100, 8160, 0] }] }       // 16 320 pt + marks > limit
+]});
+var sK10 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK10, ZSM.Draw.getBounds(sK10)), sK10);
+var regK10 = findLayer(docK10b, "Regmarks");
+assert(findSublayer(regK10, "Summa") !== null, "Summa output kept when the artboard cannot be set");
+assert(findSublayer(regK10, "Zünd") === null, "no Zünd marks drawn");
+assert(alertsK10.join("\n").indexOf("artboard too large") >= 0,
+    "operator gets the artboard-size message (got: " + alertsK10.join(" | ") + ")");
+global.alert = origAlertK10;
 
 
 // =====================================================

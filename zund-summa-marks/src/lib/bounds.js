@@ -57,6 +57,11 @@ ZSM.Bounds = {
         // Per-layer skip rules for sublayer recursion
         var regmarksSkip = {};
         regmarksSkip[currentMode] = true;
+        // A Zünd run removes the Summa output (see ZSM.Draw.removeSummaOutput),
+        // so it must not count as a boundary either. render() removes it only
+        // after the new artboard has been accepted — nothing is deleted before
+        // the run is known to succeed.
+        if (currentMode === "Zünd") regmarksSkip["Summa"] = true;
         // Legacy: pre-v26.5.0 versions drew trim as a Graphics/Trim SUBLAYER —
         // keep skipping it so old documents don't inflate bounds either.
         var graphicsSkip = {};

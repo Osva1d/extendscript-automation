@@ -48,6 +48,13 @@ Opravy z code review 2026-09-26
   o právě přesunuté řezové cesty. Mapování na vrstvy Regmarks a Trim se teď
   odmítne dřív, než se dokument změní, a ve vrstvě Trim skript maže jen své
   vlastní linky (nově je označuje; linky ze starších verzí pozná podle vzhledu).
+- **Chyba během běhu už nenechá dokument napůl změněný (K10).** Běh ZUND smazal
+  výstup Summa dřív, než ověřil, že nový artboard půjde nastavit; příliš velký
+  artboard pak skončil obecnou chybou a na dokumentu nezůstaly žádné značky.
+  Neplatně spočítané značky se tiše vynechaly. Teď se nejdřív ověří geometrie
+  a artboard a výstup Summa se odstraní až potom; příliš velký artboard ohlásí
+  svůj rozměr a dokument nechá beze změny. Kritická chyba během vykreslování
+  upozorní, že dokument může být částečně změněný.
 
 ## [1.0.0] — 2026-06-28
 

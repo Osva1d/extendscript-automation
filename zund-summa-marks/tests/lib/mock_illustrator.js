@@ -412,7 +412,19 @@
         });
 
         // Artboards
-        this.artboards = [{ artboardRect: spec.artboardRect || [0, 100, 100, 0] }];
+        // An artboard wider or taller than ~16 300 pt is refused at assignment
+        // ("CoOA", measured — docs/extendscript-engine-facts.md "Mez artboardu").
+        var ab = { _rect: (spec.artboardRect || [0, 100, 100, 0]).slice() };
+        Object.defineProperty(ab, "artboardRect", {
+            get: function () { return this._rect.slice(); },
+            set: function (r) {
+                if ((r[2] - r[0]) > 16300 || (r[1] - r[3]) > 16300) {
+                    throw new Error("an Illustrator error occurred: 1095724867 ('CoOA')");
+                }
+                this._rect = r.slice();
+            }
+        });
+        this.artboards = [ab];
         this.artboards.getActiveArtboardIndex = function () { return 0; };
 
         // Spots / swatches
