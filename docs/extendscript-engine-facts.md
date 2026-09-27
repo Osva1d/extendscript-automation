@@ -192,6 +192,12 @@ další bylo dohledání, ne nové měření.
   zavřel a další volání odpovědělo normálně. Příčina neprokázaná; zavírání
   ve `finally` se `DONTDISPLAYALERTS` proběhlo v tomtéž sezení bez potíží.
   Po timeoutu nejdřív čtecím dotazem zjistit stav, nic dalšího nespouštět.
+- **Otevření dokumentu s propojenými PDF přepíše uživateli předvolbu importu PDF**
+  (naměřeno 2026-09-27). Sonda, která takové dokumenty otevírá nebo relinkuje,
+  si `app.preferences.PDFFileOptions.pageToOpen` a `.pDFCropToBox` uloží na
+  začátku a ve `finally` je vrátí. Jinak po ní v Illustratoru zůstane jiná
+  výchozí strana a ořez. Podrobnosti v sekci „Relink umístěných PDF a předvolby
+  importu".
 
 ## Export, artboardy a vodítka (naměřeno 2026-09-13, AI 30.8.1)
 
@@ -656,4 +662,96 @@ výstup jde porovnat vedle sebe.
   Soubor › Skripty neměřeno.
 - ScriptUI: `edittext.text = null` zobrazí text „null", `undefined` text
   „undefined", bez výjimky. `parseFloat` z nich dá `NaN`.
+
+## Relink umístěných PDF a předvolby importu (naměřeno 2026-09-27, AI 30.8.2)
+
+Zdroj: code review batch-relink-export
+([`reports/2026-09-27-code-review-batch-relink-export.md`](reports/2026-09-27-code-review-batch-relink-export.md)).
+Stejný kontext jako předchozí sekce: `tools/ai-eval.sh`, vlastní dokumenty,
+**běh přes Soubor › Skripty neměřen**. Illustrator mezitím povýšil na 30.8.2.
+
+Testovací data: vícestránková PDF 100 × 70 mm s ořezovými značkami (MediaBox je
+větší než TrimBox), každá strana jiné barvy a s vlastním číslem. Šablona má čtyři
+pozice umístěné skriptem s ořezem TrimBox a stranami 1–4, dvě z nich v ořezové
+masce. Výstupy jsou vyrenderované a prohlédnuté.
+
+### `PlacedItem.pageNumber` neexistuje
+
+`"pageNumber" in item` vrací `false` a `item.reflect.properties` ji nemá — ani
+u pozic, které skript umístil s `PDFFileOptions.pageToOpen` 2–4. Kterou stranu PDF
+pozice ukazuje, ze skriptu zjistit nejde. Úplný seznam vlastností `PlacedItem`:
+
+```
+file matrix boundingBox contentVariable typename uRL note layer locked hidden
+selected position width height geometricBounds visibleBounds controlBounds name
+uuid blendingMode opacity isIsolated artworkKnockout zOrderPosition
+absoluteZOrderPosition editable sliced top left visibilityVariable tags
+pixelAligned wrapped wrapOffset wrapInside parent
+```
+
+Typings ji nemají taky. `tools/typecheck.sh` ji nahlásí, jen když má proměnná typ.
+
+### `relink()` zachová stranu i ořez pozice
+
+| relink na | výsledek |
+|---|---|
+| PDF stejného formátu | každá pozice ukáže svou stranu, rozměr beze změny |
+| totéž, `pageToOpen = 2` a `pDFCropToBox = PDFMEDIABOX` nastavené těsně před relinkem | beze změny — předvolby relink neovlivní |
+| PDF s méně stranami (2 místo 4) | pozice pro chybějící strany ukážou **stranu 1**, bez chyby |
+| PDF jiného formátu (TrimBox 110 × 60 mm) | pozice 107,16 × 58,45 mm, střed zachován, bez chyby |
+| PDF 106 × 76 mm bez TrimBoxu (spadávka v ploše stránky) | 99,20 × 71,13 mm, spadávka uvnitř pozice, bez chyby |
+
+Obě změny rozměru sedí na 0,01 mm s tímto popisem: Illustrator ponechá typ ořezu
+(bez TrimBoxu tedy celou stránku) i střed pozice a novou stranu přeškáluje tak,
+aby zůstala úhlopříčka pozice. Poměr stran nové strany zůstane přesný. Kdo po
+relinku potřebuje jistotu rozměru, porovná `geometricBounds` před a po.
+
+### Chybějící soubor, zámky a odebrání
+
+| operace | výsledek |
+|---|---|
+| `item.file`, když propojený soubor chybí | hází „There is no file associated with this item" |
+| `item.relink()` na takové pozici | projde, strana zachována |
+| relink v zamčené vrstvě nejvyšší úrovně | „Target layer cannot be modified" |
+| relink v zamčené podvrstvě (nadřazená vrstva odemčená) | „Target layer cannot be modified" |
+| relink ve skryté vrstvě | „Target layer cannot be modified" |
+| relink objektu s vlastním `locked = true` | projde, zámek zůstane |
+| relink uvnitř zamčené ořezové skupiny | projde |
+| `remove()` na PlacedItem, který je obsahem ořezové masky | projde; skupina s ořezovou cestou zůstane |
+| `doc.placedItems` | všech 5 pozic včetně skryté vrstvy, zamčené podvrstvy a ořezové masky |
+| `saveAs` do existujícího PDF (`DONTDISPLAYALERTS`) | přepíše bez dotazu |
+
+Pořadí `doc.placedItems` po otevření neodpovídá pořadí vytvoření. Mezi sedmi
+otevřeními téhož souboru bylo stejné; obecně to prokázané není.
+
+### Otevření dokumentu i relink přepisují předvolbu importu PDF
+
+`app.preferences.PDFFileOptions` je globální předvolba pro Otevřít a Umístit PDF.
+
+| krok | `pageToOpen` | `pDFCropToBox` |
+|---|---|---|
+| nastaveno | 1 | PDFBOUNDINGBOX |
+| `app.open()` šablony s propojenými PDF | 3 | PDFTRIMBOX |
+| relink čtyř pozic se stranami 3, 2, 4, 1 | 3 → 2 → 4 → 1 | PDFTRIMBOX |
+| `saveAs` do PDF, `close()` | beze změny | beze změny |
+
+Po skriptu tedy zůstane taková, jakou měl poslední načtený link. Jestli to ovlivní
+i Umístit s dialogem možností importu, neměřeno. Vlastnost se jmenuje
+`pDFCropToBox`; `pDFCropBounds` neexistuje a čte se bez chyby jako `undefined`.
+
+### Drobnosti
+
+- `new Folder("")` i `new File("")` mají `fsName` `/tmp00000001` a
+  `exists === false`. `Folder.current` je `/`.
+- `app.system` neexistuje (`typeof` → `undefined`). Shell ze skriptu spustit nejde.
+- Binární čtení (`encoding = "binary"`, `read()`) 8 MB souboru trvá 17 ms. Dva
+  průchody `indexOf` + `charAt` přes takový řetězec 25 ms.
+- S presetem `[Tisková kvalita]` nemá PDF dokumentu se skrytou vrstvou
+  `/OCProperties`. Jiné presety neměřeny; srovnej „Skrytá vrstva jde do PDF jako
+  vypnutá vrstva" výš.
+- Názvy PDF presetů v české instalaci, v pořadí `app.PDFPresetsList`:
+  `[Výchozí Illustratoru]`, `[Kvalitní tisk]`, `[Nejmenší velikost souboru]`,
+  `[Nejmenší velikost souboru (PDF 1.6)]`, `[PDF/X-1a:2001]`, `[PDF/X-3:2002]`,
+  `[PDF/X-4:2008]`, `[Tisková kvalita]`. Podle pořadí odpovídají anglickým
+  High Quality Print (druhý) a Press Quality (poslední); EN instalace neměřena.
 
