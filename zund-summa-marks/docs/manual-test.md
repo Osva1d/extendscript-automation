@@ -133,6 +133,12 @@ a CHANGELOG. Tady zůstává jen to, co sonda nedokáže.
     ✅ stroj najde všechny značky a pozná orientaci archu
     ✗ když ne: kontrola v jádře (findMarkConflict) blokuje zatím jen dotyk
       a překryv — doplnit minimální mezeru, kterou stroj potřebuje
+[ ] K5 — živý dialog (engine ověřen se skutečnými prvky ScriptUI, ale bez
+    zobrazení okna): uložit předvolbu v režimu SUMMA, přepnout na ZUND,
+    vybrat tu předvolbu v nabídce
+    ✅ dialog se přepne na SUMMA, ukáže její hodnoty, bez „*"
+    přepnout na ZUND, kliknout ↺
+    ✅ dialog se znovu přepne na SUMMA s hodnotami předvolby
 ```
 
 ## P1 — důležité, ne blokující deploy

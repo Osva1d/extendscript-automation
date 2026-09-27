@@ -73,6 +73,8 @@ Nastavení se ukládají jako pojmenované presety. Speciální presety:
 - `[Default]` — výchozí hodnoty, nelze smazat (v UI zobrazen lokalizovaně jako `[Výchozí]`)
 - `[Last Settings]` — interní auto-save posledního spuštění (v dropdown se nezobrazuje)
 
+Preset si pamatuje i mód. Výběr presetu jiného módu (nebo ↺ na něj) přepne dialog do jeho módu.
+
 ---
 
 ## Adresářová struktura

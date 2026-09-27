@@ -69,6 +69,11 @@ Opravy z code review 2026-09-26
   hlášky. Teď běh skončí dřív, než se dokument změní, a hláška řekne, kterou
   hodnotu upravit. Blokuje se dotyk a překryv; značky s i malou mezerou
   projdou, protože jakou mezeru potřebuje kamera, zatím ověřené není.
+- **Předvolba jiného módu přepne dialog (K5).** Výběr uložené předvolby SUMMA
+  v dialogu ZUND (a naopak) načetl její hodnoty do polí aktuálního módu
+  a dialog zůstal ZUND — Generovat pak vytvořilo značky Zünd a jediným
+  náznakem byla „*" u předvolby. Stejně se choval ↺. Teď se dialog přepne do
+  módu předvolby a ukáže její hodnoty.
 
 ## [1.0.0] — 2026-06-28
 

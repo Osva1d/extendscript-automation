@@ -547,6 +547,110 @@ assert(okDistinct !== null && okDistinct.enabled === true,
 
 
 // =====================================================
+// TEST 17 (review K5): a preset of the other mode reopens the dialog in it
+// =====================================================
+// setUIValues fills only the current mode's controls and ignores obj.mode:
+// picking a SUMMA preset in the ZUND dialog loaded its values into the ZUND
+// fields, the dialog stayed ZUND and Generate drew Zünd marks — only a "*"
+// hinted at it. Revert did the same. Drive the real ZSM.UI.show() mode loop:
+// each show() of the mock runs the next scripted step on that dialog.
+console.log("\n=== TEST 17 (review K5): preset of the other mode switches the dialog ===");
+function runDialogs(pData, steps) {
+    var shown = [];
+    SUI.MockWindow.prototype.show = function () {
+        shown.push(this);
+        var step = steps[shown.length - 1];
+        if (step) step(this);
+        return 0;
+    };
+    try { ZSM.UI.show(pData); } finally { delete SUI.MockWindow.prototype.show; }
+    return shown;
+}
+function k5PresetDD(win) {
+    return win.findOne(function (c) {
+        return c.type === "dropdownlist" && c.parent && c.parent.parent &&
+               c.parent.parent.type === "panel" && c.parent.parent.text === ZSM.L.PANEL_PRESET;
+    });
+}
+function fieldText(win, label) {
+    var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+    var et = lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    return et ? et.text : null;
+}
+function radioOn(win, label) {
+    var rb = win.findOne(function (c) { return c.type === "radiobutton" && c.text === label; });
+    return rb ? rb.value : null;
+}
+function pick(win, name) {
+    var dd = k5PresetDD(win);
+    for (var i = 0; i < dd.items.length; i++) {
+        if (dd.items[i].text.indexOf(name) === 0) { dd.selection = i; dd.onChange(); return; }
+    }
+    throw new Error("preset not in dropdown: " + name);
+}
+function bannerPresets() {
+    var banner = ZSM.Config.getDefaults();
+    banner.mode = "SUMMA"; banner.feedTop = 123; banner.markSizeS = 4;
+    var zundGap = ZSM.Config.getDefaults();
+    zundGap.gapInner = 17;
+    return { "[Default]": ZSM.Config.getDefaults(), "Banner": banner, "Gap17": zundGap };
+}
+
+// (a) ZUND dialog, pick the SUMMA preset → the dialog reopens as SUMMA with its values
+var pK5 = { activePreset: "[Default]", presets: bannerPresets() };
+var closeCode = null, afterSwitch = {};
+var shownK5 = runDialogs(pK5, [
+    function (win) { win.close = function (c) { closeCode = c; }; pick(win, "Banner"); },
+    function (win) {
+        afterSwitch.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
+        afterSwitch.feedTop = fieldText(win, ZSM.L.FEED_TOP);
+        afterSwitch.size    = fieldText(win, ZSM.L.MARK_SIZE_S);
+        afterSwitch.preset  = k5PresetDD(win).selection ? k5PresetDD(win).selection.text : null;
+    }
+]);
+assertEq(closeCode, 2, "picking a SUMMA preset closes the ZUND dialog as a mode switch");
+assertEq(shownK5.length, 2, "the dialog is shown again");
+assertEq(afterSwitch.summaOn, true, "the new dialog is SUMMA");
+assertEq(afterSwitch.feedTop, "123", "the new dialog shows the preset's feed");
+assertEq(afterSwitch.size, "4", "the new dialog shows the preset's Summa size");
+assertEq(afterSwitch.preset, "Banner", "the preset is active and unmodified (no asterisk)");
+assertEq(pK5.activePreset, "Banner", "activePreset = the picked preset");
+assert(pK5.presets["[Last Settings]"] !== pK5.presets["Banner"],
+    "[Last Settings] is a copy, not the named preset itself");
+assertEq(pK5.presets["Banner"].feedTop, 123, "the named preset is unchanged");
+
+// (b) same-mode preset: values load in place, no second dialog
+var pK5b = { activePreset: "[Default]", presets: bannerPresets() };
+var gapAfter = null;
+var shownK5b = runDialogs(pK5b, [
+    function (win) { pick(win, "Gap17"); gapAfter = fieldText(win, ZSM.L.GAP_GZ); }
+]);
+assertEq(shownK5b.length, 1, "same-mode preset: no mode switch");
+assertEq(gapAfter, "17", "same-mode preset: values loaded into the open dialog");
+
+// (c) Revert with a SUMMA preset active in a ZUND dialog → back to SUMMA
+var pK5c = { activePreset: "Banner", presets: bannerPresets() };
+pK5c.presets["[Last Settings]"] = ZSM.Config.getDefaults();   // last run: ZUND
+var revert = {};
+var shownK5c = runDialogs(pK5c, [
+    function (win) {
+        revert.startZund = radioOn(win, ZSM.L.MODE_ZUND);
+        win.findOne(function (c) { return c.type === "button" && c.text === "↺"; }).onClick();
+    },
+    function (win) {
+        revert.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
+        revert.feedTop = fieldText(win, ZSM.L.FEED_TOP);
+        revert.preset  = k5PresetDD(win).selection ? k5PresetDD(win).selection.text : null;
+    }
+]);
+assertEq(revert.startZund, true, "revert: the dialog starts in ZUND (last run)");
+assertEq(shownK5c.length, 2, "revert to a SUMMA preset reopens the dialog");
+assertEq(revert.summaOn, true, "revert: the new dialog is SUMMA");
+assertEq(revert.feedTop, "123", "revert: the preset's values");
+assertEq(revert.preset, "Banner", "revert: the preset shows unmodified");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 SUI.uninstall();

@@ -819,6 +819,22 @@ ZSM.UI = {
             if (!ok) alert(l.ERR_WRITE_SETTINGS);
         }
 
+        /**
+         * Loads a preset into the dialog. A preset of the other mode reopens
+         * the dialog in that mode (review K5): setUIValues fills only this
+         * mode's controls, so a SUMMA preset picked in the ZUND dialog left it
+         * ZUND and Generate drew Zünd marks.
+         */
+        function loadPreset(settings) {
+            var presetMode = (settings.mode === "SUMMA") ? "SUMMA" : "ZUND";
+            if (presetMode !== mode) {
+                requestModeSwitch(presetMode, settings);
+                return;
+            }
+            setUIValues(settings);
+            refreshModifiedIndicator();
+        }
+
         ddPreset.onChange = function () {
             if (!ddPreset.selection) return;
             var key = sortedKeys[ddPreset.selection.index];
@@ -826,8 +842,7 @@ ZSM.UI = {
             var r = ZSM.UIState.selectPreset(pData, key);
             if (!r.ok) return;
             btnDel.enabled = (key !== c.PRESET_KEY_DEFAULT);
-            setUIValues(r.settings);
-            refreshModifiedIndicator();
+            loadPreset(r.settings);
         };
 
         /**
@@ -906,8 +921,7 @@ ZSM.UI = {
         btnRevert.onClick = function () {
             var preset = pData.presets[pData.activePreset];
             if (!preset) return;
-            setUIValues(preset);
-            refreshModifiedIndicator();
+            loadPreset(preset);
         };
 
         /**
@@ -929,11 +943,15 @@ ZSM.UI = {
         // =================================================================
         var switchTarget = null;
 
-        function requestModeSwitch(newMode) {
+        function requestModeSwitch(newMode, preset) {
             if (newMode === mode) return;
 
             // Snapshot current UI state into [Last Settings] so nothing is lost
-            pData.presets["[Last Settings]"] = getUIValues();
+            // — or the preset being loaded, as a copy: [Last Settings] must
+            // never alias a named preset.
+            pData.presets["[Last Settings]"] = preset
+                ? JSON.parse(JSON.stringify(preset))
+                : getUIValues();
             // Tag the snapshot with the TARGET mode so the next dialog opens correctly
             pData.presets["[Last Settings]"].mode = newMode;
 
