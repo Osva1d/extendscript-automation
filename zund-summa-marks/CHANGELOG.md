@@ -23,6 +23,10 @@ Opravy z code review 2026-09-26
   grafika pod ním zmizela, nebo změnila barvu. Takový objekt teď zůstane na místě
   a skript ho ohlásí s výzvou k rozdělení; přesouvají se jen cesty čistě v řezové
   barvě.
+- **Skrytá spodní vrstva zůstane skrytá (K3).** Nejspodnější vrstvu skript
+  přejmenoval na „Graphics" a zviditelnil, i když byla skrytá (šablona, náhled od
+  zákazníka, stará verze) — a ta se pak tiskla. Skrytou spodní vrstvu teď nechá
+  beze změny; přejmenovává jen viditelnou.
 
 ## [1.0.0] — 2026-06-28
 

@@ -918,6 +918,27 @@ global.alert = origAlertK1;
 
 
 // =====================================================
+// TEST 26 (review K3): a hidden bottom layer is left alone
+// =====================================================
+// The §7b "bottom layer = artwork" rename also set visible = true. A hidden
+// template / customer proof / old version at the bottom was renamed Graphics
+// and made visible — i.e. it printed.
+console.log("\n=== TEST 26 (review K3): hidden bottom layer keeps name and visibility ===");
+var docK3 = setupDoc({
+    layers: [
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] },
+        { name: "Template", visible: false, items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sK3 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK3, ZSM.Draw.getBounds(sK3)), sK3);
+var tplK3 = findLayer(docK3, "Template");
+assert(tplK3 !== null, "hidden bottom layer keeps its name (not renamed to Graphics)");
+assert(tplK3 !== null && tplK3.visible === false, "hidden bottom layer stays hidden");
+assert(findLayer(docK3, "Graphics") === null, "no layer renamed to Graphics in this document");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

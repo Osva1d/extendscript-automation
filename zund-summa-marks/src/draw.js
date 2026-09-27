@@ -351,8 +351,12 @@ ZSM.Draw = {
             //     Skipped in marks-only (user's layers are left untouched).
             if (!s.marksOnly) {
                 // Assumption: the bottom-most layer is the user's artwork layer.
+                // A HIDDEN bottom layer is not artwork that prints (a template,
+                // a customer proof, an old version) — leave it exactly as it is.
+                // It used to be renamed Graphics and made visible, i.e. printed.
                 var gfxLayer = doc.layers[doc.layers.length - 1];
-                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)
+                    && gfxLayer.visible) {
                     // Don't auto-rename a layer the user explicitly mapped in the
                     // layer table. The move/remove passes above can leave a real,
                     // user-named target layer at the bottom — renaming THAT to
@@ -370,7 +374,6 @@ ZSM.Draw = {
                         }
                     }
                     gfxLayer.locked  = false;
-                    gfxLayer.visible = true;
                     // Send Graphics layer to back, but only if not already there.
                     if (doc.layers.length > 0
                         && doc.layers[doc.layers.length - 1] !== gfxLayer) {
