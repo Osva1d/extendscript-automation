@@ -286,10 +286,13 @@ BRE.UI = {
         dlg.margins = 20;
         dlg.spacing = 10;
 
-        // One-line verdict (bold): processable / total / blocked.
+        // One-line verdict (bold): processable / total / with a warning / blocked.
+        // Processable includes the short and unreadable sheets, so they are
+        // counted apart — "OK" for them read as if nothing needed a look.
         var total = config.pdfFiles.length;
         var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
-            String(scan.processable), String(total), String(total - scan.processable)));
+            String(scan.processable), String(total),
+            String(scan.processable - scan.counts.ok), String(total - scan.processable)));
         verdictST.preferredSize.width = 500;
         try {
             var vf = verdictST.graphics.font;

@@ -78,6 +78,10 @@ Opravy z code review 2026-09-27
   se stejnou šablonou a výchozím vzorem názvu — a arch se nevytvořil. Přeskočí
   se teď jen výstup novější než zdroj i šablona (pokračování přerušené dávky);
   starší se vytvoří znovu a souhrn to uvede.
+- **Verdikt náhledu nepočítá archy s upozorněním jako „v pořádku" (T2).**
+  „3 z 3 archů v pořádku" zahrnovalo i neúplný arch a PDF s nečitelným počtem
+  stran. Verdikt teď říká, kolik archů lze zpracovat, kolik z nich
+  s upozorněním a kolik je blokováno.
 
 ## [1.0.0] — 2026-06-28
 

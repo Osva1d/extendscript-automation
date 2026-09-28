@@ -52,7 +52,7 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} index · {template} template · {source} source",
             SAMPLE_TEMPLATE:    "template",
             SAMPLE_SOURCE:      "source",
-            PREVIEW_VERDICT:    "%s of %s sheets OK · %s blocked",
+            PREVIEW_VERDICT:    "%s of %s sheets can be processed (%s with a warning) · %s blocked",
 
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
@@ -164,7 +164,7 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
             SAMPLE_TEMPLATE:    "sablona",
             SAMPLE_SOURCE:      "zdroj",
-            PREVIEW_VERDICT:    "%s z %s archů v pořádku · %s blokováno",
+            PREVIEW_VERDICT:    "%s z %s archů lze zpracovat (%s s upozorněním) · %s blokováno",
 
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
