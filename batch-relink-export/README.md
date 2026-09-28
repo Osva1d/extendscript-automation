@@ -75,6 +75,7 @@ src/
 
 - Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`).
 - Verze je v `package.json`; `tools/build.sh` ji ověřuje proti `src/config.js` (parity guard).
+- **Ruční testy** před vydáním: [`docs/manual-test.md`](docs/manual-test.md).
 - **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do výstupní složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (vrstva, clip-group, propojený soubor) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
 ---
 
