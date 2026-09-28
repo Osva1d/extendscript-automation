@@ -95,6 +95,11 @@ Opravy z auditu UI 2026-09-28
   klávesou Esc stálo pod „Zrušeno uživatelem po zpracování 1 z 3 souborů." i
   „Vše proběhlo bez chyb." — nedokončená dávka se dala přečíst jako hotová.
   Ten řádek se teď ukáže jen u celé dávky.
+- **Čísla v hláškách se neskloňují chybně (A9).** Náhled a souhrn psaly
+  „4 pozic", „2 souborů", „2 stran". Hlášky jsou přeformulované tak, aby
+  číslo nestálo před podstatným jménem: „Šablona: T1 · pozic: 4",
+  „Zdrojových PDF: 2", „a_4.pdf: stran 2, pozic navíc 2 — odeberou se
+  z archu."
 
 ## [1.0.0] — 2026-06-28
 

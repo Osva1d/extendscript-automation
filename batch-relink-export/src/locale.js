@@ -143,7 +143,7 @@ BRE.L = (function () {
             ERR_HIDDEN_LAYER:   "PlacedItem na skryté vrstvě přeskočen: %s",
             ERR_RELINK_ITEM:    "Nepodařilo se relinkovat položku %s: %s",
             ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat placeholder {n}.",
-            ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
+            ERR_RELINK_FAILED:  "Export přeskočen — pozic, které se nepodařilo relinkovat: %s.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
             WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
@@ -195,23 +195,23 @@ BRE.L = (function () {
 
             // --- Náhled ---
             PREVIEW_TITLE:      "Náhled zpracování",
-            PREVIEW_TEMPLATE:   "Šablona: %s (%s pozic)",
-            PREVIEW_SOURCE:     "Zdrojové PDF: %s souborů",
+            PREVIEW_TEMPLATE:   "Šablona: %s · pozic: %s",
+            PREVIEW_SOURCE:     "Zdrojových PDF: %s",
             PREVIEW_SAMPLE:     "Vzor výstupu: %s",
 
             // --- Pre-flight sken ---
-            SCAN_HEADER:        "Kontrola zdrojových souborů (počet stran vs. %s pozic):",
+            SCAN_HEADER:        "Kontrola zdrojových souborů — počet stran proti počtu pozic (%s):",
             SCAN_OK:            "V pořádku (plný arch): %s",
             SCAN_PARTIAL:       "Neúplný poslední arch: %s",
             SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
             SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
             SCAN_OVER:          "Blokováno (více stran než pozic): %s",
-            SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
-            SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
-            SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic navíc se z archu odebere.",
+            SCAN_FILE_OVER:     "%s: stran %s > pozic %s — BUDE PŘESKOČENO (hrozí ztráta stran)",
+            SCAN_FILE_UNDER:    "%s: stran %s < pozic %s (přebytečné pozice budou odebrány)",
+            SCAN_FILE_PARTIAL:  "%s: stran %s, pozic navíc %s — odeberou se z archu.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
-            ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
+            ERR_OVER_PAGES:     "Přeskočeno: stran je více než pozic (%s > %s) — hrozí tichá ztráta stran.",
 
             // --- Průběh ---
             PROGRESS_TITLE:     "Zpracování souborů…",
@@ -228,7 +228,7 @@ BRE.L = (function () {
             LOG_BLOCKED:        "Blokováno",
             LOG_REMOVED:        "Odebrané pozice",
             LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu",
-            LOG_MANUAL:         "%s pozic navíc se nepodařilo odebrat a ukazují znovu stranu 1 — před tiskem je odstraňte ručně",
+            LOG_MANUAL:         "Pozic navíc, které se nepodařilo odebrat: %s. Ukazují znovu stranu 1 — před tiskem je odstraňte ručně.",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",

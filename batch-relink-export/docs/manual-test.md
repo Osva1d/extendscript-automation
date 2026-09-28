@@ -122,9 +122,9 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | pozice v zamčené podvrstvě | arch vyexportovaný, bez chyby |
 | propojené logo, pozice na skryté vrstvě | počet pozic bez nich; „PlacedItem na skryté vrstvě přeskočen: …" |
 | zdroj 110 × 60 mm na pozice 100 × 70 | „Pozice …: strana zdroje má 110 × 60 mm, šablona počítá s 100 × 70 mm…" |
-| 2 strany na 4 pozice | náhled „2 pozic navíc se z archu odebere.", souhrn „Odebrané pozice 2" |
-| šablona se stranou 1 dvakrát, 2 strany | „Pozice navíc se neodebraly automaticky…", „2 pozic navíc se nepodařilo odebrat a ukazují znovu stranu 1…" |
-| 5 stran na 4 pozice | „… 5 stran > 4 pozic — BUDE PŘESKOČENO…" |
+| 2 strany na 4 pozice | náhled „…: stran 2, pozic navíc 2 — odeberou se z archu.", souhrn „Odebrané pozice 2" |
+| šablona se stranou 1 dvakrát, 2 strany | „Pozice navíc se neodebraly automaticky…", „Pozic navíc, které se nepodařilo odebrat: 2. Ukazují znovu stranu 1…" |
+| 5 stran na 4 pozice | náhled „…: stran 5 > pozic 4 — BUDE PŘESKOČENO…", souhrn „Přeskočeno: stran je více než pozic (5 > 4)…" |
 | výstup = zdroj | „Výstupní složka je stejná jako zdrojová…" |
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
@@ -133,7 +133,7 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 jazyka a nepamatuje se (B9); po běhu zůstane v Illustratoru změněná předvolba
 importu PDF — strana a ořez posledního linku šablony (B10); dialog si
 nepamatuje nastavení a validuje až po zavření, takže chyba znamená vyplnit
-cesty znovu; texty T3–T8.
+cesty znovu; texty T3–T8 kromě skloňování čísel.
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
 jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash
