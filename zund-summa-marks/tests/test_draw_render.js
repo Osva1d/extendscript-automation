@@ -46,7 +46,7 @@ ZSM.L = {
     ERR_GEOMETRY_INVALID: "geometry invalid",
     WARN_SUMMA_REMOVED: "summa removed",
     ERR_GENERIC: "err: %s",
-    ERR_COLOR_MISSING: "missing color %s",
+    ERR_COLOR_MISSING: "missing color %s %s",
     WARN_PREFIX: "WARN: ",
     WARN_LAYERS_UNHIDDEN: "unhidden %s",
     ERR_MARKS_FAILED: "marks failed %s",
@@ -1202,6 +1202,23 @@ ZSM.Draw.render(ZSM.Core.calculateAll(sK7, ZSM.Draw.getBounds(sK7)), sK7);
 assertEq(countItems(findLayer(docK7ok, "Regmarks"), "PathItem"), 5, "120 mm artwork: 4 corners + orientation mark drawn");
 assertEq(alertsK7.length, 0, "120 mm artwork: no message (got: " + alertsK7.join(" | ") + ")");
 global.alert = origAlertK7;
+
+
+// =====================================================
+// TEST 34 (audit A7): the no-paths warning names the layer and the colour
+// =====================================================
+// "Assigned colour not found in the document" also appeared when the swatch
+// existed and only no path used it, and it never said which layer — the
+// operator checked the Swatches panel, found the colour there and was stuck.
+console.log("\n=== TEST 34 (audit A7): no path in the mapped colour ===");
+var alertsA7 = [], origAlertA7 = global.alert;
+global.alert = function (m) { alertsA7.push(String(m)); };
+setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(150), 0] }] }] });
+var sA7 = makeSettings({ mode: "ZUND", layers: [{ name: "Rez", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sA7, ZSM.Draw.getBounds(sA7)), sA7);
+assert(alertsA7.join("\n").indexOf("missing color Rez Cut") >= 0,
+    "warning names the layer and the colour (got: " + alertsA7.join(" | ") + ")");
+global.alert = origAlertA7;
 
 
 // =====================================================

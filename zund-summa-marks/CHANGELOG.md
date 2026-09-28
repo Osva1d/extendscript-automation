@@ -4,10 +4,27 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [1.1.0] — 2026-09-28
 
 Opravy z code review 2026-09-26
-([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)).
+([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)) a úpravy
+z auditu UI 2026-09-28
+([audit](../docs/reports/2026-09-28-audit-ui-zund-summa-marks.md)).
+
+### Změněno
+
+- **Režim „Dle výběru" se jmenuje „Dle grafiky" (audit A1).** Režim nikdy
+  nečetl výběr: značky i artboard počítá kolem veškeré grafiky v dokumentu,
+  i ve skrytých vrstvách a mimo artboard. Popisek, nápověda, README i hláška
+  prázdného dokumentu teď říkají, co skutečně dělá — dřívější „Nic není
+  vybráno" posílalo operátora vybírat, i když dokument neměl žádnou grafiku.
+  Režim, který by značky umístil jen kolem výběru, zůstává otevřený (review K4).
+- **Výchozí předvolba mapuje řezovou vrstvu na barvu řezu z dokumentu (audit
+  A2).** Řádek „Cut ← [Registration]" se od opravy K8 při každém běhu přeskočil
+  s upozorněním, takže každý běh s [Výchozí] končil hláškou, kterou se operátor
+  naučil odklikávat. [Výchozí] teď vezme řezovou barvu, kterou skript
+  v dokumentu najde (CutContour, Thru-cut, Kiss-cut nebo Cut). Vlastní
+  předvolby zůstávají, jak jsou uložené.
 
 ### Opraveno
 
@@ -74,6 +91,20 @@ Opravy z code review 2026-09-26
   a dialog zůstal ZUND — Generovat pak vytvořilo značky Zünd a jediným
   náznakem byla „*" u předvolby. Stejně se choval ↺. Teď se dialog přepne do
   módu předvolby a ukáže její hodnoty.
+- **Upozornění na barvu bez cest říká, o kterou vrstvu jde (audit A7).** Hláška
+  „Přiřazená barva nebyla v dokumentu nalezena" se ukázala i tehdy, když barva
+  ve Vzornících byla, jen v ní nebyla žádná cesta, a neuvedla vrstvu. Teď zní
+  „Vrstva ‘Cut’: v barvě ‘Cut’ není v dokumentu žádná cesta, nic se nepřesunulo.
+  Zkontrolujte barvu řezových cest."
+- **Úprava druhého režimu přežije běh v tom prvním (audit A3).** Hodnoty režimu,
+  který dialog právě neukazuje, se braly z aktivní předvolby: neuložená úprava
+  SUMMA (třeba horní výjezd 90) po jednom běhu ZUND zmizela a další zakázka
+  SUMMA tiše vyšla s hodnotou z předvolby. Teď se berou z posledního běhu,
+  případně z předvolby, kterou operátor v dialogu vybral.
+- **Nápovědy říkají, co skript opravdu dělá (audit A5, A6, A9).** Mezera od
+  grafiky se měří k okraji značky, ne k jejímu středu. Nabídka předvoleb už
+  neradí vybrat [Last Settings], která v ní není. Pouze značky upozorní, že
+  artboard se přizpůsobí i v tomto režimu, pokud není zvoleno Dle Artboardu.
 
 ## [1.0.0] — 2026-06-28
 

@@ -65,6 +65,13 @@ ZSM.UI = {
             detectedColor: ZSM.Draw.detectCutColor()
         };
 
+        // [Default] holds factory values only: Save never writes it (it turns
+        // into Save As), so it is rebuilt here for this document. Its mapping
+        // row takes the cut colour found in the document — the stored factory
+        // row "Cut <- [Registration]" is skipped with a warning on every run,
+        // because registration cannot identify cut paths (audit A2).
+        pData.presets[c.PRESET_KEY_DEFAULT] = this.defaultsForDocument(docData);
+
         // Determine initial mode from [Last Settings] or active preset
         var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
         var mode = (initPreset && initPreset.mode === "SUMMA") ? "SUMMA" : "ZUND";
@@ -106,6 +113,13 @@ ZSM.UI = {
         var sData = pData.presets["[Last Settings]"]
                  || pData.presets[pData.activePreset]
                  || c.getDefaults();
+
+        // Values of the mode this dialog does not show come from what it was
+        // opened or last loaded with (the last run, a picked preset, the
+        // factory values), not from the active preset — that dropped an
+        // unsaved tweak to the other mode after a single run (audit A3).
+        // setUIValues() moves it on every load.
+        var otherModeBase = sData;
 
         // =================================================================
         // Window
@@ -628,9 +642,11 @@ ZSM.UI = {
          * Reads current UI state into a flat settings object.
          * Only reads controls that exist in the current mode;
          * missing-mode values are preserved from the previous preset.
+         * @param {Object} [prevSettings] - Source of the missing-mode values;
+         *        the active preset when omitted (modified check, Save).
          */
-        function getUIValues() {
-            var prev = pData.presets[pData.activePreset] || c.getDefaults();
+        function getUIValues(prevSettings) {
+            var prev = prevSettings || pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
@@ -663,6 +679,7 @@ ZSM.UI = {
          */
         function setUIValues(obj) {
             if (!obj) return;
+            otherModeBase = obj;
 
             // Mode selector (visual only — actual mode is fixed for this dialog;
             // reflect the dialog's own mode so the radios never desync from it).
@@ -931,7 +948,7 @@ ZSM.UI = {
          * until the user explicitly saves.
          */
         btnReset.onClick = function () {
-            var d = c.getDefaults();
+            var d = self.defaultsForDocument(docData);
             d.mode = mode;
             setUIValues(d);
             refreshModifiedIndicator();
@@ -951,7 +968,7 @@ ZSM.UI = {
             // never alias a named preset.
             pData.presets["[Last Settings]"] = preset
                 ? JSON.parse(JSON.stringify(preset))
-                : getUIValues();
+                : getUIValues(otherModeBase);
             // Tag the snapshot with the TARGET mode so the next dialog opens correctly
             pData.presets["[Last Settings]"].mode = newMode;
 
@@ -1026,8 +1043,9 @@ ZSM.UI = {
             };
 
             // Run validation (alerts shown by validateNumber on failure).
-            // Mode-irrelevant fields are pulled from prevOk (active preset).
-            var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
+            // Mode-irrelevant fields are pulled from prevOk: the values the
+            // dialog was opened or last loaded with (audit A3).
+            var prevOk = otherModeBase || pData.presets[pData.activePreset] || c.getDefaults();
             var result_v = ZSM.Validation.validate(raw, prevOk, l);
             if (!result_v.valid) return;  // Errors already shown via alerts
 
@@ -1370,6 +1388,26 @@ ZSM.UI = {
     // =====================================================================
     // Shared UI helpers
     // =====================================================================
+
+    /**
+     * Factory settings for the open document: ZSM.Config.getDefaults() with
+     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found.
+     * With no cut colour in the document detectCutColor falls back to the
+     * (localized) registration swatch, and the row keeps the canonical
+     * "[Registration]" token that presets store.
+     * @param {Object} docData - {detectedColor, ...} from show().
+     * @returns {Object} Settings object.
+     */
+    defaultsForDocument: function (docData) {
+        var d = ZSM.Config.getDefaults();
+        var col = docData ? docData.detectedColor : "";
+        var reg = (ZSM.Draw && ZSM.Draw.getRegistrationName)
+            ? ZSM.Draw.getRegistrationName() : "[Registration]";
+        if (col && col !== reg && col !== "[Registration]" && d.layers && d.layers.length > 0) {
+            d.layers[0].color = col;
+        }
+        return d;
+    },
 
     /**
      * Adds a labeled edittext row with a "mm" suffix.

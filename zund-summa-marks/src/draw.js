@@ -16,8 +16,8 @@ ZSM.Draw = {
     /**
      * Unlocks all layers before rendering.
      * Stores locked layer names so endSession() can restore them.
-     * Hidden layers are left hidden — their items are excluded from
-     * bounds calculation and movePaths() cannot move from them.
+     * Hidden layers are left hidden. Bounds still measure their items
+     * (ZSM.Bounds.get), and movePaths() cannot move from them.
      */
     beginSession: function () {
         var doc = app.activeDocument;
@@ -261,7 +261,7 @@ ZSM.Draw = {
                     var st = routed[ri];
                     var leftInPlace = st.clipped + st.blocked;
                     if (st.moved === 0 && st.mixed === 0 && leftInPlace === 0) {
-                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].color));
+                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].name, routes[ri].color));
                     }
                     if (st.mixed > 0) {
                         geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, routes[ri].color, st.mixed));

@@ -31,16 +31,18 @@ a po testu ho vrať.
 | Forex | nový dokument 1560 × 3050 mm, CMYK, jednotky mm; ve vrstvě obdélník ~1500 × 3000 mm (grafika); přímá barva **Cut** a pár cest v ní |
 | malý | nový dokument s obdélníkem 100 × 100 mm, pro čísla v sekci 6 |
 
-**Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby, v mapování
-vrstev pak řádek **Cut ← Cut**. Výchozí řádek Cut ← [Registrační] skript od
-opravy K8 přeskočí s upozorněním.
+**Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby. Řádek
+mapování dostane řezovou barvu, kterou skript v dokumentu najde — ve Forex
+dokumentu **Cut ← Cut**.
 
 ---
 
 ## 1. Dialog
 
 - [ ] **1.1 Okem.** Dialog ZUND i SUMMA: nic uříznutého, pole zarovnaná, titulek
-  „Zünd & Summa Marks v…". Přepnutí ZUND ↔ SUMMA zachová zadané hodnoty.
+  „Zünd & Summa Marks v…". Přepnutí ZUND ↔ SUMMA zachová zadané hodnoty. Zdroj
+  se jmenuje „Dle grafiky (Auto-fit)" a nápověda říká, že se výběr nebere
+  v úvahu (A1).
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Generovat.
 - [ ] **1.3 Validace.** Rozteč 99999 → pole zčervená a Generovat se vypne; zpět na
   500 → obojí se vrátí. Znovu neplatná hodnota a pak ↺ nebo jiná předvolba →
@@ -57,7 +59,8 @@ opravy K8 přeskočí s upozorněním.
   Engine je ověřený bez zobrazení okna, živý dialog ne.
 - [ ] **1.6 Paměť.** Uložená předvolba přežije zavření a nové spuštění. Po
   Generovat s neuloženými změnami otevře další spuštění dialog s hodnotami
-  posledního běhu.
+  posledního běhu. Neuložená úprava SUMMA (horní výjezd 90) přežije jeden běh
+  ZUND: po přepnutí zpět na SUMMA je tam pořád 90 (A3).
 
 ---
 
@@ -66,7 +69,7 @@ opravy K8 přeskočí s upozorněním.
 Ve všech krocích platí: skript grafiku nemaže ani nemění, jen přidává značky
 a přesouvá cesty čistě v řezové barvě.
 
-- [ ] **2.1 ZUND, Dle výběru.** Vyber grafiku, Generovat → kruhové značky φ 5 mm
+- [ ] **2.1 ZUND, Dle grafiky.** Generovat → kruhové značky φ 5 mm
   v rozích a orientační u levého dolního rohu; artboard obepne grafiku
   s mezerami; značky ve vrstvě Regmarks › Zünd; cesty v barvě Cut ve vrstvě
   Cut; spodní vrstva přejmenovaná na Graphics. Když dole skončí vrstva
@@ -84,8 +87,9 @@ a přesouvá cesty čistě v řezové barvě.
   s obsahem), zaškrtnout „Pouze značky (neměnit vrstvy)" → mapování zešedne;
   Generovat přidá jen značky a vrstvy zůstanou beze změny; v SUMMA jdou ořezové
   linky do samostatné vrstvy Trim, ne do Regmarks.
-- [ ] **2.7 Barvy.** [Výchozí] s barvou značek [Registrační] je po otevření bez
-  „*" a značky jsou v registrační barvě. Vlastní přímá barva → značky v ní.
+- [ ] **2.7 Barvy.** [Výchozí] má v dokumentu s přímou barvou Cut řádek
+  mapování Cut ← Cut (A2), po otevření je bez „*" a značky jsou v registrační
+  barvě. Vlastní přímá barva → značky v ní.
   Předvolba s barvou, která v dokumentu chybí → nabídka ukáže „Název (chybí)";
   Generovat → značky v [Registrační] a „UPOZORNĚNÍ:", žádná nová barva ve
   Vzornících.
@@ -110,7 +114,8 @@ a přesouvá cesty čistě v řezové barvě.
 
 - [ ] **4.1 Texty.** Dialog a hlášky anglicky.
 - [ ] **4.2 Registrační barva (K8).** Dokument s ořezovými značkami (Object ›
-  Create Trim Marks), výchozí předvolba (Cut ← [Registration]), Generate →
+  Create Trim Marks) bez řezové barvy, výchozí předvolba (řádek zůstane
+  Cut ← [Registration]), Generate →
   ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne; upozornění,
   že registrační barvou nejde rozpoznat řezové cesty.
 
@@ -150,8 +155,8 @@ Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchoz�
 
 **Hlášky** (česky):
 
-- bez dokumentu → „Není otevřený dokument."; Dle výběru bez výběru → „Nic není
-  vybráno."
+- bez dokumentu → „Není otevřený dokument."; prázdný dokument, Dle grafiky →
+  „V dokumentu není žádná grafika, kolem které by šly značky umístit…"
 - grafika tak velká, že by artboard přesáhl mez Illustratoru (K10) → „Artboard
   by měl … × … mm, a to Illustrator nedovolí…", dokument beze změny
 - řádek mapování se jménem Trim nebo Regmarks (K6) → „Vrstvu ‘Trim’ nejde

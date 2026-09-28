@@ -42,9 +42,8 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 ### Rychlý start
 
 1. Otevřít dokument s grafikou
-2. Vybrat grafiku (nebo použít mód "Dle Artboardu")
-3. Spustit: `File > Scripts > Other Script... > illustrator-zund-summa-marks.jsx`
-4. Nastavit parametry v dialogu → kliknout **Generovat**
+2. Spustit: `File > Scripts > Other Script... > illustrator-zund-summa-marks.jsx`
+3. Nastavit parametry v dialogu → kliknout **Generovat**
 
 Běh se vrací několika kroky Zpět (Cmd+Z). Změna artboardu je samostatný krok —
 ve stejném kroku s ostatními změnami by ji Illustrator nevrátil vůbec. SUMMA
@@ -52,9 +51,9 @@ s ořezovými linkami má kroků víc než ZUND.
 
 ### Módy
 
-**Dle výběru (Auto-fit)** — artboard se automaticky přizpůsobí grafice; značky se umisťují od okraje výběru. Vyžaduje, aby byla grafika vybrána.
+**Dle grafiky (Auto-fit)** — značky se umístí kolem veškeré grafiky v dokumentu, i ve skrytých vrstvách a mimo artboard, a artboard se jí přizpůsobí. Výběr se nebere v úvahu: co značky obepínat nemají (šablony, poznámky mimo artboard), musí z dokumentu pryč.
 
-**Dle Artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu. Nevyžaduje výběr.
+**Dle Artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu.
 
 Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
 
@@ -89,13 +88,11 @@ Každá vrstva je objekt:
 { name: "Cut", color: "[Registration]" }
 ```
 
-Přítomnost řádku v poli = vrstva je aktivní. Výchozí stav při prvním spuštění:
-
-```javascript
-layers: [
-    { name: "Cut", color: "[Registration]" }
-]
-```
+Přítomnost řádku v poli = vrstva je aktivní. Výchozí předvolba má jeden řádek
+Cut s řezovou barvou, kterou skript najde v dokumentu (CutContour, Thru-cut,
+Kiss-cut nebo Cut, v tomto pořadí). Když žádnou nenajde, zůstane
+`[Registration]` — takový řádek se při běhu přeskočí s upozorněním, protože
+registrační barvou nejde rozpoznat řezové cesty.
 
 ---
 
