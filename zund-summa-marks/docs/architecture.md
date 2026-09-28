@@ -125,6 +125,8 @@ Sjednocené pravidlo pro error handling napříč moduly:
 }
 ```
 
+`[Default]` obsahuje jen tovární hodnoty — Uložit do ní nikdy nezapíše (změní se na Uložit jako). `UI.show()` ji proto při každém otevření sestaví znovu přes `ZSM.UI.defaultsForDocument()`: `getDefaults()` s řezovou barvou, kterou `ZSM.Draw.detectCutColor()` najde v dokumentu. Tlačítko Výchozí načítá totéž.
+
 `UI.show()` přijímá **wrapper**, ne flat settings. Vrací wrapper nebo `null` (cancel). Main pak extrahuje flat settings přes `wrapper.presets[wrapper.activePreset]`.
 
 ### Geometry objekt (výstup ZSM.Core.calculateAll)

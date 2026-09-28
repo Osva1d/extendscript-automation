@@ -31,9 +31,9 @@ a po testu ho vrať.
 | Forex | nový dokument 1560 × 3050 mm, CMYK, jednotky mm; ve vrstvě obdélník ~1500 × 3000 mm (grafika); přímá barva **Cut** a pár cest v ní |
 | malý | nový dokument s obdélníkem 100 × 100 mm, pro čísla v sekci 6 |
 
-**Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby, v mapování
-vrstev pak řádek **Cut ← Cut**. Výchozí řádek Cut ← [Registrační] skript od
-opravy K8 přeskočí s upozorněním.
+**Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby. Řádek
+mapování dostane řezovou barvu, kterou skript v dokumentu najde — ve Forex
+dokumentu **Cut ← Cut**.
 
 ---
 
@@ -84,8 +84,9 @@ a přesouvá cesty čistě v řezové barvě.
   s obsahem), zaškrtnout „Pouze značky (neměnit vrstvy)" → mapování zešedne;
   Generovat přidá jen značky a vrstvy zůstanou beze změny; v SUMMA jdou ořezové
   linky do samostatné vrstvy Trim, ne do Regmarks.
-- [ ] **2.7 Barvy.** [Výchozí] s barvou značek [Registrační] je po otevření bez
-  „*" a značky jsou v registrační barvě. Vlastní přímá barva → značky v ní.
+- [ ] **2.7 Barvy.** [Výchozí] má v dokumentu s přímou barvou Cut řádek
+  mapování Cut ← Cut (A2), po otevření je bez „*" a značky jsou v registrační
+  barvě. Vlastní přímá barva → značky v ní.
   Předvolba s barvou, která v dokumentu chybí → nabídka ukáže „Název (chybí)";
   Generovat → značky v [Registrační] a „UPOZORNĚNÍ:", žádná nová barva ve
   Vzornících.
@@ -110,7 +111,8 @@ a přesouvá cesty čistě v řezové barvě.
 
 - [ ] **4.1 Texty.** Dialog a hlášky anglicky.
 - [ ] **4.2 Registrační barva (K8).** Dokument s ořezovými značkami (Object ›
-  Create Trim Marks), výchozí předvolba (Cut ← [Registration]), Generate →
+  Create Trim Marks) bez řezové barvy, výchozí předvolba (řádek zůstane
+  Cut ← [Registration]), Generate →
   ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne; upozornění,
   že registrační barvou nejde rozpoznat řezové cesty.
 

@@ -11,6 +11,15 @@ Opravy z code review 2026-09-26
 z auditu UI 2026-09-28
 ([audit](../docs/reports/2026-09-28-audit-ui-zund-summa-marks.md)).
 
+### Změněno
+
+- **Výchozí předvolba mapuje řezovou vrstvu na barvu řezu z dokumentu (audit
+  A2).** Řádek „Cut ← [Registration]" se od opravy K8 při každém běhu přeskočil
+  s upozorněním, takže každý běh s [Výchozí] končil hláškou, kterou se operátor
+  naučil odklikávat. [Výchozí] teď vezme řezovou barvu, kterou skript
+  v dokumentu najde (CutContour, Thru-cut, Kiss-cut nebo Cut). Vlastní
+  předvolby zůstávají, jak jsou uložené.
+
 ### Opraveno
 
 - **Skrytá vrstva Regmarks už nezpůsobí tiché ztracení značek (K12).** Opakovaný

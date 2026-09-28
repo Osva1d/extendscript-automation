@@ -65,6 +65,13 @@ ZSM.UI = {
             detectedColor: ZSM.Draw.detectCutColor()
         };
 
+        // [Default] holds factory values only: Save never writes it (it turns
+        // into Save As), so it is rebuilt here for this document. Its mapping
+        // row takes the cut colour found in the document — the stored factory
+        // row "Cut <- [Registration]" is skipped with a warning on every run,
+        // because registration cannot identify cut paths (audit A2).
+        pData.presets[c.PRESET_KEY_DEFAULT] = this.defaultsForDocument(docData);
+
         // Determine initial mode from [Last Settings] or active preset
         var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
         var mode = (initPreset && initPreset.mode === "SUMMA") ? "SUMMA" : "ZUND";
@@ -931,7 +938,7 @@ ZSM.UI = {
          * until the user explicitly saves.
          */
         btnReset.onClick = function () {
-            var d = c.getDefaults();
+            var d = self.defaultsForDocument(docData);
             d.mode = mode;
             setUIValues(d);
             refreshModifiedIndicator();
@@ -1370,6 +1377,26 @@ ZSM.UI = {
     // =====================================================================
     // Shared UI helpers
     // =====================================================================
+
+    /**
+     * Factory settings for the open document: ZSM.Config.getDefaults() with
+     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found.
+     * With no cut colour in the document detectCutColor falls back to the
+     * (localized) registration swatch, and the row keeps the canonical
+     * "[Registration]" token that presets store.
+     * @param {Object} docData - {detectedColor, ...} from show().
+     * @returns {Object} Settings object.
+     */
+    defaultsForDocument: function (docData) {
+        var d = ZSM.Config.getDefaults();
+        var col = docData ? docData.detectedColor : "";
+        var reg = (ZSM.Draw && ZSM.Draw.getRegistrationName)
+            ? ZSM.Draw.getRegistrationName() : "[Registration]";
+        if (col && col !== reg && col !== "[Registration]" && d.layers && d.layers.length > 0) {
+            d.layers[0].color = col;
+        }
+        return d;
+    },
 
     /**
      * Adds a labeled edittext row with a "mm" suffix.

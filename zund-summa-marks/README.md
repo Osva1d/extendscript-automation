@@ -89,13 +89,11 @@ Každá vrstva je objekt:
 { name: "Cut", color: "[Registration]" }
 ```
 
-Přítomnost řádku v poli = vrstva je aktivní. Výchozí stav při prvním spuštění:
-
-```javascript
-layers: [
-    { name: "Cut", color: "[Registration]" }
-]
-```
+Přítomnost řádku v poli = vrstva je aktivní. Výchozí předvolba má jeden řádek
+Cut s řezovou barvou, kterou skript najde v dokumentu (CutContour, Thru-cut,
+Kiss-cut nebo Cut, v tomto pořadí). Když žádnou nenajde, zůstane
+`[Registration]` — takový řádek se při běhu přeskočí s upozorněním, protože
+registrační barvou nejde rozpoznat řezové cesty.
 
 ---
 

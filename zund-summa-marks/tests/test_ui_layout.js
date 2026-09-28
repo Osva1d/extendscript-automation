@@ -651,6 +651,55 @@ assertEq(revert.preset, "Banner", "revert: the preset shows unmodified");
 
 
 // =====================================================
+// TEST 18 (audit A2): the factory preset maps to the detected cut colour
+// =====================================================
+// The stored factory row "Cut ← [Registration]" is skipped with a warning on
+// every run (registration cannot identify cut paths), so every run with
+// [Default] ended in a warning the operator learnt to dismiss. [Default] is
+// never saved by the user, so it is rebuilt per document with the cut colour
+// ZSM.Draw.detectCutColor() finds; user presets stay as saved.
+console.log("\n=== TEST 18 (audit A2): factory preset uses the detected cut colour ===");
+function mappingColour(win) {
+    var pLay = win.findOne(function (c) { return c.type === "panel" && c.text === ZSM.L.PANEL_LAYERS; });
+    var dds = pLay ? pLay.find(function (c) { return c.type === "dropdownlist"; }) : [];
+    for (var i = 0; i < dds.length; i++) {
+        var isLayerList = false;
+        for (var j = 0; j < dds[i].items.length; j++) if (dds[i].items[j].text === "Score") isLayerList = true;
+        if (!isLayerList) return dds[i].selection ? dds[i].selection.text : null;
+    }
+    return null;
+}
+var mineA2 = ZSM.Config.getDefaults();
+mineA2.gapInner = 9;
+var pA2 = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mineA2 } };
+var a2 = {};
+runDialogs(pA2, [function (win) {
+    a2.colour = mappingColour(win);
+    a2.preset = k5PresetDD(win).selection ? k5PresetDD(win).selection.text : null;
+}]);
+assertEq(a2.colour, "Cut", "[Default]: mapping row shows the detected cut colour");
+assertEq(a2.preset, "[Default]", "[Default] shows unmodified (no asterisk)");
+assertEq(pA2.presets["[Default]"].layers[0].color, "Cut", "[Default] rebuilt with the detected colour");
+assertEq(pA2.presets["Mine"].layers[0].color, "[Registration]", "user presets stay as saved");
+
+var origDetectA2 = ZSM.Draw.detectCutColor;
+ZSM.Draw.detectCutColor = function () { return "[Registration]"; };
+var pA2b = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } };
+runDialogs(pA2b, [function () {}]);
+assertEq(pA2b.presets["[Default]"].layers[0].color, "[Registration]",
+    "no cut colour in the document: the factory row keeps [Registration]");
+ZSM.Draw.detectCutColor = origDetectA2;
+
+var pA2c = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mineA2 } };
+var a2c = {};
+runDialogs(pA2c, [function (win) {
+    win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_RESET; }).onClick();
+    a2c.colour = mappingColour(win);
+}]);
+assertEq(a2c.colour, "Cut", "Defaults button: mapping row gets the detected cut colour");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 SUI.uninstall();
