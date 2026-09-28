@@ -9,6 +9,8 @@ BRE.Core = {
 
     _lockedLayers: [],
     _lockedItems: [],
+    _probeFile: null,
+    _probePages: 0,
 
     // ---------------------------------------------------------------------
     // Session management
@@ -171,7 +173,11 @@ BRE.Core = {
 
     /**
      * Relinks the template's positions (see getPositions) to the target PDF.
-     * Removes PlacedItems whose pageNumber exceeds the source page count.
+     * When the PDF has fewer pages than the template has positions, the
+     * positions for the missing pages would show page 1 again (measured,
+     * AI 30.8.2). Their pages are found with the page probe (_positionPages)
+     * and they are removed. When the probe cannot tell every position's page,
+     * nothing is removed and the caller flags the sheet for manual cleanup.
      *
      * @param {Document} doc - The active document.
      * @param {File} targetPdf - The PDF file to relink to.
@@ -197,6 +203,18 @@ BRE.Core = {
             }
         }
 
+        // Page sizes for verifyRelink, taken before the probe changes them.
+        var sizes = [];
+        for (i = 0; i < positions.length; i++) sizes.push(this._pageSize(positions[i]));
+
+        var pages = null;
+        if (totalPages > 0 && totalPages < positions.length) {
+            pages = this._positionPages(positions);
+            if (!pages) {
+                results.warnings.push(BRE.L.format(BRE.L.WARN_PAGE_MAP, String(positions.length)));
+            }
+        }
+
         for (i = 0; i < positions.length; i++) {
             item = positions[i];
             label = item.name || ("item_" + i);
@@ -205,33 +223,32 @@ BRE.Core = {
             // was moved or deleted, reading .file throws "There is no file
             // associated with this item", yet relink() still works and keeps
             // the page (measured, AI 30.8.2).
-            if (totalPages > 0 && item.pageNumber && item.pageNumber > totalPages) {
-                // Excess position (its page is beyond this PDF). Capture the
-                // reference now; remove after the loop. Only visible items
-                // reach here — hidden ones were skipped.
-                toRemove.push({ item: item, page: item.pageNumber });
+            try {
+                item.relink(targetPdf);
+                results.relinked++;
+            } catch (e) {
+                results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
                 continue;
             }
 
-            try {
-                var size = this._pageSize(item);
-                item.relink(targetPdf);
-                results.relinked++;
-                // Keep a reference so verifyRelink checks ONLY the items we
-                // actually relinked — never the deliberately-skipped hidden
-                // ones, which still point to the old PDF.
-                results.relinkedItems.push({ item: item, label: label, size: size });
-            } catch (e) {
-                results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
+            if (pages && pages[i] > totalPages) {
+                // Excess position. Relinked first, so that if its removal
+                // fails it shows page 1 of the source and is counted as a
+                // leftover — never a stale page.
+                toRemove.push({ item: item, page: pages[i] });
+            } else {
+                // Keep a reference so verifyRelink checks ONLY the positions
+                // we relinked and kept — never the hidden ones, which still
+                // point to the old PDF.
+                results.relinkedItems.push({ item: item, label: label, size: sizes[i] });
             }
         }
 
-        // Remove captured excess positions by reference (safe against live
+        // Remove the excess positions by reference (safe against live
         // collection mutation). Each position may be the clipped content of a
         // clipping mask — _removePosition removes the whole clip group so no
         // clip path / frame is left behind. The remove-set lets it refuse to
         // delete a clip group that also encloses a position we are keeping.
-        // Best-effort auto-removal (only fires when pageNumber is readable).
         // Anything that cannot be removed is reported as a warning; the caller
         // counts the leftover positions and asks the user to remove them by
         // hand — it never refuses the sheet on this account.
@@ -248,6 +265,69 @@ BRE.Core = {
 
         results.ok = (results.errors.length === 0);
         return results;
+    },
+
+    /**
+     * Which page of the template's PDF each position shows. PlacedItem has
+     * no page property (measured, AI 30.8.2), so every position is relinked
+     * to the page probe (BRE.Pdf.writeProbe) and its page is read from the
+     * width of its placed page. The caller relinks the positions to the
+     * source right after. Returns null unless the pages are exactly 1..n,
+     * each once — a template that shows a page twice, or a page beyond its
+     * position count, gets no automatic removal.
+     * @param {PlacedItem[]} positions - The template's positions.
+     * @returns {number[]|null} Page per position, or null.
+     */
+    _positionPages: function (positions) {
+        var n = positions.length, pages = [], seen = [], i, k, size;
+        var probe = this._probe(n);
+        if (!probe) return null;
+        try {
+            for (i = 0; i < n; i++) {
+                positions[i].relink(probe);
+                size = this._pageSize(positions[i]);
+                if (!size) return null;
+                k = BRE.Pdf.pageFromWidth(size[0]);
+                if (k < 1 || k > n || seen[k]) return null;
+                seen[k] = true;
+                pages.push(k);
+            }
+        } catch (e) {
+            this._log("_positionPages: " + e.message);
+            return null;
+        }
+        return pages;
+    },
+
+    /**
+     * The page probe for this run, written to the temp folder on first use.
+     * @param {number} n - Pages needed.
+     * @returns {File|null} The probe, or null if it could not be written.
+     */
+    _probe: function (n) {
+        if (this._probeFile && this._probePages >= n && this._probeFile.exists) return this._probeFile;
+        this.removeProbe();
+        var f = new File(Folder.temp.fsName + "/bre-probe-" + new Date().getTime() + ".pdf");
+        try {
+            if (!BRE.Pdf.writeProbe(f, n)) return null;
+        } catch (e) {
+            this._log("_probe: " + e.message);
+            return null;
+        }
+        this._probeFile = f;
+        this._probePages = n;
+        return f;
+    },
+
+    /**
+     * Deletes the page probe written during this run, if any.
+     */
+    removeProbe: function () {
+        if (this._probeFile) {
+            try { this._probeFile.remove(); } catch (e) {}
+        }
+        this._probeFile = null;
+        this._probePages = 0;
     },
 
     /**
@@ -273,16 +353,13 @@ BRE.Core = {
     /**
      * Removes one position from the sheet. If the placed item is the clipped
      * content of a clipping mask, the whole clip group is removed instead —
-     * calling remove() on the clipped item alone is an ineffective no-op in
-     * Illustrator and would leave the clipped PDF (and frame) on the sheet.
+     * removing the placed item alone would leave the clip path behind as an
+     * empty group (measured, AI 30.8.2), with its frame if it has a stroke.
      *
      * Safety: the climb only ascends into a clip group whose every placed item
      * is itself being removed (removeRefs). A clip group that also encloses a
      * position we are KEEPING is never removed — otherwise good artwork would
-     * be silently deleted. In that case removal falls back to the bare item
-     * (an ineffective no-op for clipped content); the caller then counts the
-     * surviving positions (countManagedPositions) and flags the sheet for
-     * manual cleanup instead of failing it.
+     * be silently deleted. In that case only the bare item is removed.
      *
      * @param {PlacedItem} item - The placed item to remove.
      * @param {Array} removeRefs - All placed items scheduled for removal.
@@ -691,9 +768,9 @@ BRE.Core = {
 
     /**
      * Builds a human-readable snapshot of every placed item in the document —
-     * pageNumber, "over" verdict, layer + visibility, parent group / clip
-     * state, hidden-layer result, linked file name. Used by diagnostic mode to
-     * reveal the real document structure when removal behaves unexpectedly.
+     * layer + visibility, parent group / clip state, hidden-layer result,
+     * linked file name. Used by diagnostic mode to reveal the real document
+     * structure when removal behaves unexpectedly.
      * @param {Document} doc - Document to inspect.
      * @param {number} totalPages - Detected page count of the source PDF.
      * @returns {string} Multi-line report.
@@ -704,8 +781,7 @@ BRE.Core = {
         lines.push("  totalPages=" + totalPages + "  placedItems=" + items.length);
         for (var i = 0; i < items.length; i++) {
             var it = items[i];
-            var pn = "?", lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
-            try { pn = it.pageNumber; } catch (e) { pn = "ERR"; }
+            var lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
             try { lay = it.layer.name; } catch (e) {}
             try { vis = it.layer.visible; } catch (e) {}
             try {
@@ -714,9 +790,7 @@ BRE.Core = {
             } catch (e) {}
             try { hid = this._isHidden(it); } catch (e) {}
             try { fil = it.file ? decodeURI(it.file.name) : "NONE"; } catch (e) { fil = "ERR"; }
-            lines.push("    [" + i + "] page=" + pn +
-                       " over=" + (totalPages > 0 && pn !== "ERR" && pn > totalPages) +
-                       " layer='" + lay + "' vis=" + vis +
+            lines.push("    [" + i + "] layer='" + lay + "' vis=" + vis +
                        " parent=" + par + " clipped=" + clp + " hidden=" + hid + " file=" + fil);
         }
         return lines.join("\n");

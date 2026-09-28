@@ -233,6 +233,7 @@
 
         } finally {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
+            BRE.Core.removeProbe();
             progress.close();
         }
 

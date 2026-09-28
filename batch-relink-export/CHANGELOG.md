@@ -46,6 +46,15 @@ Opravy z code review 2026-09-27
   a obojí jako „v pořádku". Ověření relinku teď porovná rozměr strany před
   relinkem a po něm (tolerance 0,1 mm) a arch jiného formátu nevyexportuje,
   s hláškou, která oba rozměry uvede.
+- **Neúplný arch se vyčistí sám (B2, T1).** Pozice, pro které zdroj nemá
+  stranu, ukázaly znovu stranu 1 — a arch se uložil pod běžným jménem, jen
+  s řádkem „odeber ručně" v souhrnu. Automatické odebírání se nespustilo nikdy:
+  stálo na vlastnosti `PlacedItem.pageNumber`, kterou Illustrator vůbec nemá.
+  Náhled přitom u „Méně stran uprostřed dávky" sliboval, že se pozice odeberou.
+  Skript teď stranu každé pozice zjistí přes dočasné pomocné PDF a pozice navíc
+  odebere, u oříznuté pozice i s maskou. Když šablona neukazuje strany 1 až N
+  každou právě jednou, zůstává dosavadní chování: arch se vyexportuje a souhrn
+  řekne proč a kolik pozic odstranit ručně.
 
 ## [1.0.0] — 2026-06-28
 
