@@ -13,6 +13,12 @@ z auditu UI 2026-09-28
 
 ### Změněno
 
+- **Režim „Dle výběru" se jmenuje „Dle grafiky" (audit A1).** Režim nikdy
+  nečetl výběr: značky i artboard počítá kolem veškeré grafiky v dokumentu,
+  i ve skrytých vrstvách a mimo artboard. Popisek, nápověda, README i hláška
+  prázdného dokumentu teď říkají, co skutečně dělá — dřívější „Nic není
+  vybráno" posílalo operátora vybírat, i když dokument neměl žádnou grafiku.
+  Režim, který by značky umístil jen kolem výběru, zůstává otevřený (review K4).
 - **Výchozí předvolba mapuje řezovou vrstvu na barvu řezu z dokumentu (audit
   A2).** Řádek „Cut ← [Registration]" se od opravy K8 při každém běhu přeskočil
   s upozorněním, takže každý běh s [Výchozí] končil hláškou, kterou se operátor

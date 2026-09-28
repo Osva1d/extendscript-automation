@@ -40,7 +40,9 @@ dokumentu **Cut ← Cut**.
 ## 1. Dialog
 
 - [ ] **1.1 Okem.** Dialog ZUND i SUMMA: nic uříznutého, pole zarovnaná, titulek
-  „Zünd & Summa Marks v…". Přepnutí ZUND ↔ SUMMA zachová zadané hodnoty.
+  „Zünd & Summa Marks v…". Přepnutí ZUND ↔ SUMMA zachová zadané hodnoty. Zdroj
+  se jmenuje „Dle grafiky (Auto-fit)" a nápověda říká, že se výběr nebere
+  v úvahu (A1).
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Generovat.
 - [ ] **1.3 Validace.** Rozteč 99999 → pole zčervená a Generovat se vypne; zpět na
   500 → obojí se vrátí. Znovu neplatná hodnota a pak ↺ nebo jiná předvolba →
@@ -67,7 +69,7 @@ dokumentu **Cut ← Cut**.
 Ve všech krocích platí: skript grafiku nemaže ani nemění, jen přidává značky
 a přesouvá cesty čistě v řezové barvě.
 
-- [ ] **2.1 ZUND, Dle výběru.** Vyber grafiku, Generovat → kruhové značky φ 5 mm
+- [ ] **2.1 ZUND, Dle grafiky.** Generovat → kruhové značky φ 5 mm
   v rozích a orientační u levého dolního rohu; artboard obepne grafiku
   s mezerami; značky ve vrstvě Regmarks › Zünd; cesty v barvě Cut ve vrstvě
   Cut; spodní vrstva přejmenovaná na Graphics. Když dole skončí vrstva
@@ -153,8 +155,8 @@ Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchoz�
 
 **Hlášky** (česky):
 
-- bez dokumentu → „Není otevřený dokument."; Dle výběru bez výběru → „Nic není
-  vybráno."
+- bez dokumentu → „Není otevřený dokument."; prázdný dokument, Dle grafiky →
+  „V dokumentu není žádná grafika, kolem které by šly značky umístit…"
 - grafika tak velká, že by artboard přesáhl mez Illustratoru (K10) → „Artboard
   by měl … × … mm, a to Illustrator nedovolí…", dokument beze změny
 - řádek mapování se jménem Trim nebo Regmarks (K6) → „Vrstvu ‘Trim’ nejde

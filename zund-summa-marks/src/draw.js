@@ -16,8 +16,8 @@ ZSM.Draw = {
     /**
      * Unlocks all layers before rendering.
      * Stores locked layer names so endSession() can restore them.
-     * Hidden layers are left hidden — their items are excluded from
-     * bounds calculation and movePaths() cannot move from them.
+     * Hidden layers are left hidden. Bounds still measure their items
+     * (ZSM.Bounds.get), and movePaths() cannot move from them.
      */
     beginSession: function () {
         var doc = app.activeDocument;
