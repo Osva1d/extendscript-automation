@@ -12,21 +12,15 @@
             } catch (e) {}
         }
 
-        // Count PlacedItems for the preview. If the user already has the
-        // template open, read from THAT instance without closing it — closing
-        // here would discard their unsaved work even if they then cancel at the
-        // preview. (Processing later closes it on the first iteration, which is
-        // what the warning above is about.)
+        // Count the template's positions for the preview — as saved on disk,
+        // which is what every sheet is built from. An open template is not
+        // closed here: that would discard the user's unsaved work even if
+        // they then cancel at the preview. (Processing later closes it, which
+        // is what the warning above is about.)
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
         try {
-            if (openTpl) {
-                slotCount = openTpl.placedItems.length;
-            } else {
-                var tplDoc = app.open(config.templateFile);
-                slotCount = tplDoc.placedItems.length;
-                tplDoc.close(SaveOptions.DONOTSAVECHANGES);
-            }
+            slotCount = BRE.Core.countSavedPositions(config.templateFile, openTpl);
         } catch (e) {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
             alert(BRE.L.ERR_TEMPLATE + "\n" + e.message);
@@ -100,11 +94,6 @@
                         BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
                     continue;
                 }
-                if (fileInfo.status === "uncertain") {
-                    results.blocked++;
-                    results.log.push(outputName + ": " + BRE.L.ERR_UNCERTAIN);
-                    continue;
-                }
 
                 // Unreadable page count: the sheet still processes (relink all,
                 // remove none), but the short-sheet check below cannot work
@@ -115,15 +104,23 @@
                         BRE.L.SCAN_FILE_UNREAD, sourceFileName));
                 }
 
-                // Skip existing
+                // Skip existing — only an output newer than both its source and
+                // the template counts as done (a batch resumed after a crash).
+                // An older one belongs to another job with the same name, or
+                // the source or template changed since; it is made again.
                 if (config.skipExisting && outputFile.exists) {
-                    results.skipped++;
-                    results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
-                    continue;
+                    if (outputFile.modified > currentFile.modified &&
+                            outputFile.modified > config.templateFile.modified) {
+                        results.skipped++;
+                        results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
+                        continue;
+                    }
+                    results.log.push(outputName + ": " + BRE.L.LOG_REDONE);
                 }
 
                 try {
                     doc = app.open(config.templateFile);
+                    progress.poll();    // Esc held during a long step
                     BRE.Core.beginSession(doc);
 
                     // Diagnostic logging: when BRE.Config.debug is enabled (a
@@ -141,6 +138,7 @@
                         // Reuse the page count from the pre-flight scan
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
+                        progress.poll();
 
                         if (BRE.Config.debug) {
                             BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
@@ -194,7 +192,7 @@
                         // extra positions by hand on the last sheet).
                         var expected = (fileInfo.pages > 0 && fileInfo.pages < slotCount)
                             ? fileInfo.pages : slotCount;
-                        var remaining = BRE.Core.countManagedPositions(doc);
+                        var remaining = BRE.Core.countManagedPositions(doc, currentFile);
                         if (remaining > expected) {
                             results.manual++;
                             results.log.push(outputName + ": " + BRE.L.format(
@@ -214,6 +212,7 @@
 
                         doc.saveAs(outputFile, pdfOpts);
                         results.success++;
+                        progress.poll();
 
                     } finally {
                         BRE.Core.endSession(doc);
@@ -239,6 +238,7 @@
 
         } finally {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
+            BRE.Core.removeProbe();
             progress.close();
         }
 

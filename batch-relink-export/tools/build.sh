@@ -9,7 +9,7 @@
 #   Concatenates Batch Relink Export source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   locale.js -> config.js -> core.js -> ui.js -> main.js
+#   locale.js -> config.js -> pdf.js -> core.js -> ui.js -> main.js
 # ===========================================================================
 
 set -euo pipefail
@@ -75,6 +75,7 @@ EOF
 
 cat "$SRC_DIR/locale.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/config.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "$SRC_DIR/pdf.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/core.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/main.js"   >> "$OUTPUT"

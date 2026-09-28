@@ -788,3 +788,72 @@ přesunuly se **2 ze 4**. Kolekce se po každém `move` přečísluje a index p�
 následující prvek. Zbylé dvě cesty, zkopírované předem do pole, se přesunuly
 obě. Kolekce na úrovni dokumentu se navíc aktualizují až po `app.redraw()`
 (viz „Kolekce na úrovni dokumentu…" výš).
+
+## Velká pole a řetězce s NUL (naměřeno 2026-09-28, AI 30.8.2)
+
+Zdroj: opravy z review batch-relink-export — dekodér Flate pro počet stran PDF
+(`batch-relink-export/src/pdf.js`, nález B3). Kontext: `tools/ai-eval.sh`, bez
+dokumentu.
+
+### Velká pole zpomalují kvadraticky
+
+Čas v ms pro n zápisů nebo čtení:
+
+| operace | n = 10 000 | n = 40 000 |
+|---|---|---|
+| `a.push(x)` | 96 | 1 582 |
+| `a[i] = x` do rostoucího pole | 37 | 1 232 |
+| `a[i] = x` do `new Array(n)` | 34 | 641 |
+| `a[i & 32767] = x` do pole 32 768 prvků | 40 | 908 |
+| `s += znak` | 10 | 147 |
+| pole jednoznakových řetězců, `join("")` | 186 | 3 437 |
+| bloky po 4 096 znacích, každý `join("")` | 80 | 253 |
+| `s.charCodeAt(i)` | 10 | 42 |
+
+Čtyřikrát víc prvků stojí u pole šestnáctkrát víc času. Zpomaluje i předem
+alokované pole a pole pevné velikosti, takže cena roste s velikostí pole, ne
+s počtem zápisů. Lineárně se chovají jen malá pole spojovaná do řetězců
+a `charCodeAt`. `String.fromCharCode.apply(null, pole)` se 4 096 prvky funguje,
+ale jedno volání trvá ~84 ms.
+
+V praxi: první dekodér držel výstup jako jedno pole čísel a 102 kB textu
+rozbaloval **147 s** — Illustrator mezitím nereagoval. S výstupem v blocích po
+4 096 znacích a oknem zpětných odkazů jako řetězcem totéž trvá 0,75 s. V cyklech
+přes tisíce prvků drž pole do ~4 096 položek a výsledek skládej po blocích.
+
+### `charAt` vrací pro znak NUL prázdný řetězec
+
+```
+var s = "a" + String.fromCharCode(0) + "b";
+s.length             → 3
+s.charCodeAt(1)      → 0
+s.charAt(1).length   → 0      ← "" místo znaku NUL
+```
+
+Spojování řetězců, `join`, `substring` i `String.fromCharCode` NUL zachovají.
+Binární data z `File.read()` (kódování `BINARY`) nuly obsahují — bajty z nich
+ber přes `charCodeAt` a tabulku jednoznakových řetězců, nikdy přes `charAt`.
+Dekodér, který bral bajty přes `charAt`, ztratil přesně nulové bajty: z 20 000
+náhodných bajtů vrátil 19 925.
+
+## Paleta a klávesnice během běhu skriptu (naměřeno 2026-09-28, AI 30.8.2)
+
+Zdroj: ruční test batch-relink-export — tlačítko Zastavit v paletě průběhu
+nereagovalo. Sonda: `Window("palette")` s tlačítkem, smyčka 4 × 9 s
+s prací po 200 ms, člověk během každé fáze opakovaně klikal.
+
+| co smyčka dělala mezi kroky | kliknutí na tlačítko |
+|---|---|
+| `win.update()` | nedošlo |
+| `win.update()` + `$.sleep(30)` | nedošlo |
+| `win.update()` + `app.redraw()` | nedošlo |
+
+Illustrator paletě během běhu skriptu kliknutí nepředá; `update()` okno jen
+překreslí. Tlačítko „Storno/Zastavit" v paletě průběhu tak nemůže fungovat,
+dokud zpracování běží synchronně v jednom skriptu.
+
+**Klávesnice jde číst.** Ve čtvrté fázi smyčka četla
+`ScriptUI.environment.keyboardState` a zachytila podržený Esc
+(`keyName === "Escape"`) i Shift (`shiftKey`). Zastavení dávky se dá postavit na
+podržené klávese kontrolované mezi kroky (batch-relink-export to tak dělá).
+Jestli Esc stisknutý během `saveAs` přeruší i samotné ukládání, neměřeno.

@@ -25,19 +25,20 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 4. Rozděl zdrojové PDF na soubory po N stranách (N = počet pozic v šabloně), typicky v Acrobatu.
 5. Spusť skript, vyplň dialog, potvrď náhled (u bezchybné dávky se přeskočí), hotovo.
 
-> **Tip:** Doplň zdrojové PDF prázdnými stranami na násobek N, aby byl každý arch plný — pak nevzniknou žádné přebytečné pozice (viz [Omezení](#omezení--neúplný-poslední-arch)).
+> **Tip:** Neúplný arch skript vyčistí sám (viz [Neúplný arch](#neúplný-arch)). Kdo chce plné archy, doplní zdrojové PDF prázdnými stranami na násobek N.
 
 ## Funkce
 
-- Hromadné relinkování všech nalinkovaných PDF v šabloně + export do PDF (dle zvoleného presetu).
-- **Ověření relinku** po každém souboru (kontrola, že každá relinkovaná pozice ukazuje na správný soubor).
+- Hromadné relinkování pozic šablony + export do PDF (dle zvoleného presetu). Pozice jsou viditelné umístěné stránky PDF, ze kterého šablona vznikla (soubor, na který odkazuje většina umístěných objektů). Logo nebo značky umístěné jako jiný soubor zůstanou beze změny; skryté pozice se nepočítají.
+- **Ověření relinku** po každém souboru: každá relinkovaná pozice ukazuje na správný soubor a strana zdroje má stejný rozměr jako strana šablony (po ořezu PDF). Zdroj jiného formátu nebo PDF se spadávkou v ploše stránky bez TrimBoxu se nevyexportuje — Illustrator by stranu tiše přeškáloval.
 - **Session management** — automatické odemčení a obnovení zamčených vrstev i objektů.
-- **Pre-flight sken** — před zpracováním proskenuje všechny zdroje a porovná počet stran s počtem pozic; soubor s **více stranami než pozic** nebo s **nejednoznačným počtem stran** (křížová kontrola `/Count` × počet objektů stran) se tvrdě **zablokuje** jako ochrana proti tiché ztrátě stran.
-- **Neúplný poslední arch** — skript spočítá přebytečné pozice a v souhrnu nahlásí „N pozic navíc — odeber ručně" (automatické smazání viz [Omezení](#omezení--neúplný-poslední-arch)).
+- **Pre-flight sken** — před zpracováním zjistí počet stran každého zdroje a porovná ho s počtem pozic; soubor s **více stranami než pozic** se tvrdě **zablokuje** jako ochrana proti tiché ztrátě stran. Počet se čte ze stromu stran PDF stejně jako v prohlížeči, i u PDF 1.5+ s komprimovanými tabulkami. Když ho přečíst nejde (poškozené nebo šifrované PDF), zdroj se zpracuje s upozorněním v souhrnu.
+- **Neúplný arch** — pozice, pro které zdroj nemá stranu, skript z archu odebere (viz [Neúplný arch](#neúplný-arch)).
 - **Předvídatelné číslování** — zdroje řazeny přirozeně (`part_2` před `part_10`).
 - **Pojmenování výstupů** přes vzor s placeholdery (viz níže).
 - **Náhled** před zpracováním (přeskočí se, když je dávka bez anomálií).
-- **Skip existing** — přeskočí už hotové výstupy (crash recovery).
+- **Zastavení dávky** podržením klávesy Esc — rozpracovaný soubor se dokončí, souhrn uvede, kolik souborů se zpracovalo.
+- **Skip existing** — přeskočí archy, jejichž výstup už existuje a je novější než zdroj i šablona (pokračování přerušené dávky). Starší výstup — třeba jiné zakázky se stejnou šablonou — se vytvoří znovu.
 - Ignoruje macOS systémové soubory (`._*`, tečkové) ve zdrojové složce.
 - Lokalizace **cs/en** (auto-detekce dle Illustratoru).
 
@@ -51,15 +52,15 @@ Pole „Vzor pojmenování" v dialogu podporuje placeholdery (musí obsahovat as
 | `{template}` | název šablony bez přípony |
 | `{source}` | název zdrojového PDF bez přípony |
 
-Výchozí vzor: `{n}_{template}` → např. `01_vizitky-arch.pdf`. Číslo zakázky si připíšeš před vzor.
+Výchozí vzor: `{n}_{template}_{source}` → např. `01_vizitky-arch_zakazka_Part1.pdf`. Název zdroje v názvu brání tomu, aby se archy dvou zakázek se stejnou šablonou jmenovaly stejně. Číslo zakázky si můžeš připsat před vzor.
 
-## Omezení — neúplný poslední arch
+## Neúplný arch
 
-Skript pozná, *kolik* pozic je navíc, ale neumí spolehlivě určit *které*, pokud šablona používá **ručně umístěné (a oříznuté) PDF stránky** — Illustrator u nich přes skript nevrací `PlacedItem.pageNumber` (je `undefined`). Automatické mazání proto funguje jen tam, kde je `pageNumber` čitelný; jinak skript arch vyexportuje a označí „N pozic navíc — odeber ručně".
+Když má zdrojové PDF méně stran než šablona pozic, ukázaly by pozice pro chybějící strany znovu stranu 1 — Illustrator při relinku na neexistující stranu vezme první. Skript proto u takového archu zjistí, kterou stranu která pozice ukazuje, a pozice navíc odebere, u oříznuté pozice i s ořezovou maskou.
 
-Dvě praktické cesty:
-- **Doplnit zdroj** prázdnými stranami na násobek počtu pozic → žádný arch není neúplný (doporučeno).
-- **Dokončit ručně** poslední arch (smazat pár pozic) — týká se jen posledního archu.
+Stránku pozice Illustrator skriptu neprozradí (`PlacedItem` nemá žádnou vlastnost se stranou). Skript ji zjistí tak, že pozice na chvíli přelinkuje na dočasné pomocné PDF, v němž má každá strana jinou šířku, a pak je přelinkuje na zdroj.
+
+Automaticky se odebírá jen tehdy, když šablona ukazuje strany 1 až N každou právě jednou. Jinak (například stejná strana na dvou pozicích) skript arch vyexportuje beze změny a v souhrnu napíše, kolik pozic navíc je třeba před tiskem odstranit ručně.
 
 ## Vývoj
 
@@ -67,6 +68,7 @@ Dvě praktické cesty:
 src/
 ├── locale.js   # BRE.L — lokalizace cs/en
 ├── config.js   # BRE.Config — verze, UI konstanty, výchozí vzor pojmenování
+├── pdf.js      # BRE.Pdf — počet stran PDF, pomocné PDF pro zjištění strany pozice
 ├── core.js     # BRE.Core — session mgmt, relink, verifikace, sken, pojmenování
 ├── ui.js       # BRE.UI — dialog, náhled, progress, souhrn
 └── main.js    # Entry point — smyčka zpracování
@@ -74,7 +76,8 @@ src/
 
 - Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`).
 - Verze je v `package.json`; `tools/build.sh` ji ověřuje proti `src/config.js` (parity guard).
-- **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do výstupní složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (pageNumber, vrstva, clip-group) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
+- **Ruční testy** před vydáním: [`docs/manual-test.md`](docs/manual-test.md).
+- **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do výstupní složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (vrstva, clip-group, propojený soubor) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
 ---
 
 ## Changelog

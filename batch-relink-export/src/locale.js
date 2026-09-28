@@ -19,18 +19,21 @@ BRE.L = (function () {
             ERR_SOURCE:         "Source folder does not exist.",
             ERR_OUTPUT_ASK:     "Output folder does not exist. Create it?",
             ERR_OUTPUT_FAIL:    "Failed to create output folder.",
+            ERR_OUTPUT_IS_SOURCE: "The output folder is the source folder. The next run would read the outputs as source PDFs — choose another output folder.",
             ERR_PRESET:         "You must select a PDF Preset.",
             ERR_NO_PDF:         "No PDF files found in the selected folder.",
             ERR_NO_LINKS:       "No linked objects found in the template.",
             ERR_NO_RELINK:      "No linked PDF objects found for relinking.",
             ERR_PROCESS:        "Error processing",
             ERR_RELINK_VERIFY:  "Relink verification failed for item %s: expected '%s', got '%s'.",
+            ERR_PAGE_SIZE:      "Position %s: the source page is %s × %s mm, the template expects %s × %s mm. The source PDF has another page size (or no TrimBox) — check the template and the source.",
+            DEC_SEP:            ".",
             ERR_HIDDEN_LAYER:   "PlacedItem on hidden layer skipped: %s",
             ERR_RELINK_ITEM:    "Failed to relink item %s: %s",
             ERR_NAMING_PATTERN: "Naming pattern must contain {n} placeholder.",
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
-            ERR_UNCERTAIN:      "Skipped: ambiguous page count — please check this file manually.",
+            WARN_PAGE_MAP:      "Extra positions were not removed automatically: the template does not show pages 1–%s exactly once each.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
@@ -49,15 +52,13 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} index · {template} template · {source} source",
             SAMPLE_TEMPLATE:    "template",
             SAMPLE_SOURCE:      "source",
-            PREVIEW_VERDICT:    "%s of %s sheets OK · %s blocked",
+            PREVIEW_VERDICT:    "%s of %s sheets can be processed (%s with a warning) · %s blocked",
 
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
             BTN_RUN:            "Run",
             BTN_CANCEL:         "Cancel",
             BTN_CLOSE:          "Close",
-            BTN_STOP:           "Stop",
-            BTN_STOPPING:       "Stopping…",
             BTN_CONTINUE:       "Continue",
 
             // --- UI: Checkboxes ---
@@ -73,7 +74,7 @@ BRE.L = (function () {
             TIP_OUTPUT_BTN:     "Select output folder",
             TIP_NAMING:         "Output filename pattern. {n} = number, {template} = template name, {source} = source PDF name",
             TIP_PRESET:         "PDF quality profile for export",
-            TIP_SKIP:           "Skip processing if output file already exists",
+            TIP_SKIP:           "Skip a sheet whose output already exists and is newer than both its source and the template",
             TIP_OPEN:           "Open output folder in system file manager after completion",
 
             // --- UI: File Dialogs ---
@@ -93,12 +94,10 @@ BRE.L = (function () {
             SCAN_UNDER:         "Fewer pages mid-batch: %s",
             SCAN_UNREADABLE:    "Page count unreadable: %s",
             SCAN_OVER:          "Blocked (more pages than positions): %s",
-            SCAN_UNCERTAIN:     "Uncertain page count (blocked): %s",
             SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
-            SCAN_FILE_PARTIAL:  "%s: %s pages — %s extra position(s) will remain (remove manually).",
+            SCAN_FILE_PARTIAL:  "%s: %s pages — %s extra position(s) will be removed from the sheet.",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
-            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
             ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
@@ -106,6 +105,8 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Processing files…",
             PROGRESS_INIT:      "Preparing…",
             PROGRESS_FILE:      "Processing: %s (%s of %s)",
+            PROGRESS_STOP_HINT: "To stop the batch, hold down Esc.",
+            PROGRESS_STOPPING:  "Stopping — the file in progress will be finished…",
 
             // --- Log ---
             LOG_TITLE:          "Processing Result",
@@ -115,11 +116,12 @@ BRE.L = (function () {
             LOG_BLOCKED:        "Blocked",
             LOG_REMOVED:        "Removed positions",
             LOG_MANUAL_LABEL:   "Needs manual cleanup",
-            LOG_MANUAL:         "%s extra position(s) on this sheet — remove manually",
+            LOG_MANUAL:         "%s extra position(s) could not be removed and show page 1 again — remove them by hand before printing",
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
             LOG_CANCELLED:      "Cancelled by user after processing %s of %s files.",
-            SKIP_MSG:           "Skipped (file exists)"
+            SKIP_MSG:           "Skipped (file exists)",
+            LOG_REDONE:         "The output existed but is older than its source or the template — created again."
         },
 
         cs: {
@@ -129,18 +131,21 @@ BRE.L = (function () {
             ERR_SOURCE:         "Zdrojová složka neexistuje.",
             ERR_OUTPUT_ASK:     "Výstupní složka neexistuje. Vytvořit?",
             ERR_OUTPUT_FAIL:    "Nepodařilo se vytvořit výstupní složku.",
+            ERR_OUTPUT_IS_SOURCE: "Výstupní složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdrojová PDF — zvolte jinou výstupní složku.",
             ERR_PRESET:         "Musíte vybrat PDF Preset.",
             ERR_NO_PDF:         "Ve vybrané složce nebyly nalezeny žádné PDF soubory.",
             ERR_NO_LINKS:       "V šabloně nebyly nalezeny žádné propojené objekty.",
             ERR_NO_RELINK:      "Žádný propojený PDF objekt nebyl nalezen k relinkování.",
             ERR_PROCESS:        "Chyba při zpracování",
             ERR_RELINK_VERIFY:  "Ověření relinku selhalo pro položku %s: očekáváno '%s', nalezeno '%s'.",
+            ERR_PAGE_SIZE:      "Pozice %s: strana zdroje má %s × %s mm, šablona počítá s %s × %s mm. Zdrojové PDF má jiný formát stránky (nebo nemá TrimBox) — zkontrolujte šablonu a zdroj.",
+            DEC_SEP:            ",",
             ERR_HIDDEN_LAYER:   "PlacedItem na skryté vrstvě přeskočen: %s",
             ERR_RELINK_ITEM:    "Nepodařilo se relinkovat položku %s: %s",
             ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat placeholder {n}.",
             ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
-            ERR_UNCERTAIN:      "Přeskočeno: nejednoznačný počet stran — zkontrolujte tento soubor ručně.",
+            WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---
@@ -159,15 +164,13 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
             SAMPLE_TEMPLATE:    "sablona",
             SAMPLE_SOURCE:      "zdroj",
-            PREVIEW_VERDICT:    "%s z %s archů v pořádku · %s blokováno",
+            PREVIEW_VERDICT:    "%s z %s archů lze zpracovat (%s s upozorněním) · %s blokováno",
 
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
             BTN_RUN:            "Spustit",
             BTN_CANCEL:         "Storno",
             BTN_CLOSE:          "Zavřít",
-            BTN_STOP:           "Zastavit",
-            BTN_STOPPING:       "Zastavuji…",
             BTN_CONTINUE:       "Pokračovat",
 
             // --- UI: Checkboxy ---
@@ -183,7 +186,7 @@ BRE.L = (function () {
             TIP_OUTPUT_BTN:     "Vybrat výstupní složku",
             TIP_NAMING:         "Vzor názvu výstupu. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
             TIP_PRESET:         "Profil kvality PDF pro export",
-            TIP_SKIP:           "Pokud výstupní soubor již existuje, přeskočí se",
+            TIP_SKIP:           "Přeskočí arch, jehož výstup už existuje a je novější než zdroj i šablona",
             TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
 
             // --- UI: Dialogy souborů ---
@@ -203,12 +206,10 @@ BRE.L = (function () {
             SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
             SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
             SCAN_OVER:          "Blokováno (více stran než pozic): %s",
-            SCAN_UNCERTAIN:     "Nejistý počet stran (blokováno): %s",
             SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
-            SCAN_FILE_PARTIAL:  "%s: %s stran — zůstane %s pozic navíc (odeber ručně).",
+            SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic navíc se z archu odebere.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
-            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
             ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 
@@ -216,6 +217,8 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Zpracování souborů…",
             PROGRESS_INIT:      "Připravuji…",
             PROGRESS_FILE:      "Zpracovávám: %s (%s z %s)",
+            PROGRESS_STOP_HINT: "Dávku zastavíte podržením klávesy Esc.",
+            PROGRESS_STOPPING:  "Zastavuji — rozpracovaný soubor se dokončí…",
 
             // --- Log ---
             LOG_TITLE:          "Výsledek zpracování",
@@ -225,11 +228,12 @@ BRE.L = (function () {
             LOG_BLOCKED:        "Blokováno",
             LOG_REMOVED:        "Odebrané pozice",
             LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu",
-            LOG_MANUAL:         "%s pozic navíc na tomto archu — odeber ručně",
+            LOG_MANUAL:         "%s pozic navíc se nepodařilo odebrat a ukazují znovu stranu 1 — před tiskem je odstraňte ručně",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",
-            SKIP_MSG:           "Přeskočeno (soubor existuje)"
+            SKIP_MSG:           "Přeskočeno (soubor existuje)",
+            LOG_REDONE:         "Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu."
         }
     };
 

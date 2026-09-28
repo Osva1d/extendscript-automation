@@ -9,32 +9,24 @@ BRE.Core = {
 
     _lockedLayers: [],
     _lockedItems: [],
+    _probeFile: null,
+    _probePages: 0,
 
     // ---------------------------------------------------------------------
     // Session management
     // ---------------------------------------------------------------------
 
     /**
-     * Unlocks all locked layers and PlacedItems before processing.
-     * Stores their state so endSession() can restore it.
+     * Unlocks all locked layers (sublayers included) and PlacedItems before
+     * processing. Stores their state so endSession() can restore it.
      * @param {Document} doc - The active Illustrator document.
      */
     beginSession: function (doc) {
         this._lockedLayers = [];
         this._lockedItems = [];
-        var i, layer, item;
+        var i, item;
 
-        for (i = 0; i < doc.layers.length; i++) {
-            layer = doc.layers[i];
-            try {
-                if (layer.locked) {
-                    this._lockedLayers.push({ idx: i, name: layer.name });
-                    layer.locked = false;
-                }
-            } catch (e) {
-                this._log("beginSession: layer unlock failed — " + layer.name);
-            }
-        }
+        this._unlockLayers(doc.layers);
 
         for (i = 0; i < doc.placedItems.length; i++) {
             item = doc.placedItems[i];
@@ -60,7 +52,7 @@ BRE.Core = {
      * @param {Document} doc - The active Illustrator document.
      */
     endSession: function (doc) {
-        var i, rec, lay;
+        var i;
 
         // Restore item locks by reference. Items removed during processing
         // throw here (reference invalid) and are harmlessly swallowed.
@@ -72,11 +64,7 @@ BRE.Core = {
 
         for (i = 0; i < this._lockedLayers.length; i++) {
             try {
-                rec = this._lockedLayers[i];
-                lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
-                    ? doc.layers[rec.idx]
-                    : doc.layers.getByName(rec.name);
-                lay.locked = true;
+                this._lockedLayers[i].locked = true;
             } catch (e) {}
         }
 
@@ -84,13 +72,112 @@ BRE.Core = {
         this._lockedItems = [];
     },
 
+    /**
+     * Unlocks every locked layer in the collection and, recursively, its
+     * sublayers. relink() in a locked sublayer throws "Target layer cannot be
+     * modified" even when the parent layer is unlocked (measured, AI 30.8.2).
+     * Layers are kept by reference — a sublayer has no top-level index to
+     * restore by.
+     * @param {Layers} layers - A document's or a layer's layer collection.
+     */
+    _unlockLayers: function (layers) {
+        for (var i = 0; i < layers.length; i++) {
+            try {
+                var layer = layers[i];
+                if (layer.locked) {
+                    this._lockedLayers.push(layer);
+                    layer.locked = false;
+                }
+                this._unlockLayers(layer.layers);
+            } catch (e) {
+                this._log("beginSession: layer unlock failed at index " + i);
+            }
+        }
+    },
+
     // ---------------------------------------------------------------------
     // Relink pipeline
     // ---------------------------------------------------------------------
 
     /**
-     * Relinks all PlacedItems in the document to the target PDF.
-     * Removes PlacedItems whose pageNumber exceeds the source page count.
+     * The template's positions: visible placed items linked to the file most
+     * of them share — the multi-page PDF the sheet was built from. Other
+     * links (a logo, marks placed as a file) are not positions and are left
+     * alone. A missing link cannot report its file (reading .file throws when
+     * the original PDF was moved or deleted), so missing links form a group
+     * of their own and a template whose original PDF is gone still finds its
+     * positions. When two groups tie, every visible placed item counts, as
+     * before this definition existed.
+     * @param {Document} doc - The document to inspect.
+     * @returns {PlacedItem[]} The positions.
+     */
+    getPositions: function (doc) {
+        var items = doc.placedItems;
+        var groups = {}, keys = [], i, item, key;
+
+        for (i = 0; i < items.length; i++) {
+            item = items[i];
+            if (this._isHidden(item)) continue;
+            try {
+                key = "file:" + item.file.fsName;
+            } catch (e) {
+                key = "missing";
+            }
+            if (!groups.hasOwnProperty(key)) {
+                groups[key] = [];
+                keys.push(key);
+            }
+            groups[key].push(item);
+        }
+
+        var best = null, tie = false, all = [];
+        for (i = 0; i < keys.length; i++) {
+            var group = groups[keys[i]];
+            all = all.concat(group);
+            if (!best || group.length > best.length) {
+                best = group;
+                tie = false;
+            } else if (group.length === best.length) {
+                tie = true;
+            }
+        }
+        return (best && !tie) ? best : all;
+    },
+
+    /**
+     * Counts the positions of the template as saved on disk — the state every
+     * sheet is built from. A template open with unsaved changes would give
+     * its in-memory count (app.open() returns that instance), so the count
+     * then comes from a temporary copy of the file; the user's open document
+     * is not touched.
+     * @param {File} file - The template file.
+     * @param {Document|null} openDoc - The template if it is already open.
+     * @returns {number} Position count of the saved template.
+     */
+    countSavedPositions: function (file, openDoc) {
+        if (openDoc && openDoc.saved !== false) return this.getPositions(openDoc).length;
+        var src = file, copy = null;
+        if (openDoc) {
+            copy = new File(Folder.temp.fsName + "/bre-template-" + new Date().getTime() + ".ai");
+            if (!file.copy(copy.fsName)) throw new Error("cannot copy the template to " + copy.fsName);
+            src = copy;
+        }
+        var doc = app.open(src);
+        try {
+            return this.getPositions(doc).length;
+        } finally {
+            doc.close(SaveOptions.DONOTSAVECHANGES);
+            if (copy) copy.remove();
+        }
+    },
+
+    /**
+     * Relinks the template's positions (see getPositions) to the target PDF.
+     * When the PDF has fewer pages than the template has positions, the
+     * positions for the missing pages would show page 1 again (measured,
+     * AI 30.8.2). Their pages are found with the page probe (_positionPages)
+     * and they are removed. When the probe cannot tell every position's page,
+     * nothing is removed and the caller flags the sheet for manual cleanup.
      *
      * @param {Document} doc - The active document.
      * @param {File} targetPdf - The PDF file to relink to.
@@ -103,50 +190,65 @@ BRE.Core = {
             relinkedItems: [], warnings: [], errors: [], ok: false
         };
         var items = doc.placedItems;
+        var positions = this.getPositions(doc);
         var i, item, label;
         var toRemove = [];
 
+        // Hidden placed items are never positions; report them as before.
         for (i = 0; i < items.length; i++) {
-            item = items[i];
-            label = item.name || ("item_" + i);
-
-            if (!item.file) {
+            if (this._isHidden(items[i])) {
+                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER,
+                    items[i].name || ("item_" + i)));
                 results.skipped++;
-                continue;
-            }
-
-            if (this._isHidden(item)) {
-                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, label));
-                results.skipped++;
-                continue;
-            }
-
-            if (totalPages > 0 && item.pageNumber && item.pageNumber > totalPages) {
-                // Excess position (its page is beyond this PDF). Capture the
-                // reference now; remove after the loop. Only managed items
-                // (linked + visible) reach here — hidden/fileless were skipped.
-                toRemove.push({ item: item, page: item.pageNumber });
-                continue;
-            }
-
-            try {
-                item.relink(targetPdf);
-                results.relinked++;
-                // Keep a reference so verifyRelink checks ONLY the items we
-                // actually relinked — never the deliberately-skipped ones
-                // (hidden-layer / fileless), which still point to the old PDF.
-                results.relinkedItems.push({ item: item, label: label });
-            } catch (e) {
-                results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
             }
         }
 
-        // Remove captured excess positions by reference (safe against live
+        // Page sizes for verifyRelink, taken before the probe changes them.
+        var sizes = [];
+        for (i = 0; i < positions.length; i++) sizes.push(this._pageSize(positions[i]));
+
+        var pages = null;
+        if (totalPages > 0 && totalPages < positions.length) {
+            pages = this._positionPages(positions);
+            if (!pages) {
+                results.warnings.push(BRE.L.format(BRE.L.WARN_PAGE_MAP, String(positions.length)));
+            }
+        }
+
+        for (i = 0; i < positions.length; i++) {
+            item = positions[i];
+            label = item.name || ("item_" + i);
+
+            // No check on item.file here: when the template's original PDF
+            // was moved or deleted, reading .file throws "There is no file
+            // associated with this item", yet relink() still works and keeps
+            // the page (measured, AI 30.8.2).
+            try {
+                item.relink(targetPdf);
+                results.relinked++;
+            } catch (e) {
+                results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
+                continue;
+            }
+
+            if (pages && pages[i] > totalPages) {
+                // Excess position. Relinked first, so that if its removal
+                // fails it shows page 1 of the source and is counted as a
+                // leftover — never a stale page.
+                toRemove.push({ item: item, page: pages[i] });
+            } else {
+                // Keep a reference so verifyRelink checks ONLY the positions
+                // we relinked and kept — never the hidden ones, which still
+                // point to the old PDF.
+                results.relinkedItems.push({ item: item, label: label, size: sizes[i] });
+            }
+        }
+
+        // Remove the excess positions by reference (safe against live
         // collection mutation). Each position may be the clipped content of a
         // clipping mask — _removePosition removes the whole clip group so no
         // clip path / frame is left behind. The remove-set lets it refuse to
         // delete a clip group that also encloses a position we are keeping.
-        // Best-effort auto-removal (only fires when pageNumber is readable).
         // Anything that cannot be removed is reported as a warning; the caller
         // counts the leftover positions and asks the user to remove them by
         // hand — it never refuses the sheet on this account.
@@ -166,19 +268,83 @@ BRE.Core = {
     },
 
     /**
-     * Counts managed positions in the document — placed items that are linked
-     * (have a file) and not hidden (item itself or any ancestor layer). Used
-     * to detect how many extra positions remain on a sheet so the user can be
-     * told to remove them.
+     * Which page of the template's PDF each position shows. PlacedItem has
+     * no page property (measured, AI 30.8.2), so every position is relinked
+     * to the page probe (BRE.Pdf.writeProbe) and its page is read from the
+     * width of its placed page. The caller relinks the positions to the
+     * source right after. Returns null unless the pages are exactly 1..n,
+     * each once — a template that shows a page twice, or a page beyond its
+     * position count, gets no automatic removal.
+     * @param {PlacedItem[]} positions - The template's positions.
+     * @returns {number[]|null} Page per position, or null.
+     */
+    _positionPages: function (positions) {
+        var n = positions.length, pages = [], seen = [], i, k, size;
+        var probe = this._probe(n);
+        if (!probe) return null;
+        try {
+            for (i = 0; i < n; i++) {
+                positions[i].relink(probe);
+                size = this._pageSize(positions[i]);
+                if (!size) return null;
+                k = BRE.Pdf.pageFromWidth(size[0]);
+                if (k < 1 || k > n || seen[k]) return null;
+                seen[k] = true;
+                pages.push(k);
+            }
+        } catch (e) {
+            this._log("_positionPages: " + e.message);
+            return null;
+        }
+        return pages;
+    },
+
+    /**
+     * The page probe for this run, written to the temp folder on first use.
+     * @param {number} n - Pages needed.
+     * @returns {File|null} The probe, or null if it could not be written.
+     */
+    _probe: function (n) {
+        if (this._probeFile && this._probePages >= n && this._probeFile.exists) return this._probeFile;
+        this.removeProbe();
+        var f = new File(Folder.temp.fsName + "/bre-probe-" + new Date().getTime() + ".pdf");
+        try {
+            if (!BRE.Pdf.writeProbe(f, n)) return null;
+        } catch (e) {
+            this._log("_probe: " + e.message);
+            return null;
+        }
+        this._probeFile = f;
+        this._probePages = n;
+        return f;
+    },
+
+    /**
+     * Deletes the page probe written during this run, if any.
+     */
+    removeProbe: function () {
+        if (this._probeFile) {
+            try { this._probeFile.remove(); } catch (e) {}
+        }
+        this._probeFile = null;
+        this._probePages = 0;
+    },
+
+    /**
+     * Counts managed positions in the document — visible placed items linked
+     * to the source PDF the sheet was relinked to. Other links (a logo) are
+     * not positions. Used to detect how many extra positions remain on a
+     * sheet so the user can be told to remove them.
      * @param {Document} doc - The document to inspect.
+     * @param {File} targetPdf - The source PDF the positions were relinked to.
      * @returns {number} Managed position count.
      */
-    countManagedPositions: function (doc) {
+    countManagedPositions: function (doc, targetPdf) {
         var n = 0;
         var items = doc.placedItems;
         for (var i = 0; i < items.length; i++) {
             try {
-                if (items[i].file && !this._isHidden(items[i])) n++;
+                if (!this._isHidden(items[i]) && items[i].file.fsName === targetPdf.fsName) n++;
             } catch (e) {}
         }
         return n;
@@ -187,16 +353,13 @@ BRE.Core = {
     /**
      * Removes one position from the sheet. If the placed item is the clipped
      * content of a clipping mask, the whole clip group is removed instead —
-     * calling remove() on the clipped item alone is an ineffective no-op in
-     * Illustrator and would leave the clipped PDF (and frame) on the sheet.
+     * removing the placed item alone would leave the clip path behind as an
+     * empty group (measured, AI 30.8.2), with its frame if it has a stroke.
      *
      * Safety: the climb only ascends into a clip group whose every placed item
      * is itself being removed (removeRefs). A clip group that also encloses a
      * position we are KEEPING is never removed — otherwise good artwork would
-     * be silently deleted. In that case removal falls back to the bare item
-     * (an ineffective no-op for clipped content); the caller then counts the
-     * surviving positions (countManagedPositions) and flags the sheet for
-     * manual cleanup instead of failing it.
+     * be silently deleted. In that case only the bare item is removed.
      *
      * @param {PlacedItem} item - The placed item to remove.
      * @param {Array} removeRefs - All placed items scheduled for removal.
@@ -261,17 +424,26 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Verifies that every relinked item now points to the expected PDF.
+     * Verifies that every relinked item now points to the expected PDF and
+     * shows a page of the same size as before. relink() does not fail on a
+     * page of another size: it keeps the position's centre and scales the new
+     * page to the old diagonal, so a source of another format — or one with
+     * the bleed baked into the page and no TrimBox — would print shrunk or
+     * stretched (measured, AI 30.8.2). The size compared is the placed page's
+     * own box (boundingBox), which does not change with the position's
+     * rotation or scale.
      * Takes the relinked-items list from relinkDocument() — NOT the whole
-     * document — so deliberately-skipped items (hidden-layer / fileless),
-     * which still reference the old PDF, are never wrongly flagged.
-     * @param {Array} relinkedItems - [{ item, label }] from relinkDocument.
+     * document — so deliberately-skipped hidden items, which still
+     * reference the old PDF, are never wrongly flagged.
+     * @param {Array} relinkedItems - [{ item, label, size }] from relinkDocument.
      * @param {File} expectedPdf - The expected linked file.
      * @returns {Object} { ok: boolean, errors: string[] }
      */
     verifyRelink: function (relinkedItems, expectedPdf) {
         var errors = [];
         var expectedPath = expectedPdf.fsName;
+        var tol = 0.1 * 72 / 25.4;    // 0.1 mm
+        var sizeReported = false;     // one size message per sheet is enough
 
         for (var i = 0; i < relinkedItems.length; i++) {
             var rec = relinkedItems[i];
@@ -281,6 +453,14 @@ BRE.Core = {
                     errors.push(
                         BRE.L.format(BRE.L.ERR_RELINK_VERIFY, rec.label, expectedPath, actualPath)
                     );
+                    continue;
+                }
+                var now = this._pageSize(rec.item);
+                if (!sizeReported && rec.size && now &&
+                        (Math.abs(now[0] - rec.size[0]) > tol || Math.abs(now[1] - rec.size[1]) > tol)) {
+                    errors.push(BRE.L.format(BRE.L.ERR_PAGE_SIZE, rec.label,
+                        this._mm(now[0]), this._mm(now[1]), this._mm(rec.size[0]), this._mm(rec.size[1])));
+                    sizeReported = true;
                 }
             } catch (e) {
                 errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, rec.label, e.message));
@@ -290,115 +470,28 @@ BRE.Core = {
         return { ok: errors.length === 0, errors: errors };
     },
 
-    // ---------------------------------------------------------------------
-    // PDF page count
-    // ---------------------------------------------------------------------
-
     /**
-     * Reads a PDF's raw bytes as a binary string.
-     * @param {File} pdfFile - The PDF file to read.
-     * @returns {string|null} File content, or null on failure.
+     * Size of the placed page's own box (after its PDF crop), independent of
+     * the position's rotation and scale.
+     * @param {PlacedItem} item - A placed item.
+     * @returns {number[]|null} [width, height] in points, or null if unreadable.
      */
-    _readPdfBinary: function (pdfFile) {
+    _pageSize: function (item) {
         try {
-            pdfFile.encoding = "binary";
-            if (!pdfFile.open("r")) return null;
-
-            // Cap memory for very large print PDFs: the /Count and /Type/Page
-            // tokens live in the object section and trailer, so we scan the
-            // head and tail rather than loading the whole file. A token missed
-            // by this window yields a low/zero count → safe "unreadable"
-            // fallback (relink all, remove none), never a wrong removal.
-            var CAP = 8 * 1024 * 1024;
-            var len = pdfFile.length;
-            var content;
-            if (len <= 0 || len <= CAP) {
-                content = pdfFile.read();
-            } else {
-                var half = Math.floor(CAP / 2);
-                var head = pdfFile.read(half);
-                pdfFile.seek(len - half, 0);
-                content = head + pdfFile.read(half);
-            }
-            pdfFile.close();
-            return content;
+            var bb = item.boundingBox;
+            return [bb[2] - bb[0], bb[1] - bb[3]];
         } catch (e) {
-            this._log("_readPdfBinary failed: " + e.message);
-            try { pdfFile.close(); } catch (ce) {}
             return null;
         }
     },
 
     /**
-     * Skips a run of PDF whitespace starting at idx.
-     * @param {string} content - PDF content.
-     * @param {number} idx - Start index.
-     * @returns {number} Index of the first non-whitespace character.
+     * Points to millimetres with one decimal, in the locale's notation.
+     * @param {number} pt - Length in points.
+     * @returns {string} e.g. "106" or "99,2".
      */
-    _skipPdfWhitespace: function (content, idx) {
-        while (idx < content.length) {
-            var w = content.charAt(idx);
-            if (w === " " || w === "\n" || w === "\r" || w === "\t" || w === "\f" || w === "\0") {
-                idx++;
-            } else {
-                break;
-            }
-        }
-        return idx;
-    },
-
-    /**
-     * Highest /Count value in the content. /Count is followed by arbitrary
-     * PDF whitespace (space, newline, CR, tab…), not only a single space —
-     * matching just "/Count " misses "/Count\n8" and silently undercounts,
-     * which (with the remove-excess logic) risks dropping real pages.
-     * @param {string} content - PDF content.
-     * @returns {number} Highest /Count, or 0 if none found.
-     */
-    _maxCount: function (content) {
-        var token = "/Count";
-        var maxCount = 0;
-        var startIdx = 0;
-        while (true) {
-            var pos = content.indexOf(token, startIdx);
-            if (pos === -1) break;
-            var ci = this._skipPdfWhitespace(content, pos + token.length);
-            var numStr = "";
-            while (ci < content.length) {
-                var ch = content.charAt(ci);
-                if (ch >= "0" && ch <= "9") { numStr += ch; ci++; } else { break; }
-            }
-            if (numStr.length > 0) {
-                var n = parseInt(numStr, 10);
-                if (n > maxCount) maxCount = n;
-            }
-            startIdx = pos + token.length;
-        }
-        return maxCount;
-    },
-
-    /**
-     * Counts page objects: "/Type" + whitespace + "/Page" (excluding "/Pages").
-     * An independent cross-check against _maxCount. Returns 0 when page
-     * objects live in compressed object streams (PDF 1.5+) — callers treat
-     * 0 as "no cross-check available" rather than a contradiction.
-     * @param {string} content - PDF content.
-     * @returns {number} Number of /Type /Page objects found.
-     */
-    _countPageObjects: function (content) {
-        var token = "/Type";
-        var count = 0;
-        var startIdx = 0;
-        while (true) {
-            var pos = content.indexOf(token, startIdx);
-            if (pos === -1) break;
-            var ci = this._skipPdfWhitespace(content, pos + token.length);
-            if (content.substr(ci, 5) === "/Page" && content.charAt(ci + 5) !== "s") {
-                count++;
-            }
-            startIdx = pos + token.length;
-        }
-        return count;
+    _mm: function (pt) {
+        return String(Math.round(pt * 254 / 72) / 10).replace(".", BRE.L.DEC_SEP);
     },
 
     // ---------------------------------------------------------------------
@@ -410,45 +503,32 @@ BRE.Core = {
      * template's position count. This is the safety net: it surfaces every
      * file whose page count does not match the number of positions BEFORE
      * any destructive processing, and flags over-page files for hard block.
+     * The count comes from the PDF's page tree (BRE.Pdf.pageCount).
      *
      * Status values:
      *   "ok"         pages === slotCount (full sheet)
      *   "partial"    pages < slotCount AND last file (expected short last sheet)
      *   "under"      pages < slotCount AND not last file (likely split error)
      *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
-     *   "uncertain"  page-object count exceeds /Count — BLOCKED
-     *   "unreadable" pages === 0 (count could not be detected)
-     *
-     * Each PDF is read once; both /Count and /Type/Page counts are derived
-     * from the same bytes. Only the dangerous direction is blocked: when there
-     * are MORE page objects than /Count claims (pageObjs > pages), /Count is
-     * undercounting and the remove-excess step would drop real pages, so the
-     * file is marked "uncertain" and hard-blocked for manual review. The other
-     * direction (pageObjs < pages, e.g. page objects hidden in compressed
-     * object streams of a modern PDF) is NOT a contradiction — /Count is
-     * authoritative there, so it is trusted.
+     *   "unreadable" pages === 0 (count could not be read)
      *
      * @param {File[]} pdfFiles - Source PDF files (already sorted).
-     * @param {number} slotCount - Number of PlacedItems in the template.
-     * @returns {Object} { items: [{file, name, pages, pageObjs, status}], counts, processable }
+     * @param {number} slotCount - Number of positions in the template.
+     * @returns {Object} { items: [{file, name, pages, status}], counts, processable }
      */
     scanSources: function (pdfFiles, slotCount) {
         var items = [];
-        var counts = { ok: 0, partial: 0, under: 0, over: 0, uncertain: 0, unreadable: 0 };
+        var counts = { ok: 0, partial: 0, under: 0, over: 0, unreadable: 0 };
         var lastIdx = pdfFiles.length - 1;
 
         for (var i = 0; i < pdfFiles.length; i++) {
             var f = pdfFiles[i];
             var name = f.displayName || decodeURI(f.name);
-            var content = this._readPdfBinary(f);
-            var pages = (content === null) ? 0 : this._maxCount(content);
-            var pageObjs = (content === null) ? 0 : this._countPageObjects(content);
+            var pages = BRE.Pdf.pageCount(f);
             var status;
 
             if (pages === 0) {
                 status = "unreadable";
-            } else if (pageObjs > pages) {
-                status = "uncertain";
             } else if (pages > slotCount) {
                 status = "over";
             } else if (pages === slotCount) {
@@ -460,14 +540,14 @@ BRE.Core = {
             counts[status]++;
             // Carry the File reference so callers iterate scan items directly
             // instead of index-coupling back to the pdfFiles array.
-            items.push({ file: f, name: name, pages: pages, pageObjs: pageObjs, status: status });
+            items.push({ file: f, name: name, pages: pages, status: status });
         }
 
-        // "over" and "uncertain" files are hard-blocked; the rest are processable.
+        // "over" files are hard-blocked; the rest are processable.
         return {
             items: items,
             counts: counts,
-            processable: pdfFiles.length - counts.over - counts.uncertain
+            processable: pdfFiles.length - counts.over
         };
     },
 
@@ -564,9 +644,9 @@ BRE.Core = {
 
     /**
      * Builds a human-readable snapshot of every placed item in the document —
-     * pageNumber, "over" verdict, layer + visibility, parent group / clip
-     * state, hidden-layer result, linked file name. Used by diagnostic mode to
-     * reveal the real document structure when removal behaves unexpectedly.
+     * layer + visibility, parent group / clip state, hidden-layer result,
+     * linked file name. Used by diagnostic mode to reveal the real document
+     * structure when removal behaves unexpectedly.
      * @param {Document} doc - Document to inspect.
      * @param {number} totalPages - Detected page count of the source PDF.
      * @returns {string} Multi-line report.
@@ -577,8 +657,7 @@ BRE.Core = {
         lines.push("  totalPages=" + totalPages + "  placedItems=" + items.length);
         for (var i = 0; i < items.length; i++) {
             var it = items[i];
-            var pn = "?", lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
-            try { pn = it.pageNumber; } catch (e) { pn = "ERR"; }
+            var lay = "?", vis = "?", par = "?", clp = "-", hid = "?", fil = "?";
             try { lay = it.layer.name; } catch (e) {}
             try { vis = it.layer.visible; } catch (e) {}
             try {
@@ -587,9 +666,7 @@ BRE.Core = {
             } catch (e) {}
             try { hid = this._isHidden(it); } catch (e) {}
             try { fil = it.file ? decodeURI(it.file.name) : "NONE"; } catch (e) { fil = "ERR"; }
-            lines.push("    [" + i + "] page=" + pn +
-                       " over=" + (totalPages > 0 && pn !== "ERR" && pn > totalPages) +
-                       " layer='" + lay + "' vis=" + vis +
+            lines.push("    [" + i + "] layer='" + lay + "' vis=" + vis +
                        " parent=" + par + " clipped=" + clp + " hidden=" + hid + " file=" + fil);
         }
         return lines.join("\n");

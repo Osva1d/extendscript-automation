@@ -192,6 +192,13 @@ BRE.UI = {
             alert(l.ERR_SOURCE);
             return null;
         }
+        // Outputs written next to the sources would be read back as sources
+        // by the next run. (A subfolder is fine: sources are not read
+        // recursively.)
+        if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
+            alert(l.ERR_OUTPUT_IS_SOURCE);
+            return null;
+        }
         if (!outputFolder.exists) {
             if (confirm(l.ERR_OUTPUT_ASK)) {
                 if (!outputFolder.create()) {
@@ -279,10 +286,13 @@ BRE.UI = {
         dlg.margins = 20;
         dlg.spacing = 10;
 
-        // One-line verdict (bold): processable / total / blocked.
+        // One-line verdict (bold): processable / total / with a warning / blocked.
+        // Processable includes the short and unreadable sheets, so they are
+        // counted apart — "OK" for them read as if nothing needed a look.
         var total = config.pdfFiles.length;
         var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
-            String(scan.processable), String(total), String(total - scan.processable)));
+            String(scan.processable), String(total),
+            String(scan.processable - scan.counts.ok), String(total - scan.processable)));
         verdictST.preferredSize.width = 500;
         try {
             var vf = verdictST.graphics.font;
@@ -323,7 +333,6 @@ BRE.UI = {
         addCountRow(c.under, l.SCAN_UNDER, AMBER, false);
         addCountRow(c.unreadable, l.SCAN_UNREADABLE, GREY, false);
         addCountRow(c.over, l.SCAN_OVER, RED, false);
-        addCountRow(c.uncertain, l.SCAN_UNCERTAIN, RED, false);
 
         // --- Per-file anomaly details (everything except "ok") ---
         var details = [];
@@ -337,8 +346,6 @@ BRE.UI = {
                 details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
-            } else if (it.status === "uncertain") {
-                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name));
             }
         }
         if (details.length > 0) {
@@ -370,9 +377,12 @@ BRE.UI = {
     // ---------------------------------------------------------------------
 
     /**
-     * Creates and shows a progress palette.
+     * Creates and shows a progress palette. The batch is stopped by holding
+     * Esc: a palette button gets no clicks while the script runs — Illustrator
+     * does not dispatch them, however the loop redraws or waits — but the
+     * keyboard state can be read (both measured, AI 30.8.2).
      * @param {number} total - Total number of files.
-     * @returns {Object} { win, statusText, bar, cancelled, update(i, name), close() }
+     * @returns {Object} { isCancelled(), poll(), update(i, name), finish(), close() }
      */
     createProgress: function (total) {
         var l = BRE.L;
@@ -389,22 +399,31 @@ BRE.UI = {
         bar.preferredSize.width = 450;
 
         var cancelled = false;
-        var cancelBtn = dlg.add("button", undefined, l.BTN_STOP);
-        cancelBtn.alignment = ["center", "center"];
-        cancelBtn.onClick = function () {
-            // Cancellation takes effect after the current file finishes (the
-            // loop polls between files). Give immediate visual feedback so the
-            // button doesn't look dead during the in-progress file.
-            cancelled = true;
-            cancelBtn.text = l.BTN_STOPPING;
-            cancelBtn.enabled = false;
-            dlg.update();
-        };
+        var stopHint = dlg.add("statictext", undefined, l.PROGRESS_STOP_HINT);
+        stopHint.preferredSize.width = 450;
+        stopHint.justify = "center";
+
+        // Latches a stop request while Esc is held. The loop acts on it
+        // between files, so the file in progress is finished.
+        function poll() {
+            if (cancelled) return;
+            try {
+                if (ScriptUI.environment.keyboardState.keyName === "Escape") {
+                    cancelled = true;
+                    stopHint.text = l.PROGRESS_STOPPING;
+                    dlg.update();
+                }
+            } catch (e) {}
+        }
 
         dlg.show();
 
         return {
-            isCancelled: function () { return cancelled; },
+            isCancelled: function () {
+                poll();
+                return cancelled;
+            },
+            poll: poll,
             update: function (index, fileName) {
                 // Keep the status line from overflowing on long names.
                 var nm = fileName;
@@ -413,6 +432,7 @@ BRE.UI = {
                     nm, String(index + 1), String(total));
                 bar.value = index;
                 dlg.update();
+                poll();
             },
             finish: function () {
                 bar.value = total;
