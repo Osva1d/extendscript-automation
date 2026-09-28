@@ -127,7 +127,7 @@ Sjednocené pravidlo pro error handling napříč moduly:
 
 `[Default]` obsahuje jen tovární hodnoty — Uložit do ní nikdy nezapíše (změní se na Uložit jako). `UI.show()` ji proto při každém otevření sestaví znovu přes `ZSM.UI.defaultsForDocument()`: `getDefaults()` s řezovou barvou, kterou `ZSM.Draw.detectCutColor()` najde v dokumentu. Tlačítko Výchozí načítá totéž.
 
-`UI.show()` přijímá **wrapper**, ne flat settings. Vrací wrapper nebo `null` (cancel). Main pak extrahuje flat settings přes `wrapper.presets[wrapper.activePreset]`.
+`UI.show()` přijímá **wrapper**, ne flat settings. Vrací wrapper nebo `null` (cancel). Main pak bere nastavení běhu z `wrapper.presets["[Last Settings]"]`, které dialog zapíše při Generovat: pole zobrazeného režimu z dialogu, pole druhého režimu z toho, s čím byl dialog otevřen nebo naposledy načten (poslední běh, vybraná předvolba, tovární hodnoty) — ne z aktivní předvolby.
 
 ### Geometry objekt (výstup ZSM.Core.calculateAll)
 ```javascript

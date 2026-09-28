@@ -700,6 +700,50 @@ assertEq(a2c.colour, "Cut", "Defaults button: mapping row gets the detected cut 
 
 
 // =====================================================
+// TEST 19 (audit A3): the other mode's values come from the last run
+// =====================================================
+// Fields of the mode a dialog does not show were taken from the active
+// preset. An unsaved SUMMA tweak (top feed 90) therefore vanished after one
+// ZUND run, and the next SUMMA job silently used the preset's 70.
+console.log("\n=== TEST 19 (audit A3): other-mode values survive a run in the other mode ===");
+function clickRadio(win, label) {
+    win.findOne(function (c) { return c.type === "radiobutton" && c.text === label; }).onClick();
+}
+function clickGenerate(win) {
+    win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }).onClick();
+}
+var lastA3 = ZSM.Config.getDefaults();
+lastA3.mode = "SUMMA";
+lastA3.feedTop = 90;
+var pA3 = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": lastA3 } };
+runDialogs(pA3, [
+    function (win) { clickRadio(win, ZSM.L.MODE_ZUND); },   // SUMMA dialog -> ZUND
+    function (win) { clickGenerate(win); }                   // ZUND run
+]);
+assertEq(pA3.presets["[Last Settings]"].mode, "ZUND", "the ZUND run is the last run");
+assertEq(pA3.presets["[Last Settings]"].feedTop, 90, "the SUMMA top feed from the last SUMMA values survives the ZUND run");
+
+var feedA3 = null;
+runDialogs(pA3, [
+    function (win) { clickRadio(win, ZSM.L.MODE_SUMMA); },   // next job: back to SUMMA
+    function (win) { feedA3 = fieldText(win, ZSM.L.FEED_TOP); }
+]);
+assertEq(feedA3, "90", "the next SUMMA dialog shows the last SUMMA top feed");
+
+// Loading a preset adopts all of its values, the other mode's included.
+var bannerZ = ZSM.Config.getDefaults();
+bannerZ.feedTop = 55;
+bannerZ.gapInner = 8;
+var lastZ = ZSM.Config.getDefaults();
+lastZ.feedTop = 90;
+var pA3c = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": lastZ, "Banner Z": bannerZ } };
+runDialogs(pA3c, [
+    function (win) { pick(win, "Banner Z"); clickGenerate(win); }
+]);
+assertEq(pA3c.presets["[Last Settings]"].feedTop, 55, "a picked preset brings its own values for the other mode");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 SUI.uninstall();

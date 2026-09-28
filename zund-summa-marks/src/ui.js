@@ -114,6 +114,13 @@ ZSM.UI = {
                  || pData.presets[pData.activePreset]
                  || c.getDefaults();
 
+        // Values of the mode this dialog does not show come from what it was
+        // opened or last loaded with (the last run, a picked preset, the
+        // factory values), not from the active preset — that dropped an
+        // unsaved tweak to the other mode after a single run (audit A3).
+        // setUIValues() moves it on every load.
+        var otherModeBase = sData;
+
         // =================================================================
         // Window
         // =================================================================
@@ -635,9 +642,11 @@ ZSM.UI = {
          * Reads current UI state into a flat settings object.
          * Only reads controls that exist in the current mode;
          * missing-mode values are preserved from the previous preset.
+         * @param {Object} [prevSettings] - Source of the missing-mode values;
+         *        the active preset when omitted (modified check, Save).
          */
-        function getUIValues() {
-            var prev = pData.presets[pData.activePreset] || c.getDefaults();
+        function getUIValues(prevSettings) {
+            var prev = prevSettings || pData.presets[pData.activePreset] || c.getDefaults();
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
@@ -670,6 +679,7 @@ ZSM.UI = {
          */
         function setUIValues(obj) {
             if (!obj) return;
+            otherModeBase = obj;
 
             // Mode selector (visual only — actual mode is fixed for this dialog;
             // reflect the dialog's own mode so the radios never desync from it).
@@ -958,7 +968,7 @@ ZSM.UI = {
             // never alias a named preset.
             pData.presets["[Last Settings]"] = preset
                 ? JSON.parse(JSON.stringify(preset))
-                : getUIValues();
+                : getUIValues(otherModeBase);
             // Tag the snapshot with the TARGET mode so the next dialog opens correctly
             pData.presets["[Last Settings]"].mode = newMode;
 
@@ -1033,8 +1043,9 @@ ZSM.UI = {
             };
 
             // Run validation (alerts shown by validateNumber on failure).
-            // Mode-irrelevant fields are pulled from prevOk (active preset).
-            var prevOk = pData.presets[pData.activePreset] || c.getDefaults();
+            // Mode-irrelevant fields are pulled from prevOk: the values the
+            // dialog was opened or last loaded with (audit A3).
+            var prevOk = otherModeBase || pData.presets[pData.activePreset] || c.getDefaults();
             var result_v = ZSM.Validation.validate(raw, prevOk, l);
             if (!result_v.valid) return;  // Errors already shown via alerts
 

@@ -90,6 +90,11 @@ z auditu UI 2026-09-28
   ve Vzornících byla, jen v ní nebyla žádná cesta, a neuvedla vrstvu. Teď zní
   „Vrstva ‘Cut’: v barvě ‘Cut’ není v dokumentu žádná cesta, nic se nepřesunulo.
   Zkontrolujte barvu řezových cest."
+- **Úprava druhého režimu přežije běh v tom prvním (audit A3).** Hodnoty režimu,
+  který dialog právě neukazuje, se braly z aktivní předvolby: neuložená úprava
+  SUMMA (třeba horní výjezd 90) po jednom běhu ZUND zmizela a další zakázka
+  SUMMA tiše vyšla s hodnotou z předvolby. Teď se berou z posledního běhu,
+  případně z předvolby, kterou operátor v dialogu vybral.
 
 ## [1.0.0] — 2026-06-28
 

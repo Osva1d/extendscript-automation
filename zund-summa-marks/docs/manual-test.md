@@ -57,7 +57,8 @@ dokumentu **Cut ← Cut**.
   Engine je ověřený bez zobrazení okna, živý dialog ne.
 - [ ] **1.6 Paměť.** Uložená předvolba přežije zavření a nové spuštění. Po
   Generovat s neuloženými změnami otevře další spuštění dialog s hodnotami
-  posledního běhu.
+  posledního běhu. Neuložená úprava SUMMA (horní výjezd 90) přežije jeden běh
+  ZUND: po přepnutí zpět na SUMMA je tam pořád 90 (A3).
 
 ---
 
