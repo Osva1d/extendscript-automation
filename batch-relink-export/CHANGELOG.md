@@ -6,6 +6,17 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 
 ## [Nevydáno]
 
+### Přidáno
+
+- **Dialog si pamatuje poslední nastavení (A1, A2 z auditu UI 2026-09-28).**
+  Šablona, výstupní složka, vzor, PDF preset a „Po dokončení otevřít výstupní
+  složku" se předvyplní z minulého běhu; uloží se po Spustit, když dialog
+  projde kontrolou. Konec výběru presetu při každém běhu — výchozí preset
+  podle jazyka Illustratoru (`[Tisková kvalita]` / `[High Quality Print]`)
+  platí jen do první volby. Zdrojová složka se mění se zakázkou a „Přeskočit
+  existující" je rozhodnutí pro jeden běh, proto se nepamatují. Nastavení je
+  v `~/Library/Application Support/batch-relink-export/settings.json`.
+
 ### Změněno
 
 - Sjednocen slovník tlačítek se zbytkem sady: **Storno** nyní znamená *zrušit
@@ -87,6 +98,42 @@ Opravy z code review 2026-09-27
   místo tlačítka říká „Dávku zastavíte podržením klávesy Esc."; skript klávesu
   kontroluje před každým souborem i po jeho dlouhých krocích, rozpracovaný
   soubor dokončí a souhrn uvede, kolik souborů zpracoval.
+- **Běh nemění předvolbu importu PDF (B10).** Otevření šablony i každý relink
+  zapíše do předvoleb Illustratoru stranu a ořez dané pozice, takže po dávce
+  v nich zůstala strana a ořez poslední pozice šablony — po reálné zakázce
+  strana 12 a BleedBox, a to i po Stornu v náhledu. Skript teď předvolbu na
+  začátku běhu uloží a na konci vrátí, ať běh skončí jakkoli.
+
+Opravy z auditu UI 2026-09-28
+([report](../docs/reports/2026-09-28-audit-ui-batch-relink-export.md)).
+
+- **Souhrn zastavené dávky netvrdí, že vše proběhlo (A7).** Po zastavení
+  klávesou Esc stálo pod „Zrušeno uživatelem po zpracování 1 z 3 souborů." i
+  „Vše proběhlo bez chyb." — nedokončená dávka se dala přečíst jako hotová.
+  Ten řádek se teď ukáže jen u celé dávky.
+- **Čísla v hláškách se neskloňují chybně (A9).** Náhled a souhrn psaly
+  „4 pozic", „2 souborů", „2 stran". Hlášky jsou přeformulované tak, aby
+  číslo nestálo před podstatným jménem: „Šablona: T1 · pozic: 4",
+  „Zdrojových PDF: 2", „a_4.pdf: stran 2, pozic navíc 2 — odeberou se
+  z archu."
+- **Hlášky říkají, co se stalo a co udělat (A10–A12).** „Neplatná šablona
+  AI." platilo pro chybějící soubor, špatnou příponu i šablonu, kterou
+  Illustrator neotevřel; teď má otevření vlastní hlášku s radou otevřít
+  šablonu ručně. Chyba archu místo „Chyba při zpracování (anglická hláška)"
+  říká „Arch se nevyexportoval kvůli chybě: …", neočekávaná chyba místo
+  „KRITICKÁ CHYBA: … (line N)" říká, že se skript zastavil a komu hlášku
+  poslat. Skrytá pozice se hlásí podle vrstvy („item_3" v dokumentu nikdo
+  nenašel), bez žargonu „PlacedItem", „placeholder" a „relinkování".
+  Nečitelný počet stran říká riziko a co ověřit. Anglické texty se změnily
+  stejně.
+- **Chyba v zadání nechá dialog otevřený (A3, A4).** Chybějící `{n}`, výstup
+  do zdrojové složky nebo překlep v cestě ukončily skript a všechno se
+  vyplňovalo znovu. Kontrola teď proběhne po Spustit v otevřeném dialogu
+  a chyba ho nechá otevřený s vyplněnými poli; Ne u dotazu na vytvoření
+  výstupní složky vrátí do dialogu. Prázdné pole má vlastní hlášku („Vyberte
+  výstupní složku." místo „Výstupní složka neexistuje. Vytvořit?"). Výstupní
+  složka se vytvoří až po ostatních kontrolách, takže chyba ve vzoru už po
+  sobě nenechá prázdnou složku.
 
 ## [1.0.0] — 2026-06-28
 

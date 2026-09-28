@@ -14,10 +14,12 @@ BRE.UI = {
     /**
      * Shows the main configuration dialog.
      * Returns validated config object or null on cancel.
+     * @param {Object} saved - Remembered settings from BRE.Storage.load():
+     *        { template, output, pattern, preset, openAfter }.
      * @returns {Object|null} Config with templateFile, sourceFolder, outputFolder,
      *          namingPattern, preset, skipExisting, openAfter, pdfFiles, templateName.
      */
-    show: function () {
+    show: function (saved) {
         var c = BRE.Config;
         var l = BRE.L;
 
@@ -46,6 +48,9 @@ BRE.UI = {
             true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
         var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
             true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
+        // Last run's paths. The source changes with every job — not remembered.
+        templatePath.text = saved.template;
+        outputPath.text = saved.output;
 
         // --- Panel 2: naming & format ---
         var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
@@ -61,10 +66,11 @@ BRE.UI = {
         var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
         namingST.preferredSize.width = c.ui.labelWidth;
         namingST.helpTip = l.TIP_NAMING;
-        var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
+        var namingInput = namingGrp.add("edittext", undefined, saved.pattern);
         // Fill to the panel's right edge — same line as panel-1's buttons.
         namingInput.alignment = ["fill", "center"];
         namingInput.minimumSize.width = c.ui.fieldMinWidth;
+        namingInput.characters = c.ui.fieldChars;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
@@ -84,6 +90,7 @@ BRE.UI = {
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
         previewST.alignment = ["fill", "center"];
         previewST.minimumSize.width = c.ui.fieldMinWidth;
+        previewST.characters = c.ui.fieldChars;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -119,6 +126,13 @@ BRE.UI = {
                 }
                 if (defaultIdx > 0) break;
             }
+            // The preset chosen last time wins while it still exists.
+            for (var ri = 0; ri < pdfPresets.length; ri++) {
+                if (pdfPresets[ri] === saved.preset) {
+                    defaultIdx = ri;
+                    break;
+                }
+            }
             presetDDL.selection = defaultIdx;
         }
 
@@ -133,7 +147,7 @@ BRE.UI = {
         skipCB.helpTip = l.TIP_SKIP;
 
         var openCB = optionsPanel.add("checkbox", undefined, l.CB_OPEN_FOLDER);
-        openCB.value = true;
+        openCB.value = saved.openAfter;
         openCB.helpTip = l.TIP_OPEN;
 
         // --- Footer: greyed copyright (left) + buttons (right), one row ---
@@ -150,7 +164,7 @@ BRE.UI = {
         btnGrp.alignment = ["right", "center"];
         btnGrp.spacing = 8;
         btnGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
-        btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
+        var runBtn = btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
 
         // Live name preview — presentation only, read-only call into the
         // existing buildOutputName. No validation, no write, no side-effect.
@@ -172,90 +186,103 @@ BRE.UI = {
         // Recompute the layout with the deterministic fixed widths.
         try { dialog.layout.layout(true); } catch (le) {}
 
-        // --- Show dialog ---
-        if (dialog.show() !== 1) return null;
+        // --- Validation on Run ---
+        // An error keeps the dialog open with every field as the operator
+        // left it. Checks that change nothing run first, so a later error
+        // cannot leave a new, empty output folder behind.
+        var result = null;
+        runBtn.onClick = function () {
+            var blank = /^\s*$/;
+            if (blank.test(templatePath.text)) {
+                alert(l.ERR_TEMPLATE_EMPTY);
+                return;
+            }
+            var templateFile = new File(templatePath.text);
+            if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
+                alert(l.ERR_TEMPLATE);
+                return;
+            }
+            if (blank.test(sourcePath.text)) {
+                alert(l.ERR_SOURCE_EMPTY);
+                return;
+            }
+            var sourceFolder = new Folder(sourcePath.text);
+            if (!sourceFolder.exists) {
+                alert(l.ERR_SOURCE);
+                return;
+            }
+            if (blank.test(outputPath.text)) {
+                alert(l.ERR_OUTPUT_EMPTY);
+                return;
+            }
+            var outputFolder = new Folder(outputPath.text);
+            // Outputs written next to the sources would be read back as sources
+            // by the next run. (A subfolder is fine: sources are not read
+            // recursively.)
+            if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
+                alert(l.ERR_OUTPUT_IS_SOURCE);
+                return;
+            }
+            var preset = presetDDL.selection ? presetDDL.selection.text : "";
+            if (!preset) {
+                alert(l.ERR_PRESET);
+                return;
+            }
+            var namingPattern = namingInput.text;
+            if (namingPattern.indexOf(c.placeholders.N) === -1) {
+                alert(l.ERR_NAMING_PATTERN);
+                return;
+            }
 
-        // --- Validation ---
-        var templateFile = new File(templatePath.text);
-        var sourceFolder = new Folder(sourcePath.text);
-        var outputFolder = new Folder(outputPath.text);
-        var preset = presetDDL.selection ? presetDDL.selection.text : "";
-        var namingPattern = namingInput.text;
-        var skipExisting = skipCB.value;
-        var openAfter = openCB.value;
+            var pdfFiles = sourceFolder.getFiles(function (f) {
+                if (!(f instanceof File)) return false;
+                var nm = f.displayName || decodeURI(f.name);
+                // Skip macOS AppleDouble files (._name) and other hidden/system
+                // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
+                // and would otherwise be processed as real PDFs.
+                if (nm.charAt(0) === ".") return false;
+                return /\.pdf$/i.test(nm);
+            });
+            if (pdfFiles.length === 0) {
+                alert(l.ERR_NO_PDF);
+                return;
+            }
 
-        if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
-            alert(l.ERR_TEMPLATE);
-            return null;
-        }
-        if (!sourceFolder.exists) {
-            alert(l.ERR_SOURCE);
-            return null;
-        }
-        // Outputs written next to the sources would be read back as sources
-        // by the next run. (A subfolder is fine: sources are not read
-        // recursively.)
-        if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
-            alert(l.ERR_OUTPUT_IS_SOURCE);
-            return null;
-        }
-        if (!outputFolder.exists) {
-            if (confirm(l.ERR_OUTPUT_ASK)) {
+            if (!outputFolder.exists) {
+                if (!confirm(l.ERR_OUTPUT_ASK)) return;
                 if (!outputFolder.create()) {
                     alert(l.ERR_OUTPUT_FAIL);
-                    return null;
+                    return;
                 }
-            } else {
-                return null;
             }
-        }
-        if (!preset) {
-            alert(l.ERR_PRESET);
-            return null;
-        }
-        if (namingPattern.indexOf(c.placeholders.N) === -1) {
-            alert(l.ERR_NAMING_PATTERN);
-            return null;
-        }
 
-        var pdfFiles = sourceFolder.getFiles(function (f) {
-            if (!(f instanceof File)) return false;
-            var nm = f.displayName || decodeURI(f.name);
-            // Skip macOS AppleDouble files (._name) and other hidden/system
-            // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
-            // and would otherwise be processed as real PDFs.
-            if (nm.charAt(0) === ".") return false;
-            return /\.pdf$/i.test(nm);
-        });
-        if (pdfFiles.length === 0) {
-            alert(l.ERR_NO_PDF);
-            return null;
-        }
+            // Sort PDF files in natural (numeric-aware) order so sheet numbering
+            // is predictable: part_2 before part_10, not lexical 1,10,11,2…
+            pdfFiles.sort(function (a, b) {
+                return BRE.Core.naturalCompare(
+                    a.displayName || decodeURI(a.name),
+                    b.displayName || decodeURI(b.name)
+                );
+            });
 
-        // Sort PDF files in natural (numeric-aware) order so sheet numbering
-        // is predictable: part_2 before part_10, not lexical 1,10,11,2…
-        pdfFiles.sort(function (a, b) {
-            return BRE.Core.naturalCompare(
-                a.displayName || decodeURI(a.name),
-                b.displayName || decodeURI(b.name)
-            );
-        });
-
-        var templateName = BRE.Core.stripExtension(
-            templateFile.displayName || decodeURI(templateFile.name)
-        );
-
-        return {
-            templateFile: templateFile,
-            sourceFolder: sourceFolder,
-            outputFolder: outputFolder,
-            namingPattern: namingPattern,
-            preset: preset,
-            skipExisting: skipExisting,
-            openAfter: openAfter,
-            pdfFiles: pdfFiles,
-            templateName: templateName
+            result = {
+                templateFile: templateFile,
+                sourceFolder: sourceFolder,
+                outputFolder: outputFolder,
+                namingPattern: namingPattern,
+                preset: preset,
+                skipExisting: skipCB.value,
+                openAfter: openCB.value,
+                pdfFiles: pdfFiles,
+                templateName: BRE.Core.stripExtension(
+                    templateFile.displayName || decodeURI(templateFile.name))
+            };
+            dialog.close(1);
         };
+
+        // --- Show dialog ---
+        if (dialog.show() !== 1) return null;
+        return result;
     },
 
     // ---------------------------------------------------------------------
@@ -500,7 +527,8 @@ BRE.UI = {
             var logBox = detailPanel.add("edittext", undefined, results.log.join("\n"),
                 { multiline: true, scrolling: true, "readonly": true });
             logBox.preferredSize = [480, 200];
-        } else {
+        } else if (!results.cancelled) {
+            // A stopped batch is not "all OK" — the rest never ran.
             logWin.add("statictext", undefined, l.LOG_ALL_OK);
         }
 
@@ -554,6 +582,7 @@ BRE.UI = {
         var et = grp.add("edittext", undefined, "");
         et.alignment = ["fill", "center"];
         et.minimumSize.width = c.ui.fieldMinWidth;
+        et.characters = c.ui.fieldChars;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
         btn.preferredSize.width = c.ui.browseBtnWidth;

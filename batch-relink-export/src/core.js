@@ -95,6 +95,38 @@ BRE.Core = {
         }
     },
 
+    /**
+     * Reads the PDF import preferences. Opening a document with links and
+     * every relink overwrite them with that link's page and crop (measured,
+     * AI 30.8.2), so a run would leave the operator's File > Open and Place
+     * set to the template's last position.
+     * @returns {Object|null} { page, box }, or null when unreadable.
+     */
+    savePdfPrefs: function () {
+        try {
+            var po = app.preferences.PDFFileOptions;
+            return { page: po.pageToOpen, box: po.pDFCropToBox };
+        } catch (e) {
+            this._log("savePdfPrefs failed: " + e.message);
+            return null;
+        }
+    },
+
+    /**
+     * Puts back the PDF import preferences read by savePdfPrefs().
+     * @param {Object|null} saved - Result of savePdfPrefs().
+     */
+    restorePdfPrefs: function (saved) {
+        if (!saved) return;
+        try {
+            var po = app.preferences.PDFFileOptions;
+            po.pageToOpen = saved.page;
+            po.pDFCropToBox = saved.box;
+        } catch (e) {
+            this._log("restorePdfPrefs failed: " + e.message);
+        }
+    },
+
     // ---------------------------------------------------------------------
     // Relink pipeline
     // ---------------------------------------------------------------------
@@ -194,11 +226,19 @@ BRE.Core = {
         var i, item, label;
         var toRemove = [];
 
-        // Hidden placed items are never positions; report them as before.
+        // Hidden placed items are never positions; report each by its
+        // layer — an unnamed item's index ("item_3") cannot be found in the
+        // document, its layer can.
+        var layerName;
         for (i = 0; i < items.length; i++) {
             if (this._isHidden(items[i])) {
-                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER,
-                    items[i].name || ("item_" + i)));
+                layerName = "?";
+                try {
+                    layerName = items[i].layer.name;
+                } catch (le) {
+                    this._log("relinkDocument: layer of hidden item " + i + " unreadable");
+                }
+                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, layerName));
                 results.skipped++;
             }
         }
