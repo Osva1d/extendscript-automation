@@ -101,6 +101,10 @@ z auditu UI 2026-09-28
   SUMMA (třeba horní výjezd 90) po jednom běhu ZUND zmizela a další zakázka
   SUMMA tiše vyšla s hodnotou z předvolby. Teď se berou z posledního běhu,
   případně z předvolby, kterou operátor v dialogu vybral.
+- **Nápovědy říkají, co skript opravdu dělá (audit A5, A6, A9).** Mezera od
+  grafiky se měří k okraji značky, ne k jejímu středu. Nabídka předvoleb už
+  neradí vybrat [Last Settings], která v ní není. Pouze značky upozorní, že
+  artboard se přizpůsobí i v tomto režimu, pokud není zvoleno Dle Artboardu.
 
 ## [1.0.0] — 2026-06-28
 

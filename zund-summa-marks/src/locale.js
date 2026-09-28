@@ -70,7 +70,7 @@ ZSM.L = (function () {
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
-            TIP_PRESET:         "Select a saved preset to load its settings, or pick [Last Settings] to restore the values from your last Generate run.",
+            TIP_PRESET:         "Select a saved preset to load its values and mode. The dialog always opens with the values of your last run.",
             TIP_REVERT:         "Discard unsaved changes and reload the selected preset as saved (enabled only when the preset has unsaved edits).",
             BTN_SAVE:           "Save",
             TIP_SAVE:           "Save changes to the current preset (disabled when no changes).",
@@ -87,7 +87,7 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Gap from graphics:",
-            TIP_GAP_GZ: "Distance from graphics edge to mark center.",
+            TIP_GAP_GZ: "Gap between the edge of the artwork and the edge of the mark.",
             GAP_ZO:    "Gap from edge:",
             TIP_GAP_ZO: "Distance from mark outer edge to Artboard edge.",
             MAX_DIST:  "Mark spacing:",
@@ -119,7 +119,7 @@ ZSM.L = (function () {
             TIP_BTN_ADD:    "Add another layer mapping row.",
             BTN_ADD_LAYER:  "+ Add",
             MARKS_ONLY:     "Marks only (don't modify layers)",
-            TIP_MARKS_ONLY: "Draw only the registration marks and leave all layers untouched — no path routing, no renaming. Use when your cut layers are already separated and only the marks are missing.",
+            TIP_MARKS_ONLY: "Draws only the registration marks (and, in SUMMA, the trim lines): no paths are moved and your layers are not renamed. The artboard is still resized unless Fixed to Artboard is selected. Use when your cut layers are already separated.",
             ERR_MIN_ROW:    "At least one mapping row is required.",
             DEF_CUT:        "Cut",
             DEF_KISS:       "Kiss-cut",
@@ -199,7 +199,7 @@ ZSM.L = (function () {
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Předvolba:",
-            TIP_PRESET:         "Vyberte uloženou předvolbu pro načtení jejích nastavení, nebo zvolte [Last Settings] pro obnovení hodnot z posledního spuštění.",
+            TIP_PRESET:         "Vyberte uloženou předvolbu; načtou se její hodnoty i režim. Dialog se vždy otevírá s hodnotami posledního spuštění.",
             TIP_REVERT:         "Zahodit neuložené změny a načíst vybranou předvolbu znovu (aktivní jen když má předvolba neuložené úpravy).",
             BTN_SAVE:           "Uložit",
             TIP_SAVE:           "Uloží změny do aktuální předvolby (neaktivní, pokud nejsou žádné změny).",
@@ -216,7 +216,7 @@ ZSM.L = (function () {
 
             // --- UI: Gap Settings ---
             GAP_GZ:    "Mezera od grafiky:",
-            TIP_GAP_GZ: "Vzdálenost středu značky od okraje grafiky.",
+            TIP_GAP_GZ: "Mezera mezi okrajem grafiky a okrajem značky.",
             GAP_ZO:    "Mezera od okraje:",
             TIP_GAP_ZO: "Vzdálenost vnějšího okraje značky od hrany artboardu.",
             MAX_DIST:  "Rozteč značek:",
@@ -248,7 +248,7 @@ ZSM.L = (function () {
             TIP_BTN_ADD:    "Přidat další mapování vrstvy.",
             BTN_ADD_LAYER:  "+ Přidat",
             MARKS_ONLY:     "Pouze značky (neměnit vrstvy)",
-            TIP_MARKS_ONLY: "Vykreslí pouze registrační značky a nesáhne na žádné vrstvy — žádné přesouvání cest ani přejmenování. Použijte, když máte řezací vrstvy už separované a schází jen značky.",
+            TIP_MARKS_ONLY: "Vykreslí jen registrační značky (a u SUMMA ořezové linky): cesty nepřesouvá a vaše vrstvy nepřejmenovává. Artboard se přizpůsobí, pokud není zvoleno Dle Artboardu. Použijte, když máte řezací vrstvy už separované.",
             ERR_MIN_ROW:    "Musí existovat alespoň jedno mapování.",
             DEF_CUT:        "Cut",
             DEF_KISS:       "Kiss-cut",
