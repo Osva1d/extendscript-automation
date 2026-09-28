@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Nevydáno]
+## [1.1.0] — 2026-09-28
 
 ### Přidáno
 
