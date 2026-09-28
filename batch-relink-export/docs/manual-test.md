@@ -61,7 +61,8 @@ soubor kratší) a prázdnou výstupní složku.
   presetem dílny (třeba pass4press), vlastním vzorem a vypnutým „Otevřít
   složku". Spusť skript znovu, i po restartu Illustratoru → šablona, výstup,
   vzor, preset a „Otevřít složku" jsou z minula; zdroj je prázdný
-  a „Přeskočit existující" vypnuté.
+  a „Přeskočit existující" vypnuté. Okno má stejnou šířku jako při prvním
+  spuštění — dlouhá cesta se do pole nevejde celá.
 
 ---
 
@@ -162,6 +163,7 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 | druhé spuštění | šablona, výstup (i s diakritikou v cestě), vzor, preset a „Otevřít složku" z minula, zdroj prázdný; výstup s uloženým `[PDF/X-4:2008]` je PDF 1.6 s PDF/X |
+| zapamatované dlouhé cesty (72 i 133 znaků) | okno 460 × 478 px jako bez nastavení; pole cest 180 px, vzor, náhled názvu a preset 280 px — pole se nenatahují podle textu |
 | ručně upravený soubor s nastavením (číslo místo cesty, neexistující preset) | špatné hodnoty výchozí, ostatní z minula, bez hlášky |
 | poškozený soubor s nastavením | výchozí hodnoty, bez hlášky; běh soubor přepíše platným |
 | nastavení nejde zapsat | „Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje." a dávka proběhne |

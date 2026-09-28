@@ -70,6 +70,7 @@ BRE.UI = {
         // Fill to the panel's right edge — same line as panel-1's buttons.
         namingInput.alignment = ["fill", "center"];
         namingInput.minimumSize.width = c.ui.fieldMinWidth;
+        namingInput.characters = c.ui.fieldChars;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
@@ -89,6 +90,7 @@ BRE.UI = {
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
         previewST.alignment = ["fill", "center"];
         previewST.minimumSize.width = c.ui.fieldMinWidth;
+        previewST.characters = c.ui.fieldChars;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -580,6 +582,7 @@ BRE.UI = {
         var et = grp.add("edittext", undefined, "");
         et.alignment = ["fill", "center"];
         et.minimumSize.width = c.ui.fieldMinWidth;
+        et.characters = c.ui.fieldChars;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
         btn.preferredSize.width = c.ui.browseBtnWidth;

@@ -20,6 +20,11 @@ BRE.Config = {
         // the row's slack flows into the field, not the button — that capping
         // is what makes fill behave (the earlier "fat button" symptom).
         fieldMinWidth: 180,
+        // Natural width of the path, pattern and name-preview fields. Without
+        // it a field is as wide as its text, so remembered paths widened the
+        // dialog (753 px for the real job's paths instead of 460). 20 chars =
+        // 176 px, under fieldMinWidth: fill decides the width, as when empty.
+        fieldChars: 20,
         dialogMargins: 20,
         dialogSpacing: 12,
         panelMargins: 15,
