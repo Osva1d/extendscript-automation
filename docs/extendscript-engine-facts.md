@@ -835,3 +835,25 @@ Binární data z `File.read()` (kódování `BINARY`) nuly obsahují — bajty z
 ber přes `charCodeAt` a tabulku jednoznakových řetězců, nikdy přes `charAt`.
 Dekodér, který bral bajty přes `charAt`, ztratil přesně nulové bajty: z 20 000
 náhodných bajtů vrátil 19 925.
+
+## Paleta a klávesnice během běhu skriptu (naměřeno 2026-09-28, AI 30.8.2)
+
+Zdroj: ruční test batch-relink-export — tlačítko Zastavit v paletě průběhu
+nereagovalo. Sonda: `Window("palette")` s tlačítkem, smyčka 4 × 9 s
+s prací po 200 ms, člověk během každé fáze opakovaně klikal.
+
+| co smyčka dělala mezi kroky | kliknutí na tlačítko |
+|---|---|
+| `win.update()` | nedošlo |
+| `win.update()` + `$.sleep(30)` | nedošlo |
+| `win.update()` + `app.redraw()` | nedošlo |
+
+Illustrator paletě během běhu skriptu kliknutí nepředá; `update()` okno jen
+překreslí. Tlačítko „Storno/Zastavit" v paletě průběhu tak nemůže fungovat,
+dokud zpracování běží synchronně v jednom skriptu.
+
+**Klávesnice jde číst.** Ve čtvrté fázi smyčka četla
+`ScriptUI.environment.keyboardState` a zachytila podržený Esc
+(`keyName === "Escape"`) i Shift (`shiftKey`). Zastavení dávky se dá postavit na
+podržené klávese kontrolované mezi kroky (batch-relink-export to tak dělá).
+Jestli Esc stisknutý během `saveAs` přeruší i samotné ukládání, neměřeno.
