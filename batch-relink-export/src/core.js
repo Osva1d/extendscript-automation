@@ -143,6 +143,33 @@ BRE.Core = {
     },
 
     /**
+     * Counts the positions of the template as saved on disk — the state every
+     * sheet is built from. A template open with unsaved changes would give
+     * its in-memory count (app.open() returns that instance), so the count
+     * then comes from a temporary copy of the file; the user's open document
+     * is not touched.
+     * @param {File} file - The template file.
+     * @param {Document|null} openDoc - The template if it is already open.
+     * @returns {number} Position count of the saved template.
+     */
+    countSavedPositions: function (file, openDoc) {
+        if (openDoc && openDoc.saved !== false) return this.getPositions(openDoc).length;
+        var src = file, copy = null;
+        if (openDoc) {
+            copy = new File(Folder.temp.fsName + "/bre-template-" + new Date().getTime() + ".ai");
+            if (!file.copy(copy.fsName)) throw new Error("cannot copy the template to " + copy.fsName);
+            src = copy;
+        }
+        var doc = app.open(src);
+        try {
+            return this.getPositions(doc).length;
+        } finally {
+            doc.close(SaveOptions.DONOTSAVECHANGES);
+            if (copy) copy.remove();
+        }
+    },
+
+    /**
      * Relinks the template's positions (see getPositions) to the target PDF.
      * Removes PlacedItems whose pageNumber exceeds the source page count.
      *

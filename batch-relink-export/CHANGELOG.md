@@ -33,6 +33,12 @@ Opravy z code review 2026-09-27
   a poslední strana se tiše ztratila. Pozice jsou teď jen viditelné objekty
   propojené na soubor, na který odkazuje většina z nich; stejnou definici
   používá počet pozic v náhledu, relink i kontrola pozic navíc.
+- **Neuložené změny otevřené šablony už nezmění počet pozic (B5).** Když byla
+  šablona otevřená s neuloženými změnami, počítal skript pozice z otevřeného
+  dokumentu, ale archy stavěl ze souboru na disku. S dvěma přidanými
+  neuloženými pozicemi prošel desetistránkový zdroj jako „v pořádku" a strany
+  9–10 se tiše ztratily. Pozice se teď počítají ze šablony uložené na disku
+  (z dočasné kopie, otevřený dokument zůstane beze změny).
 
 ## [1.0.0] — 2026-06-28
 
