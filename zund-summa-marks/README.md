@@ -46,6 +46,10 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 3. Spustit: `File > Scripts > Other Script... > illustrator-zund-summa-marks.jsx`
 4. Nastavit parametry v dialogu → kliknout **Generovat**
 
+Běh se vrací několika kroky Zpět (Cmd+Z). Změna artboardu je samostatný krok —
+ve stejném kroku s ostatními změnami by ji Illustrator nevrátil vůbec. SUMMA
+s ořezovými linkami má kroků víc než ZUND.
+
 ### Módy
 
 **Dle výběru (Auto-fit)** — artboard se automaticky přizpůsobí grafice; značky se umisťují od okraje výběru. Vyžaduje, aby byla grafika vybrána.
