@@ -38,15 +38,21 @@ soubor kratší) a prázdnou výstupní složku.
   Nápověda u „Přeskočit existující soubory" říká, že se přeskočí jen výstup
   novější než zdroj i šablona.
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Spustit.
+  Enter s prázdným polem Výstup ukáže „Vyberte výstupní složku." a dialog
+  zůstane otevřený — jestli Enter volá kontrolu jako kliknutí na Spustit,
+  ověřené není.
 - [ ] **1.3 Výstup do zdrojové složky (B8).** Stejná složka jako Zdroj i Výstup →
-  hláška „Výstupní složka je stejná jako zdrojová…" a skript skončí, nic se
-  nezapíše. Podsložka zdrojové složky jako Výstup projde.
+  hláška „Výstupní složka je stejná jako zdrojová…", dialog zůstane otevřený
+  a nic se nezapíše. Podsložka zdrojové složky jako Výstup projde.
 - [ ] **1.4 Náhled (T2).** Dávka s kratším posledním souborem → tučný verdikt
   „… archů lze zpracovat (1 s upozorněním) · 0 blokováno", celý čitelný.
   Dávka, kde je každý soubor delší než počet pozic → Pokračovat je vypnuté;
   zkus i Enter — jestli vypnuté tlačítko spustí, ověřené není.
 - [ ] **1.5 Storno.** Storno v hlavním dialogu, u dotazu na otevřenou šablonu
   i v náhledu → ve výstupní složce nic nepřibude a otevřené dokumenty zůstanou.
+- [ ] **1.6 Chyba nezavře dialog (A3, A4).** Spustit s vyplněnými cestami
+  a vzorem bez `{n}` → hláška, dialog zůstane otevřený se všemi poli. Oprav
+  vzor a znovu Spustit → dávka se spustí.
 
 ---
 
@@ -133,7 +139,9 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | 2 strany na 4 pozice | náhled „…: stran 2, pozic navíc 2 — odeberou se z archu.", souhrn „Odebrané pozice 2" |
 | šablona se stranou 1 dvakrát, 2 strany | „Pozice navíc se neodebraly automaticky…", „Pozic navíc, které se nepodařilo odebrat: 2. Ukazují znovu stranu 1…" |
 | 5 stran na 4 pozice | náhled „…: stran 5 > pozic 4 — BUDE PŘESKOČENO…", souhrn „Přeskočeno: stran je více než pozic (5 > 4)…" |
-| výstup = zdroj | „Výstupní složka je stejná jako zdrojová…" |
+| výstup = zdroj | „Výstupní složka je stejná jako zdrojová…", dialog zůstane otevřený |
+| prázdné pole Šablona, Zdroj, Výstup | „Vyberte šablonu." / „Vyberte zdrojovou složku." / „Vyberte výstupní složku.", dialog zůstane otevřený s vyplněnými poli |
+| vzor bez `{n}` a výstupní složka, která ještě neexistuje | hláška o vzoru, složka se nevytvoří; po opravě dotaz na vytvoření a běh |
 | šablona jiného typu (PDF) | „Šablona se nenašla nebo nemá příponu .ai. Vyberte ji tlačítkem Vybrat…" |
 | vzor bez `{n}` | „Vzor musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly." |
 | zdroj s nečitelným počtem stran | „…: počet stran nejde zjistit (poškozené nebo šifrované PDF?). Ověřte, že nemá víc stran než pozic…" |
@@ -143,8 +151,7 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 **Známé, vědomě neopravené** (minor z review): výchozí PDF preset se liší podle
 jazyka a nepamatuje se (B9); po běhu zůstane v Illustratoru změněná předvolba
 importu PDF — strana a ořez posledního linku šablony (B10); dialog si
-nepamatuje nastavení a validuje až po zavření, takže chyba znamená vyplnit
-cesty znovu; v detailu chyby zůstává anglická hláška Illustratoru (T5);
+nepamatuje nastavení; v detailu chyby zůstává anglická hláška Illustratoru (T5);
 titulek okna je anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte
 složku:" (T8).
 

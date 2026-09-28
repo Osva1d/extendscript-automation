@@ -110,6 +110,14 @@ Opravy z auditu UI 2026-09-28
   nenašel), bez žargonu „PlacedItem", „placeholder" a „relinkování".
   Nečitelný počet stran říká riziko a co ověřit. Anglické texty se změnily
   stejně.
+- **Chyba v zadání nechá dialog otevřený (A3, A4).** Chybějící `{n}`, výstup
+  do zdrojové složky nebo překlep v cestě ukončily skript a všechno se
+  vyplňovalo znovu. Kontrola teď proběhne po Spustit v otevřeném dialogu
+  a chyba ho nechá otevřený s vyplněnými poli; Ne u dotazu na vytvoření
+  výstupní složky vrátí do dialogu. Prázdné pole má vlastní hlášku („Vyberte
+  výstupní složku." místo „Výstupní složka neexistuje. Vytvořit?"). Výstupní
+  složka se vytvoří až po ostatních kontrolách, takže chyba ve vzoru už po
+  sobě nenechá prázdnou složku.
 
 ## [1.0.0] — 2026-06-28
 

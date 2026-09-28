@@ -150,7 +150,7 @@ BRE.UI = {
         btnGrp.alignment = ["right", "center"];
         btnGrp.spacing = 8;
         btnGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
-        btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
+        var runBtn = btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
 
         // Live name preview — presentation only, read-only call into the
         // existing buildOutputName. No validation, no write, no side-effect.
@@ -172,90 +172,103 @@ BRE.UI = {
         // Recompute the layout with the deterministic fixed widths.
         try { dialog.layout.layout(true); } catch (le) {}
 
-        // --- Show dialog ---
-        if (dialog.show() !== 1) return null;
+        // --- Validation on Run ---
+        // An error keeps the dialog open with every field as the operator
+        // left it. Checks that change nothing run first, so a later error
+        // cannot leave a new, empty output folder behind.
+        var result = null;
+        runBtn.onClick = function () {
+            var blank = /^\s*$/;
+            if (blank.test(templatePath.text)) {
+                alert(l.ERR_TEMPLATE_EMPTY);
+                return;
+            }
+            var templateFile = new File(templatePath.text);
+            if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
+                alert(l.ERR_TEMPLATE);
+                return;
+            }
+            if (blank.test(sourcePath.text)) {
+                alert(l.ERR_SOURCE_EMPTY);
+                return;
+            }
+            var sourceFolder = new Folder(sourcePath.text);
+            if (!sourceFolder.exists) {
+                alert(l.ERR_SOURCE);
+                return;
+            }
+            if (blank.test(outputPath.text)) {
+                alert(l.ERR_OUTPUT_EMPTY);
+                return;
+            }
+            var outputFolder = new Folder(outputPath.text);
+            // Outputs written next to the sources would be read back as sources
+            // by the next run. (A subfolder is fine: sources are not read
+            // recursively.)
+            if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
+                alert(l.ERR_OUTPUT_IS_SOURCE);
+                return;
+            }
+            var preset = presetDDL.selection ? presetDDL.selection.text : "";
+            if (!preset) {
+                alert(l.ERR_PRESET);
+                return;
+            }
+            var namingPattern = namingInput.text;
+            if (namingPattern.indexOf(c.placeholders.N) === -1) {
+                alert(l.ERR_NAMING_PATTERN);
+                return;
+            }
 
-        // --- Validation ---
-        var templateFile = new File(templatePath.text);
-        var sourceFolder = new Folder(sourcePath.text);
-        var outputFolder = new Folder(outputPath.text);
-        var preset = presetDDL.selection ? presetDDL.selection.text : "";
-        var namingPattern = namingInput.text;
-        var skipExisting = skipCB.value;
-        var openAfter = openCB.value;
+            var pdfFiles = sourceFolder.getFiles(function (f) {
+                if (!(f instanceof File)) return false;
+                var nm = f.displayName || decodeURI(f.name);
+                // Skip macOS AppleDouble files (._name) and other hidden/system
+                // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
+                // and would otherwise be processed as real PDFs.
+                if (nm.charAt(0) === ".") return false;
+                return /\.pdf$/i.test(nm);
+            });
+            if (pdfFiles.length === 0) {
+                alert(l.ERR_NO_PDF);
+                return;
+            }
 
-        if (!templateFile.exists || !/\.ai$/i.test(templateFile.name)) {
-            alert(l.ERR_TEMPLATE);
-            return null;
-        }
-        if (!sourceFolder.exists) {
-            alert(l.ERR_SOURCE);
-            return null;
-        }
-        // Outputs written next to the sources would be read back as sources
-        // by the next run. (A subfolder is fine: sources are not read
-        // recursively.)
-        if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
-            alert(l.ERR_OUTPUT_IS_SOURCE);
-            return null;
-        }
-        if (!outputFolder.exists) {
-            if (confirm(l.ERR_OUTPUT_ASK)) {
+            if (!outputFolder.exists) {
+                if (!confirm(l.ERR_OUTPUT_ASK)) return;
                 if (!outputFolder.create()) {
                     alert(l.ERR_OUTPUT_FAIL);
-                    return null;
+                    return;
                 }
-            } else {
-                return null;
             }
-        }
-        if (!preset) {
-            alert(l.ERR_PRESET);
-            return null;
-        }
-        if (namingPattern.indexOf(c.placeholders.N) === -1) {
-            alert(l.ERR_NAMING_PATTERN);
-            return null;
-        }
 
-        var pdfFiles = sourceFolder.getFiles(function (f) {
-            if (!(f instanceof File)) return false;
-            var nm = f.displayName || decodeURI(f.name);
-            // Skip macOS AppleDouble files (._name) and other hidden/system
-            // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
-            // and would otherwise be processed as real PDFs.
-            if (nm.charAt(0) === ".") return false;
-            return /\.pdf$/i.test(nm);
-        });
-        if (pdfFiles.length === 0) {
-            alert(l.ERR_NO_PDF);
-            return null;
-        }
+            // Sort PDF files in natural (numeric-aware) order so sheet numbering
+            // is predictable: part_2 before part_10, not lexical 1,10,11,2…
+            pdfFiles.sort(function (a, b) {
+                return BRE.Core.naturalCompare(
+                    a.displayName || decodeURI(a.name),
+                    b.displayName || decodeURI(b.name)
+                );
+            });
 
-        // Sort PDF files in natural (numeric-aware) order so sheet numbering
-        // is predictable: part_2 before part_10, not lexical 1,10,11,2…
-        pdfFiles.sort(function (a, b) {
-            return BRE.Core.naturalCompare(
-                a.displayName || decodeURI(a.name),
-                b.displayName || decodeURI(b.name)
-            );
-        });
-
-        var templateName = BRE.Core.stripExtension(
-            templateFile.displayName || decodeURI(templateFile.name)
-        );
-
-        return {
-            templateFile: templateFile,
-            sourceFolder: sourceFolder,
-            outputFolder: outputFolder,
-            namingPattern: namingPattern,
-            preset: preset,
-            skipExisting: skipExisting,
-            openAfter: openAfter,
-            pdfFiles: pdfFiles,
-            templateName: templateName
+            result = {
+                templateFile: templateFile,
+                sourceFolder: sourceFolder,
+                outputFolder: outputFolder,
+                namingPattern: namingPattern,
+                preset: preset,
+                skipExisting: skipCB.value,
+                openAfter: openCB.value,
+                pdfFiles: pdfFiles,
+                templateName: BRE.Core.stripExtension(
+                    templateFile.displayName || decodeURI(templateFile.name))
+            };
+            dialog.close(1);
         };
+
+        // --- Show dialog ---
+        if (dialog.show() !== 1) return null;
+        return result;
     },
 
     // ---------------------------------------------------------------------
