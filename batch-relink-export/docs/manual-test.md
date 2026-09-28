@@ -127,13 +127,13 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | 5 stran na 4 pozice | „… 5 stran > 4 pozic — BUDE PŘESKOČENO…" |
 | výstup = zdroj | „Výstupní složka je stejná jako zdrojová…" |
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
+| dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 
 **Známé, vědomě neopravené** (minor z review): výchozí PDF preset se liší podle
 jazyka a nepamatuje se (B9); po běhu zůstane v Illustratoru změněná předvolba
 importu PDF — strana a ořez posledního linku šablony (B10); dialog si
 nepamatuje nastavení a validuje až po zavření, takže chyba znamená vyplnit
-cesty znovu; po zastavení souhrn napíše vedle „Zrušeno…" i „Vše proběhlo bez
-chyb."; texty T3–T8.
+cesty znovu; texty T3–T8.
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
 jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash

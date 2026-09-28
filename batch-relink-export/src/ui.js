@@ -500,7 +500,8 @@ BRE.UI = {
             var logBox = detailPanel.add("edittext", undefined, results.log.join("\n"),
                 { multiline: true, scrolling: true, "readonly": true });
             logBox.preferredSize = [480, 200];
-        } else {
+        } else if (!results.cancelled) {
+            // A stopped batch is not "all OK" — the rest never ran.
             logWin.add("statictext", undefined, l.LOG_ALL_OK);
         }
 

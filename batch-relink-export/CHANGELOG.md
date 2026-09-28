@@ -88,6 +88,14 @@ Opravy z code review 2026-09-27
   kontroluje před každým souborem i po jeho dlouhých krocích, rozpracovaný
   soubor dokončí a souhrn uvede, kolik souborů zpracoval.
 
+Opravy z auditu UI 2026-09-28
+([report](../docs/reports/2026-09-28-audit-ui-batch-relink-export.md)).
+
+- **Souhrn zastavené dávky netvrdí, že vše proběhlo (A7).** Po zastavení
+  klávesou Esc stálo pod „Zrušeno uživatelem po zpracování 1 z 3 souborů." i
+  „Vše proběhlo bez chyb." — nedokončená dávka se dala přečíst jako hotová.
+  Ten řádek se teď ukáže jen u celé dávky.
+
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline). Sjednocení verzí napříč sadou pro open-source
