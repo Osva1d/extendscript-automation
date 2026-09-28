@@ -192,6 +192,13 @@ BRE.UI = {
             alert(l.ERR_SOURCE);
             return null;
         }
+        // Outputs written next to the sources would be read back as sources
+        // by the next run. (A subfolder is fine: sources are not read
+        // recursively.)
+        if (outputFolder.fsName.toLowerCase() === sourceFolder.fsName.toLowerCase()) {
+            alert(l.ERR_OUTPUT_IS_SOURCE);
+            return null;
+        }
         if (!outputFolder.exists) {
             if (confirm(l.ERR_OUTPUT_ASK)) {
                 if (!outputFolder.create()) {

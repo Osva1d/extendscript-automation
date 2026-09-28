@@ -65,6 +65,10 @@ Opravy z code review 2026-09-27
   správné soubory. Počet se teď čte jako v prohlížeči — z katalogu a kořene
   stromu stran, přes celý řetěz tabulek odkazů, včetně komprimovaných. Stav
   „nejednoznačný počet stran" zanikl.
+- **Výstup nejde do zdrojové složky (B8).** Když byla výstupní složka stejná
+  jako zdrojová, načetl další běh vlastní výstupy jako zdrojová PDF: posunulo
+  se číslování archů a výstup se zpracoval jako zakázka. Dialog teď takovou
+  volbu odmítne s hláškou; podsložka zdrojové složky dál projde.
 
 ## [1.0.0] — 2026-06-28
 
