@@ -9,7 +9,7 @@
  *   - Correct sublayer structure (Regmarks/Zünd, Regmarks/Summa) + top-level Trim
  *   - Mode-specific sublayer cleanup (Zünd run removes Zünd sub, preserves Summa)
  *   - Bottom-most layer renamed to Graphics
- *   - Coordinate validation prevents creation beyond AI's 16383pt limit
+ *   - Invalid geometry and a refused artboard stop the run before any change
  *   - movePaths semantics
  *
  * NOT covered: C++ crashes, app.redraw timing, real ScriptUI behavior.
@@ -41,9 +41,22 @@ Mock.install();
 var ZSM = {};
 ZSM.L = {
     ERROR_PREFIX: "ERR: ",
-    ERR_RENDER_CRITICAL: "render error: ",
+    ERR_RENDER_CRITICAL: "render error: %s",
+    ERR_ARTBOARD_TOO_LARGE: "artboard too large %s %s",
+    ERR_GEOMETRY_INVALID: "geometry invalid",
+    WARN_SUMMA_REMOVED: "summa removed",
     ERR_GENERIC: "err: %s",
     ERR_COLOR_MISSING: "missing color %s",
+    WARN_PREFIX: "WARN: ",
+    WARN_LAYERS_UNHIDDEN: "unhidden %s",
+    ERR_MARKS_FAILED: "marks failed %s",
+    WARN_MIXED_PAINT: "mixed %s %s",
+    WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
+    WARN_REG_ROUTING: "regskip %s",
+    WARN_TRIM_FOREIGN: "trimforeign",
+    ERR_MARKS_ORIENT: "marks orient %s %s",
+    ERR_MARKS_OVERLAP: "marks overlap %s %s",
+    ERR_MARKS_OUTSIDE: "marks outside %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -55,6 +68,7 @@ ZSM.Config = {
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
     layerTrim:     "Trim",
+    trimNote:      "ZSM trim line",
     summaXCenter: 10,    // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,    // mm: gap from graphic edge to Summa mark outer edge (Y)
     redLineWidth: 1,
@@ -247,23 +261,20 @@ console.log("\n=== TEST 5: Coordinate overflow protection ===");
 doc = setupDoc({
     layers: [{ name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }]
 });
-// Inject extreme coordinates that exceed AI's 16383pt limit
+// A non-finite mark used to be skipped silently — an incomplete mark set is
+// worse than none (review K10). Now the run stops before changing anything.
 settings = makeSettings({ mode: "ZUND" });
 bounds = ZSM.Draw.getBounds(settings);
 geo = ZSM.Core.calculateAll(settings, bounds);
-// Manually inflate one mark to trigger validation
-geo.marksZ.push({ cx: 99999, cy: 99999 });
 geo.marksZ.push({ cx: NaN, cy: 0 });
-
+var alerts5 = [], origAlert5 = global.alert;
+global.alert = function (m) { alerts5.push(String(m)); };
 var threwError = false;
 try { ZSM.Draw.render(geo, settings); } catch (e) { threwError = true; }
-assert(!threwError, "Coordinate overflow: render() does not throw");
-
-regmarks = findLayer(doc, "Regmarks");
-zundSub = findSublayer(regmarks, "Zünd");
-markCount = countItems(zundSub, "PathItem");
-// Original 5 marks valid + 2 invalid (skipped) = 5
-assertEq(markCount, 5, "Coordinate overflow: invalid marks skipped (got " + markCount + ")");
+global.alert = origAlert5;
+assert(!threwError, "Invalid geometry: render() does not throw");
+assert(findLayer(doc, "Regmarks") === null, "Invalid geometry: nothing drawn, no layer created");
+assert(alerts5.join("\n").indexOf("geometry invalid") >= 0, "Invalid geometry: reported as an error");
 
 
 // =====================================================
@@ -354,7 +365,7 @@ doc = setupDoc({
         items: [
             { type: "path", bounds: [0, 100, 100, 0] },                                            // no spot
             { type: "path", bounds: [10, 90, 90, 10], spot: "Cut" },                               // spot Cut on fill
-            { type: "path", bounds: [20, 80, 80, 20], strokeSpot: "Cut", stroked: true }           // spot Cut on stroke
+            { type: "path", bounds: [20, 80, 80, 20], strokeSpot: "Cut", stroked: true, filled: false }  // spot Cut on stroke (no fill)
         ]
     }]
 });
@@ -435,6 +446,7 @@ geo.marksZ[1].cy = Infinity;
 threwError = false;
 try { ZSM.Draw.render(geo, settings); } catch (e) { threwError = true; }
 assert(!threwError, "NaN/Infinity in geo: render() doesn't throw");
+assert(findLayer(doc, "Regmarks") === null, "NaN/Infinity in geo: nothing drawn");
 
 
 // =====================================================
@@ -717,7 +729,7 @@ var regCan   = findLayer(docCan, "Regmarks");
 var zundCan  = regCan ? findSublayer(regCan, "Zünd") : null;
 var trimCan  = findLayer(docCan, "Trim");
 
-ZSM.Draw.movePaths(whiteLay, ["Spot 1"]);
+ZSM.Draw.movePaths([{ color: "Spot 1", layer: whiteLay }]);
 
 assert(countItems(whiteLay, "PathItem") === 1,
     "movePaths: user artwork (Spot 1) routed to White");
@@ -798,6 +810,398 @@ var sS3 = makeSettings({ mode: "SUMMA" });
 ZSM.Draw.render(ZSM.Core.calculateAll(sS3, ZSM.Draw.getBounds(sS3)), sS3);
 assert(findSublayer(findLayer(docSZ, "Regmarks"), "Zünd") !== null,
     "SUMMA after ZUND still preserves the Zünd sublayer");
+
+
+// =====================================================
+// TEST 24 (review K12): hidden output / target layers
+// =====================================================
+// A hidden layer rejects writes like a locked one (measured, AI 30.8.1). An
+// operator who hid Regmarks to check the artwork and re-ran the script got the
+// old marks removed and NO new marks — without any message. A hidden mapped
+// layer silently kept the cut paths where they were.
+console.log("\n=== TEST 24 (review K12): hidden Regmarks / hidden target layer ===");
+var alertsK12 = [];
+var origAlertK12 = global.alert;
+global.alert = function (m) { alertsK12.push(String(m)); };
+
+var docH1 = setupDoc({
+    layers: [
+        { name: "Regmarks", visible: false, sublayers: [
+            { name: "Zünd", items: [{ type: "path", bounds: [-20, 120, -15, 115] }] }   // old mark
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sH1 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH1, ZSM.Draw.getBounds(sH1)), sH1);
+var regH1 = findLayer(docH1, "Regmarks");
+assertEq(countItems(findSublayer(regH1, "Zünd"), "PathItem"), 5,
+    "hidden Regmarks: 5 new marks drawn (not silently lost)");
+assert(regH1.visible === true, "hidden Regmarks: made visible so the marks can be drawn");
+assert(alertsK12.join("\n").indexOf("unhidden Regmarks") >= 0,
+    "hidden Regmarks: operator is told the layer was made visible");
+
+alertsK12.length = 0;
+var docH2 = setupDoc({
+    layers: [
+        { name: "Cut", visible: false, items: [] },
+        { name: "Art", items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            { type: "path", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false }
+        ]}
+    ]
+});
+var sH2 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH2, ZSM.Draw.getBounds(sH2)), sH2);
+var cutH2 = findLayer(docH2, "Cut");
+assertEq(countItems(cutH2, "PathItem"), 1, "hidden target: cut path moved into 'Cut'");
+assert(cutH2.visible === true, "hidden target: 'Cut' made visible");
+assert(alertsK12.join("\n").indexOf("unhidden Cut") >= 0, "hidden target: operator is told");
+
+// Anything that still cannot be drawn is reported as an ERROR (was a
+// debug-log line only). Locked Regmarks + render() without beginSession.
+alertsK12.length = 0;
+var docH3 = setupDoc({
+    layers: [
+        { name: "Regmarks", locked: true, items: [] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sH3 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sH3, ZSM.Draw.getBounds(sH3)), sH3);
+assertEq(countItems(findLayer(docH3, "Regmarks"), "PathItem"), 0,
+    "precondition: locked Regmarks blocks drawing");
+assert(alertsK12.join("\n").indexOf("ERR: marks failed 5") >= 0,
+    "draw failures reported as an error with the count (got: " + alertsK12.join(" | ") + ")");
+
+global.alert = origAlertK12;
+
+
+// =====================================================
+// TEST 25 (review K1): objects with printable paint are not routed
+// =====================================================
+// A cut stroke on a shape that also has a printable fill (sticker background)
+// used to move the whole shape onto the cut layer — ABOVE the artwork — and set
+// fillOverprint on the printable fill. Rendered in AI 30.8.1: the art under it
+// disappeared (no overprint simulation) or changed colour (with it).
+console.log("\n=== TEST 25 (review K1): mixed paint stays, pure cut paths move ===");
+var alertsK1 = [];
+var origAlertK1 = global.alert;
+global.alert = function (m) { alertsK1.push(String(m)); };
+var WHITE = { typename: "CMYKColor", cyan: 0, magenta: 0, yellow: 0, black: 0 };
+var docK1 = setupDoc({
+    layers: [{
+        name: "Art",
+        items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            { type: "path", name: "pure", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+            { type: "path", name: "whiteFillCutStroke", bounds: [20, 80, 80, 20], fillColor: WHITE, strokeSpot: "Cut", stroked: true },
+            { type: "path", name: "cutFillBlackStroke", bounds: [30, 70, 70, 30], spot: "Cut", stroked: true },
+            { type: "compound", name: "mixedCompound", bounds: [40, 60, 60, 40], children: [
+                { type: "path", bounds: [40, 60, 60, 40], fillColor: WHITE, strokeSpot: "Cut", stroked: true }
+            ]}
+        ]
+    }]
+});
+var artK1 = docK1._layers[0];
+function itemNamed(lay, nm) {
+    for (var i = 0; i < lay._items.length; i++) if (lay._items[i].name === nm) return lay._items[i];
+    return null;
+}
+var mixedK1 = itemNamed(artK1, "whiteFillCutStroke");
+var sK1 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK1, ZSM.Draw.getBounds(sK1)), sK1);
+
+var cutK1 = findLayer(docK1, "Cut");
+assert(cutK1 !== null && itemNamed(cutK1, "pure") !== null, "pure cut path (stroke only) moved to Cut");
+assert(itemNamed(cutK1, "pure").strokeOverprint === true, "pure cut path: stroke overprint set");
+var artAfterK1 = findLayer(docK1, "Graphics") || findLayer(docK1, "Art");
+assert(itemNamed(artAfterK1, "whiteFillCutStroke") !== null, "white fill + cut stroke stays with the artwork");
+assert(mixedK1.fillOverprint === false, "white fill does NOT get overprint");
+assert(itemNamed(artAfterK1, "cutFillBlackStroke") !== null, "cut fill + printable stroke stays with the artwork");
+assert(itemNamed(artAfterK1, "mixedCompound") !== null, "mixed compound path stays with the artwork");
+assert(alertsK1.join("\n").indexOf("mixed Cut 3") >= 0,
+    "operator is told how many objects were left and why (got: " + alertsK1.join(" | ") + ")");
+global.alert = origAlertK1;
+
+
+// =====================================================
+// TEST 26 (review K3): a hidden bottom layer is left alone
+// =====================================================
+// The §7b "bottom layer = artwork" rename also set visible = true. A hidden
+// template / customer proof / old version at the bottom was renamed Graphics
+// and made visible — i.e. it printed.
+console.log("\n=== TEST 26 (review K3): hidden bottom layer keeps name and visibility ===");
+var docK3 = setupDoc({
+    layers: [
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] },
+        { name: "Template", visible: false, items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sK3 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK3, ZSM.Draw.getBounds(sK3)), sK3);
+var tplK3 = findLayer(docK3, "Template");
+assert(tplK3 !== null, "hidden bottom layer keeps its name (not renamed to Graphics)");
+assert(tplK3 !== null && tplK3.visible === false, "hidden bottom layer stays hidden");
+assert(findLayer(docK3, "Graphics") === null, "no layer renamed to Graphics in this document");
+
+
+// =====================================================
+// TEST 27 (review K2): cut paths left in place are reported
+// =====================================================
+// Paths inside a clipping mask are skipped by design; paths on a locked
+// sublayer or a hidden layer cannot be moved (move() throws — measured). Both
+// were silent: with one path moved the run looked complete, and the cutter
+// then missed the rest.
+console.log("\n=== TEST 27 (review K2): skipped cut paths are reported with reasons ===");
+var alertsK2 = [];
+var origAlertK2 = global.alert;
+global.alert = function (m) { alertsK2.push(String(m)); };
+var CUTS = { strokeSpot: "Cut", stroked: true, filled: false };
+function cutPath(nm, b) { return { type: "path", name: nm, bounds: b, strokeSpot: CUTS.strokeSpot, stroked: true, filled: false }; }
+var docK2 = setupDoc({
+    layers: [
+        { name: "Hid", visible: false, items: [cutPath("onHidden", [5, 95, 95, 5])] },
+        { name: "Art", items: [
+            { type: "path", bounds: [0, 100, 100, 0] },
+            cutPath("free", [10, 90, 90, 10]),
+            { type: "group", clipped: true, bounds: [20, 80, 80, 20], children: [
+                { type: "path", bounds: [20, 80, 80, 20] },            // clip path
+                cutPath("inClip", [25, 75, 75, 25])
+            ]}
+        ], sublayers: [
+            { name: "SubL", locked: true, items: [cutPath("inLockedSub", [30, 70, 70, 30])] }
+        ]}
+    ]
+});
+var sK2 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "Cut" }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK2, ZSM.Draw.getBounds(sK2)), sK2);
+assertEq(countItems(findLayer(docK2, "Cut"), "PathItem"), 1, "the free cut path moved");
+assert(alertsK2.join("\n").indexOf("skipped Cut Cut 1 2") >= 0,
+    "left-in-place paths reported: 1 in a clipping mask, 2 on locked/hidden layers (got: " + alertsK2.join(" | ") + ")");
+assert(alertsK2.join("\n").indexOf("missing color") < 0,
+    "no misleading 'colour not found' warning when paths of that colour exist");
+global.alert = origAlertK2;
+
+
+// =====================================================
+// TEST 28 (review K8): the registration colour never routes paths
+// =====================================================
+// [Registration] prints on every separation, so it cannot identify cut paths.
+// The default row "Cut ← [Registration]" moved every registration-coloured
+// path (trim marks, other tools' marks) onto the cut layer in an English
+// Illustrator, and matched nothing (misleading warning) in a localized one.
+console.log("\n=== TEST 28 (review K8): registration mapping row is skipped with a warning ===");
+var alertsK8 = [];
+var origAlertK8 = global.alert;
+global.alert = function (m) { alertsK8.push(String(m)); };
+var sK8 = makeSettings({ mode: "ZUND", layers: [{ name: "Cut", color: "[Registration]" }] });
+
+var docK8en = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", name: "trimMark", bounds: [-10, 110, -5, 105], strokeSpot: "[Registration]", stroked: true, filled: false }
+    ]}]
+});
+ZSM.Draw.render(ZSM.Core.calculateAll(sK8, ZSM.Draw.getBounds(sK8)), sK8);
+assert(findLayer(docK8en, "Cut") === null, "EN: no 'Cut' layer created from a registration row");
+assertEq(countItems(findLayer(docK8en, "Graphics") || findLayer(docK8en, "Art"), "PathItem"), 2,
+    "EN: registration-coloured path stays with the artwork");
+assert(alertsK8.join("\n").indexOf("regskip Cut") >= 0, "EN: operator told why the row was skipped");
+
+alertsK8.length = 0;
+var docK8cs = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", bounds: [-10, 110, -5, 105], strokeSpot: "[Registrační]", stroked: true, filled: false }
+    ]}]
+});
+docK8cs.swatches[1].name = "[Registrační]";   // localized Illustrator
+ZSM.Draw.render(ZSM.Core.calculateAll(sK8, ZSM.Draw.getBounds(sK8)), sK8);
+assert(findLayer(docK8cs, "Cut") === null, "CS: no 'Cut' layer created");
+assert(alertsK8.join("\n").indexOf("regskip Cut") >= 0, "CS: the same clear warning");
+assert(alertsK8.join("\n").indexOf("missing color") < 0, "CS: no misleading 'colour not found'");
+global.alert = origAlertK8;
+
+
+// =====================================================
+// TEST 29 (review K13): one routing pass over the document
+// =====================================================
+// movePaths ran once per mapping row, each time snapshotting doc.pathItems and
+// doing several DOM reads per path — on a large document with a few rows that
+// is hundreds of thousands of calls and looks like a hang.
+console.log("\n=== TEST 29 (review K13): all rows routed in one pass ===");
+var docK13 = setupDoc({
+    layers: [{ name: "Art", items: [
+        { type: "path", bounds: [0, 100, 100, 0] },
+        { type: "path", name: "c", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+        { type: "path", name: "k", bounds: [20, 80, 80, 20], strokeSpot: "Kiss-cut", stroked: true, filled: false },
+        { type: "path", name: "r", bounds: [30, 70, 70, 30], strokeSpot: "Crease", stroked: true, filled: false },
+        { type: "compound", name: "cc", bounds: [40, 60, 60, 40], children: [
+            { type: "path", bounds: [40, 60, 60, 40], strokeSpot: "Kiss-cut", stroked: true, filled: false }
+        ]}
+    ]}]
+});
+var passes = { paths: 0, compounds: 0 };
+var protoK13 = Object.getPrototypeOf(docK13);
+var getPaths = Object.getOwnPropertyDescriptor(protoK13, "pathItems").get;
+var getComps = Object.getOwnPropertyDescriptor(protoK13, "compoundPathItems").get;
+Object.defineProperty(docK13, "pathItems", { get: function () { passes.paths++; return getPaths.call(this); } });
+Object.defineProperty(docK13, "compoundPathItems", { get: function () { passes.compounds++; return getComps.call(this); } });
+var sK13 = makeSettings({ mode: "ZUND", layers: [
+    { name: "Cut", color: "Cut" }, { name: "Kiss-cut", color: "Kiss-cut" }, { name: "Crease", color: "Crease" }
+]});
+ZSM.Draw.render(ZSM.Core.calculateAll(sK13, ZSM.Draw.getBounds(sK13)), sK13);
+assertEq(passes.paths, 1, "doc.pathItems enumerated once for three rows");
+assertEq(passes.compounds, 1, "doc.compoundPathItems enumerated once for three rows");
+assertEq(countItems(findLayer(docK13, "Cut"), "PathItem"), 1, "Cut path routed");
+var kissK13 = findLayer(docK13, "Kiss-cut");
+assert(itemNamed(kissK13, "k") !== null && itemNamed(kissK13, "cc") !== null,
+    "Kiss-cut path and compound routed");
+assertEq(countItems(findLayer(docK13, "Crease"), "PathItem"), 1, "Crease path routed");
+
+
+// =====================================================
+// TEST 30 (review K6): the script's own layer names vs. user content
+// =====================================================
+// Regmarks and Trim are the script's output layers: it rewrites their content.
+// A mapping row named "Trim" had its freshly routed cut paths deleted by the
+// trim-line refresh in the same run; a user's own "Trim" layer (e.g. in a
+// pre-separated marks-only document) lost its content, or the whole layer.
+console.log("\n=== TEST 30 (review K6): reserved mapping names and foreign Trim content ===");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Trim", color: "Cut" }] })), "Trim",
+    "mapping row 'Trim' is detected");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Cut", color: "Cut" }, { name: "Regmarks", color: "X" }] })),
+    "Regmarks", "mapping row 'Regmarks' is detected");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] })), null,
+    "ordinary names pass");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ marksOnly: true, layers: [{ name: "Trim", color: "Cut" }] })), null,
+    "marks-only ignores the mapping, so there is nothing to refuse");
+
+var alertsK6 = [];
+var origAlertK6 = global.alert;
+global.alert = function (m) { alertsK6.push(String(m)); };
+var RED = { typename: "CMYKColor", cyan: 0, magenta: 100, yellow: 100, black: 0 };
+var docK6 = setupDoc({
+    layers: [
+        { name: "Trim", items: [
+            { type: "path", name: "userContour", bounds: [10, 90, 90, 10], strokeSpot: "Cut", stroked: true, filled: false },
+            { type: "path", name: "legacyLine", points: [[-50, 150], [150, 150]], bounds: [-50, 150, 150, 150],
+              strokeColor: RED, stroked: true, filled: false }
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+function ownTrimLines(lay) { return lay._items.filter(function (it) { return it.note === "ZSM trim line"; }).length; }
+var sK6 = makeSettings({ mode: "SUMMA", drawRed: true, marksOnly: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK6, ZSM.Draw.getBounds(sK6)), sK6);
+var trimK6 = findLayer(docK6, "Trim");
+assert(itemNamed(trimK6, "userContour") !== null, "user's contour on 'Trim' survives the refresh");
+assert(itemNamed(trimK6, "legacyLine") === null, "an old unmarked trim line of the script is replaced");
+assertEq(ownTrimLines(trimK6), 2, "two new trim lines, marked as the script's own");
+assert(alertsK6.join("\n").indexOf("trimforeign") >= 0, "operator told the Trim layer holds foreign objects");
+
+var sK6b = makeSettings({ mode: "SUMMA", drawRed: false, marksOnly: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK6b, ZSM.Draw.getBounds(sK6b)), sK6b);
+trimK6 = findLayer(docK6, "Trim");
+assert(trimK6 !== null && itemNamed(trimK6, "userContour") !== null, "trim lines off: user content and layer kept");
+assertEq(trimK6 ? ownTrimLines(trimK6) : -1, 0, "trim lines off: the script's own lines removed");
+global.alert = origAlertK6;
+
+
+// =====================================================
+// TEST 31 (review K10): validate before changing the document
+// =====================================================
+// main.js deleted the Summa output BEFORE anything was validated, and an
+// artboard Illustrator refuses (wider than ~16 300 pt, measured) surfaced as a
+// generic render error after that — the Summa set was gone, nothing new drawn.
+console.log("\n=== TEST 31 (review K10): nothing changes when the artboard cannot be set ===");
+// (a) a ZUND run's bounds ignore the Summa sublayer (the run removes it),
+//     so the main flow no longer has to delete it before validating
+var docK10a = setupDoc({ layers: [
+    { name: "Regmarks", sublayers: [{ name: "Summa", items: [{ type: "path", bounds: [-100, 300, -90, 290] }] }] },
+    { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+]});
+var bK10 = ZSM.Draw.getBounds(makeSettings({ mode: "ZUND" }));
+assert(bK10[0] === 0 && bK10[1] === 100 && bK10[2] === 100 && bK10[3] === 0,
+    "ZUND bounds ignore the Summa sublayer (got " + bK10.join(",") + ")");
+
+// (b) artboard refused → specific message with the size; Summa output kept
+var alertsK10 = [], origAlertK10 = global.alert;
+global.alert = function (m) { alertsK10.push(String(m)); };
+var docK10b = setupDoc({ layers: [
+    { name: "Regmarks", sublayers: [{ name: "Summa", items: [{ type: "path", bounds: [-8170, 120, -8160, 110] }] }] },
+    { name: "Art", items: [{ type: "path", bounds: [-8160, 100, 8160, 0] }] }       // 16 320 pt + marks > limit
+]});
+var sK10 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK10, ZSM.Draw.getBounds(sK10)), sK10);
+var regK10 = findLayer(docK10b, "Regmarks");
+assert(findSublayer(regK10, "Summa") !== null, "Summa output kept when the artboard cannot be set");
+assert(findSublayer(regK10, "Zünd") === null, "no Zünd marks drawn");
+assert(alertsK10.join("\n").indexOf("artboard too large") >= 0,
+    "operator gets the artboard-size message (got: " + alertsK10.join(" | ") + ")");
+global.alert = origAlertK10;
+
+
+// =====================================================
+// TEST 32 (review K11): the artboard change is its own undo step
+// =====================================================
+// Each app.redraw() closes an undo step, and an artboard change made in the
+// same step as other edits is NOT reverted by Undo (measured, AI 30.8.1): after
+// undoing a run the layers came back but the artboard stayed enlarged. Isolated
+// between two redraws it reverts on its own (measured). Guard the isolation.
+console.log("\n=== TEST 32 (review K11): artboard change fenced by redraws ===");
+var docK11 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+var sK11 = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK11, ZSM.Draw.getBounds(sK11)), sK11);
+var logK11 = docK11._mutationLog;
+var iAb = -1;
+for (var li11 = 0; li11 < logK11.length; li11++) if (logK11[li11].op === "artboard") { iAb = li11; break; }
+assert(iAb >= 0, "artboard assignment logged");
+assert(iAb > 0 && logK11[iAb - 1].op === "redraw", "redraw right before the artboard change");
+assert(iAb >= 0 && iAb + 1 < logK11.length && logK11[iAb + 1].op === "redraw", "redraw right after the artboard change");
+
+
+// =====================================================
+// TEST 33 (review K7): conflicting marks stop the run before any change
+// =====================================================
+// 90 mm wide artwork with the defaults puts the orientation mark exactly on the
+// bottom-right corner mark; a 100 mm Fixed artboard leaves it 10 mm off the
+// artboard. Both used to render without a word.
+console.log("\n=== TEST 33 (review K7): overlapping or off-artboard marks block the run ===");
+function artboardOps(doc) {
+    var n = 0;
+    for (var i = 0; i < doc._mutationLog.length; i++) if (doc._mutationLog[i].op === "artboard") n++;
+    return n;
+}
+var alertsK7 = [], origAlertK7 = global.alert;
+global.alert = function (m) { alertsK7.push(String(m)); };
+
+var docK7 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(90), 0] }] }] });
+var sK7 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7, ZSM.Draw.getBounds(sK7)), sK7);
+assert(findLayer(docK7, "Regmarks") === null, "orientation conflict: no marks, no Regmarks layer");
+assertEq(artboardOps(docK7), 0, "orientation conflict: artboard untouched");
+assert(alertsK7.join("\n").indexOf("marks orient 0 5") >= 0,
+    "orientation conflict: distance and mark size reported (got: " + alertsK7.join(" | ") + ")");
+
+alertsK7 = [];
+var docK7f = setupDoc({
+    artboardRect: [0, ZSM.Utils.mm2pt(100), ZSM.Utils.mm2pt(100), 0],
+    layers: [{ name: "Art", items: [{ type: "path", bounds: [20, 200, 200, 20] }] }]
+});
+var sK7f = makeSettings({ mode: "ZUND", useArtboardBounds: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7f, ZSM.Draw.getBounds(sK7f)), sK7f);
+assert(findLayer(docK7f, "Regmarks") === null, "mark off the Fixed artboard: nothing drawn");
+assert(alertsK7.join("\n").indexOf("marks outside 10") >= 0,
+    "mark off the Fixed artboard: overhang reported (got: " + alertsK7.join(" | ") + ")");
+
+alertsK7 = [];
+var docK7ok = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(120), 0] }] }] });
+ZSM.Draw.render(ZSM.Core.calculateAll(sK7, ZSM.Draw.getBounds(sK7)), sK7);
+assertEq(countItems(findLayer(docK7ok, "Regmarks"), "PathItem"), 5, "120 mm artwork: 4 corners + orientation mark drawn");
+assertEq(alertsK7.length, 0, "120 mm artwork: no message (got: " + alertsK7.join(" | ") + ")");
+global.alert = origAlertK7;
 
 
 // =====================================================

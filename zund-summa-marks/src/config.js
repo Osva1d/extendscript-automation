@@ -24,6 +24,9 @@ ZSM.Config = {
     layerRegmarks: "Regmarks",
     layerGraphics: "Graphics",
     layerTrim:     "Trim",
+    // Note stamped on every trim line the script draws, so a refresh removes
+    // only its own lines and never a user's content on a layer named "Trim".
+    trimNote:      "ZSM trim line",
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {

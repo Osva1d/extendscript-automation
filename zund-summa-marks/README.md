@@ -46,11 +46,17 @@ Skript pro Adobe Illustrator, který automaticky generuje registrační značky 
 3. Spustit: `File > Scripts > Other Script... > illustrator-zund-summa-marks.jsx`
 4. Nastavit parametry v dialogu → kliknout **Generovat**
 
+Běh se vrací několika kroky Zpět (Cmd+Z). Změna artboardu je samostatný krok —
+ve stejném kroku s ostatními změnami by ji Illustrator nevrátil vůbec. SUMMA
+s ořezovými linkami má kroků víc než ZUND.
+
 ### Módy
 
 **Dle výběru (Auto-fit)** — artboard se automaticky přizpůsobí grafice; značky se umisťují od okraje výběru. Vyžaduje, aby byla grafika vybrána.
 
 **Dle Artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu. Nevyžaduje výběr.
+
+Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
 
 ### Správa vrstev
 
@@ -61,13 +67,17 @@ Panel *Přiřazení vrstev k barvám* obsahuje tabulku řezacích vrstev. Každ�
 
 Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
-Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky.
+Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk.
+
+Vrstvy **Regmarks** a **Trim** patří skriptu (značky a ořezové linky) a v mapování je použít nejde. Ve vrstvě Trim skript obnovuje jen své vlastní ořezové linky; cizí objekty v ní nechá a upozorní na ně.
 
 ### Presets
 
 Nastavení se ukládají jako pojmenované presety. Speciální presety:
 - `[Default]` — výchozí hodnoty, nelze smazat (v UI zobrazen lokalizovaně jako `[Výchozí]`)
 - `[Last Settings]` — interní auto-save posledního spuštění (v dropdown se nezobrazuje)
+
+Preset si pamatuje i mód. Výběr presetu jiného módu (nebo ↺ na něj) přepne dialog do jeho módu.
 
 ---
 

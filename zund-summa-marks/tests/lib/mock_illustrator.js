@@ -43,6 +43,27 @@
         while (node && node.typename !== "Document") node = node.parent;
         return node;
     }
+    /**
+     * Illustrator rejects writes into a layer that is locked OR hidden, and
+     * inherits both from parent layers (measured 2026-09-26, AI 30.8.1 — see
+     * docs/extendscript-engine-facts.md "Skrytá vrstva je pro zápis zamčená").
+     */
+    function isWriteBlocked(layer) {
+        for (var l = layer; l && l.typename === "Layer"; l = l.parent) {
+            if (l.locked || l.visible === false) return true;
+        }
+        return false;
+    }
+    function assertWritable(layer) {
+        if (isWriteBlocked(layer)) throw new Error("Cannot modify a layer that is locked");
+    }
+    /** move(): source layer blocked → "Target layer cannot be modified" (sic, measured). */
+    function assertMovable(item, target) {
+        var src = findEnclosingLayer(item);
+        if (src && isWriteBlocked(src)) throw new Error("Target layer cannot be modified");
+        var dst = (target && target.typename === "Layer") ? target : (target ? findEnclosingLayer(target) : null);
+        if (dst && isWriteBlocked(dst)) throw new Error("Cannot modify a layer that is locked");
+    }
 
     // ===== Mock collections =====
     /**
@@ -128,6 +149,7 @@
             var self = this;
             return wrapCollection(items, {
                 ellipse: function (top, left, w, h) {
+                    assertWritable(self);
                     var p = new MockPathItem({
                         bounds: [left, top, left + w, top - h]
                     }, self);
@@ -136,6 +158,7 @@
                     return p;
                 },
                 rectangle: function (top, left, w, h) {
+                    assertWritable(self);
                     var p = new MockPathItem({
                         bounds: [left, top, left + w, top - h]
                     }, self);
@@ -144,6 +167,7 @@
                     return p;
                 },
                 add: function () {
+                    assertWritable(self);
                     var p = new MockPathItem({}, self);
                     self._items.push(p);
                     logMutation(findDoc(self), { op: "add-path", layer: self.name });
@@ -158,18 +182,21 @@
             var self = this;
             return wrapCollection(all, {
                 add: function () {
+                    assertWritable(self);
                     var p = new MockPathItem({}, self);
                     self._items.push(p);
                     logMutation(findDoc(self), { op: "add-path", layer: self.name });
                     return p;
                 },
                 ellipse: function (top, left, w, h) {
+                    assertWritable(self);
                     var p = new MockPathItem({ bounds: [left, top, left + w, top - h] }, self);
                     self._items.push(p);
                     logMutation(findDoc(self), { op: "add-path-ellipse", layer: self.name, bounds: p.geometricBounds });
                     return p;
                 },
                 rectangle: function (top, left, w, h) {
+                    assertWritable(self);
                     var p = new MockPathItem({ bounds: [left, top, left + w, top - h] }, self);
                     self._items.push(p);
                     logMutation(findDoc(self), { op: "add-path-rectangle", layer: self.name, bounds: p.geometricBounds });
@@ -215,7 +242,13 @@
         }
         logMutation(findDoc(p), { op: "remove-layer", name: this.name });
     };
-    MockLayer.prototype.move = function () {};   // stub for reorder
+    // Stub for reorder (order is not modeled). Illustrator refuses to move a
+    // hidden layer or to place one relative to a hidden layer (measured).
+    MockLayer.prototype.move = function (ref) {
+        if (this.visible === false || (ref && ref.visible === false)) {
+            throw new Error("Cannot modify a layer that is locked");
+        }
+    };
     MockLayer.prototype.zOrder = function (method) {
         logMutation(findDoc(this.parent), { op: "zOrder", layer: this.name, method: method });
     };
@@ -234,6 +267,9 @@
         this.fillOverprint = false;
         this.strokeOverprint = false;
         this.strokeWidth = spec.strokeWidth || 0;
+        this.note = spec.note || "";
+        this.closed = !!spec.closed;
+        this._points = spec.points || null;   // [[x, y], ...] for pathPoints
         // Default colors: CMYK black if no spot specified — never null, since
         // production code reads .typename without null-checks (matches AI behavior).
         this.fillColor = spec.fillColor
@@ -254,6 +290,7 @@
         return null;
     }
     MockPathItem.prototype.move = function (target, placement) {
+        assertMovable(this, target);
         var oldParent = this.parent;
         // Remove from old parent
         if (oldParent && oldParent._items) arrayRemove(oldParent._items, this);
@@ -266,9 +303,15 @@
         if (this.parent && this.parent._items) arrayRemove(this.parent._items, this);
         logMutation(findDoc(this.parent), { op: "remove-item", layer: this.parent && this.parent.name });
     };
+    Object.defineProperty(MockPathItem.prototype, "pathPoints", {
+        get: function () {
+            return (this._points || []).map(function (pt) { return { anchor: [pt[0], pt[1]] }; });
+        }
+    });
     MockPathItem.prototype.setEntirePath = function (points) {
         // Update bounds from points
         if (!points || !points.length) return;
+        this._points = points.slice();
         var l = points[0][0], t = points[0][1], r = l, b = t;
         for (var i = 1; i < points.length; i++) {
             var x = points[i][0], y = points[i][1];
@@ -300,6 +343,7 @@
         get: function () { return wrapCollection(this._items); }
     });
     MockCompoundPathItem.prototype.move = function (target) {
+        assertMovable(this, target);
         if (this.parent && this.parent._items) arrayRemove(this.parent._items, this);
         if (target && target._items) target._items.push(this);
         this.parent = target;
@@ -368,7 +412,21 @@
         });
 
         // Artboards
-        this.artboards = [{ artboardRect: spec.artboardRect || [0, 100, 100, 0] }];
+        // An artboard wider or taller than ~16 300 pt is refused at assignment
+        // ("CoOA", measured — docs/extendscript-engine-facts.md "Mez artboardu").
+        var self = this;
+        var ab = { _rect: (spec.artboardRect || [0, 100, 100, 0]).slice() };
+        Object.defineProperty(ab, "artboardRect", {
+            get: function () { return this._rect.slice(); },
+            set: function (r) {
+                if ((r[2] - r[0]) > 16300 || (r[1] - r[3]) > 16300) {
+                    throw new Error("an Illustrator error occurred: 1095724867 ('CoOA')");
+                }
+                this._rect = r.slice();
+                logMutation(self, { op: "artboard" });
+            }
+        });
+        this.artboards = [ab];
         this.artboards.getActiveArtboardIndex = function () { return 0; };
 
         // Spots / swatches
@@ -456,7 +514,11 @@
             documents: { length: 1 },
             activeDocument: null,
             executeMenuCommand: function () {},
-            redraw: function () {},
+            // Logged so tests can check where undo checkpoints fall: each
+            // redraw closes an undo step in Illustrator (measured).
+            redraw: function () {
+                if (global.app.activeDocument) logMutation(global.app.activeDocument, { op: "redraw" });
+            },
             locale: "en_US"
         };
         global.ZOrderMethod = {

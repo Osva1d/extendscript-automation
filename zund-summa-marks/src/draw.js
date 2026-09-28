@@ -6,13 +6,6 @@
 var ZSM = ZSM || {};
 
 ZSM.Draw = {
-    /**
-     * Illustrator hard coordinate limit. Anything beyond this in artboardRect or
-     * pathItem positions crashes at C++ level (no JS try/catch can intercept).
-     * 16383 pt ≈ 227 in ≈ 5765 mm — Large Canvas Mode upper bound.
-     */
-    MAX_ARTBOARD_COORD: 16383,
-
     /** @private Storage for layers locked at session start {idx, name}, restored on end. */
     _lockedLayers: [],
 
@@ -97,26 +90,63 @@ ZSM.Draw = {
         var doc = app.activeDocument;
 
         try {
+            // Nothing is changed unless the whole geometry is usable. A
+            // non-finite mark used to be skipped silently — an incomplete mark
+            // set is worse than none.
+            if (!this._geometryIsFinite(geo, s)) {
+                ZSM.Utils.error(ZSM.L.ERR_GEOMETRY_INVALID);
+                return;
+            }
+            // Nor when marks would print as one shape or partly off the
+            // artboard. With the defaults the orientation mark lands on the
+            // bottom-right corner mark for 85–95 mm wide artwork, and nothing
+            // said so (review K7).
+            var conflict = ZSM.Core.findMarkConflict(geo, s);
+            if (conflict) {
+                var conflictMsg = { overlap: ZSM.L.ERR_MARKS_OVERLAP, orient: ZSM.L.ERR_MARKS_ORIENT,
+                                    outside: ZSM.L.ERR_MARKS_OUTSIDE }[conflict.type];
+                ZSM.Utils.error(ZSM.L.format(conflictMsg, Math.round(conflict.dist * 10) / 10,
+                    (s.mode === "SUMMA") ? s.markSizeS : s.markSizeZ));
+                return;
+            }
+
             // 0. Deselect all — removing or reordering items/layers while
             //    Illustrator holds references to selected objects can crash
             //    at C++ level. Clearing selection first prevents this.
             try { doc.selection = null; } catch (ds) {}
 
-            // 1. Resize artboard (Auto-fit mode only)
-            // Validate bounds before setting — see ZSM.Draw.MAX_ARTBOARD_COORD.
+            // Layers this run had to unhide to write into (reported at the
+            // end) and output objects that failed to draw. A hidden layer
+            // rejects writes exactly like a locked one, so both used to fail
+            // silently — a re-run with Regmarks hidden deleted the old marks
+            // and drew none.
+            var unhidden = [];
+            var drawFailures = 0;
+
+            // 1. Resize artboard (Auto-fit mode only). This is the FIRST change
+            //    of the run: if Illustrator refuses the rectangle (wider or
+            //    taller than ~16 300 pt: "CoOA"/"MRAP", measured) the document
+            //    is still untouched. The old |coordinate| > 16383 check never
+            //    fired — no canvas coordinate gets that large — and the refusal
+            //    surfaced as a generic error after the Summa output was gone.
             if (!s.useArtboardBounds) {
-                var abMax = this.MAX_ARTBOARD_COORD;
-                if (Math.abs(geo.ab[0]) > abMax || Math.abs(geo.ab[1]) > abMax ||
-                    Math.abs(geo.ab[2]) > abMax || Math.abs(geo.ab[3]) > abMax) {
-                    ZSM.Utils.log("render: artboard rect " + geo.ab.join(",") +
-                        " exceeds MAX_ARTBOARD_COORD=" + abMax + "pt — aborting.");
-                    ZSM.Utils.error(ZSM.L.ERR_GENERIC
-                        ? ZSM.L.format(ZSM.L.ERR_GENERIC, "Artboard exceeds maximum size (5765 mm).")
-                        : "Artboard exceeds maximum size.");
+                var activeIdx = doc.artboards.getActiveArtboardIndex();
+                // The artboard change gets an undo step of its own. Made in
+                // the same step as other edits, Undo does not revert it
+                // (measured: the layers came back, the artboard stayed
+                // enlarged); fenced by redraws it reverts on its own.
+                try { app.redraw(); } catch (rdA) {}
+                try {
+                    doc.artboards[activeIdx].artboardRect = geo.ab;
+                    try { app.redraw(); } catch (rdB) {}
+                } catch (abErr) {
+                    ZSM.Utils.log("render: artboardRect refused — " + abErr.message);
+                    var sfAb = ZSM.Utils.getEffectiveSF(s);
+                    ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_ARTBOARD_TOO_LARGE,
+                        Math.round(ZSM.Utils.pt2mm(geo.ab[2] - geo.ab[0]) * sfAb),
+                        Math.round(ZSM.Utils.pt2mm(geo.ab[1] - geo.ab[3]) * sfAb)));
                     return;
                 }
-                var activeIdx = doc.artboards.getActiveArtboardIndex();
-                doc.artboards[activeIdx].artboardRect = geo.ab;
             }
 
             // 2. Prepare Regmarks layer — mode-specific sublayers.
@@ -124,7 +154,7 @@ ZSM.Draw = {
             //    so running one mode does not destroy the other's marks.
             //    This supports the intended workflow: run ZUND first,
             //    then run SUMMA second — both sets of marks coexist.
-            var reg = this.getLay(ZSM.Config.layerRegmarks);
+            var reg = this.getLay(ZSM.Config.layerRegmarks, unhidden);
 
             var modeSubName = (s.mode === "SUMMA") ? "Summa" : "Zünd";
             var zundSub = null, summaSub = null;
@@ -149,9 +179,8 @@ ZSM.Draw = {
                 }
                 // A Zünd run invalidates any existing Summa output (artboard
                 // recompute + OPOS-outermost violation — see removeSummaOutput).
-                // The main flow already removed it before measuring bounds, so
-                // this is normally a no-op; it fires only for direct render()
-                // callers, and then also surfaces the operator warning.
+                // Removed here, after the new artboard was accepted; the bounds
+                // measurement already left it out.
                 if (this.removeSummaOutput()) {
                     geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
                     summaSub = null;
@@ -194,19 +223,25 @@ ZSM.Draw = {
                 // attempt a self-move (`targetLay.move(targetLay)` would
                 // self-reference and can crash AI at C++ level).
                 var seenTargets = {};
+                var routes = [];
                 for (var i = 0; i < s.layers.length; i++) {
                     var layDef = s.layers[i];
                     if (layDef.name && layDef.color && layDef.color !== "") {
+                        // [Registration] prints on every separation, so it can
+                        // never identify cut paths. Routing by it moved trim
+                        // marks and other tools' marks onto the cut layer in an
+                        // English Illustrator, and matched nothing under a
+                        // localized swatch name. Skip the row and say why.
+                        if (layDef.color === "[Registration]" || layDef.color === this.getRegistrationName()) {
+                            geo.warnings.push(ZSM.L.format(ZSM.L.WARN_REG_ROUTING, layDef.name));
+                            continue;
+                        }
                         // "l_" prefix keeps user layer names like "toString"
                         // from colliding with inherited Object.prototype members.
                         if (seenTargets["l_" + layDef.name]) continue; // dedupe
                         seenTargets["l_" + layDef.name] = true;
 
-                        var targetLay = this.getLay(layDef.name);
-                        var hit = this.movePaths(targetLay, [layDef.color]);
-                        if (!hit) {
-                            geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, layDef.color));
-                        }
+                        var targetLay = this.getLay(layDef.name, unhidden);
                         // Guard against self-move (would happen if getLay
                         // resolved to the same Layer instance as refLayer,
                         // e.g. on the first iteration when targetLay is
@@ -216,6 +251,24 @@ ZSM.Draw = {
                             catch (mvErr) { ZSM.Utils.log("layer move failed: " + mvErr.message); }
                         }
                         refLayer = targetLay;
+                        routes.push({ name: layDef.name, color: layDef.color, layer: targetLay });
+                    }
+                }
+
+                // All rows in ONE pass over the document (was one per row).
+                var routed = this.movePaths(routes);
+                for (var ri = 0; ri < routes.length; ri++) {
+                    var st = routed[ri];
+                    var leftInPlace = st.clipped + st.blocked;
+                    if (st.moved === 0 && st.mixed === 0 && leftInPlace === 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].color));
+                    }
+                    if (st.mixed > 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, routes[ri].color, st.mixed));
+                    }
+                    if (leftInPlace > 0) {
+                        geo.warnings.push(ZSM.L.format(ZSM.L.WARN_PATHS_SKIPPED,
+                            routes[ri].name, routes[ri].color, st.clipped, st.blocked));
                     }
                 }
             }
@@ -271,19 +324,16 @@ ZSM.Draw = {
             var zSize = (Number(s.markSizeZ) || 5.0) / sf;
             var rZ   = ZSM.Utils.mm2pt(zSize / 2);
 
-            // Validate mark coords against Illustrator's hard limit before drawing.
-            var MAX_COORD = this.MAX_ARTBOARD_COORD;
-
             var marksZ = geo.marksZ;
             for (var z = 0; z < marksZ.length; z++) {
                 var m = marksZ[z];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var circle = modeSub.pathItems.ellipse(m.cy + rZ, m.cx - rZ, rZ * 2, rZ * 2);
                     circle.fillColor     = col;
                     circle.fillOverprint = true;
                     circle.stroked       = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw Zünd mark at index " + z);
                 }
             }
@@ -295,13 +345,13 @@ ZSM.Draw = {
             var marksS = geo.marksS;
             for (var sm = 0; sm < marksS.length; sm++) {
                 var m = marksS[sm];
-                if (isNaN(m.cx) || isNaN(m.cy) || Math.abs(m.cx) > MAX_COORD || Math.abs(m.cy) > MAX_COORD) continue;
                 try {
                     var sq = modeSub.pathItems.rectangle(m.cy + rS, m.cx - rS, rS * 2, rS * 2);
                     sq.fillColor     = col;
                     sq.fillOverprint = true;
                     sq.stroked       = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw Summa mark at index " + sm);
                 }
             }
@@ -316,6 +366,7 @@ ZSM.Draw = {
                     bar.strokeWidth     = geo.barS.w;
                     bar.filled          = false;
                 } catch (e) {
+                    drawFailures++;
                     ZSM.Utils.log("render: failed to draw OPOS bar");
                 }
             }
@@ -328,17 +379,21 @@ ZSM.Draw = {
             //     would mislead the operator. ZUND leaves an existing Trim
             //     alone (it belongs to the SUMMA layout, not ours to delete).
             if (geo.red && geo.red.length > 0) {
-                this._drawTrimTopLevel(geo.red);
+                drawFailures += this._drawTrimTopLevel(geo.red, geo.warnings);
             } else if (s.mode === "SUMMA") {
-                this._removeTrimLayer();
+                this._removeTrimLayer(geo.warnings);
             }
 
             // 7b. Normal mode only — name the artwork (bottom) layer "Graphics".
             //     Skipped in marks-only (user's layers are left untouched).
             if (!s.marksOnly) {
                 // Assumption: the bottom-most layer is the user's artwork layer.
+                // A HIDDEN bottom layer is not artwork that prints (a template,
+                // a customer proof, an old version) — leave it exactly as it is.
+                // It used to be renamed Graphics and made visible, i.e. printed.
                 var gfxLayer = doc.layers[doc.layers.length - 1];
-                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)) {
+                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)
+                    && gfxLayer.visible) {
                     // Don't auto-rename a layer the user explicitly mapped in the
                     // layer table. The move/remove passes above can leave a real,
                     // user-named target layer at the bottom — renaming THAT to
@@ -356,7 +411,6 @@ ZSM.Draw = {
                         }
                     }
                     gfxLayer.locked  = false;
-                    gfxLayer.visible = true;
                     // Send Graphics layer to back, but only if not already there.
                     if (doc.layers.length > 0
                         && doc.layers[doc.layers.length - 1] !== gfxLayer) {
@@ -368,14 +422,54 @@ ZSM.Draw = {
                 }
             }
 
-            // Non-fatal notices (missing colour → fallback, unmatched layer
-            // colour) — surface as a WARNING, not an error: the marks rendered.
-            if (geo.warnings.length > 0) ZSM.Utils.warn(geo.warnings.join("\n"));
+            if (unhidden.length > 0) {
+                geo.warnings.push(ZSM.L.format(ZSM.L.WARN_LAYERS_UNHIDDEN, unhidden.join(", ")));
+            }
+
+            // A mark that failed to draw leaves a sheet the cutter cannot
+            // register — that is an ERROR, not a debug-log line. Non-fatal
+            // notices (missing colour → fallback, unmatched layer colour,
+            // unhidden layers) ride along; on their own they are a WARNING.
+            if (drawFailures > 0) {
+                var failMsg = ZSM.L.format(ZSM.L.ERR_MARKS_FAILED, drawFailures);
+                if (geo.warnings.length > 0) failMsg += "\n\n" + geo.warnings.join("\n");
+                ZSM.Utils.error(failMsg);
+            } else if (geo.warnings.length > 0) {
+                ZSM.Utils.warn(geo.warnings.join("\n"));
+            }
             app.redraw();
 
         } catch (e) {
-            ZSM.Utils.error(ZSM.L.ERR_RENDER_CRITICAL + e.message);
+            ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_RENDER_CRITICAL, e.message));
         }
+    },
+
+    /**
+     * True if every coordinate the render would use is a finite number.
+     * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
+     * @param {Object} s   - Settings (useArtboardBounds decides if geo.ab is used).
+     * @returns {boolean}
+     * @private
+     */
+    _geometryIsFinite: function (geo, s) {
+        var ok = function (v) { return typeof v === "number" && isFinite(v); };
+        var lists = [geo.marksZ || [], geo.marksS || []];
+        for (var l = 0; l < lists.length; l++) {
+            for (var i = 0; i < lists[l].length; i++) {
+                if (!ok(lists[l][i].cx) || !ok(lists[l][i].cy)) return false;
+            }
+        }
+        if (geo.barS && !(ok(geo.barS.x1) && ok(geo.barS.x2) && ok(geo.barS.y) && ok(geo.barS.w))) return false;
+        var red = geo.red || [];
+        for (var r = 0; r < red.length; r++) {
+            if (!(ok(red[r].x1) && ok(red[r].y1) && ok(red[r].x2) && ok(red[r].y2) && ok(red[r].w))) return false;
+        }
+        if (!s.useArtboardBounds) {
+            for (var a = 0; a < 4; a++) {
+                if (!ok(geo.ab[a])) return false;
+            }
+        }
+        return true;
     },
 
     // -------------------------------------------------------------------------
@@ -389,10 +483,13 @@ ZSM.Draw = {
      * operator). Refreshes the layer if it already exists (idempotent re-runs).
      * No-op when there are no trim lines.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @param {Array} warnings - Optional; receives a notice when the layer
+     *                           holds objects the script did not create.
+     * @returns {number} Trim lines that could not be drawn.
      * @private
      */
-    _drawTrimTopLevel: function (redLines) {
-        if (!redLines || redLines.length === 0) return;
+    _drawTrimTopLevel: function (redLines, warnings) {
+        if (!redLines || redLines.length === 0) return 0;
         var doc = app.activeDocument;
         // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
         // at a SUBLAYER (the mode sublayer). Calling doc.layers.add() to create a
@@ -407,7 +504,8 @@ ZSM.Draw = {
         try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { trimLayer = null; }
         if (trimLayer) {
             try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
-            this._clearLayer(trimLayer);          // refresh — drop old trim lines
+            // Refresh: drop only the script's own lines — foreign content stays.
+            if (this._clearOwnTrimLines(trimLayer) > 0 && warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
             try { app.redraw(); } catch (rd) {}
         } else {
             try {
@@ -416,10 +514,10 @@ ZSM.Draw = {
                 try { app.redraw(); } catch (rd2) {}   // commit layer creation
             } catch (eAdd) {
                 ZSM.Utils.log("trim: top-level layer add failed — " + eAdd.message);
-                return;
+                return redLines.length;
             }
         }
-        this._paintRedLines(trimLayer, redLines);
+        return this._paintRedLines(trimLayer, redLines);
     },
 
     /**
@@ -427,9 +525,12 @@ ZSM.Draw = {
      * has trim lines OFF — stale lines from a previous run sit at outdated
      * artboard edges. Same C++ crash guard as _drawTrimTopLevel: deselect,
      * move activeLayer OFF the layer being removed, commit, then remove.
+     * Only the script's own lines are removed; a layer that still holds
+     * foreign content (a user's own "Trim" layer) is kept as it was found.
+     * @param {Array} warnings - Optional; receives a notice when kept.
      * @private
      */
-    _removeTrimLayer: function () {
+    _removeTrimLayer: function (warnings) {
         var doc = app.activeDocument;
         var trimLayer = null;
         try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { return; }
@@ -443,8 +544,15 @@ ZSM.Draw = {
         } catch (e2) {}
         try { app.redraw(); } catch (e3) {}
         try {
+            var wasVisible = trimLayer.visible, wasLocked = trimLayer.locked;
             trimLayer.locked = false; trimLayer.visible = true;
-            trimLayer.remove();
+            if (this._clearOwnTrimLines(trimLayer) > 0) {
+                trimLayer.visible = wasVisible;   // a user's layer — leave it as found
+                trimLayer.locked  = wasLocked;
+                if (warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
+            } else {
+                trimLayer.remove();
+            }
             try { app.redraw(); } catch (rd) {}
         } catch (e4) {
             ZSM.Utils.log("trim: stale layer remove failed — " + e4.message);
@@ -501,12 +609,14 @@ ZSM.Draw = {
      * Draws red trim lines as direct children of the given layer.
      * @param {Layer} layer    - Host layer.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
+     * @returns {number} Lines that could not be drawn.
      * @private
      */
     _paintRedLines: function (layer, redLines) {
         var redColor = new CMYKColor();
         redColor.magenta = 100;
         redColor.yellow  = 100;
+        var failed = 0;
         for (var r = 0; r < redLines.length; r++) {
             try {
                 var line = layer.pathItems.add();
@@ -517,9 +627,58 @@ ZSM.Draw = {
                 line.strokeColor = redColor;
                 line.strokeWidth = redLines[r].w;
                 line.filled      = false;
+                line.note        = ZSM.Config.trimNote;
             } catch (e) {
+                failed++;
                 ZSM.Utils.log("render: failed to draw trim line at index " + r);
             }
+        }
+        return failed;
+    },
+
+    /**
+     * Removes the script's own trim lines from a layer and leaves everything
+     * else: a user's own layer called "Trim" (a pre-separated cut layer, say)
+     * used to be cleared wholesale. Own = stamped with ZSM.Config.trimNote, or
+     * an unmarked line from an older version (see _isOwnTrimLine).
+     * @param {Layer} layer - The Trim layer (unlocked and visible).
+     * @returns {number} Items and sublayers left that are not the script's.
+     * @private
+     */
+    _clearOwnTrimLines: function (layer) {
+        var foreign = 0;
+        try {
+            var items = layer.pageItems;
+            for (var i = items.length - 1; i >= 0; i--) {
+                if (!this._isOwnTrimLine(items[i])) { foreign++; continue; }
+                try { items[i].remove(); } catch (e) { foreign++; }
+            }
+            foreign += layer.layers.length;
+        } catch (e) {
+            ZSM.Utils.log("_clearOwnTrimLines: " + e.message);
+        }
+        return foreign;
+    },
+
+    /**
+     * True for a trim line drawn by this script: stamped with the trim note,
+     * or — drawn before the stamp existed — exactly what _paintRedLines draws:
+     * an open two-point horizontal path, no fill, stroked C0 M100 Y100 K0.
+     * @param {PageItem} item
+     * @returns {boolean}
+     * @private
+     */
+    _isOwnTrimLine: function (item) {
+        try {
+            if (item.note === ZSM.Config.trimNote) return true;
+            if (item.typename !== "PathItem" || item.filled || !item.stroked || item.closed) return false;
+            var pp = item.pathPoints;
+            if (pp.length !== 2 || pp[0].anchor[1] !== pp[1].anchor[1]) return false;
+            var c = item.strokeColor;
+            return c.typename === "CMYKColor" && Math.round(c.cyan) === 0 && Math.round(c.magenta) === 100
+                && Math.round(c.yellow) === 100 && Math.round(c.black) === 0;
+        } catch (e) {
+            return false;
         }
     },
 
@@ -556,18 +715,45 @@ ZSM.Draw = {
     // directly (see callers in beginSession, render, movePaths).
 
     /**
+     * The first mapping-row layer name that is one of the script's own output
+     * layers (Regmarks, Trim), or null. The script rewrites those layers'
+     * content, so paths routed there were deleted in the same run. Rows the
+     * run ignores (no name or colour; marks-only mode) don't count.
+     * @param {Object} s - Settings.
+     * @returns {string|null}
+     */
+    reservedMappingName: function (s) {
+        if (!s || s.marksOnly || !s.layers) return null;
+        for (var i = 0; i < s.layers.length; i++) {
+            var n = s.layers[i].name;
+            if (n && s.layers[i].color && (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerTrim)) return n;
+        }
+        return null;
+    },
+
+    /**
      * Gets an existing layer by name or creates it if it doesn't exist.
-     * @param {string} name - Layer name.
+     * An existing HIDDEN layer is made visible: Illustrator rejects writes
+     * into a hidden layer exactly like into a locked one ("Cannot modify a
+     * layer that is locked", measured), so marks or moved paths would fail.
+     * @param {string} name     - Layer name.
+     * @param {Array}  unhidden - Optional collector; receives `name` when the
+     *                            layer had to be made visible.
      * @returns {Layer} Illustrator Layer object.
      */
-    getLay: function (name) {
-        try {
-            return app.activeDocument.layers.getByName(name);
-        } catch (e) {
-            var layer = app.activeDocument.layers.add();
+    getLay: function (name, unhidden) {
+        var layer = null;
+        try { layer = app.activeDocument.layers.getByName(name); } catch (e) { layer = null; }
+        if (!layer) {
+            layer = app.activeDocument.layers.add();
             layer.name = name;
             return layer;
         }
+        if (!layer.visible) {
+            layer.visible = true;
+            if (unhidden) unhidden.push(name);
+        }
+        return layer;
     },
 
     /**
@@ -602,50 +788,88 @@ ZSM.Draw = {
     },
 
     /**
-     * Moves all paths whose fill or stroke matches any of the given spot color
-     * names (case-insensitive) to the target layer.
-     * Uses a snapshot to avoid live-collection issues during iteration.
+     * Routes spot-coloured paths to their mapped layers in ONE pass over the
+     * document. It used to rescan every path once per mapping row, with
+     * several DOM reads per path each time — on a large document that
+     * multiplied tens of thousands of DOM calls by the number of rows.
      *
-     * @param {Layer}  targetLayer - Destination layer.
-     * @param {Array}  names       - Spot color names to match.
-     * @returns {boolean} True if at least one path was moved.
+     * A path is moved only when it is painted EXCLUSIVELY in its route's
+     * colour; a path that also carries printable paint (see _hasOtherPaint)
+     * stays with the artwork. Every matching path that stays behind is
+     * counted, so the caller can tell the operator — a cut layer that
+     * silently misses paths is a bad cut. Uses a snapshot to avoid
+     * live-collection issues during iteration.
+     *
+     * @param {Array} routes - [{color: spot name (case-insensitive), layer: Layer}]
+     * @returns {Array} Per route, same order: {moved, mixed, clipped, blocked} —
+     *   paths moved; matching paths left in place because they also carry
+     *   printable paint (mixed), sit inside a clipping mask or on an artifact
+     *   layer (clipped), or could not be moved off a locked sublayer / hidden
+     *   layer (blocked).
      */
-    movePaths: function (targetLayer, names) {
+    movePaths: function (routes) {
+        var stats = [], byKey = {};
+        for (var r = 0; r < routes.length; r++) {
+            stats.push({ moved: 0, mixed: 0, clipped: 0, blocked: 0 });
+            // "c_" prefix keeps colour names like "toString" from colliding
+            // with inherited Object.prototype members. First row wins (the
+            // dialog blocks two rows with the same colour).
+            var key = "c_" + String(routes[r].color).toLowerCase();
+            if (byKey[key] === undefined) byKey[key] = r;
+        }
+        // Route index of a path by its spot paint (stroke or fill), -1 if none.
+        var routeOf = function (p) {
+            var ri = -1, k;
+            if (p.stroked && p.strokeColor.typename === "SpotColor") {
+                k = byKey["c_" + p.strokeColor.spot.name.toLowerCase()];
+                if (k !== undefined) ri = k;
+            }
+            if (p.filled && p.fillColor.typename === "SpotColor") {
+                k = byKey["c_" + p.fillColor.spot.name.toLowerCase()];
+                if (k !== undefined && (ri < 0 || k < ri)) ri = k;
+            }
+            return ri;
+        };
         try {
             var doc = app.activeDocument;
-            var found = false;
 
             // --- 1. CompoundPathItems (move as atomic units) ---
             var compounds = doc.compoundPathItems;
             var cpSnap = [];
             for (var ci = 0; ci < compounds.length; ci++) cpSnap.push(compounds[ci]);
 
-            // Track moved compound parents so we skip their children in step 2
-            var movedCompounds = [];
-
             for (var ci = 0; ci < cpSnap.length; ci++) {
                 var cp = cpSnap[ci];
+                if (cp.pathItems.length === 0) continue;
+
+                // Match by first sub-path color (all sub-paths share the same
+                // color). Colour first: only matching paths are worth the
+                // checks below, and only they belong in the report.
+                var first = cp.pathItems[0];
+                var cri = routeOf(first);
+                if (cri < 0) continue;
+                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
+
                 // Skip items on artifact layers — moving them could crash AI.
                 // isArtifactLayer treats an unreadable layer name as artifact
                 // (returns true) so a transient/broken layer item is skipped
                 // rather than risked — the safe default for a mutating op.
-                if (ZSM.Bounds.isArtifactLayer(cp.layer)) continue;
-                if (ZSM.Bounds.isInsideClippedGroup(cp)) continue;
-                if (this._isOnReservedLayer(cp)) continue;   // never route FROM marks/trim
-                if (cp.pathItems.length === 0) continue;
-
-                // Match by first sub-path color (all sub-paths share the same color)
-                var first = cp.pathItems[0];
-                if (this._matchesSpotColor(first, names)) {
-                    try {
-                        cp.move(targetLayer, ElementPlacement.PLACEATEND);
-                        for (var sp = 0; sp < cp.pathItems.length; sp++) {
-                            if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
-                            if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
-                        }
-                        movedCompounds.push(cp);
-                        found = true;
-                    } catch (e) {}
+                if (ZSM.Bounds.isArtifactLayer(cp.layer) || ZSM.Bounds.isInsideClippedGroup(cp)) {
+                    stats[cri].clipped++;
+                    continue;
+                }
+                if (this._hasOtherPaint(first, [routes[cri].color])) { stats[cri].mixed++; continue; }
+                try {
+                    cp.move(routes[cri].layer, ElementPlacement.PLACEATEND);
+                    // Only cut-colour paint reaches this point, so the
+                    // overprint cannot hit a printable fill or stroke.
+                    for (var sp = 0; sp < cp.pathItems.length; sp++) {
+                        if (cp.pathItems[sp].filled)  cp.pathItems[sp].fillOverprint   = true;
+                        if (cp.pathItems[sp].stroked) cp.pathItems[sp].strokeOverprint = true;
+                    }
+                    stats[cri].moved++;
+                } catch (e) {
+                    stats[cri].blocked++;   // locked sublayer / hidden layer (see below)
                 }
             }
 
@@ -657,59 +881,71 @@ ZSM.Draw = {
             for (var i = 0; i < snapshot.length; i++) {
                 var item = snapshot[i];
 
-                // Skip items on artifact layers — moving them could crash AI
-                // (see compound-path loop above for the unreadable-name rationale).
-                if (ZSM.Bounds.isArtifactLayer(item.layer)) continue;
-
-                // Skip items nested inside clipped groups — moving them out
-                // would break the group structure and trigger MRAP errors.
-                if (ZSM.Bounds.isInsideClippedGroup(item)) continue;
+                // Colour first (see the compound loop).
+                var ri = routeOf(item);
+                if (ri < 0) continue;
 
                 // Never route FROM the marks (Regmarks) or Trim layers — they
                 // legitimately share the user's spot colours (see _isOnReservedLayer).
                 if (this._isOnReservedLayer(item)) continue;
 
-                // Skip items already moved as part of a CompoundPathItem
-                var alreadyMoved = false;
+                // Skip sub-paths of a CompoundPathItem — handled as a unit above
+                var inCompound = false;
                 try {
-                    if (item.parent && item.parent.typename === "CompoundPathItem") alreadyMoved = true;
+                    if (item.parent && item.parent.typename === "CompoundPathItem") inCompound = true;
                 } catch (e) {}
-                if (alreadyMoved) continue;
+                if (inCompound) continue;
 
-                if (this._matchesSpotColor(item, names)) {
-                    try {
-                        item.move(targetLayer, ElementPlacement.PLACEATEND);
-                        if (item.filled)  item.fillOverprint   = true;
-                        if (item.stroked) item.strokeOverprint = true;
-                        found = true;
-                    } catch (e) {}
+                // Skip items on artifact layers — moving them could crash AI
+                // (see compound-path loop above for the unreadable-name
+                // rationale) — and items nested inside clipped groups — moving
+                // them out would break the group structure and trigger MRAP
+                // errors. Both are reported.
+                if (ZSM.Bounds.isArtifactLayer(item.layer) || ZSM.Bounds.isInsideClippedGroup(item)) {
+                    stats[ri].clipped++;
+                    continue;
+                }
+
+                if (this._hasOtherPaint(item, [routes[ri].color])) { stats[ri].mixed++; continue; }
+                try {
+                    item.move(routes[ri].layer, ElementPlacement.PLACEATEND);
+                    if (item.filled)  item.fillOverprint   = true;
+                    if (item.stroked) item.strokeOverprint = true;
+                    stats[ri].moved++;
+                } catch (e) {
+                    // A path on a locked sublayer or a hidden layer cannot be
+                    // moved: "Target layer cannot be modified" (measured).
+                    stats[ri].blocked++;
                 }
             }
-            return found;
         } catch (e) {
             ZSM.Utils.log("movePaths error: " + e.message);
-            return false;
         }
+        return stats;
     },
 
     /**
-     * Checks if a path's fill or stroke matches any of the given spot color names.
-     * @param {PathItem} item  - Path to test.
+     * True if a path carries paint OTHER than the given spot colours: a
+     * printable fill under a cut stroke (the typical sticker background shape
+     * with a CutContour stroke), or a cut fill with a printable stroke. Moving
+     * such a path to the cut layer puts its printable paint ABOVE the artwork,
+     * and the overprint set there changes the print (rendered in AI 30.8.1:
+     * the art underneath vanished, or changed colour with overprint on).
+     * @param {PathItem} item  - Path to test (first sub-path of a compound).
      * @param {Array}    names - Spot color names (case-insensitive).
-     * @returns {boolean} True if match found.
+     * @returns {boolean}
      * @private
      */
-    _matchesSpotColor: function (item, names) {
-        for (var n = 0; n < names.length; n++) {
-            var target = names[n].toLowerCase();
-            if (item.stroked && item.strokeColor.typename === "SpotColor") {
-                if (item.strokeColor.spot.name.toLowerCase() === target) return true;
+    _hasOtherPaint: function (item, names) {
+        var isCut = function (color) {
+            if (color.typename !== "SpotColor") return false;
+            var n = color.spot.name.toLowerCase();
+            for (var i = 0; i < names.length; i++) {
+                if (n === names[i].toLowerCase()) return true;
             }
-            if (item.filled && item.fillColor.typename === "SpotColor") {
-                if (item.fillColor.spot.name.toLowerCase() === target) return true;
-            }
-        }
-        return false;
+            return false;
+        };
+        return (item.filled && !isCut(item.fillColor)) || (item.stroked && !isCut(item.strokeColor));
     },
 
     /**

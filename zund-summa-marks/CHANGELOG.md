@@ -4,6 +4,77 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+Opravy z code review 2026-09-26
+([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)).
+
+### Opraveno
+
+- **Skrytá vrstva Regmarks už nezpůsobí tiché ztracení značek (K12).** Opakovaný
+  běh se skrytou vrstvou Regmarks smazal staré značky a nové nevykreslil, bez
+  jakékoli hlášky; skrytá mapovaná vrstva zase tiše nechala řezové cesty na místě.
+  Skript teď skryté vrstvy, do kterých zapisuje, zviditelní a oznámí to. Objekt,
+  který se přesto nepodaří vykreslit (značka, OPOS pruh, ořezová linka), ohlásí
+  jako chybu s počtem.
+- **Přesun řezových cest už nemění tisk (K1).** Objekt, který měl vedle řezové
+  barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým
+  tahem), se přesunul do řezové vrstvy nad grafiku a jeho výplň dostala přetisk —
+  grafika pod ním zmizela, nebo změnila barvu. Takový objekt teď zůstane na místě
+  a skript ho ohlásí s výzvou k rozdělení; přesouvají se jen cesty čistě v řezové
+  barvě.
+- **Skrytá spodní vrstva zůstane skrytá (K3).** Nejspodnější vrstvu skript
+  přejmenoval na „Graphics" a zviditelnil, i když byla skrytá (šablona, náhled od
+  zákazníka, stará verze) — a ta se pak tiskla. Skrytou spodní vrstvu teď nechá
+  beze změny; přejmenovává jen viditelnou.
+- **Nepřesunuté řezové cesty se hlásí (K2).** Cesty v řezové barvě uvnitř
+  ořezové masky, v zamčené podvrstvě nebo ve skryté vrstvě zůstaly tiše na místě;
+  stačilo, aby se přesunula jediná, a běh vypadal úplný. Skript je teď spočítá
+  a ohlásí i s důvodem. Hláška „barva nebyla nalezena" se v takovém případě už
+  neobjeví.
+- **Registrační barva už neurčuje řezové cesty (K8).** Výchozí mapování
+  „Cut ← [Registration]" v anglickém Illustratoru přesunulo do vrstvy Cut všechno
+  v registrační barvě (ořezové značky, značky jiných nástrojů), v české verzi
+  nepřesunulo nic a ohlásilo nenalezenou barvu. Řádek s registrační barvou teď
+  skript přeskočí a vysvětlí proč.
+- **Rychlejší přesun cest na velkých dokumentech (K13).** Každý řádek mapování
+  procházel celý dokument znovu; na velkém dokumentu s několika řádky to vypadalo
+  jako zamrznutí. Teď se dokument projde jednou pro všechny řádky — na 3900
+  cestách a třech řádcích klesl celý běh z 2,4 s na 1,1 s a rozdíl roste
+  s počtem řádků.
+- **Vrstva „Trim" od uživatele už nepřijde o obsah (K6).** Skript považoval každou
+  vrstvu „Trim" za svou: při obnově ořezových linek smazal celý její obsah a při
+  vypnutých linkách celou vrstvu. Řádek mapování s názvem „Trim" tak přišel
+  o právě přesunuté řezové cesty. Mapování na vrstvy Regmarks a Trim se teď
+  odmítne dřív, než se dokument změní, a ve vrstvě Trim skript maže jen své
+  vlastní linky (nově je označuje; linky ze starších verzí pozná podle vzhledu).
+- **Chyba během běhu už nenechá dokument napůl změněný (K10).** Běh ZUND smazal
+  výstup Summa dřív, než ověřil, že nový artboard půjde nastavit; příliš velký
+  artboard pak skončil obecnou chybou a na dokumentu nezůstaly žádné značky.
+  Neplatně spočítané značky se tiše vynechaly. Teď se nejdřív ověří geometrie
+  a artboard a výstup Summa se odstraní až potom; příliš velký artboard ohlásí
+  svůj rozměr a dokument nechá beze změny. Kritická chyba během vykreslování
+  upozorní, že dokument může být částečně změněný.
+- **Běh skriptu jde vrátit přes Zpět (K11).** Změna artboardu se zapsala do
+  stejného kroku historie jako ostatní změny a Zpět ji nevrátilo: vrstvy
+  a značky se vrátily, artboard zůstal zvětšený. Teď má vlastní krok — celý běh
+  se vrátí několika kroky Zpět (SUMMA s mapováním a ořezovými linkami: 4)
+  a další krok už vrací až úpravy před spuštěním skriptu.
+- **Značky, které by splynuly nebo se nevešly na artboard, zastaví běh (K7).**
+  Orientační značka stojí vždy o odsazení a velikost značky vpravo od levé
+  dolní rohové, ať je grafika jakkoli široká. S výchozím nastavením tak
+  u grafiky široké 85–95 mm padla na pravou dolní rohovou značku (u 90 mm
+  přesně na ni), na dlouhých hranách se mohla dotknout mezilehlé a ve Fixed
+  módu s artboardem užším než 110 mm ležela mimo artboard — bez jakékoli
+  hlášky. Teď běh skončí dřív, než se dokument změní, a hláška řekne, kterou
+  hodnotu upravit. Blokuje se dotyk a překryv; značky s i malou mezerou
+  projdou, protože jakou mezeru potřebuje kamera, zatím ověřené není.
+- **Předvolba jiného módu přepne dialog (K5).** Výběr uložené předvolby SUMMA
+  v dialogu ZUND (a naopak) načetl její hodnoty do polí aktuálního módu
+  a dialog zůstal ZUND — Generovat pak vytvořilo značky Zünd a jediným
+  náznakem byla „*" u předvolby. Stejně se choval ↺. Teď se dialog přepne do
+  módu předvolby a ukáže její hodnoty.
+
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline). Sjednocení verzí napříč sadou pro open-source

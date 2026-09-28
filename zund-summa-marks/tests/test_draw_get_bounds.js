@@ -131,8 +131,11 @@ assertClose(b[2], 100, 0.01, "Regmarks skipped: R stays at 100 (not 200)");
 // TEST 5: Current mode sublayer in Regmarks is skipped
 // =====================================================
 console.log("\n=== TEST 5: Current mode sublayer skip in Regmarks ===");
-// In ZUND mode, the "Zünd" sublayer should be skipped (we're replacing it).
-// The "Summa" sublayer (other mode) should be MEASURED.
+// In ZUND mode, the "Zünd" sublayer is skipped (we're replacing it) and so is
+// the "Summa" sublayer: a Zünd run removes the Summa output it invalidates
+// (removeSummaOutput), and since review K10 that happens only after the new
+// artboard is accepted — so the measurement must already leave it out.
+// In SUMMA mode the "Zünd" sublayer (other mode) is MEASURED.
 var docSpec = {
     layers: [
         { name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] },
@@ -143,9 +146,9 @@ var docSpec = {
     ]
 };
 b = runWith(docSpec, { mode: "ZUND", useArtboardBounds: false });
-// ZUND: Zünd sublayer skipped, Summa measured → bounds extends to -20..120
-assertClose(b[0], -20, 0.01, "ZUND mode: Summa sublayer measured (L=-20)");
-assertClose(b[2], 120, 0.01, "ZUND mode: Summa sublayer measured (R=120)");
+// ZUND: both mode sublayers skipped → bounds are the artwork only, 0..100
+assertClose(b[0], 0, 0.01, "ZUND mode: Summa sublayer not measured (L=0)");
+assertClose(b[2], 100, 0.01, "ZUND mode: Summa sublayer not measured (R=100)");
 
 b = runWith(docSpec, { mode: "SUMMA", useArtboardBounds: false });
 // SUMMA: Summa sublayer skipped, Zünd measured → bounds extends to -10..110
@@ -436,8 +439,9 @@ b = runWith({
     ]
 }, { mode: "WHATEVER", useArtboardBounds: false });
 // Per code: currentMode = (s.mode === "SUMMA") ? "Summa" : "Zünd"
-// So unknown mode treats as ZUND → skips Zünd, measures Summa
-assertClose(b[0], -20, 0.01, "Unknown mode → defaults to ZUND skip rules (Summa measured)");
+// So unknown mode follows the ZUND rules → skips Zünd AND Summa (a Zünd run
+// removes the Summa output) → nothing else in this document to measure
+assert(b === null, "Unknown mode → defaults to ZUND skip rules (both mode sublayers skipped)");
 
 
 // =====================================================

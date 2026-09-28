@@ -772,6 +772,83 @@ ZSM.Utils.getSF = origSFC;
 
 
 // =====================================================
+// TEST 20 (review K7): marks that merge or fall off the artboard
+// =====================================================
+// The orientation mark sits orientDist + mark size right of the bottom-left
+// corner, whatever the artwork width. With the defaults it lands on the
+// bottom-right corner mark for 85–95 mm wide artwork, and on long edges an
+// intermediate mark can land next to it. Nothing flagged either. Only overlap
+// and touch are certain failures (two marks print as one blob); the clearance
+// the Zünd camera needs is not known, so a 1 mm gap still passes.
+console.log("\n=== TEST 20 (review K7): overlapping marks and marks off the artboard ===");
+var defK7 = {
+    mode: "ZUND", markSizeZ: 5, markSizeS: 3,
+    gapInner: 5, gapOuter: 0, maxDist: 500, orientDist: 100,
+    feedTop: 70, feedBottom: 50, drawRed: false, useArtboardBounds: false
+};
+/** Conflict for a wMm × hMm rectangle at the origin (artwork, or the artboard in Fixed mode). */
+function conflictK7(s, wMm, hMm, scale) {
+    var b = [0, mm2pt(hMm), mm2pt(wMm), 0];
+    return ZSM.Core.findMarkConflict(ZSM.Core.calculateAll(s, b, scale), s, scale);
+}
+function describeK7(c) { return c ? c.type + " " + c.dist.toFixed(2) : "null"; }
+
+// (a) orientation mark vs the bottom-right corner: centre distance = width − 90 mm
+var orientCases = [[85, 5], [88, 2], [90, 0], [92, 2], [95, 5]];
+for (var oc = 0; oc < orientCases.length; oc++) {
+    var cOr = conflictK7(defK7, orientCases[oc][0], 100);
+    assert(cOr !== null && cOr.type === "orient",
+        orientCases[oc][0] + " mm artwork: orientation mark conflict (got " + describeK7(cOr) + ")");
+    if (cOr) assertClose(cOr.dist, orientCases[oc][1], 0.01,
+        orientCases[oc][0] + " mm artwork: centre distance in mm");
+}
+var clearCases = [80, 96, 100, 120];   // 80: 10 mm past the corner, on the artboard; 96: 1 mm gap
+for (var cc = 0; cc < clearCases.length; cc++) {
+    var cClr = conflictK7(defK7, clearCases[cc], 100);
+    assert(cClr === null, clearCases[cc] + " mm artwork: no conflict (got " + describeK7(cClr) + ")");
+}
+
+// (b) an intermediate mark next to the orientation mark: 1000 mm edge, spacing
+//     101.5 mm → the last intermediate is 101.5 mm from the corner, 3.5 mm from it
+var cInt = conflictK7(merge(defK7, { maxDist: 105 }), 1000, 200);
+assert(cInt !== null && cInt.type === "orient", "intermediate next to the orientation mark (got " + describeK7(cInt) + ")");
+if (cInt) assertClose(cInt.dist, 3.5, 0.01, "intermediate: 3.5 mm from the orientation mark");
+
+// (c) spacing below the mark size: marks along an edge touch or overlap
+var cOvZ = conflictK7(merge(defK7, { maxDist: 5 }), 100, 100);
+assert(cOvZ !== null && cOvZ.type === "overlap", "Zünd spacing 5 mm with 5 mm marks (got " + describeK7(cOvZ) + ")");
+var defK7S = merge(defK7, { mode: "SUMMA" });
+var cOvS = conflictK7(merge(defK7S, { markSizeS: 5, maxDist: 5 }), 100, 100);
+assert(cOvS !== null && cOvS.type === "overlap", "Summa spacing 5 mm with 5 mm marks (got " + describeK7(cOvS) + ")");
+assert(conflictK7(defK7S, 100, 100) === null, "Summa defaults: no conflict");
+
+// (d) Fixed mode: marks are placed inside the artboard, the orientation mark
+//     ends at artboard left + gapOuter + orientDist + 2 × mark size = 110 mm
+var fixK7 = merge(defK7, { useArtboardBounds: true });
+var cOut = conflictK7(fixK7, 100, 100);
+assert(cOut !== null && cOut.type === "outside", "Fixed 100 mm: orientation mark off the artboard (got " + describeK7(cOut) + ")");
+if (cOut) assertClose(cOut.dist, 10, 0.01, "Fixed 100 mm: 10 mm past the edge");
+var cOut60 = conflictK7(fixK7, 60, 100);
+assert(cOut60 !== null && cOut60.type === "outside", "Fixed 60 mm: off the artboard (got " + describeK7(cOut60) + ")");
+var cFix110 = conflictK7(fixK7, 110, 100);
+assert(cFix110 !== null && cFix110.type === "orient", "Fixed 110 mm: orientation mark on the corner mark (got " + describeK7(cFix110) + ")");
+assert(conflictK7(fixK7, 150, 100) === null, "Fixed 150 mm: no conflict (corner marks touching the edge are on the artboard)");
+assert(conflictK7(merge(fixK7, { gapOuter: 5 }), 150, 100) === null, "Fixed 150 mm, gap 5 mm: no conflict");
+
+// (e) distances are real millimetres at 1:N — a 9 mm wide document at 1:10 is
+//     90 mm of artwork
+var cScaled = conflictK7(merge(defK7, { scaleN: 10 }), 9, 10);
+assert(cScaled !== null && cScaled.type === "orient", "1:10, 90 mm real: orientation conflict (got " + describeK7(cScaled) + ")");
+if (cScaled) assertClose(cScaled.dist, 0, 0.01, "1:10: distance in real mm");
+assert(conflictK7(merge(defK7, { scaleN: 10 }), 12, 10) === null, "1:10, 120 mm real: no conflict");
+var cScaledArg = conflictK7(defK7, 9, 10, 10);   // tile-export passes the scale explicitly
+assert(cScaledArg !== null && cScaledArg.type === "orient", "explicit scale 10: orientation conflict (got " + describeK7(cScaledArg) + ")");
+
+// (f) no marks, no conflict
+assert(ZSM.Core.findMarkConflict({ marksZ: [], marksS: [], ab: [0, 1, 1, 0] }, defK7) === null, "no marks: null");
+
+
+// =====================================================
 // SUMMARY
 // =====================================================
 console.log("\n" + "=".repeat(50));
