@@ -6,6 +6,17 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 
 ## [Nevydáno]
 
+### Přidáno
+
+- **Dialog si pamatuje poslední nastavení (A1, A2 z auditu UI 2026-09-28).**
+  Šablona, výstupní složka, vzor, PDF preset a „Po dokončení otevřít výstupní
+  složku" se předvyplní z minulého běhu; uloží se po Spustit, když dialog
+  projde kontrolou. Konec výběru presetu při každém běhu — výchozí preset
+  podle jazyka Illustratoru (`[Tisková kvalita]` / `[High Quality Print]`)
+  platí jen do první volby. Zdrojová složka se mění se zakázkou a „Přeskočit
+  existující" je rozhodnutí pro jeden běh, proto se nepamatují. Nastavení je
+  v `~/Library/Application Support/batch-relink-export/settings.json`.
+
 ### Změněno
 
 - Sjednocen slovník tlačítek se zbytkem sady: **Storno** nyní znamená *zrušit

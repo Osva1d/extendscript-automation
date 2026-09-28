@@ -38,6 +38,7 @@ BRE.L = (function () {
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
             WARN_PAGE_MAP:      "Extra positions were not removed automatically: the template does not show pages 1–%s exactly once each.",
+            ERR_WRITE_SETTINGS: "The dialog settings could not be saved — next time the dialog opens without them. The batch continues.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
@@ -154,6 +155,7 @@ BRE.L = (function () {
             ERR_RELINK_FAILED:  "Export přeskočen — pozic, které se nepodařilo relinkovat: %s.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
             WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
+            ERR_WRITE_SETTINGS: "Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---

@@ -14,10 +14,12 @@ BRE.UI = {
     /**
      * Shows the main configuration dialog.
      * Returns validated config object or null on cancel.
+     * @param {Object} saved - Remembered settings from BRE.Storage.load():
+     *        { template, output, pattern, preset, openAfter }.
      * @returns {Object|null} Config with templateFile, sourceFolder, outputFolder,
      *          namingPattern, preset, skipExisting, openAfter, pdfFiles, templateName.
      */
-    show: function () {
+    show: function (saved) {
         var c = BRE.Config;
         var l = BRE.L;
 
@@ -46,6 +48,9 @@ BRE.UI = {
             true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
         var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
             true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
+        // Last run's paths. The source changes with every job — not remembered.
+        templatePath.text = saved.template;
+        outputPath.text = saved.output;
 
         // --- Panel 2: naming & format ---
         var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
@@ -61,7 +66,7 @@ BRE.UI = {
         var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
         namingST.preferredSize.width = c.ui.labelWidth;
         namingST.helpTip = l.TIP_NAMING;
-        var namingInput = namingGrp.add("edittext", undefined, c.defaultNamingPattern);
+        var namingInput = namingGrp.add("edittext", undefined, saved.pattern);
         // Fill to the panel's right edge — same line as panel-1's buttons.
         namingInput.alignment = ["fill", "center"];
         namingInput.minimumSize.width = c.ui.fieldMinWidth;
@@ -119,6 +124,13 @@ BRE.UI = {
                 }
                 if (defaultIdx > 0) break;
             }
+            // The preset chosen last time wins while it still exists.
+            for (var ri = 0; ri < pdfPresets.length; ri++) {
+                if (pdfPresets[ri] === saved.preset) {
+                    defaultIdx = ri;
+                    break;
+                }
+            }
             presetDDL.selection = defaultIdx;
         }
 
@@ -133,7 +145,7 @@ BRE.UI = {
         skipCB.helpTip = l.TIP_SKIP;
 
         var openCB = optionsPanel.add("checkbox", undefined, l.CB_OPEN_FOLDER);
-        openCB.value = true;
+        openCB.value = saved.openAfter;
         openCB.helpTip = l.TIP_OPEN;
 
         // --- Footer: greyed copyright (left) + buttons (right), one row ---

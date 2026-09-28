@@ -9,7 +9,8 @@
 #   Concatenates Batch Relink Export source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   locale.js -> config.js -> pdf.js -> core.js -> ui.js -> main.js
+#   json2.js -> locale.js -> config.js -> storage.js -> pdf.js -> core.js
+#   -> ui.js -> main.js
 # ===========================================================================
 
 set -euo pipefail
@@ -49,7 +50,7 @@ printf '\xEF\xBB\xBF' > "$OUTPUT"
 # Deterministic build: stamp the last commit date of the build inputs, not today.
 # Using date(1) made every rebuild on a new day change dist with zero content
 # change. Fallback: no git / no history.
-UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" 2>/dev/null || true)"
+UPDATED="$(git log -1 --format=%cs -- "$SRC_DIR" ../shared/lib 2>/dev/null || true)"
 [ -n "$UPDATED" ] || UPDATED="$(date '+%Y-%m-%d')"
 UPDATED_YEAR="${UPDATED%%-*}"
 
@@ -73,8 +74,10 @@ cat >> "$OUTPUT" << EOF
 
 EOF
 
+cat "../shared/lib/json2.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/locale.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/config.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "$SRC_DIR/storage.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/pdf.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/core.js"    >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/ui.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"

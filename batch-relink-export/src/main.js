@@ -1,7 +1,11 @@
 (function (BRE) {
     try {
-        var config = BRE.UI.show();
+        var config = BRE.UI.show(BRE.Storage.load());
         if (!config) return;
+
+        // Remember this setup for the next dialog. A failure costs only that
+        // convenience, so the batch goes on.
+        if (!BRE.Storage.save(config)) alert(BRE.L.ERR_WRITE_SETTINGS);
 
         // If the template is already open with unsaved changes, processing
         // would close it without saving and discard the user's work. Warn first.
