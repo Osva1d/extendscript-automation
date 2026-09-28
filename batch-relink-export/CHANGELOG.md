@@ -26,6 +26,13 @@ Opravy z code review 2026-09-27
   kterého šablona vznikla, přesunulo nebo smazalo, skončil každý arch hláškou
   „There is no file associated with this item". Pozice s chybějícím odkazem se
   teď přelinkují jako ostatní.
+- **Logo ani skrytá pozice už nejsou pozicí (B4).** Skript přelinkoval každý
+  propojený objekt v šabloně: propojené logo nebo značky se na každém archu
+  změnily na stranu 1 zakázky. Do počtu pozic navíc započítal i objekty na
+  skryté vrstvě, takže zdroj s o stranu delším PDF prošel jako „v pořádku"
+  a poslední strana se tiše ztratila. Pozice jsou teď jen viditelné objekty
+  propojené na soubor, na který odkazuje většina z nich; stejnou definici
+  používá počet pozic v náhledu, relink i kontrola pozic navíc.
 
 ## [1.0.0] — 2026-06-28
 

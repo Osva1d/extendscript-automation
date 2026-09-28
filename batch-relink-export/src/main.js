@@ -12,19 +12,19 @@
             } catch (e) {}
         }
 
-        // Count PlacedItems for the preview. If the user already has the
-        // template open, read from THAT instance without closing it — closing
-        // here would discard their unsaved work even if they then cancel at the
-        // preview. (Processing later closes it on the first iteration, which is
-        // what the warning above is about.)
+        // Count the template's positions for the preview. If the user already
+        // has the template open, read from THAT instance without closing it —
+        // closing here would discard their unsaved work even if they then
+        // cancel at the preview. (Processing later closes it on the first
+        // iteration, which is what the warning above is about.)
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
         try {
             if (openTpl) {
-                slotCount = openTpl.placedItems.length;
+                slotCount = BRE.Core.getPositions(openTpl).length;
             } else {
                 var tplDoc = app.open(config.templateFile);
-                slotCount = tplDoc.placedItems.length;
+                slotCount = BRE.Core.getPositions(tplDoc).length;
                 tplDoc.close(SaveOptions.DONOTSAVECHANGES);
             }
         } catch (e) {
@@ -194,7 +194,7 @@
                         // extra positions by hand on the last sheet).
                         var expected = (fileInfo.pages > 0 && fileInfo.pages < slotCount)
                             ? fileInfo.pages : slotCount;
-                        var remaining = BRE.Core.countManagedPositions(doc);
+                        var remaining = BRE.Core.countManagedPositions(doc, currentFile);
                         if (remaining > expected) {
                             results.manual++;
                             results.log.push(outputName + ": " + BRE.L.format(

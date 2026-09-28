@@ -98,7 +98,52 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Relinks all PlacedItems in the document to the target PDF.
+     * The template's positions: visible placed items linked to the file most
+     * of them share — the multi-page PDF the sheet was built from. Other
+     * links (a logo, marks placed as a file) are not positions and are left
+     * alone. A missing link cannot report its file (reading .file throws when
+     * the original PDF was moved or deleted), so missing links form a group
+     * of their own and a template whose original PDF is gone still finds its
+     * positions. When two groups tie, every visible placed item counts, as
+     * before this definition existed.
+     * @param {Document} doc - The document to inspect.
+     * @returns {PlacedItem[]} The positions.
+     */
+    getPositions: function (doc) {
+        var items = doc.placedItems;
+        var groups = {}, keys = [], i, item, key;
+
+        for (i = 0; i < items.length; i++) {
+            item = items[i];
+            if (this._isHidden(item)) continue;
+            try {
+                key = "file:" + item.file.fsName;
+            } catch (e) {
+                key = "missing";
+            }
+            if (!groups.hasOwnProperty(key)) {
+                groups[key] = [];
+                keys.push(key);
+            }
+            groups[key].push(item);
+        }
+
+        var best = null, tie = false, all = [];
+        for (i = 0; i < keys.length; i++) {
+            var group = groups[keys[i]];
+            all = all.concat(group);
+            if (!best || group.length > best.length) {
+                best = group;
+                tie = false;
+            } else if (group.length === best.length) {
+                tie = true;
+            }
+        }
+        return (best && !tie) ? best : all;
+    },
+
+    /**
+     * Relinks the template's positions (see getPositions) to the target PDF.
      * Removes PlacedItems whose pageNumber exceeds the source page count.
      *
      * @param {Document} doc - The active document.
@@ -112,23 +157,27 @@ BRE.Core = {
             relinkedItems: [], warnings: [], errors: [], ok: false
         };
         var items = doc.placedItems;
+        var positions = this.getPositions(doc);
         var i, item, label;
         var toRemove = [];
 
+        // Hidden placed items are never positions; report them as before.
         for (i = 0; i < items.length; i++) {
-            item = items[i];
+            if (this._isHidden(items[i])) {
+                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER,
+                    items[i].name || ("item_" + i)));
+                results.skipped++;
+            }
+        }
+
+        for (i = 0; i < positions.length; i++) {
+            item = positions[i];
             label = item.name || ("item_" + i);
 
             // No check on item.file here: when the template's original PDF
             // was moved or deleted, reading .file throws "There is no file
             // associated with this item", yet relink() still works and keeps
             // the page (measured, AI 30.8.2).
-            if (this._isHidden(item)) {
-                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, label));
-                results.skipped++;
-                continue;
-            }
-
             if (totalPages > 0 && item.pageNumber && item.pageNumber > totalPages) {
                 // Excess position (its page is beyond this PDF). Capture the
                 // reference now; remove after the loop. Only visible items
@@ -174,19 +223,20 @@ BRE.Core = {
     },
 
     /**
-     * Counts managed positions in the document — placed items that are linked
-     * (have a file) and not hidden (item itself or any ancestor layer). Used
-     * to detect how many extra positions remain on a sheet so the user can be
-     * told to remove them.
+     * Counts managed positions in the document — visible placed items linked
+     * to the source PDF the sheet was relinked to. Other links (a logo) are
+     * not positions. Used to detect how many extra positions remain on a
+     * sheet so the user can be told to remove them.
      * @param {Document} doc - The document to inspect.
+     * @param {File} targetPdf - The source PDF the positions were relinked to.
      * @returns {number} Managed position count.
      */
-    countManagedPositions: function (doc) {
+    countManagedPositions: function (doc, targetPdf) {
         var n = 0;
         var items = doc.placedItems;
         for (var i = 0; i < items.length; i++) {
             try {
-                if (items[i].file && !this._isHidden(items[i])) n++;
+                if (!this._isHidden(items[i]) && items[i].file.fsName === targetPdf.fsName) n++;
             } catch (e) {}
         }
         return n;
