@@ -132,7 +132,15 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 jazyka a nepamatuje se (B9); po běhu zůstane v Illustratoru změněná předvolba
 importu PDF — strana a ořez posledního linku šablony (B10); dialog si
 nepamatuje nastavení a validuje až po zavření, takže chyba znamená vyplnit
-cesty znovu; texty T3–T8.
+cesty znovu; po zastavení souhrn napíše vedle „Zrušeno…" i „Vše proběhlo bez
+chyb."; texty T3–T8.
+
+**Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
+jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash
+reportu; tentýž běh pak prošel) a jednou zamrzl na deadlocku uvnitř aplikace,
+3 s po dávce s neúplným archem (skript už neběžel). Příčina není známá, kód se
+kvůli tomu neměnil. Když se to zopakuje, zapiš podle sekce 7, u kterého souboru
+paleta byla a jestli šlo o pád, nebo zamrznutí.
 
 ---
 
@@ -148,6 +156,7 @@ Nahlas, s čím skript běžel (šablona, počet souborů, preset), co vyšlo a 
 | „Nečitelný počet stran" u běžného PDF | struktura PDF, kterou parser nezná | to PDF (nebo aspoň `pdfinfo`) |
 | arch odmítnutý kvůli rozměru, ač sedí | TrimBox zdroje nebo šablony | `pdfinfo -box` zdroje |
 | Illustrator dlouho nereaguje | sken velkých PDF | počet a velikost zdrojů |
+| Illustrator spadne nebo zamrzne během dávky či krátce po ní | neznámá, sledováno (sekce 6) | u kterého souboru paleta byla; pád, nebo zamrznutí (točící se kolečko); jestli dávka měla neúplný arch nebo zaškrtnuté „Přeskočit existující"; čas; soubor `Adobe Illustrator_…` z `/Library/Logs/DiagnosticReports` |
 
 ---
 
