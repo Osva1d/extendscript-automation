@@ -69,6 +69,11 @@ Opravy z code review 2026-09-27
   jako zdrojová, načetl další běh vlastní výstupy jako zdrojová PDF: posunulo
   se číslování archů a výstup se zpracoval jako zakázka. Dialog teď takovou
   volbu odmítne s hláškou; podsložka zdrojové složky dál projde.
+- **„Přeskočit existující" přeskočí jen opravdu hotový arch (B8).** Stačilo,
+  aby ve výstupní složce ležel soubor stejného jména — třeba arch jiné zakázky
+  se stejnou šablonou a výchozím vzorem názvu — a arch se nevytvořil. Přeskočí
+  se teď jen výstup novější než zdroj i šablona (pokračování přerušené dávky);
+  starší se vytvoří znovu a souhrn to uvede.
 
 ## [1.0.0] — 2026-06-28
 

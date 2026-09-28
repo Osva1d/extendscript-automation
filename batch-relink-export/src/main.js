@@ -104,11 +104,18 @@
                         BRE.L.SCAN_FILE_UNREAD, sourceFileName));
                 }
 
-                // Skip existing
+                // Skip existing — only an output newer than both its source and
+                // the template counts as done (a batch resumed after a crash).
+                // An older one belongs to another job with the same name, or
+                // the source or template changed since; it is made again.
                 if (config.skipExisting && outputFile.exists) {
-                    results.skipped++;
-                    results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
-                    continue;
+                    if (outputFile.modified > currentFile.modified &&
+                            outputFile.modified > config.templateFile.modified) {
+                        results.skipped++;
+                        results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
+                        continue;
+                    }
+                    results.log.push(outputName + ": " + BRE.L.LOG_REDONE);
                 }
 
                 try {

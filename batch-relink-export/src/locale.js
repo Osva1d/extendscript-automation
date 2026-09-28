@@ -76,7 +76,7 @@ BRE.L = (function () {
             TIP_OUTPUT_BTN:     "Select output folder",
             TIP_NAMING:         "Output filename pattern. {n} = number, {template} = template name, {source} = source PDF name",
             TIP_PRESET:         "PDF quality profile for export",
-            TIP_SKIP:           "Skip processing if output file already exists",
+            TIP_SKIP:           "Skip a sheet whose output already exists and is newer than both its source and the template",
             TIP_OPEN:           "Open output folder in system file manager after completion",
 
             // --- UI: File Dialogs ---
@@ -120,7 +120,8 @@ BRE.L = (function () {
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
             LOG_CANCELLED:      "Cancelled by user after processing %s of %s files.",
-            SKIP_MSG:           "Skipped (file exists)"
+            SKIP_MSG:           "Skipped (file exists)",
+            LOG_REDONE:         "The output existed but is older than its source or the template — created again."
         },
 
         cs: {
@@ -187,7 +188,7 @@ BRE.L = (function () {
             TIP_OUTPUT_BTN:     "Vybrat výstupní složku",
             TIP_NAMING:         "Vzor názvu výstupu. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
             TIP_PRESET:         "Profil kvality PDF pro export",
-            TIP_SKIP:           "Pokud výstupní soubor již existuje, přeskočí se",
+            TIP_SKIP:           "Přeskočí arch, jehož výstup už existuje a je novější než zdroj i šablona",
             TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
 
             // --- UI: Dialogy souborů ---
@@ -231,7 +232,8 @@ BRE.L = (function () {
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",
-            SKIP_MSG:           "Přeskočeno (soubor existuje)"
+            SKIP_MSG:           "Přeskočeno (soubor existuje)",
+            LOG_REDONE:         "Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu."
         }
     };
 
