@@ -214,12 +214,13 @@ BRE.Core = {
             }
 
             try {
+                var size = this._pageSize(item);
                 item.relink(targetPdf);
                 results.relinked++;
                 // Keep a reference so verifyRelink checks ONLY the items we
                 // actually relinked — never the deliberately-skipped hidden
                 // ones, which still point to the old PDF.
-                results.relinkedItems.push({ item: item, label: label });
+                results.relinkedItems.push({ item: item, label: label, size: size });
             } catch (e) {
                 results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
             }
@@ -346,17 +347,26 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Verifies that every relinked item now points to the expected PDF.
+     * Verifies that every relinked item now points to the expected PDF and
+     * shows a page of the same size as before. relink() does not fail on a
+     * page of another size: it keeps the position's centre and scales the new
+     * page to the old diagonal, so a source of another format — or one with
+     * the bleed baked into the page and no TrimBox — would print shrunk or
+     * stretched (measured, AI 30.8.2). The size compared is the placed page's
+     * own box (boundingBox), which does not change with the position's
+     * rotation or scale.
      * Takes the relinked-items list from relinkDocument() — NOT the whole
      * document — so deliberately-skipped hidden items, which still
      * reference the old PDF, are never wrongly flagged.
-     * @param {Array} relinkedItems - [{ item, label }] from relinkDocument.
+     * @param {Array} relinkedItems - [{ item, label, size }] from relinkDocument.
      * @param {File} expectedPdf - The expected linked file.
      * @returns {Object} { ok: boolean, errors: string[] }
      */
     verifyRelink: function (relinkedItems, expectedPdf) {
         var errors = [];
         var expectedPath = expectedPdf.fsName;
+        var tol = 0.1 * 72 / 25.4;    // 0.1 mm
+        var sizeReported = false;     // one size message per sheet is enough
 
         for (var i = 0; i < relinkedItems.length; i++) {
             var rec = relinkedItems[i];
@@ -366,6 +376,14 @@ BRE.Core = {
                     errors.push(
                         BRE.L.format(BRE.L.ERR_RELINK_VERIFY, rec.label, expectedPath, actualPath)
                     );
+                    continue;
+                }
+                var now = this._pageSize(rec.item);
+                if (!sizeReported && rec.size && now &&
+                        (Math.abs(now[0] - rec.size[0]) > tol || Math.abs(now[1] - rec.size[1]) > tol)) {
+                    errors.push(BRE.L.format(BRE.L.ERR_PAGE_SIZE, rec.label,
+                        this._mm(now[0]), this._mm(now[1]), this._mm(rec.size[0]), this._mm(rec.size[1])));
+                    sizeReported = true;
                 }
             } catch (e) {
                 errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, rec.label, e.message));
@@ -373,6 +391,30 @@ BRE.Core = {
         }
 
         return { ok: errors.length === 0, errors: errors };
+    },
+
+    /**
+     * Size of the placed page's own box (after its PDF crop), independent of
+     * the position's rotation and scale.
+     * @param {PlacedItem} item - A placed item.
+     * @returns {number[]|null} [width, height] in points, or null if unreadable.
+     */
+    _pageSize: function (item) {
+        try {
+            var bb = item.boundingBox;
+            return [bb[2] - bb[0], bb[1] - bb[3]];
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Points to millimetres with one decimal, in the locale's notation.
+     * @param {number} pt - Length in points.
+     * @returns {string} e.g. "106" or "99,2".
+     */
+    _mm: function (pt) {
+        return String(Math.round(pt * 254 / 72) / 10).replace(".", BRE.L.DEC_SEP);
     },
 
     // ---------------------------------------------------------------------

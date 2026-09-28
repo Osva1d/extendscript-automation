@@ -39,6 +39,13 @@ Opravy z code review 2026-09-27
   neuloženými pozicemi prošel desetistránkový zdroj jako „v pořádku" a strany
   9–10 se tiše ztratily. Pozice se teď počítají ze šablony uložené na disku
   (z dočasné kopie, otevřený dokument zůstane beze změny).
+- **Zdroj jiného formátu už neprojde (B1).** Illustrator při relinku na stranu
+  jiného rozměru nehlásí chybu: zachová střed pozice a stranu přeškáluje. PDF
+  se spadávkou v ploše stránky a bez TrimBoxu tak vyšlo zmenšené na 93,6 %
+  se spadávkou v řezu, PDF 110 × 60 mm v šabloně 100 × 70 mm přeškálované —
+  a obojí jako „v pořádku". Ověření relinku teď porovná rozměr strany před
+  relinkem a po něm (tolerance 0,1 mm) a arch jiného formátu nevyexportuje,
+  s hláškou, která oba rozměry uvede.
 
 ## [1.0.0] — 2026-06-28
 

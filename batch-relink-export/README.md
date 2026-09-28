@@ -30,7 +30,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 ## Funkce
 
 - Hromadné relinkování pozic šablony + export do PDF (dle zvoleného presetu). Pozice jsou viditelné umístěné stránky PDF, ze kterého šablona vznikla (soubor, na který odkazuje většina umístěných objektů). Logo nebo značky umístěné jako jiný soubor zůstanou beze změny; skryté pozice se nepočítají.
-- **Ověření relinku** po každém souboru (kontrola, že každá relinkovaná pozice ukazuje na správný soubor).
+- **Ověření relinku** po každém souboru: každá relinkovaná pozice ukazuje na správný soubor a strana zdroje má stejný rozměr jako strana šablony (po ořezu PDF). Zdroj jiného formátu nebo PDF se spadávkou v ploše stránky bez TrimBoxu se nevyexportuje — Illustrator by stranu tiše přeškáloval.
 - **Session management** — automatické odemčení a obnovení zamčených vrstev i objektů.
 - **Pre-flight sken** — před zpracováním proskenuje všechny zdroje a porovná počet stran s počtem pozic; soubor s **více stranami než pozic** nebo s **nejednoznačným počtem stran** (křížová kontrola `/Count` × počet objektů stran) se tvrdě **zablokuje** jako ochrana proti tiché ztrátě stran.
 - **Neúplný poslední arch** — skript spočítá přebytečné pozice a v souhrnu nahlásí „N pozic navíc — odeber ručně" (automatické smazání viz [Omezení](#omezení--neúplný-poslední-arch)).
