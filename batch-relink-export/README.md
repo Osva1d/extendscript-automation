@@ -37,6 +37,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Předvídatelné číslování** — zdroje řazeny přirozeně (`part_2` před `part_10`).
 - **Pojmenování výstupů** přes vzor s placeholdery (viz níže).
 - **Náhled** před zpracováním (přeskočí se, když je dávka bez anomálií).
+- **Zastavení dávky** podržením klávesy Esc — rozpracovaný soubor se dokončí, souhrn uvede, kolik souborů se zpracovalo.
 - **Skip existing** — přeskočí archy, jejichž výstup už existuje a je novější než zdroj i šablona (pokračování přerušené dávky). Starší výstup — třeba jiné zakázky se stejnou šablonou — se vytvoří znovu.
 - Ignoruje macOS systémové soubory (`._*`, tečkové) ve zdrojové složce.
 - Lokalizace **cs/en** (auto-detekce dle Illustratoru).

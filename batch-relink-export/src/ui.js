@@ -377,9 +377,12 @@ BRE.UI = {
     // ---------------------------------------------------------------------
 
     /**
-     * Creates and shows a progress palette.
+     * Creates and shows a progress palette. The batch is stopped by holding
+     * Esc: a palette button gets no clicks while the script runs — Illustrator
+     * does not dispatch them, however the loop redraws or waits — but the
+     * keyboard state can be read (both measured, AI 30.8.2).
      * @param {number} total - Total number of files.
-     * @returns {Object} { win, statusText, bar, cancelled, update(i, name), close() }
+     * @returns {Object} { isCancelled(), poll(), update(i, name), finish(), close() }
      */
     createProgress: function (total) {
         var l = BRE.L;
@@ -396,22 +399,31 @@ BRE.UI = {
         bar.preferredSize.width = 450;
 
         var cancelled = false;
-        var cancelBtn = dlg.add("button", undefined, l.BTN_STOP);
-        cancelBtn.alignment = ["center", "center"];
-        cancelBtn.onClick = function () {
-            // Cancellation takes effect after the current file finishes (the
-            // loop polls between files). Give immediate visual feedback so the
-            // button doesn't look dead during the in-progress file.
-            cancelled = true;
-            cancelBtn.text = l.BTN_STOPPING;
-            cancelBtn.enabled = false;
-            dlg.update();
-        };
+        var stopHint = dlg.add("statictext", undefined, l.PROGRESS_STOP_HINT);
+        stopHint.preferredSize.width = 450;
+        stopHint.justify = "center";
+
+        // Latches a stop request while Esc is held. The loop acts on it
+        // between files, so the file in progress is finished.
+        function poll() {
+            if (cancelled) return;
+            try {
+                if (ScriptUI.environment.keyboardState.keyName === "Escape") {
+                    cancelled = true;
+                    stopHint.text = l.PROGRESS_STOPPING;
+                    dlg.update();
+                }
+            } catch (e) {}
+        }
 
         dlg.show();
 
         return {
-            isCancelled: function () { return cancelled; },
+            isCancelled: function () {
+                poll();
+                return cancelled;
+            },
+            poll: poll,
             update: function (index, fileName) {
                 // Keep the status line from overflowing on long names.
                 var nm = fileName;
@@ -420,6 +432,7 @@ BRE.UI = {
                     nm, String(index + 1), String(total));
                 bar.value = index;
                 dlg.update();
+                poll();
             },
             finish: function () {
                 bar.value = total;

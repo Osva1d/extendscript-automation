@@ -9,9 +9,8 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 ### Změněno
 
 - Sjednocen slovník tlačítek se zbytkem sady: **Storno** nyní znamená *zrušit
-  dialog* (dříve „Zrušit“), tlačítko pro zastavení běžícího zpracování se jmenuje
-  **Zastavit** (dříve „Storno“). Totéž slovo dosud znamenalo v tomto skriptu něco
-  jiného než v Grommet Marks a Zünd & Summa Marks.
+  dialog* (dříve „Zrušit“). Totéž slovo dosud znamenalo v tomto skriptu i
+  zastavení běžícího zpracování — to se teď dělá klávesou Esc (viz Opraveno).
 - **Výchozí vzor názvu nese i název zdroje (B8):** `{n}_{template}_{source}`
   místo `{n}_{template}`. Dosavadní vzor dával archům dvou zakázek se stejnou
   šablonou stejná jména, takže se ve výstupní složce přepisovaly nebo
@@ -82,6 +81,12 @@ Opravy z code review 2026-09-27
   „3 z 3 archů v pořádku" zahrnovalo i neúplný arch a PDF s nečitelným počtem
   stran. Verdikt teď říká, kolik archů lze zpracovat, kolik z nich
   s upozorněním a kolik je blokováno.
+- **Dávka jde zastavit — podržením klávesy Esc.** Tlačítko v paletě průběhu
+  (dříve Storno, pak Zastavit) nereagovalo: Illustrator paletě kliknutí
+  během běhu skriptu nepředá, ať skript okno překresluje nebo čeká. Paleta teď
+  místo tlačítka říká „Dávku zastavíte podržením klávesy Esc."; skript klávesu
+  kontroluje před každým souborem i po jeho dlouhých krocích, rozpracovaný
+  soubor dokončí a souhrn uvede, kolik souborů zpracoval.
 
 ## [1.0.0] — 2026-06-28
 

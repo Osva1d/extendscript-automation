@@ -120,6 +120,7 @@
 
                 try {
                     doc = app.open(config.templateFile);
+                    progress.poll();    // Esc held during a long step
                     BRE.Core.beginSession(doc);
 
                     // Diagnostic logging: when BRE.Config.debug is enabled (a
@@ -137,6 +138,7 @@
                         // Reuse the page count from the pre-flight scan
                         // (already counted once — no need to re-read the PDF).
                         var relinkResult = BRE.Core.relinkDocument(doc, currentFile, fileInfo.pages);
+                        progress.poll();
 
                         if (BRE.Config.debug) {
                             BRE.Core.appendLog(config.outputFolder, "_bre-diagnostika.txt",
@@ -210,6 +212,7 @@
 
                         doc.saveAs(outputFile, pdfOpts);
                         results.success++;
+                        progress.poll();
 
                     } finally {
                         BRE.Core.endSession(doc);

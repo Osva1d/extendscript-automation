@@ -6,8 +6,8 @@ automatické sady; opravy z code review 2026-09-27
 se ověřily během sestaveného skriptu v Illustratoru 30.8.2 přes
 `tools/ai-eval.sh`, s dialogy procházenými bez zobrazení (pole vyplnil
 skript), a na reálné zakázce (12 pozic, oboustranný arch, 4 zdroje). Tady
-zůstává, co tak ověřit nešlo: dialog okem a myší, běh z menu, tlačítko
-Zastavit, PDF z dalších programů, anglický Illustrator a tisk.
+zůstává, co tak ověřit nešlo: dialog okem a myší, běh z menu, zastavení
+klávesou Esc, PDF z dalších programů, anglický Illustrator a tisk.
 
 **Brána pro vydání jsou sekce 1–4.** Sekce 6 je rychlá kontrola hlášek. Co
 prošlo, zaškrtni; co ne, nahlas podle sekce 7. Na konci vyplň záznam a před
@@ -77,14 +77,16 @@ soubor kratší) a prázdnou výstupní složku.
 
 ---
 
-## 3. Běh z menu a Zastavit
+## 3. Běh z menu a zastavení dávky
 
 - [ ] **3.1 Menu.** Všechno v sekci 2 poběží přes Soubor › Skripty (ověřování
   běželo přes AppleScript).
-- [ ] **3.2 Zastavit.** Dávka o deseti a více souborech, během zpracování klikni
-  Zastavit → tlačítko se změní na „Zastavuji…", aktuální soubor doběhne
-  a souhrn napíše „Zrušeno uživatelem po zpracování…". Jestli paleta během
-  smyčky kliknutí vůbec přijme, ověřené není.
+- [ ] **3.2 Zastavení klávesou Esc.** Dávka o deseti a více souborech, během
+  zpracování podrž Esc zhruba sekundu → paleta napíše „Zastavuji — rozpracovaný
+  soubor se dokončí…", soubor doběhne a souhrn napíše „Zrušeno uživatelem po
+  zpracování…". Zkus Esc podržet i ve chvíli, kdy se ukládá PDF: jestli
+  Illustrator samotné ukládání nepřeruší (a nenechá ve výstupní složce
+  rozepsaný soubor), ověřené není — výstup posledního souboru otevři v Acrobatu.
 
 ---
 

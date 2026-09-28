@@ -59,8 +59,6 @@ BRE.L = (function () {
             BTN_RUN:            "Run",
             BTN_CANCEL:         "Cancel",
             BTN_CLOSE:          "Close",
-            BTN_STOP:           "Stop",
-            BTN_STOPPING:       "Stopping…",
             BTN_CONTINUE:       "Continue",
 
             // --- UI: Checkboxes ---
@@ -107,6 +105,8 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Processing files…",
             PROGRESS_INIT:      "Preparing…",
             PROGRESS_FILE:      "Processing: %s (%s of %s)",
+            PROGRESS_STOP_HINT: "To stop the batch, hold down Esc.",
+            PROGRESS_STOPPING:  "Stopping — the file in progress will be finished…",
 
             // --- Log ---
             LOG_TITLE:          "Processing Result",
@@ -171,8 +171,6 @@ BRE.L = (function () {
             BTN_RUN:            "Spustit",
             BTN_CANCEL:         "Storno",
             BTN_CLOSE:          "Zavřít",
-            BTN_STOP:           "Zastavit",
-            BTN_STOPPING:       "Zastavuji…",
             BTN_CONTINUE:       "Pokračovat",
 
             // --- UI: Checkboxy ---
@@ -219,6 +217,8 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Zpracování souborů…",
             PROGRESS_INIT:      "Připravuji…",
             PROGRESS_FILE:      "Zpracovávám: %s (%s z %s)",
+            PROGRESS_STOP_HINT: "Dávku zastavíte podržením klávesy Esc.",
+            PROGRESS_STOPPING:  "Zastavuji — rozpracovaný soubor se dokončí…",
 
             // --- Log ---
             LOG_TITLE:          "Výsledek zpracování",
