@@ -15,26 +15,16 @@ BRE.Core = {
     // ---------------------------------------------------------------------
 
     /**
-     * Unlocks all locked layers and PlacedItems before processing.
-     * Stores their state so endSession() can restore it.
+     * Unlocks all locked layers (sublayers included) and PlacedItems before
+     * processing. Stores their state so endSession() can restore it.
      * @param {Document} doc - The active Illustrator document.
      */
     beginSession: function (doc) {
         this._lockedLayers = [];
         this._lockedItems = [];
-        var i, layer, item;
+        var i, item;
 
-        for (i = 0; i < doc.layers.length; i++) {
-            layer = doc.layers[i];
-            try {
-                if (layer.locked) {
-                    this._lockedLayers.push({ idx: i, name: layer.name });
-                    layer.locked = false;
-                }
-            } catch (e) {
-                this._log("beginSession: layer unlock failed — " + layer.name);
-            }
-        }
+        this._unlockLayers(doc.layers);
 
         for (i = 0; i < doc.placedItems.length; i++) {
             item = doc.placedItems[i];
@@ -60,7 +50,7 @@ BRE.Core = {
      * @param {Document} doc - The active Illustrator document.
      */
     endSession: function (doc) {
-        var i, rec, lay;
+        var i;
 
         // Restore item locks by reference. Items removed during processing
         // throw here (reference invalid) and are harmlessly swallowed.
@@ -72,16 +62,35 @@ BRE.Core = {
 
         for (i = 0; i < this._lockedLayers.length; i++) {
             try {
-                rec = this._lockedLayers[i];
-                lay = (rec.idx < doc.layers.length && doc.layers[rec.idx].name === rec.name)
-                    ? doc.layers[rec.idx]
-                    : doc.layers.getByName(rec.name);
-                lay.locked = true;
+                this._lockedLayers[i].locked = true;
             } catch (e) {}
         }
 
         this._lockedLayers = [];
         this._lockedItems = [];
+    },
+
+    /**
+     * Unlocks every locked layer in the collection and, recursively, its
+     * sublayers. relink() in a locked sublayer throws "Target layer cannot be
+     * modified" even when the parent layer is unlocked (measured, AI 30.8.2).
+     * Layers are kept by reference — a sublayer has no top-level index to
+     * restore by.
+     * @param {Layers} layers - A document's or a layer's layer collection.
+     */
+    _unlockLayers: function (layers) {
+        for (var i = 0; i < layers.length; i++) {
+            try {
+                var layer = layers[i];
+                if (layer.locked) {
+                    this._lockedLayers.push(layer);
+                    layer.locked = false;
+                }
+                this._unlockLayers(layer.layers);
+            } catch (e) {
+                this._log("beginSession: layer unlock failed at index " + i);
+            }
+        }
     },
 
     // ---------------------------------------------------------------------

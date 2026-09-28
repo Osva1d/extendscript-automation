@@ -13,6 +13,16 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
   **Zastavit** (dříve „Storno“). Totéž slovo dosud znamenalo v tomto skriptu něco
   jiného než v Grommet Marks a Zünd & Summa Marks.
 
+### Opraveno
+
+Opravy z code review 2026-09-27
+([report](../docs/reports/2026-09-27-code-review-batch-relink-export.md)).
+
+- **Zamčená podvrstva už nezastaví dávku (B7).** Skript odemykal jen vrstvy
+  nejvyšší úrovně. Pozici v zamčené podvrstvě se nepodařilo přelinkovat
+  („Target layer cannot be modified") a každý arch skončil chybou. Teď odemyká
+  i podvrstvy.
+
 ## [1.0.0] — 2026-06-28
 
 První veřejné vydání (re-baseline). Sjednocení verzí napříč sadou pro open-source
