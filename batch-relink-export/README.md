@@ -8,7 +8,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Namespace:** `BRE`
 - **Build:** `npm run build` (`tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx`
 - **Min. verze AI:** CC 2018 (v22)
-- **Verze:** 1.0.0
+- **Verze:** 1.1.0
 
 ## Instalace
 
