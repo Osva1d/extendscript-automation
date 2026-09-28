@@ -12,6 +12,10 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
   dialog* (dříve „Zrušit“), tlačítko pro zastavení běžícího zpracování se jmenuje
   **Zastavit** (dříve „Storno“). Totéž slovo dosud znamenalo v tomto skriptu něco
   jiného než v Grommet Marks a Zünd & Summa Marks.
+- **Výchozí vzor názvu nese i název zdroje (B8):** `{n}_{template}_{source}`
+  místo `{n}_{template}`. Dosavadní vzor dával archům dvou zakázek se stejnou
+  šablonou stejná jména, takže se ve výstupní složce přepisovaly nebo
+  přeskakovaly. Kratší názvy dá vzor v dialogu přepsat jako dřív.
 
 ### Opraveno
 

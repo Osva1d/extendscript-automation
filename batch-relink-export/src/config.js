@@ -30,7 +30,8 @@ BRE.Config = {
 
     artboardRange: "",
 
-    defaultNamingPattern: "{n}_{template}",
+    // {source} keeps two jobs made with the same template from sharing names.
+    defaultNamingPattern: "{n}_{template}_{source}",
 
     placeholders: {
         N: "{n}",

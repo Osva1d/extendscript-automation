@@ -51,7 +51,7 @@ Pole „Vzor pojmenování" v dialogu podporuje placeholdery (musí obsahovat as
 | `{template}` | název šablony bez přípony |
 | `{source}` | název zdrojového PDF bez přípony |
 
-Výchozí vzor: `{n}_{template}` → např. `01_vizitky-arch.pdf`. Číslo zakázky si připíšeš před vzor.
+Výchozí vzor: `{n}_{template}_{source}` → např. `01_vizitky-arch_zakazka_Part1.pdf`. Název zdroje v názvu brání tomu, aby se archy dvou zakázek se stejnou šablonou jmenovaly stejně. Číslo zakázky si můžeš připsat před vzor.
 
 ## Neúplný arch
 
