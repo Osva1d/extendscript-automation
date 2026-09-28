@@ -1,219 +1,194 @@
-# Manuální test plán — Zünd & Summa Marks (deploy gate)
+# Zünd & Summa Marks — ruční testy
 
-> **Jediný** manuální test plán. Když projdou všechny **P0** body, je build připravený k deployi.
-> **Testovací dokument:** reálná **Forex deska 1560 × 3050 mm** (běžný use case).
-> Pozn.: 3050 mm < 5765 mm (limit Illustratoru) → **reálná velikost, scaleFactor = 1**,
-> žádné Large Canvas ani měřítko 1:N (to je sekundární use case, sekce H).
+Co se musí vyzkoušet rukou před vydáním a po větší změně. Výpočet značek,
+validaci, předvolby, migrace nastavení a vykreslení do dokumentu kryjí
+automatické sady (`npm test` v `zund-summa-marks/`). Opravy z code review
+2026-09-26 se navíc ověřily během skriptu v Illustratoru přes `tools/ai-eval.sh`
+([report](../../docs/reports/2026-09-26-code-review-zund-summa-marks.md)).
+Tady zůstává to, co automat nevidí: dialog okem a myší, hlavní zakázka od
+začátku do konce, běh z menu, anglický Illustrator a stroj.
 
-Legenda: `[ ]` krok · ✅ PASS · ❌ FAIL signál · ⚠️ riziko
-
----
-
-## Příprava
-
-```
-[✅] Illustrator CC 2024+ (CZ nebo EN locale)
-[✅] Nový dokument: 1560 × 3050 mm, CMYK, jednotky mm
-[✅] Vrstva "Layer 1" / "Vrstva 1": nakreslit obdélník ~1500 × 3000 mm (grafika)
-[✅] Swatches panel: vytvořit přímou barvu (Spot) "Cut"; pár cest obarvit "Cut"
-[✅] Window > Layers a Window > Swatches otevřené (budeš ověřovat)
-[✅] Spouštět PŘESNĚ tento soubor (ne starou nainstalovanou kopii):
-    Soubor → Skripty → Jiný skript… →
-    …/Sandbox/_incubator/zund-summa-marks/dist/illustrator-zund-summa-marks.jsx
-[✅] (volitelně čistý start) smazat ~/Library/Application Support/ZSM/settings.json
-```
+**Brána pro vydání jsou sekce 1–5.** Sekce 6 je rychlá kontrola čísel a hlášek
+bez harnessu. Co prošlo, zaškrtni; co ne, nahlas podle sekce 7. Na konci vyplň
+záznam a před dalším kolem vrať zaškrtnutí na `[ ]`. Kódy K1–K12 odkazují na
+nálezy v reportu z review.
 
 ---
 
-## P0 — musí projít pro deploy
+## 0. Příprava
 
-### A — Základní generování na Forex desce
-```
-[✅] ZUND, "Dle výběru (Auto-fit)", vyber grafiku, Generovat
-    ✅ rohové kruhové značky φ5 mm + orientační značka u levého dolního rohu
-    ✅ artboard se přizpůsobil grafice + mezerám
-    ✅ značky ve vrstvě Regmarks / sublayer "Zünd"
-[✅] SUMMA, Generovat
-    ✅ čtvercové značky (3 mm) + OPOS bar pod grafikou
-    ✅ se zapnutým "Přidat ořezové linky" → červené linky na hranicích archu
-       (v samostatné top-level vrstvě "Trim")
-[✅] "Dle Artboardu (Fixed)", Generovat → značky UVNITŘ artboardu, artboard beze změny
-[✅] Spusť ZUND, pak SUMMA na stejný dok → oba sety koexistují (Regmarks/Zünd + /Summa)
+```bash
+cd ~/Dev/extendscript-automation/zund-summa-marks && npm run verify
 ```
 
-### B — Rozteč / interpolace (klíčové na dlouhé 3050 hraně)
-```
-[✅] ZUND, Rozteč značek = 400 mm, Generovat
-    ✅ na 3050 mm hraně je mezi rohy ~7 mezilehlých značek (ceil(3050/400)−1)
-    ✅ na 1560 mm hraně ~3 mezilehlé (ceil(1560/400)−1)
-    ✅ rozmístění je rovnoměrné (značky leží na hraně)
-[✅] Rozteč = 5000 mm → žádné mezilehlé (jen rohy)
-```
+Build vznikne v `dist/illustrator-zund-summa-marks.jsx`. Spouštěj vždy tento
+soubor přes **Soubor › Skripty › Jiný skript…**, ne starou nainstalovanou kopii.
+Pro čistý start přejmenuj `~/Library/Application Support/ZSM/settings.json`
+a po testu ho vrať.
 
-### C — Barvy + registrace  (oprava canonColor / CZ locale)
-```
-[✅] Otevři skript s presetem [Výchozí], barva značek [Registrační]
-    ✅ u [Výchozí] NENÍ hvězdička "*" hned po otevření (bez úprav)   ← CZ AI fix
-[✅] Generovat → značky v registrační barvě (overprint, čte se na všech separacích)
-[✅] Nastav vlastní spot barvu značek → Generovat → značky v té barvě
-[✅] Preset z jiného dokumentu odkazující na neexistující barvu:
-    ✅ dropdown ukáže "Název (chybí)"
-    ✅ Generovat → značky v [Registrační] + "UPOZORNĚNÍ:", ŽÁDNÝ nový magenta swatch
-```
+| dokument | příprava |
+|---|---|
+| Forex | nový dokument 1560 × 3050 mm, CMYK, jednotky mm; ve vrstvě obdélník ~1500 × 3000 mm (grafika); přímá barva **Cut** a pár cest v ní |
+| malý | nový dokument s obdélníkem 100 × 100 mm, pro čísla v sekci 6 |
 
-### D — Mapování vrstev k barvám
-```
-[✅] Řádek {Vrstva: "Cut", Barva: "Cut"}, Generovat
-    ✅ vrstva "Cut" vytvořena (pokud nebyla), Cut-obarvené cesty do ní přesunuty
-[✅] W1: namapuj vrstvu, která po přesunu skončí dole (např. "Cut")
-    ✅ NEPŘEjmenuje se na "Graphics"
-[✅] W3: přidej řádek, zvol barvu, nech PRÁZDNÝ název, Generovat
-    ✅ chyba "Řádek vrstvy má barvu… ale nemá název" (ne tiché zahození)
-```
-
-### E — Pouze značky (Phase 3, nová feature)
-```
-[✅] Dok s UŽ separovanými vrstvami (Cut, Kiss-cut… s obsahem)
-[✅] Zaškrtni "Pouze značky (neměnit vrstvy)"
-    ✅ mapovací tabulka pod tím ZAŠEDNE
-[❌] Generovat
-    ✅ přidají se POUZE značky (Regmarks)
-    ✅ existující vrstvy BEZE ZMĚNY — žádný přesun cest, žádné přejmenování
-    ✅ (SUMMA) ořezové linky v SAMOSTATNÉ top-level vrstvě "Trim"
-       (ne v Regmarks, ne v cut/uživatelských vrstvách)
- BUG: V suma režimu se trim přida do vrstvy Regmarks a to je chyba kolidovalo by to s načtením značek, musí být mimo regmarks i cut.
-```
-
-### F — Presety + Revert
-```
-[x] Uložit jako… "Test" → objeví se v dropdownu
-[x] Změň hodnotu (Rozteč 400→500)
-    ✅ "Test *" + ↺ Revert AKTIVNÍ + Uložit AKTIVNÍ
-[x] Klikni ↺ Revert → hodnoty zpět na uložené, "*" zmizí, ↺ a Uložit zašednou
-[ ] Změň + Uložit → přepíše Test (bez "*")
-[x] Smazat → potvrzovací dialog → po OK preset zmizí
-[x] Tovární hodnoty: vyber [Výchozí] v dropdownu → načtou se výchozí hodnoty
-[x] (Reset tlačítko NEEXISTUJE — footer je jen Storno + Generovat)
-```
-
-### G — Validace + zotavení (kritický fix, Reset odstraněn)
-```
-[✅] Zadej neplatnou Rozteč (99999), Generovat
-    ✅ pole červené + tlačítko Generovat VYPNUTÉ
-[✅] Přepiš na platnou (500)
-    ✅ červená ZMIZÍ + Generovat se ZAPNE
-[✅] Znovu zadej neplatnou → pak ↺ Revert NEBO přepni preset
-    ✅ ZOTAVÍ se: červená pryč, Generovat zapnutý   ← klíčové (Reset už není)
-[ ] Vymaž pole úplně → Generovat vypnutý
-```
+**Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby, v mapování
+vrstev pak řádek **Cut ← Cut**. Výchozí řádek Cut ← [Registrační] skript od
+opravy K8 přeskočí s upozorněním.
 
 ---
 
-### L — Opravy z code review 2026-09-26 (jen co nešlo ověřit sondou)
+## 1. Dialog
 
-Ostatní opravy jsou ověřené během skriptu v Illustratoru přes `tools/ai-eval.sh`
-— viz [report](../../docs/reports/2026-09-26-code-review-zund-summa-marks.md)
-a CHANGELOG. Tady zůstává jen to, co sonda nedokáže.
-
-```
-[ ] K8 — ANGLICKÁ verze Illustratoru: dokument s ořezovými značkami
-    (Object ▸ Create Trim Marks), výchozí předvolba, Generovat
-    ✅ ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne
-    ✅ upozornění, že registrační barvou nejde rozpoznat řezové cesty
-[ ] K11 — běh z menu Soubor ▸ Skripty (sonda běžela přes AppleScript, ne z menu):
-    dokument s grafikou a řezovou cestou, SUMMA s ořezovými linkami, Generovat;
-    pak Úpravy ▸ Zpět po jednom kroku
-    ✅ artboard se vrátí na původní rozměr jako samostatný krok
-       (přes most: 4 kroky pro SUMMA s mapováním a linkami)
-    ✅ další Zpět už vrací vaši úpravu před spuštěním skriptu, ne zbytek běhu
-[ ] K7 — na stroji Zünd (kameru sonda neověří): výchozí předvolba, dva archy —
-    grafika 96 mm (orientační značka 1 mm od pravé dolní rohové) a 80 mm
-    (orientační značka 5 mm za pravou dolní rohovou, mimo obdélník značek);
-    vytisknout, načíst kamerou
-    ✅ stroj najde všechny značky a pozná orientaci archu
-    ✗ když ne: kontrola v jádře (findMarkConflict) blokuje zatím jen dotyk
-      a překryv — doplnit minimální mezeru, kterou stroj potřebuje
-[ ] K5 — živý dialog (engine ověřen se skutečnými prvky ScriptUI, ale bez
-    zobrazení okna): uložit předvolbu v režimu SUMMA, přepnout na ZUND,
-    vybrat tu předvolbu v nabídce
-    ✅ dialog se přepne na SUMMA, ukáže její hodnoty, bez „*"
-    přepnout na ZUND, kliknout ↺
-    ✅ dialog se znovu přepne na SUMMA s hodnotami předvolby
-```
-
-## P1 — důležité, ne blokující deploy
-
-### H — Měřítko 1:N (sekundární use case — zmenšené doky)
-`✅] Menší dok reprezentující velký formát (např. 500×500 mm = 5000×5000 reality)
-[ ✅ "Pracovat v měřítku", 1: 10; zadávej REÁLNÉ mm (značky 5, rozteč 400)
-    ✅ titulek dialogu "… — 1:10"
-    ✅ značky vykresleny v 1/10 (0,5 mm), pozice odpovídají
-[✅] Odškrtni měřítko → značky zpět v zadané velikosti (1:1)
-```
-
-### I — Persistence + jazyk
-```
-[✅] Ulož preset, zavři skript, otevři → preset tam je
-[✅] Změň bez uložení, zavři, otevři → [Last Settings] obnoví poslední běh
-[?] CZ locale → české texty; EN locale → anglické
-```
-
-### J — Geometrie a přesnost (na malém obdélníku, kvůli přesným číslům)
-```
-[✅] Obdélník 100×100 mm, ZUND Auto-fit, Mezera grafiky 10, Mezera okraje 0, Zünd 5, Orient 100
-    ✅ artboard ~130×130 mm  (polovina šířky = 50 + 12,5 + 2,5 = 65 → W 130)
-    ✅ 5 značek (4 rohy + orient), žádné mezilehlé (hrana < rozteč)
-[✅] Obdélník 600×100 mm, Rozteč 200
-    ✅ na 600 mm hraně 3 mezilehlé rovnoměrně  (ceil(625/200)=4 segmenty → 3)
-[✅] SUMMA, obdélník 100×100, Feed Top 70 / Bot 50, Summa 3
-    ✅ OPOS bar 11,5 mm pod grafikou, tloušťka 3 mm
-    ✅ výška artboardu ~246 mm  (100 + 83 + 63)
-[✅] Orient. offset 200 na malé grafice → artboard se rozšíří tak, aby orient značku obsáhl
-```
-
-### K — Edge cases / robustnost
-```
-[✅] Zamčená vrstva → skript ji odemkne, vykreslí, zamkne zpět; skrytá vrstva zůstane skrytá
-[✅] Clipping maska (group s maskou, vnitřek větší) → bounds podle MASKY, ne obsahu;
-    cesty uvnitř clip group se nepřesouvají (movePaths je vynechá)
-[✅] Přepnutí ZUND ↔ SUMMA → zadané hodnoty zachovány (přes [Last Settings])
-[✅] Žádný dokument → "Není otevřený dokument"; Auto-fit bez výběru → "Nic není vybráno"
-[✅] Skript NIKDY nemaže/needituje grafiku — jen přidává značky (+ volitelně přesun cest)
-[✅] Čárka jako desetinný oddělovač (např. 10,5) → akceptováno (normalizace na tečku)
-[✅] Velmi velký dok blízko limitu → buď vykreslí, nebo srozumitelná chyba (ne pád)
-```
+- [ ] **1.1 Okem.** Dialog ZUND i SUMMA: nic uříznutého, pole zarovnaná, titulek
+  „Zünd & Summa Marks v…". Přepnutí ZUND ↔ SUMMA zachová zadané hodnoty.
+- [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Generovat.
+- [ ] **1.3 Validace.** Rozteč 99999 → pole zčervená a Generovat se vypne; zpět na
+  500 → obojí se vrátí. Znovu neplatná hodnota a pak ↺ nebo jiná předvolba →
+  dialog se zotaví. Prázdné pole → Generovat vypnuté. Hodnota `10,5` s čárkou
+  projde.
+- [ ] **1.4 Předvolby.** Uložit jako… „Test" → je v nabídce. Změna hodnoty →
+  „Test *", ↺ a Uložit aktivní. ↺ → uložené hodnoty, „*" zmizí, ↺ a Uložit
+  zešednou. Změna + Uložit → přepíše „Test" bez „*". Smazat → potvrzení,
+  předvolba zmizí; [Výchozí] smazat nejde. Tlačítko **Výchozí** načte tovární
+  hodnoty do dialogu, mód nezmění a předvolbu nepřepíše.
+- [ ] **1.5 Předvolba jiného módu (K5).** V režimu SUMMA ulož předvolbu, přepni
+  na ZUND a vyber ji v nabídce → dialog se přepne na SUMMA s jejími hodnotami,
+  bez „*". Přepni na ZUND a klikni ↺ → znovu SUMMA s hodnotami předvolby.
+  Engine je ověřený bez zobrazení okna, živý dialog ne.
+- [ ] **1.6 Paměť.** Uložená předvolba přežije zavření a nové spuštění. Po
+  Generovat s neuloženými změnami otevře další spuštění dialog s hodnotami
+  posledního běhu.
 
 ---
 
-## Pokud něco selže
+## 2. Forex deska — hlavní zakázka
 
-| Symptom | Pravděpodobná příčina | Co nahlásit |
+Ve všech krocích platí: skript grafiku nemaže ani nemění, jen přidává značky
+a přesouvá cesty čistě v řezové barvě.
+
+- [ ] **2.1 ZUND, Dle výběru.** Vyber grafiku, Generovat → kruhové značky φ 5 mm
+  v rozích a orientační u levého dolního rohu; artboard obepne grafiku
+  s mezerami; značky ve vrstvě Regmarks › Zünd; cesty v barvě Cut ve vrstvě
+  Cut; spodní vrstva přejmenovaná na Graphics. Když dole skončí vrstva
+  z mapování (např. Cut), jméno si nechá.
+- [ ] **2.2 Rozteč.** Rozteč 400 mm → na dlouhé hraně 7 mezilehlých značek, na
+  krátké 3, rovnoměrně. Rozteč 5000 mm → jen rohy.
+- [ ] **2.3 SUMMA po ZUND.** Stejný dokument, SUMMA s „Přidat ořezové linky" →
+  čtvercové značky 3 mm a OPOS pruh pod grafikou; červené linky v samostatné
+  vrstvě Trim nahoře; Regmarks › Zünd a Regmarks › Summa vedle sebe.
+- [ ] **2.4 ZUND po SUMMA.** → upozornění „Výstup Summa byl odstraněn…",
+  zůstanou jen značky Zünd.
+- [ ] **2.5 Dle Artboardu (Fixed).** ZUND → značky uvnitř artboardu, artboard
+  beze změny.
+- [ ] **2.6 Pouze značky.** Dokument s už separovanými vrstvami (Cut, Kiss-cut
+  s obsahem), zaškrtnout „Pouze značky (neměnit vrstvy)" → mapování zešedne;
+  Generovat přidá jen značky a vrstvy zůstanou beze změny; v SUMMA jdou ořezové
+  linky do samostatné vrstvy Trim, ne do Regmarks.
+- [ ] **2.7 Barvy.** [Výchozí] s barvou značek [Registrační] je po otevření bez
+  „*" a značky jsou v registrační barvě. Vlastní přímá barva → značky v ní.
+  Předvolba s barvou, která v dokumentu chybí → nabídka ukáže „Název (chybí)";
+  Generovat → značky v [Registrační] a „UPOZORNĚNÍ:", žádná nová barva ve
+  Vzornících.
+- [ ] **2.8 Zámky a skryté vrstvy.** Zamčenou vrstvu skript odemkne, vykreslí
+  a zamkne zpět. Skrytá spodní vrstva zůstane skrytá a nepřejmenuje se (K3).
+  Skrytá Regmarks se při opakovaném běhu zviditelní a upozornění ji vyjmenuje
+  (K12).
+
+---
+
+## 3. Běh z menu a Zpět (K11)
+
+- [ ] Dokument s grafikou a cestou v barvě Cut, SUMMA s mapováním Cut ← Cut
+  a ořezovými linkami, spustit přes Soubor › Skripty, pak Úpravy › Zpět po
+  jednom kroku → artboard se vrátí na původní rozměr jako samostatný krok
+  (přes AppleScript to byly 4 kroky celkem); další Zpět už vrací tvou úpravu
+  z doby před spuštěním.
+
+---
+
+## 4. Anglický Illustrator
+
+- [ ] **4.1 Texty.** Dialog a hlášky anglicky.
+- [ ] **4.2 Registrační barva (K8).** Dokument s ořezovými značkami (Object ›
+  Create Trim Marks), výchozí předvolba (Cut ← [Registration]), Generate →
+  ořezové značky zůstanou ve vrstvě grafiky, vrstva Cut nevznikne; upozornění,
+  že registrační barvou nejde rozpoznat řezové cesty.
+
+---
+
+## 5. U stroje — rozhoduje
+
+- [ ] **5.1 Zünd.** Zakázku z 2.1 vytisknout a načíst → stroj najde všechny
+  značky, pozná orientaci archu a ořízne podle Cut.
+- [ ] **5.2 Orientační značka blízko rohu (K7).** Výchozí předvolba, dva archy:
+  grafika 96 mm široká (orientační značka 1 mm od pravé dolní rohové) a 80 mm
+  (orientační 5 mm za pravou dolní rohovou) → stroj najde všechny značky
+  a pozná orientaci. Když ne, kontrola kolizí (`findMarkConflict`) blokuje
+  zatím jen dotyk a překryv — doplnit do ní minimální mezeru, kterou stroj
+  potřebuje.
+- [ ] **5.3 Summa.** Výstup z 2.3 vytisknout a načíst → OPOS najde pruh
+  i značky.
+
+---
+
+## 6. Regresní přehled
+
+Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchozí.
+
+| grafika, nastavení | výsledek |
+|---|---|
+| 100 × 100, ZUND, mezera od grafiky 10 | artboard 130 × 130; 5 značek (4 rohy + orientační), žádné mezilehlé |
+| 600 × 100, ZUND, mezera 10, rozteč 200 | na dlouhé hraně 3 mezilehlé, rovnoměrně |
+| 100 × 100, SUMMA | OPOS pruh 11,5 pod grafikou, tloušťka 3; výška artboardu 246 |
+| 100 × 100, ZUND, odsazení orientační značky 200 | artboard se rozšíří, aby orientační značku obsáhl |
+| grafika v ořezové masce s větším obsahem, ZUND | značky a artboard podle masky, ne podle skrytého obsahu |
+| 200 × 100, ZUND | artboard 220 × 120 |
+| totéž, pak SUMMA s linkami | artboard 244 × 266; vrstva Trim se 2 linkami; Regmarks › Summa 4 značky + pruh |
+| 90 široká, ZUND (K7) | chyba „Orientační značka by se dotýkala jiné značky…"; dokument beze změny |
+| Fixed, artboard 100 × 100, ZUND (K7) | chyba „Značka by přesahovala artboard o 10 mm…"; dokument beze změny |
+| dokument 500 × 500 v měřítku 1:10, značky 5, rozteč 400 | titulek „… — 1:10"; značky v dokumentu 0,5; zrušené měřítko → zpět 5 |
+
+**Hlášky** (česky):
+
+- bez dokumentu → „Není otevřený dokument."; Dle výběru bez výběru → „Nic není
+  vybráno."
+- grafika tak velká, že by artboard přesáhl mez Illustratoru (K10) → „Artboard
+  by měl … × … mm, a to Illustrator nedovolí…", dokument beze změny
+- řádek mapování se jménem Trim nebo Regmarks (K6) → „Vrstvu ‘Trim’ nejde
+  použít v mapování…", dokument beze změny
+- objekt s řezovým tahem a tiskovou výplní (K1) → zůstane na místě, „Objekty
+  v řezové barvě ‘Cut’, které mají i tiskovou výplň…"
+- cesta v barvě Cut v ořezové masce nebo zamčené podvrstvě (K2) → „Vrstva ‘Cut’:
+  některé cesty v barvě ‘Cut’ zůstaly na místě…"
+- vlastní objekt ve vrstvě Trim (K6) → zůstane, „Vrstva ‘Trim’ obsahuje
+  i objekty, které nevytvořil skript…"
+- řádek mapování s barvou a bez názvu → „Řádek vrstvy má barvu (‘Cut’), ale
+  nemá název…"
+
+---
+
+## 7. Když něco selže
+
+Nahlas nastavení dialogu (nebo název předvolby), co vyšlo a co jsi čekal.
+
+| symptom | pravděpodobná příčina | co přiložit |
 |---|---|---|
-| "*" u [Výchozí] bez úprav | registrační normalizace | CZ/EN locale, název reg swatche |
-| Pole zůstane červené / Generovat vypnutý | validace/zotavení | posloupnost akcí |
-| Vznikl magenta swatch | getCol fallback | název barvy, dok |
-| Vrstva přejmenována na Graphics | §7 rename guard (W1) | která vrstva, byla mapovaná?, pořadí vrstev |
-| Špatná velikost/pozice značek | geometrie/scaleN | hodnoty + naměřeno |
-| Skript spadl | C++ pipeline | Layers panel + posloupnost |
+| „*" u [Výchozí] bez úprav | normalizace registrační barvy | locale, název registrační barvy |
+| pole zůstane červené, Generovat vypnuté | validace a zotavení | posloupnost kroků |
+| ve Vzornících přibyla barva | náhradní barva značek | název barvy, dokument |
+| vrstva přejmenovaná na Graphics | přejmenování spodní vrstvy | která vrstva, jestli byla v mapování, pořadí vrstev |
+| špatná velikost nebo poloha značek | geometrie nebo měřítko | nastavení a naměřené hodnoty |
+| pád skriptu nebo Illustratoru | — | panel Vrstvy a posloupnost kroků |
 
 ---
 
-## Deploy sign-off
+## 8. Záznam
 
 ```
-Datum: __________   Illustrator: __________   Locale: CZ / EN
-
-P0:  A [✅]  B [✅]  C [✅]  D [✅]  E [ ]  F [✅]  G [✅]
-P1:  H [✅]  I [✅]  J [✅]  K [✅]
-
-[⚠️] Všechny P0 PASS
-
-Před deployem:
-[ ] verze sjednocena (package.json = src/config.js = nejnovější CHANGELOG entry) a bumpnuta dle SemVer
-[ ] npm test (12/12+ suites) zelené
-[ ] bash tools/build.sh — dist přebudován
-[ ] dist zkopírován do Projects/extendscript-automation/Scripts/
-[ ] (volitelně) git tag
-
-Verdikt: [✅] DEPLOY   [⚠️] BLOKOVÁNO — poznámky: E BUG: V suma režimu se trim přida do vrstvy Regmarks a to je chyba kolidovalo by to s načtením značek, musí být mimo regmarks i cut.
+Datum: ______   Build (commit): ______   Illustrator: ______   Locale: CZ / EN
+Sekce 1 [ ]  2 [ ]  3 [ ]  4 [ ]  5 [ ]
+Verdikt: [ ] vydat   [ ] blokováno — proč: ______
 ```
+
+Vydání samo (verze, build, tag, Release) popisuje
+[`../../docs/conventions.md`](../../docs/conventions.md).
