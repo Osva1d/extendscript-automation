@@ -22,6 +22,10 @@ Opravy z code review 2026-09-27
   nejvyšší úrovně. Pozici v zamčené podvrstvě se nepodařilo přelinkovat
   („Target layer cannot be modified") a každý arch skončil chybou. Teď odemyká
   i podvrstvy.
+- **Šablona s nedostupným původním PDF se zpracuje (B6).** Když se PDF, ze
+  kterého šablona vznikla, přesunulo nebo smazalo, skončil každý arch hláškou
+  „There is no file associated with this item". Pozice s chybějícím odkazem se
+  teď přelinkují jako ostatní.
 
 ## [1.0.0] — 2026-06-28
 

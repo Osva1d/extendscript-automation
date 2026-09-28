@@ -119,11 +119,10 @@ BRE.Core = {
             item = items[i];
             label = item.name || ("item_" + i);
 
-            if (!item.file) {
-                results.skipped++;
-                continue;
-            }
-
+            // No check on item.file here: when the template's original PDF
+            // was moved or deleted, reading .file throws "There is no file
+            // associated with this item", yet relink() still works and keeps
+            // the page (measured, AI 30.8.2).
             if (this._isHidden(item)) {
                 results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, label));
                 results.skipped++;
@@ -132,8 +131,8 @@ BRE.Core = {
 
             if (totalPages > 0 && item.pageNumber && item.pageNumber > totalPages) {
                 // Excess position (its page is beyond this PDF). Capture the
-                // reference now; remove after the loop. Only managed items
-                // (linked + visible) reach here — hidden/fileless were skipped.
+                // reference now; remove after the loop. Only visible items
+                // reach here — hidden ones were skipped.
                 toRemove.push({ item: item, page: item.pageNumber });
                 continue;
             }
@@ -142,8 +141,8 @@ BRE.Core = {
                 item.relink(targetPdf);
                 results.relinked++;
                 // Keep a reference so verifyRelink checks ONLY the items we
-                // actually relinked — never the deliberately-skipped ones
-                // (hidden-layer / fileless), which still point to the old PDF.
+                // actually relinked — never the deliberately-skipped hidden
+                // ones, which still point to the old PDF.
                 results.relinkedItems.push({ item: item, label: label });
             } catch (e) {
                 results.errors.push(BRE.L.format(BRE.L.ERR_RELINK_ITEM, label, e.message));
@@ -272,8 +271,8 @@ BRE.Core = {
     /**
      * Verifies that every relinked item now points to the expected PDF.
      * Takes the relinked-items list from relinkDocument() — NOT the whole
-     * document — so deliberately-skipped items (hidden-layer / fileless),
-     * which still reference the old PDF, are never wrongly flagged.
+     * document — so deliberately-skipped hidden items, which still
+     * reference the old PDF, are never wrongly flagged.
      * @param {Array} relinkedItems - [{ item, label }] from relinkDocument.
      * @param {File} expectedPdf - The expected linked file.
      * @returns {Object} { ok: boolean, errors: string[] }
