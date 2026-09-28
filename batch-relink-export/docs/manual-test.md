@@ -97,6 +97,11 @@ soubor kratší) a prázdnou výstupní složku.
     ukázat vlastní okno a zaseknout se;
   - výstupní složka bez práva zápisu → u každého archu „Arch se nevyexportoval
     kvůli chybě: …" a dávka doběhne do souhrnu.
+- [ ] **2.10 Předvolba importu PDF (B10).** Umísti (Soubor › Umístit, bez
+  možností importu) vícestránkové PDF do prázdného dokumentu a všimni si
+  strany a ořezu. Spusť dávku a umísti ho znovu → stejná strana i ořez, ne
+  poslední pozice šablony. Že dávka předvolbu vrátí, ověřil harness; jestli ji
+  Umístit bez možností importu používá, ověřené není.
 
 ---
 
@@ -160,13 +165,12 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | ručně upravený soubor s nastavením (číslo místo cesty, neexistující preset) | špatné hodnoty výchozí, ostatní z minula, bez hlášky |
 | poškozený soubor s nastavením | výchozí hodnoty, bez hlášky; běh soubor přepíše platným |
 | nastavení nejde zapsat | „Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje." a dávka proběhne |
+| předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v náhledu, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
 
 **Známé, vědomě neopravené** (minor z review): výchozí PDF preset se liší podle
-jazyka — platí jen do první volby, pak si dialog pamatuje poslední (B9); po
-běhu zůstane v Illustratoru změněná předvolba importu PDF — strana a ořez
-posledního linku šablony (B10); v detailu chyby zůstává anglická hláška Illustratoru (T5);
-titulek okna je anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte
-složku:" (T8).
+jazyka — platí jen do první volby, pak si dialog pamatuje poslední (B9);
+v detailu chyby zůstává anglická hláška Illustratoru (T5); titulek okna je
+anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte složku:" (T8).
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
 jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash

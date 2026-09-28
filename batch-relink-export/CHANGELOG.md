@@ -98,6 +98,11 @@ Opravy z code review 2026-09-27
   místo tlačítka říká „Dávku zastavíte podržením klávesy Esc."; skript klávesu
   kontroluje před každým souborem i po jeho dlouhých krocích, rozpracovaný
   soubor dokončí a souhrn uvede, kolik souborů zpracoval.
+- **Běh nemění předvolbu importu PDF (B10).** Otevření šablony i každý relink
+  zapíše do předvoleb Illustratoru stranu a ořez dané pozice, takže po dávce
+  v nich zůstala strana a ořez poslední pozice šablony — po reálné zakázce
+  strana 12 a BleedBox, a to i po Stornu v náhledu. Skript teď předvolbu na
+  začátku běhu uloží a na konci vrátí, ať běh skončí jakkoli.
 
 Opravy z auditu UI 2026-09-28
 ([report](../docs/reports/2026-09-28-audit-ui-batch-relink-export.md)).

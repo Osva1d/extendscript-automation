@@ -1,4 +1,7 @@
 (function (BRE) {
+    // Put the operator's PDF import preferences back however the run ends —
+    // opening the template for the position count already changes them.
+    var pdfPrefs = BRE.Core.savePdfPrefs();
     try {
         var config = BRE.UI.show(BRE.Storage.load());
         if (!config) return;
@@ -256,5 +259,7 @@
     } catch (e) {
         try { app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS; } catch (x) {}
         alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line)));
+    } finally {
+        BRE.Core.restorePdfPrefs(pdfPrefs);
     }
 })(BRE);
