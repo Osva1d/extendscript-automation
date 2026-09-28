@@ -100,6 +100,16 @@ Opravy z auditu UI 2026-09-28
   číslo nestálo před podstatným jménem: „Šablona: T1 · pozic: 4",
   „Zdrojových PDF: 2", „a_4.pdf: stran 2, pozic navíc 2 — odeberou se
   z archu."
+- **Hlášky říkají, co se stalo a co udělat (A10–A12).** „Neplatná šablona
+  AI." platilo pro chybějící soubor, špatnou příponu i šablonu, kterou
+  Illustrator neotevřel; teď má otevření vlastní hlášku s radou otevřít
+  šablonu ručně. Chyba archu místo „Chyba při zpracování (anglická hláška)"
+  říká „Arch se nevyexportoval kvůli chybě: …", neočekávaná chyba místo
+  „KRITICKÁ CHYBA: … (line N)" říká, že se skript zastavil a komu hlášku
+  poslat. Skrytá pozice se hlásí podle vrstvy („item_3" v dokumentu nikdo
+  nenašel), bez žargonu „PlacedItem", „placeholder" a „relinkování".
+  Nečitelný počet stran říká riziko a co ověřit. Anglické texty se změnily
+  stejně.
 
 ## [1.0.0] — 2026-06-28
 

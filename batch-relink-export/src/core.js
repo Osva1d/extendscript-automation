@@ -194,11 +194,19 @@ BRE.Core = {
         var i, item, label;
         var toRemove = [];
 
-        // Hidden placed items are never positions; report them as before.
+        // Hidden placed items are never positions; report each by its
+        // layer — an unnamed item's index ("item_3") cannot be found in the
+        // document, its layer can.
+        var layerName;
         for (i = 0; i < items.length; i++) {
             if (this._isHidden(items[i])) {
-                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER,
-                    items[i].name || ("item_" + i)));
+                layerName = "?";
+                try {
+                    layerName = items[i].layer.name;
+                } catch (le) {
+                    this._log("relinkDocument: layer of hidden item " + i + " unreadable");
+                }
+                results.warnings.push(BRE.L.format(BRE.L.ERR_HIDDEN_LAYER, layerName));
                 results.skipped++;
             }
         }

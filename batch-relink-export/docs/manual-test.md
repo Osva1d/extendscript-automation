@@ -74,6 +74,14 @@ soubor kratší) a prázdnou výstupní složku.
   znovu se zaškrtnutým „Přeskočit existující" → hotové archy se přeskočí.
   Pak změň a ulož šablonu a spusť znovu → archy se vytvoří znovu se záznamem
   „Výstup už existoval, ale je starší…".
+- [ ] **2.9 Chyby Illustratoru (A10).** Ověřené jen s podvrženou chybou,
+  ne se skutečnou:
+  - šablona, kterou Illustrator neotevře (třeba jiný soubor přejmenovaný na
+    `.ai`) → hláška „Šablonu se nepodařilo otevřít — zkuste ji otevřít
+    v Illustratoru ručně." s hláškou Illustratoru; Illustrator přitom nesmí
+    ukázat vlastní okno a zaseknout se;
+  - výstupní složka bez práva zápisu → u každého archu „Arch se nevyexportoval
+    kvůli chybě: …" a dávka doběhne do souhrnu.
 
 ---
 
@@ -120,12 +128,15 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 |---|---|
 | šablona s nedostupným původním PDF | arch vyexportovaný, bez chyby |
 | pozice v zamčené podvrstvě | arch vyexportovaný, bez chyby |
-| propojené logo, pozice na skryté vrstvě | počet pozic bez nich; „PlacedItem na skryté vrstvě přeskočen: …" |
+| propojené logo, pozice na skryté vrstvě | počet pozic bez nich; „Skrytá pozice se nepřelinkovala (netiskne se) — vrstva „…“." |
 | zdroj 110 × 60 mm na pozice 100 × 70 | „Pozice …: strana zdroje má 110 × 60 mm, šablona počítá s 100 × 70 mm…" |
 | 2 strany na 4 pozice | náhled „…: stran 2, pozic navíc 2 — odeberou se z archu.", souhrn „Odebrané pozice 2" |
 | šablona se stranou 1 dvakrát, 2 strany | „Pozice navíc se neodebraly automaticky…", „Pozic navíc, které se nepodařilo odebrat: 2. Ukazují znovu stranu 1…" |
 | 5 stran na 4 pozice | náhled „…: stran 5 > pozic 4 — BUDE PŘESKOČENO…", souhrn „Přeskočeno: stran je více než pozic (5 > 4)…" |
 | výstup = zdroj | „Výstupní složka je stejná jako zdrojová…" |
+| šablona jiného typu (PDF) | „Šablona se nenašla nebo nemá příponu .ai. Vyberte ji tlačítkem Vybrat…" |
+| vzor bez `{n}` | „Vzor musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly." |
+| zdroj s nečitelným počtem stran | „…: počet stran nejde zjistit (poškozené nebo šifrované PDF?). Ověřte, že nemá víc stran než pozic…" |
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 
@@ -133,7 +144,9 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 jazyka a nepamatuje se (B9); po běhu zůstane v Illustratoru změněná předvolba
 importu PDF — strana a ořez posledního linku šablony (B10); dialog si
 nepamatuje nastavení a validuje až po zavření, takže chyba znamená vyplnit
-cesty znovu; texty T3–T8 kromě skloňování čísel.
+cesty znovu; v detailu chyby zůstává anglická hláška Illustratoru (T5);
+titulek okna je anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte
+složku:" (T8).
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
 jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash

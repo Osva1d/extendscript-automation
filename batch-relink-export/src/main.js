@@ -23,7 +23,7 @@
             slotCount = BRE.Core.countSavedPositions(config.templateFile, openTpl);
         } catch (e) {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-            alert(BRE.L.ERR_TEMPLATE + "\n" + e.message);
+            alert(BRE.L.format(BRE.L.ERR_TEMPLATE_OPEN, e.message));
             return;
         }
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
@@ -224,7 +224,7 @@
 
                 } catch (e) {
                     results.errors++;
-                    results.log.push(outputName + ": " + BRE.L.ERR_PROCESS + " (" + e.message + ")");
+                    results.log.push(outputName + ": " + BRE.L.format(BRE.L.ERR_PROCESS, e.message));
                     try {
                         if (doc) {
                             doc.close(SaveOptions.DONOTSAVECHANGES);
@@ -251,6 +251,6 @@
 
     } catch (e) {
         try { app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS; } catch (x) {}
-        alert(BRE.L.ERR_CRITICAL + e.message + " (line " + e.line + ")");
+        alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line)));
     }
 })(BRE);
