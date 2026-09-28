@@ -55,6 +55,16 @@ Opravy z code review 2026-09-27
   odebere, u oříznuté pozice i s maskou. Když šablona neukazuje strany 1 až N
   každou právě jednou, zůstává dosavadní chování: arch se vyexportuje a souhrn
   řekne proč a kolik pozic odstranit ručně.
+- **Počet stran se čte ze stromu stran PDF (B3).** Skript hledal v bajtech
+  souboru největší číslo za „/Count" a počítal objekty stran. PDF uložené po
+  smazání stran (inkrementální uložení) tak mělo pořád původní počet: prošlo
+  jako „v pořádku" a pozice navíc ukázaly znovu stranu 1. U velkého PDF
+  s víceúrovňovým stromem stran našel jen část počtu a přebytek stran se tiše
+  ztratil. PDF 1.5+ s komprimovanými tabulkami hlásil jako nečitelné a zpracoval
+  je bez ochrany proti přebytku stran; záložky a štítky stran naopak blokovaly
+  správné soubory. Počet se teď čte jako v prohlížeči — z katalogu a kořene
+  stromu stran, přes celý řetěz tabulek odkazů, včetně komprimovaných. Stav
+  „nejednoznačný počet stran" zanikl.
 
 ## [1.0.0] — 2026-06-28
 

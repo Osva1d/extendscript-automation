@@ -33,7 +33,6 @@ BRE.L = (function () {
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
             WARN_PAGE_MAP:      "Extra positions were not removed automatically: the template does not show pages 1–%s exactly once each.",
-            ERR_UNCERTAIN:      "Skipped: ambiguous page count — please check this file manually.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
             // --- UI: Title & Panels ---
@@ -96,12 +95,10 @@ BRE.L = (function () {
             SCAN_UNDER:         "Fewer pages mid-batch: %s",
             SCAN_UNREADABLE:    "Page count unreadable: %s",
             SCAN_OVER:          "Blocked (more pages than positions): %s",
-            SCAN_UNCERTAIN:     "Uncertain page count (blocked): %s",
             SCAN_FILE_OVER:     "%s: %s pages > %s positions — WILL BE SKIPPED (risk of dropped pages)",
             SCAN_FILE_UNDER:    "%s: %s pages < %s positions (excess positions will be removed)",
             SCAN_FILE_PARTIAL:  "%s: %s pages — %s extra position(s) will be removed from the sheet.",
             SCAN_FILE_UNREAD:   "%s: page count could not be detected — all positions relinked, none removed.",
-            SCAN_FILE_UNCERTAIN: "%s: ambiguous page count — WILL BE SKIPPED, check manually",
             SCAN_NONE:          "No file can be processed safely.",
             ERR_OVER_PAGES:     "Skipped: %s pages exceeds %s positions — risk of silently dropping pages.",
 
@@ -146,7 +143,6 @@ BRE.L = (function () {
             ERR_RELINK_FAILED:  "Export přeskočen: %s pozic se nepodařilo relinkovat.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
             WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
-            ERR_UNCERTAIN:      "Přeskočeno: nejednoznačný počet stran — zkontrolujte tento soubor ručně.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
             // --- UI: Nadpis a panely ---
@@ -209,12 +205,10 @@ BRE.L = (function () {
             SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
             SCAN_UNREADABLE:    "Nečitelný počet stran: %s",
             SCAN_OVER:          "Blokováno (více stran než pozic): %s",
-            SCAN_UNCERTAIN:     "Nejistý počet stran (blokováno): %s",
             SCAN_FILE_OVER:     "%s: %s stran > %s pozic — BUDE PŘESKOČENO (hrozí ztráta stran)",
             SCAN_FILE_UNDER:    "%s: %s stran < %s pozic (přebytečné pozice budou odebrány)",
             SCAN_FILE_PARTIAL:  "%s: %s stran — %s pozic navíc se z archu odebere.",
             SCAN_FILE_UNREAD:   "%s: počet stran nelze zjistit — relinkne se vše bez odebrání.",
-            SCAN_FILE_UNCERTAIN: "%s: nejednoznačný počet stran — BUDE PŘESKOČENO, zkontrolujte ručně",
             SCAN_NONE:          "Žádný soubor nelze bezpečně zpracovat.",
             ERR_OVER_PAGES:     "Přeskočeno: %s stran je více než %s pozic — hrozí tichá ztráta stran.",
 

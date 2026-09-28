@@ -495,117 +495,6 @@ BRE.Core = {
     },
 
     // ---------------------------------------------------------------------
-    // PDF page count
-    // ---------------------------------------------------------------------
-
-    /**
-     * Reads a PDF's raw bytes as a binary string.
-     * @param {File} pdfFile - The PDF file to read.
-     * @returns {string|null} File content, or null on failure.
-     */
-    _readPdfBinary: function (pdfFile) {
-        try {
-            pdfFile.encoding = "binary";
-            if (!pdfFile.open("r")) return null;
-
-            // Cap memory for very large print PDFs: the /Count and /Type/Page
-            // tokens live in the object section and trailer, so we scan the
-            // head and tail rather than loading the whole file. A token missed
-            // by this window yields a low/zero count → safe "unreadable"
-            // fallback (relink all, remove none), never a wrong removal.
-            var CAP = 8 * 1024 * 1024;
-            var len = pdfFile.length;
-            var content;
-            if (len <= 0 || len <= CAP) {
-                content = pdfFile.read();
-            } else {
-                var half = Math.floor(CAP / 2);
-                var head = pdfFile.read(half);
-                pdfFile.seek(len - half, 0);
-                content = head + pdfFile.read(half);
-            }
-            pdfFile.close();
-            return content;
-        } catch (e) {
-            this._log("_readPdfBinary failed: " + e.message);
-            try { pdfFile.close(); } catch (ce) {}
-            return null;
-        }
-    },
-
-    /**
-     * Skips a run of PDF whitespace starting at idx.
-     * @param {string} content - PDF content.
-     * @param {number} idx - Start index.
-     * @returns {number} Index of the first non-whitespace character.
-     */
-    _skipPdfWhitespace: function (content, idx) {
-        while (idx < content.length) {
-            var w = content.charAt(idx);
-            if (w === " " || w === "\n" || w === "\r" || w === "\t" || w === "\f" || w === "\0") {
-                idx++;
-            } else {
-                break;
-            }
-        }
-        return idx;
-    },
-
-    /**
-     * Highest /Count value in the content. /Count is followed by arbitrary
-     * PDF whitespace (space, newline, CR, tab…), not only a single space —
-     * matching just "/Count " misses "/Count\n8" and silently undercounts,
-     * which (with the remove-excess logic) risks dropping real pages.
-     * @param {string} content - PDF content.
-     * @returns {number} Highest /Count, or 0 if none found.
-     */
-    _maxCount: function (content) {
-        var token = "/Count";
-        var maxCount = 0;
-        var startIdx = 0;
-        while (true) {
-            var pos = content.indexOf(token, startIdx);
-            if (pos === -1) break;
-            var ci = this._skipPdfWhitespace(content, pos + token.length);
-            var numStr = "";
-            while (ci < content.length) {
-                var ch = content.charAt(ci);
-                if (ch >= "0" && ch <= "9") { numStr += ch; ci++; } else { break; }
-            }
-            if (numStr.length > 0) {
-                var n = parseInt(numStr, 10);
-                if (n > maxCount) maxCount = n;
-            }
-            startIdx = pos + token.length;
-        }
-        return maxCount;
-    },
-
-    /**
-     * Counts page objects: "/Type" + whitespace + "/Page" (excluding "/Pages").
-     * An independent cross-check against _maxCount. Returns 0 when page
-     * objects live in compressed object streams (PDF 1.5+) — callers treat
-     * 0 as "no cross-check available" rather than a contradiction.
-     * @param {string} content - PDF content.
-     * @returns {number} Number of /Type /Page objects found.
-     */
-    _countPageObjects: function (content) {
-        var token = "/Type";
-        var count = 0;
-        var startIdx = 0;
-        while (true) {
-            var pos = content.indexOf(token, startIdx);
-            if (pos === -1) break;
-            var ci = this._skipPdfWhitespace(content, pos + token.length);
-            if (content.substr(ci, 5) === "/Page" && content.charAt(ci + 5) !== "s") {
-                count++;
-            }
-            startIdx = pos + token.length;
-        }
-        return count;
-    },
-
-    // ---------------------------------------------------------------------
     // Pre-flight scan
     // ---------------------------------------------------------------------
 
@@ -614,45 +503,32 @@ BRE.Core = {
      * template's position count. This is the safety net: it surfaces every
      * file whose page count does not match the number of positions BEFORE
      * any destructive processing, and flags over-page files for hard block.
+     * The count comes from the PDF's page tree (BRE.Pdf.pageCount).
      *
      * Status values:
      *   "ok"         pages === slotCount (full sheet)
      *   "partial"    pages < slotCount AND last file (expected short last sheet)
      *   "under"      pages < slotCount AND not last file (likely split error)
      *   "over"       pages > slotCount (would silently drop pages — BLOCKED)
-     *   "uncertain"  page-object count exceeds /Count — BLOCKED
-     *   "unreadable" pages === 0 (count could not be detected)
-     *
-     * Each PDF is read once; both /Count and /Type/Page counts are derived
-     * from the same bytes. Only the dangerous direction is blocked: when there
-     * are MORE page objects than /Count claims (pageObjs > pages), /Count is
-     * undercounting and the remove-excess step would drop real pages, so the
-     * file is marked "uncertain" and hard-blocked for manual review. The other
-     * direction (pageObjs < pages, e.g. page objects hidden in compressed
-     * object streams of a modern PDF) is NOT a contradiction — /Count is
-     * authoritative there, so it is trusted.
+     *   "unreadable" pages === 0 (count could not be read)
      *
      * @param {File[]} pdfFiles - Source PDF files (already sorted).
-     * @param {number} slotCount - Number of PlacedItems in the template.
-     * @returns {Object} { items: [{file, name, pages, pageObjs, status}], counts, processable }
+     * @param {number} slotCount - Number of positions in the template.
+     * @returns {Object} { items: [{file, name, pages, status}], counts, processable }
      */
     scanSources: function (pdfFiles, slotCount) {
         var items = [];
-        var counts = { ok: 0, partial: 0, under: 0, over: 0, uncertain: 0, unreadable: 0 };
+        var counts = { ok: 0, partial: 0, under: 0, over: 0, unreadable: 0 };
         var lastIdx = pdfFiles.length - 1;
 
         for (var i = 0; i < pdfFiles.length; i++) {
             var f = pdfFiles[i];
             var name = f.displayName || decodeURI(f.name);
-            var content = this._readPdfBinary(f);
-            var pages = (content === null) ? 0 : this._maxCount(content);
-            var pageObjs = (content === null) ? 0 : this._countPageObjects(content);
+            var pages = BRE.Pdf.pageCount(f);
             var status;
 
             if (pages === 0) {
                 status = "unreadable";
-            } else if (pageObjs > pages) {
-                status = "uncertain";
             } else if (pages > slotCount) {
                 status = "over";
             } else if (pages === slotCount) {
@@ -664,14 +540,14 @@ BRE.Core = {
             counts[status]++;
             // Carry the File reference so callers iterate scan items directly
             // instead of index-coupling back to the pdfFiles array.
-            items.push({ file: f, name: name, pages: pages, pageObjs: pageObjs, status: status });
+            items.push({ file: f, name: name, pages: pages, status: status });
         }
 
-        // "over" and "uncertain" files are hard-blocked; the rest are processable.
+        // "over" files are hard-blocked; the rest are processable.
         return {
             items: items,
             counts: counts,
-            processable: pdfFiles.length - counts.over - counts.uncertain
+            processable: pdfFiles.length - counts.over
         };
     },
 

@@ -323,7 +323,6 @@ BRE.UI = {
         addCountRow(c.under, l.SCAN_UNDER, AMBER, false);
         addCountRow(c.unreadable, l.SCAN_UNREADABLE, GREY, false);
         addCountRow(c.over, l.SCAN_OVER, RED, false);
-        addCountRow(c.uncertain, l.SCAN_UNCERTAIN, RED, false);
 
         // --- Per-file anomaly details (everything except "ok") ---
         var details = [];
@@ -337,8 +336,6 @@ BRE.UI = {
                 details.push(l.format(l.SCAN_FILE_PARTIAL, it.name, String(it.pages), String(slotCount - it.pages)));
             } else if (it.status === "unreadable") {
                 details.push(l.format(l.SCAN_FILE_UNREAD, it.name));
-            } else if (it.status === "uncertain") {
-                details.push(l.format(l.SCAN_FILE_UNCERTAIN, it.name));
             }
         }
         if (details.length > 0) {

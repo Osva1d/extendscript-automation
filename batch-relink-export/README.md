@@ -32,7 +32,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - Hromadné relinkování pozic šablony + export do PDF (dle zvoleného presetu). Pozice jsou viditelné umístěné stránky PDF, ze kterého šablona vznikla (soubor, na který odkazuje většina umístěných objektů). Logo nebo značky umístěné jako jiný soubor zůstanou beze změny; skryté pozice se nepočítají.
 - **Ověření relinku** po každém souboru: každá relinkovaná pozice ukazuje na správný soubor a strana zdroje má stejný rozměr jako strana šablony (po ořezu PDF). Zdroj jiného formátu nebo PDF se spadávkou v ploše stránky bez TrimBoxu se nevyexportuje — Illustrator by stranu tiše přeškáloval.
 - **Session management** — automatické odemčení a obnovení zamčených vrstev i objektů.
-- **Pre-flight sken** — před zpracováním proskenuje všechny zdroje a porovná počet stran s počtem pozic; soubor s **více stranami než pozic** nebo s **nejednoznačným počtem stran** (křížová kontrola `/Count` × počet objektů stran) se tvrdě **zablokuje** jako ochrana proti tiché ztrátě stran.
+- **Pre-flight sken** — před zpracováním zjistí počet stran každého zdroje a porovná ho s počtem pozic; soubor s **více stranami než pozic** se tvrdě **zablokuje** jako ochrana proti tiché ztrátě stran. Počet se čte ze stromu stran PDF stejně jako v prohlížeči, i u PDF 1.5+ s komprimovanými tabulkami. Když ho přečíst nejde (poškozené nebo šifrované PDF), zdroj se zpracuje s upozorněním v souhrnu.
 - **Neúplný arch** — pozice, pro které zdroj nemá stranu, skript z archu odebere (viz [Neúplný arch](#neúplný-arch)).
 - **Předvídatelné číslování** — zdroje řazeny přirozeně (`part_2` před `part_10`).
 - **Pojmenování výstupů** přes vzor s placeholdery (viz níže).
@@ -67,7 +67,7 @@ Automaticky se odebírá jen tehdy, když šablona ukazuje strany 1 až N každo
 src/
 ├── locale.js   # BRE.L — lokalizace cs/en
 ├── config.js   # BRE.Config — verze, UI konstanty, výchozí vzor pojmenování
-├── pdf.js      # BRE.Pdf — pomocné PDF pro zjištění strany pozice
+├── pdf.js      # BRE.Pdf — počet stran PDF, pomocné PDF pro zjištění strany pozice
 ├── core.js     # BRE.Core — session mgmt, relink, verifikace, sken, pojmenování
 ├── ui.js       # BRE.UI — dialog, náhled, progress, souhrn
 └── main.js    # Entry point — smyčka zpracování

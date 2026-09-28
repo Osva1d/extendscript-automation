@@ -94,11 +94,6 @@
                         BRE.L.ERR_OVER_PAGES, String(fileInfo.pages), String(slotCount)));
                     continue;
                 }
-                if (fileInfo.status === "uncertain") {
-                    results.blocked++;
-                    results.log.push(outputName + ": " + BRE.L.ERR_UNCERTAIN);
-                    continue;
-                }
 
                 // Unreadable page count: the sheet still processes (relink all,
                 // remove none), but the short-sheet check below cannot work
