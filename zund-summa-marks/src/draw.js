@@ -261,7 +261,7 @@ ZSM.Draw = {
                     var st = routed[ri];
                     var leftInPlace = st.clipped + st.blocked;
                     if (st.moved === 0 && st.mixed === 0 && leftInPlace === 0) {
-                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].color));
+                        geo.warnings.push(ZSM.L.format(ZSM.L.ERR_COLOR_MISSING, routes[ri].name, routes[ri].color));
                     }
                     if (st.mixed > 0) {
                         geo.warnings.push(ZSM.L.format(ZSM.L.WARN_MIXED_PAINT, routes[ri].color, st.mixed));

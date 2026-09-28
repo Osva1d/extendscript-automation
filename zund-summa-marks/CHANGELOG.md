@@ -7,7 +7,9 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 ## [Unreleased]
 
 Opravy z code review 2026-09-26
-([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)).
+([report](../docs/reports/2026-09-26-code-review-zund-summa-marks.md)) a úpravy
+z auditu UI 2026-09-28
+([audit](../docs/reports/2026-09-28-audit-ui-zund-summa-marks.md)).
 
 ### Opraveno
 
@@ -74,6 +76,11 @@ Opravy z code review 2026-09-26
   a dialog zůstal ZUND — Generovat pak vytvořilo značky Zünd a jediným
   náznakem byla „*" u předvolby. Stejně se choval ↺. Teď se dialog přepne do
   módu předvolby a ukáže její hodnoty.
+- **Upozornění na barvu bez cest říká, o kterou vrstvu jde (audit A7).** Hláška
+  „Přiřazená barva nebyla v dokumentu nalezena" se ukázala i tehdy, když barva
+  ve Vzornících byla, jen v ní nebyla žádná cesta, a neuvedla vrstvu. Teď zní
+  „Vrstva ‘Cut’: v barvě ‘Cut’ není v dokumentu žádná cesta, nic se nepřesunulo.
+  Zkontrolujte barvu řezových cest."
 
 ## [1.0.0] — 2026-06-28
 
