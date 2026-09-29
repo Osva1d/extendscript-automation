@@ -104,10 +104,21 @@ GM.UI = {
         spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
 
+        // Corner zones override Count: distributeOnSpan fills the middle of a
+        // zoned edge by spacing and ignores the count. While zones are on the
+        // row shows Spacing with Count greyed out; a Count choice switched
+        // away that way comes back when zones are turned off.
+        var countAllowed = true, forcedSpacing = false;
+        function forceSpacing() {
+            if (!numRB.value) return;
+            forcedSpacing = true;
+            numRB.value = false; spcRB.value = true;
+        }
+
         function setModeEnabled(state) {
-            numRB.enabled = state;
+            numRB.enabled = state && countAllowed;
             spcRB.enabled = state;
-            numIn.enabled = state && numRB.value;
+            numIn.enabled = state && countAllowed && numRB.value;
             spcIn.enabled = state && spcRB.value;
         }
 
@@ -161,6 +172,21 @@ GM.UI = {
             spcRB.value = !e.useNumber;
             numIn.text = e.number;
             spcIn.text = e.spacing;
+            forcedSpacing = false;
+            if (!countAllowed) forceSpacing();
+            refresh();
+        };
+        api.setCountAllowed = function (allowed) {
+            if (allowed === countAllowed) return;
+            countAllowed = allowed;
+            if (!allowed) {
+                forceSpacing();
+            } else if (forcedSpacing) {
+                forcedSpacing = false;
+                numRB.value = true; spcRB.value = false;
+            }
+            numRB.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_ZONES;
+            numIn.helpTip = numRB.helpTip;
             refresh();
         };
         api.getConvertFields = function () { return [spcIn]; };
@@ -505,6 +531,12 @@ GM.UI = {
             var fieldsOn = zonesPossible && zoneCB.value;
             zoneCountIn.enabled = fieldsOn;
             zonePitchIn.enabled = fieldsOn;
+            // Zones on the artboard edges replace Count by Spacing.
+            var countOnEdges = pathMode || !fieldsOn;
+            topUI.setCountAllowed(countOnEdges);
+            bottomUI.setCountAllowed(countOnEdges);
+            leftUI.setCountAllowed(countOnEdges);
+            rightUI.setCountAllowed(countOnEdges);
         }
         zoneCB.onClick = function () { refreshZonesEnabled(); onUserChange(); };
 

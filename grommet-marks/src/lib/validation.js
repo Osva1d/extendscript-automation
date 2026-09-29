@@ -124,7 +124,9 @@ GM.Validation = {
             for (var i = 0; i < edgeKeys.length; i++) {
                 var e = cfg[edgeKeys[i]];
                 if (!e.enabled) continue;
-                if (e.useNumber) {
+                // With corner zones on, the core fills every edge by spacing
+                // and ignores the count (distributeOnSpan) — check what is used.
+                if (e.useNumber && !zone.enabled) {
                     var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
                     if (cnt === null) return { valid: false, settings: null };
                 } else {

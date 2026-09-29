@@ -279,6 +279,42 @@ console.log("--- UI: cornerZone.enabled reflects availability ---");
     done();
 })();
 
+// ===== TEST: corner zones switch edges to Spacing (review G3) =====
+// With zones on, the core fills zoned edges by spacing and ignores the count;
+// the dialog used to keep showing Count with Spacing greyed out.
+console.log("--- UI: corner zones switch edges to Spacing (G3) ---");
+(function () {
+    var ui = buildUI();
+    var top = ui.edgeUI.top;
+    assert(ui.gatherAll().top.useNumber === true, "precheck: default top edge in count mode");
+    ui.zonesUI.enableCB.value = true; ui.zonesUI.enableCB.onClick();
+    var g = ui.gatherAll();
+    assert(g.top.useNumber === false && g.left.useNumber === false, "zones on: edges report spacing mode");
+    assert(top.numRB.enabled === false, "zones on: Count radio disabled");
+    assert(top.spcRB.value === true && top.spcIn.enabled === true, "zones on: Spacing selected and editable");
+    ui.zonesUI.enableCB.value = false; ui.zonesUI.enableCB.onClick();
+    assert(ui.gatherAll().top.useNumber === true, "zones off: Count choice restored");
+    assert(top.numRB.enabled === true && top.numIn.enabled === true, "zones off: Count editable again");
+    done();
+
+    // A stored preset with zones on and Count edges opens in Spacing.
+    var p = freshPData();
+    p.presets["[Default]"].cornerZone = { enabled: true, count: 3, pitch: 50 };
+    var ui2 = buildUI(p);
+    assert(ui2.gatherAll().top.useNumber === false, "preset with zones: edges open in spacing mode");
+    done();
+
+    // An edge the user set to Spacing stays in Spacing when zones go off.
+    var ui3 = buildUI();
+    ui3.edgeUI.left.spcRB.value = true; ui3.edgeUI.left.spcRB.onClick();
+    ui3.zonesUI.enableCB.value = true; ui3.zonesUI.enableCB.onClick();
+    ui3.zonesUI.enableCB.value = false; ui3.zonesUI.enableCB.onClick();
+    var g3 = ui3.gatherAll();
+    assert(g3.left.useNumber === false && g3.top.useNumber === true,
+        "zones off: only edges switched by zones return to Count");
+    done();
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

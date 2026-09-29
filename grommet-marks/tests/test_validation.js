@@ -257,6 +257,24 @@ console.log("--- Validation v6: shape requirement + weights ---");
     assert(ok.valid === true && ok.settings.regWeight === 1.0, "defaults valid, regWeight parsed");
 })();
 
+// ===== TEST: corner zones fill edges by spacing (review G3) =====
+// With zones on, distributeOnSpan uses the edge spacing even for a Count edge,
+// so that spacing must be validated — it used to go through unchecked.
+console.log("--- Validation: zones validate the spacing that is used (G3) ---");
+(function () {
+    var zoned = validCfg({ cornerZone: { enabled: true, count: 3, pitch: 50 } });
+    zoned.top.spacing = "abc";
+    lastAlert = null;
+    assert(GM.Validation.validate(zoned, L).valid === false,
+        "zones on: Count edge with invalid spacing -> invalid");
+
+    var plain = validCfg({ cornerZone: { enabled: false, count: 3, pitch: 50 } });
+    plain.top.spacing = "abc";
+    lastAlert = null;
+    assert(GM.Validation.validate(plain, L).valid === true,
+        "zones off: spacing of a Count edge is unused and not checked");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

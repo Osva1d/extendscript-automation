@@ -34,6 +34,12 @@ Opravy z code review 2026-09-26
   při jiném rozestupu tak vznikla směs starých a nových značek. Skript dál jen
   přidává a nic nemaže, ale když nové značky padnou na značky, které ve vrstvě
   už byly, oznámí to s počtem a poradí Zpět nebo smazání starých.
+- **S rohovými zónami ukazuje dialog u hran to, co se opravdu použije (G3).**
+  Se zapnutými zónami skript střed hrany vždy plnil podle rozestupu a zadaný
+  počet ignoroval — dialog ale dál ukazoval aktivní „Počet ok" a pole
+  Rozestup zašedlé, takže hrana s počtem 10 dostala třeba 32 značek a hodnota
+  v zašedlém poli se ani nekontrolovala. Zapnutí zón teď hrany přepne na
+  Rozestup a Počet zašedne; po vypnutí zón se vrátí původní volba.
 
 ## [1.1.0] — 2026-07-23
 
