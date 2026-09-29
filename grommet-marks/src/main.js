@@ -194,8 +194,13 @@ GM.Main = {
                 }
             }
 
+            // Restore the lock only. A layer that was hidden stays visible —
+            // hidden again, the new marks would neither show nor print.
             if (sessionOpen) {
-                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
+                try { targetLayer.locked = prevLocked; } catch (eRst) {}
+                if (!prevVisible) {
+                    addWarning(GM.L.format(GM.L.WARN_LAYER_UNHIDDEN, GM.CONSTANTS.LAYER_NAME));
+                }
             }
 
             if (failedMarks > 0) {
@@ -205,7 +210,7 @@ GM.Main = {
             if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
             if (sessionOpen) {
-                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst2) {}
+                try { targetLayer.locked = prevLocked; } catch (eRst2) {}
             }
             alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " + e.message);
         }

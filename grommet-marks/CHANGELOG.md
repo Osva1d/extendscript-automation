@@ -25,6 +25,10 @@ Opravy z code review 2026-09-26
   svého prvního bodu (typické pro kontury z PDF nebo DXF) měla v tom místě
   úsek nulové délky a skript roh na něm nepoznal — roh zůstal bez značky, bez
   varování. Body na stejném místě se teď berou jako jeden.
+- **Skrytá vrstva „Grommet Marks" po běhu zůstane viditelná (G5).** Skript ji
+  kvůli zápisu zviditelnil a pak znovu skryl, takže nové značky nebyly vidět
+  a nevytiskly se — bez jakékoli hlášky. Vrstva teď zůstane viditelná a skript
+  to oznámí. Zámek vrstvy se vrací jako dřív.
 
 ## [1.1.0] — 2026-07-23
 

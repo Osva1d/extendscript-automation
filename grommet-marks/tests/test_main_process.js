@@ -127,6 +127,30 @@ console.log("--- process: Large Canvas divides by scaleFactor (G1) ---");
     assert(rec2.marks.length === 8, "path spacing scaled: 8 marks (got " + rec2.marks.length + ")");
 })();
 
+// ===== TEST: target layer state (review G5) =====
+// Writing into a hidden layer needs it visible. Restoring "hidden" afterwards
+// left the new marks invisible and unprinted with no message; the lock is
+// still restored.
+console.log("--- process: hidden target layer stays visible (G5) ---");
+(function () {
+    var rec = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    rec.layer.locked = true; rec.layer.visible = false;
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(rec.marks.length === 36, "marks placed into the hidden, locked layer");
+    assert(rec.layer.visible === true, "layer left visible");
+    assert(rec.layer.locked === true, "lock restored");
+    assert(alerts.length === 1 && alerts[0].indexOf(GM.CONSTANTS.LAYER_NAME) >= 0,
+        "one warning naming the layer (got " + alerts.join(" | ") + ")");
+
+    var rec2 = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    rec2.layer.locked = true; rec2.layer.visible = true;
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(rec2.layer.visible === true && rec2.layer.locked === true, "visible locked layer: state unchanged");
+    assert(alerts.length === 0, "no warning for a visible layer (got " + alerts.join(" | ") + ")");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
