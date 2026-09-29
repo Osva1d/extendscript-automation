@@ -52,6 +52,11 @@ z auditu UI 2026-09-29
   halo teď uvádějí „(pt)" a nápověda jednotek už netvrdí, že platí pro
   všechny rozměry — tloušťky jsou vždy v bodech. Kdo zadal halo 1
   s milimetry v hlavě, dostal 0,35 mm.
+- **Zašedlá „Vybraná cesta" říká proč (audit A5).** Nápověda vždy radila
+  „nejdřív vyberte cestu", i když byla vybraná skupina, složená cesta nebo
+  víc objektů. Teď podle důvodu: nic není vybráno; výběr není jedna
+  jednoduchá cesta (s radou Přímý výběr, rozdělit složenou cestu, nechat
+  jeden objekt); cesta má méně než 2 body.
 
 ## [1.1.0] — 2026-07-23
 

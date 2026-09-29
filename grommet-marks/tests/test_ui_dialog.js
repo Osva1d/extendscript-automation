@@ -342,6 +342,23 @@ console.log("--- UI: tooltips of greyed-out controls match the reason (audit A3,
     done();
 })();
 
+// ===== TEST: disabled "Selected path" says why (audit A5) =====
+console.log("--- UI: disabled 'Selected path' names the reason (audit A5) ---");
+(function () {
+    var cases = [
+        ["no-selection", GM.L.ERR_PATH_NO_SELECTION],
+        ["not-a-path",   GM.L.ERR_PATH_NOT_A_PATH],
+        ["too-short",    GM.L.ERR_PATH_TOO_SHORT]
+    ];
+    for (var i = 0; i < cases.length; i++) {
+        var ui = buildUI(null, { ok: false, reason: cases[i][0] });
+        assert(ui.modeUI.pathRB.enabled === false, cases[i][0] + ": radio disabled");
+        assert(!!cases[i][1] && ui.modeUI.pathRB.helpTip === cases[i][1],
+            cases[i][0] + ": tooltip names the reason (got '" + ui.modeUI.pathRB.helpTip + "')");
+        done();
+    }
+})();
+
 // ===== TEST: both locales define the same keys =====
 console.log("--- Locale: CS and EN key sets are identical ---");
 (function () {

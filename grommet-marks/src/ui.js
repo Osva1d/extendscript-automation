@@ -290,7 +290,14 @@ GM.UI = {
         artboardRB.value = true;
         var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
         pathRB.enabled = pathOk;
-        pathRB.helpTip = pathOk ? "" : GM.L.TIP_MODE_PATH_DISABLED;
+        // Say why the mode is unavailable: customer contours often arrive as a
+        // group or a compound path, and "select a path" would not help there.
+        var pathReasonTips = {
+            "no-selection": GM.L.ERR_PATH_NO_SELECTION,
+            "not-a-path":   GM.L.ERR_PATH_NOT_A_PATH,
+            "too-short":    GM.L.ERR_PATH_TOO_SHORT
+        };
+        pathRB.helpTip = pathOk ? "" : (pathReasonTips[pathInfo && pathInfo.reason] || GM.L.ERR_PATH_NOT_A_PATH);
 
         // Units — global switch lives at the top. Fill spacer pushes it right.
         var modeSpacer = modePanel.add("group");

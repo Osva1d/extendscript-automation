@@ -133,7 +133,8 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 ### E1 — Zapnutí path mode
 1. Otevři dokument, **nevybírej nic** a spusť skript.
 - [ ] V panelu Umístění je radio **Vybraná cesta** zašedlé (disabled).
-- [ ] Tooltip na zašedlém radiu říká: „Nejdřív vyberte cestu…"
+- [ ] Tooltip na zašedlém radiu říká: „Nic není vybráno. Vyberte jednu cestu…"
+- [ ] Vyber **skupinu** s obdélníkem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt.
 
 2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
 - [ ] Radio **Vybraná cesta** je aktivní.

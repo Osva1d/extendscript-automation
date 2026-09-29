@@ -67,7 +67,6 @@ GM.L = (function () {
             PLACEMENT_PANEL: "Placement",
             MODE_ARTBOARD: "Artboard edges",
             MODE_PATH: "Selected path",
-            TIP_MODE_PATH_DISABLED: "Select a path in the document first, then run the script again.",
 
             // Path panel
             PATH_PANEL: "Path",
@@ -135,7 +134,7 @@ GM.L = (function () {
             ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
             ERR_PATH_NO_SELECTION: "Nothing is selected. Select one path and run the script again.",
-            ERR_PATH_NOT_A_PATH: "The selection is not a simple path. Release compound paths first: Object ▸ Compound Path ▸ Release.",
+            ERR_PATH_NOT_A_PATH: "The selection is not a single simple path. Pick a path inside a group with the Direct Selection tool (A), release a compound path (Object ▸ Compound Path ▸ Release), or keep one object selected.",
             ERR_PATH_TOO_SHORT: "The selected path has fewer than 2 points.",
             ERR_PATH_GONE: "The selected path is no longer available — select it again and rerun.",
             WARN_MODE_FALLBACK: "The preset uses Selected path mode, but no path is selected — switched to Artboard edges.",
@@ -199,7 +198,6 @@ GM.L = (function () {
             PLACEMENT_PANEL: "Umístění",
             MODE_ARTBOARD: "Hrany artboardu",
             MODE_PATH: "Vybraná cesta",
-            TIP_MODE_PATH_DISABLED: "Nejdřív vyberte cestu v dokumentu a spusťte skript znovu.",
 
             // Path panel
             PATH_PANEL: "Cesta",
@@ -267,7 +265,7 @@ GM.L = (function () {
             ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
             ERR_PATH_NO_SELECTION: "Nic není vybráno. Vyberte jednu cestu a spusťte skript znovu.",
-            ERR_PATH_NOT_A_PATH: "Výběr není jednoduchá cesta. Složenou cestu nejdřív rozdělte: Objekt ▸ Složená cesta ▸ Uvolnit.",
+            ERR_PATH_NOT_A_PATH: "Výběr není jedna jednoduchá cesta. Cestu ze skupiny vyberte nástrojem Přímý výběr (A), složenou cestu rozdělte (Objekt ▸ Složená cesta ▸ Uvolnit), z více objektů nechte vybraný jeden.",
             ERR_PATH_TOO_SHORT: "Vybraná cesta má méně než 2 body.",
             ERR_PATH_GONE: "Vybraná cesta už není dostupná — vyberte ji znovu a spusťte skript.",
             WARN_MODE_FALLBACK: "Předvolba používá režim Vybraná cesta, ale žádná cesta není vybraná — přepnuto na Hrany artboardu.",
