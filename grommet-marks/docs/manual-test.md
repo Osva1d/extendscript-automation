@@ -7,13 +7,13 @@
 >
 > Čísla `v6.x` a dřívější v textu jsou **historické reference** k interní
 > řadě před veřejným vydáním, ne tvrzení o aktuálním stavu.
-> **Aktualizováno:** 2026-09-29 (sekce H)
+> **Aktualizováno:** 2026-09-29 (sekce H a I)
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
 > migrace, ui_state, validace, UI dialog). Tento protokol jsou **manuální P0 kontroly**,
 > které vyžadují běžící Illustrator.
 >
-> **Priorita, když není čas na všechno:** H1–H6 (opravy z review) → G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
+> **Priorita, když není čas na všechno:** H1–H6 (opravy z review) → I1–I5 (audit UI) → G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
 
 ---
 
@@ -268,6 +268,37 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Hrany se vrátí na **Počet ok** s původními hodnotami.
 4. Zóny znovu zaškrtni (Počet 3, Rozteč 50 mm) a Generovat.
 - [ ] Značky na hraně odpovídají **Rozestupu**, který dialog ukazoval.
+
+---
+
+## I) Úpravy z auditu UI 2026-09-29
+
+> Top 5 z [auditu UI](../../docs/reports/2026-09-29-audit-ui-grommet-marks.md).
+> Texty a stavy ověřil skutečný build v Illustratoru 30.8.2 bez zobrazení okna;
+> tady zůstává, jak se nápovědy a hlášky ukážou na obrazovce.
+
+### I1 — Nápovědy (audit A1, A3, A4)
+- [ ] Najeď na pole **Velikost** → nápověda mluví o průměru kruhu a délce ramen kříže, ne o čtverci.
+- [ ] Zaškrtni **Zhustit u rohů** a najeď na zašedlé rádio **Počet ok** v řádku hrany → nápověda vysvětluje, že se zónami se hrana plní podle rozestupu. (Ukáže se nápověda i na zašedlém prvku?)
+- [ ] Obdélník v režimu **Vybraná cesta**, zvol **Počet ok** → najeď na zašedlé **Zhustit u rohů** → nápověda radí zvolit Rozestup, netvrdí „nemá rohy".
+
+### I2 — Jednotky tlouštěk (audit A2)
+- [ ] Popisky jsou **„Reg. tah (pt):"** a **„Bílé halo (pt):"**, nic není uříznuté a řádek je zarovnaný jako dřív.
+- [ ] Nápověda u **Jednotek** říká, že tloušťky tahů jsou vždy v bodech.
+
+### I3 — Proč je „Vybraná cesta" zašedlá (audit A5)
+1. Vyber **dva objekty** (nebo složenou cestu) a spusť skript.
+- [ ] Nápověda na zašedlé „Vybraná cesta" radí nechat vybraný jeden objekt a rozdělit složenou cestu.
+
+### I4 — Víc artboardů (audit A8)
+1. Dokument se **dvěma artboardy**, režim **Hrany artboardu**, Generovat.
+- [ ] Na konci přijde upozornění, že značky dostaly všechny artboardy, s počtem 2.
+2. Totéž v dokumentu s **jedním** artboardem.
+- [ ] Žádné upozornění.
+
+### I5 — Překlep v čísle (audit A9)
+- [ ] Do **Rozestupu** napiš `1O5` (písmeno O) → pole zčervená a **Generovat zešedne**.
+- [ ] `1 000` → totéž. `12,5` → pole je v pořádku.
 
 ---
 
