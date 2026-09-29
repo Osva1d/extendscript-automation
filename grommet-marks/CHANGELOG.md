@@ -48,6 +48,10 @@ z auditu UI 2026-09-29
   Nápověda zón odkazovala na „rozteč hrany", i když se pole jmenuje Rozestup,
   a zašedlý Počet ok při zapnutých zónách nevysvětloval proč. Tyto nápovědy
   teď popisují skutečný stav.
+- **Tloušťky tahů mají u sebe jednotku (audit A2).** Popisky Reg. tah a Bílé
+  halo teď uvádějí „(pt)" a nápověda jednotek už netvrdí, že platí pro
+  všechny rozměry — tloušťky jsou vždy v bodech. Kdo zadal halo 1
+  s milimetry v hlavě, dostal 0,35 mm.
 
 ## [1.1.0] — 2026-07-23
 
