@@ -603,7 +603,13 @@ Výchozí styl se mění výběrem:
 
 Značky vytvořené potom (režim „Vybraná cesta") byly čárkované — registrační
 kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší a stav po zrušení
-výběru neměřen, dědění `opacity` a `blendingMode` taky ne.
+výběru neměřen.
+
+Doměřeno 2026-09-29 (AI 30.8.2): po výběru cesty s `[8,4]`, posunem čárek 3,
+kulatými konci, kulatým spojem, limitem úhlu 9, průhledností 50 a režimem
+Násobit dostala nová cesta (`add()` i `ellipse()`) čárky, posun, konce, spoj
+i limit úhlu. **Průhlednost a režim prolnutí se nedědí** (100, `NORMAL`),
+u nové skupiny taky ne.
 
 **Důsledek:** cesta ze skriptu, na jejímž vzhledu záleží, si musí
 `strokeDashes = []`, `strokeCap` a `strokeJoin` nastavit výslovně.
