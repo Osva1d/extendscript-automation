@@ -4,6 +4,19 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+Opravy z code review 2026-09-26
+([report](../docs/reports/2026-09-26-code-review-grommet-marks.md)).
+
+### Opraveno
+
+- **Značky v dokumentech Large Canvas mají správnou velikost a polohu (G1).**
+  Dokument s velkým plátnem (od šířky zhruba 5,8 m) ukládá Illustrator
+  v měřítku 1:10 a skript s tím nepočítal: značky vycházely desetkrát větší,
+  desetkrát dál od kraje, s desetkrát tlustšími tahy a s desetkrát větším
+  rozestupem. Skript teď všechny rozměry přepočítá podle měřítka dokumentu.
+
 ## [1.1.0] — 2026-07-23
 
 ### Přidáno

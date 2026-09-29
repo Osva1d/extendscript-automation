@@ -61,7 +61,12 @@ GM.Main = {
     process: function (cfg) {
         try {
             var doc = GM.Illustrator.doc;
-            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
+            // Large Canvas documents (scaleFactor 10) keep geometry at
+            // 1/scaleFactor: every point value written into the document comes
+            // out scaleFactor times larger. Convert physical sizes to document
+            // units once, here — everything below works in document units.
+            var scale = doc.scaleFactor || 1;
+            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units] / scale;
 
             var warnings = [];
             function addWarning(msg) {
@@ -78,8 +83,8 @@ GM.Main = {
             var markOpts = {
                 circle: !!cfg.markCircle,
                 cross: !!cfg.markCross,
-                regWeight: cfg.regWeight,
-                haloWeight: cfg.haloWeight
+                regWeight: cfg.regWeight / scale,
+                haloWeight: cfg.haloWeight / scale
             };
 
             var prevLocked = false, prevVisible = true, sessionOpen = false;
