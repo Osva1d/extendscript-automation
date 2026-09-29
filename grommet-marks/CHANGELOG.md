@@ -7,7 +7,9 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 ## [Unreleased]
 
 Opravy z code review 2026-09-26
-([report](../docs/reports/2026-09-26-code-review-grommet-marks.md)).
+([report](../docs/reports/2026-09-26-code-review-grommet-marks.md)) a úpravy
+z auditu UI 2026-09-29
+([audit](../docs/reports/2026-09-29-audit-ui-grommet-marks.md)).
 
 ### Opraveno
 
@@ -40,6 +42,12 @@ Opravy z code review 2026-09-26
   Rozestup zašedlé, takže hrana s počtem 10 dostala třeba 32 značek a hodnota
   v zašedlém poli se ani nekontrolovala. Zapnutí zón teď hrany přepne na
   Rozestup a Počet zašedne; po vypnutí zón se vrátí původní volba.
+- **Nápovědy říkají, co platí (audit A1, A3, A4).** Nápověda Velikosti
+  mluvila o straně čtverce, který skript nekreslí, a o kříži mlčela. Rohové
+  zóny zašedlé kvůli Počtu ok na cestě s rohy tvrdily, že cesta rohy nemá.
+  Nápověda zón odkazovala na „rozteč hrany", i když se pole jmenuje Rozestup,
+  a zašedlý Počet ok při zapnutých zónách nevysvětloval proč. Tyto nápovědy
+  teď popisují skutečný stav.
 
 ## [1.1.0] — 2026-07-23
 

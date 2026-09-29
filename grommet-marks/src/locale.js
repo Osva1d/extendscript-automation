@@ -88,6 +88,8 @@ GM.L = (function () {
             ZONES_MARKS_PITCH: "marks, pitch",
             TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
             TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
+            TIP_ZONES_CORNERS_ONLY: "With Count selected on a path with corners, marks sit on the corners only and zones have nothing to densify. Choose Spacing to use zones.",
+            TIP_COUNT_ZONES: "With corner zones on, the edge is filled by spacing and Count is not used.",
 
             // Settings panel
             SETTINGS_PANEL: "Presets",
@@ -111,7 +113,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferred distance between mark centers (count is calculated)",
             TIP_MIRROR_BOTTOM: "Use same settings as top edge",
             TIP_MIRROR_RIGHT: "Use same settings as left edge",
-            TIP_SIZE: "Circle diameter or square side length in selected units",
+            TIP_SIZE: "Circle diameter and cross arm span, in the units above.",
             TIP_EDGE_ENABLE: "Enable/disable mark placement on this edge",
             TIP_PRESET_LOAD: "Select saved preset",
             TIP_SAVE: "Save settings to the active preset.",
@@ -216,8 +218,10 @@ GM.L = (function () {
             ZONES_PITCH: "Rozteč:",
             ZONES_FIRST: "— prvních",
             ZONES_MARKS_PITCH: "značek, rozteč",
-            TIP_ZONES: "Prvních N značek od každého rohu použije tuto rozteč; zbytek jede podle rozteče hrany/cesty.",
+            TIP_ZONES: "Prvních N značek od každého rohu dostane tuto rozteč; zbytek hrany nebo cesty se rozmístí podle rozestupu.",
             TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
+            TIP_ZONES_CORNERS_ONLY: "Když je na cestě s rohy zvolený Počet ok, leží značky jen v rozích a zóny nemají co zhustit. Pro zóny zvolte Rozestup.",
+            TIP_COUNT_ZONES: "Se zapnutými rohovými zónami se hrana plní podle rozestupu a Počet ok se nepoužije.",
 
             // Settings panel
             SETTINGS_PANEL: "Předvolby",
@@ -241,7 +245,7 @@ GM.L = (function () {
             TIP_SPACING: "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)",
             TIP_MIRROR_BOTTOM: "Použije stejné nastavení jako horní strana",
             TIP_MIRROR_RIGHT: "Použije stejné nastavení jako levá strana",
-            TIP_SIZE: "Průměr kruhu nebo délka strany čtverce v měrných jednotkách",
+            TIP_SIZE: "Průměr kruhu a délka ramen kříže, v jednotkách nahoře.",
             TIP_EDGE_ENABLE: "Zapne/vypne umístění značek na tuto hranu",
             TIP_PRESET_LOAD: "Vyberte uložené nastavení",
             TIP_SAVE: "Uložit nastavení do aktivní předvolby.",

@@ -185,7 +185,7 @@ GM.UI = {
                 forcedSpacing = false;
                 numRB.value = true; spcRB.value = false;
             }
-            numRB.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_ZONES;
+            numRB.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_COUNT_ZONES;
             numIn.helpTip = numRB.helpTip;
             refresh();
         };
@@ -527,7 +527,9 @@ GM.UI = {
             var cornersOnly = pathMode && hasCorners && pathNumRB.value;
             var zonesPossible = (!pathMode || hasCorners) && !cornersOnly;
             zoneCB.enabled = zonesPossible;
-            zoneCB.helpTip = zonesPossible ? GM.L.TIP_ZONES : GM.L.TIP_ZONES_NO_CORNERS;
+            var zoneTip = GM.L.TIP_ZONES;
+            if (!zonesPossible) zoneTip = cornersOnly ? GM.L.TIP_ZONES_CORNERS_ONLY : GM.L.TIP_ZONES_NO_CORNERS;
+            zoneCB.helpTip = zoneTip;
             var fieldsOn = zonesPossible && zoneCB.value;
             zoneCountIn.enabled = fieldsOn;
             zonePitchIn.enabled = fieldsOn;
