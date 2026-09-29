@@ -159,11 +159,10 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                // parseFloat (not parseInt) — parseInt would silently truncate
-                // "10.5" to 10 before GM.Validation ever sees it, making the
-                // edgeCount integer rule unenforceable on the submit path.
-                number: parseFloat(numIn.text.replace(/,/g, ".")),
-                spacing: parseFloat(spcIn.text.replace(/,/g, "."))
+                // parseNumber keeps "10.5" as 10.5, so the edgeCount integer
+                // rule sees it, and makes a typo like "1O5" NaN instead of 1.
+                number: GM.Validation.parseNumber(numIn.text),
+                spacing: GM.Validation.parseNumber(spcIn.text)
             };
         };
         api.apply = function (e) {
@@ -650,8 +649,8 @@ GM.UI = {
         // =================================================================
         function gatherAll() {
             return {
-                offsetX: parseFloat(offsetXIn.text.replace(/,/g, ".")),
-                offsetY: parseFloat(offsetYIn.text.replace(/,/g, ".")),
+                offsetX: GM.Validation.parseNumber(offsetXIn.text),
+                offsetY: GM.Validation.parseNumber(offsetYIn.text),
                 top: topUI.gather(),
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
@@ -659,11 +658,11 @@ GM.UI = {
                 bottomMirror: mirrorTopCB.value,
                 rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
-                markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
+                markSize: GM.Validation.parseNumber(sizeInput.text),
                 markCircle: circleCB.value,
                 markCross: crossCB.value,
-                regWeight: parseFloat(regWIn.text.replace(/,/g, ".")),
-                haloWeight: parseFloat(haloWIn.text.replace(/,/g, ".")),
+                regWeight: GM.Validation.parseNumber(regWIn.text),
+                haloWeight: GM.Validation.parseNumber(haloWIn.text),
                 placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
                 cornerZone: {
                     // Effective state: a checked-but-disabled box (zones are
@@ -671,13 +670,13 @@ GM.UI = {
                     // validate() would check count/pitch fields that live
                     // validation skipped as disabled — OK enabled, submit alerts.
                     enabled: zoneCB.value && zoneCB.enabled,
-                    count: parseFloat(zoneCountIn.text.replace(/,/g, ".")),
-                    pitch: parseFloat(zonePitchIn.text.replace(/,/g, "."))
+                    count: GM.Validation.parseNumber(zoneCountIn.text),
+                    pitch: GM.Validation.parseNumber(zonePitchIn.text)
                 },
                 pathDist: {
                     useNumber: pathNumRB.value,
-                    number: parseFloat(pathNumIn.text.replace(/,/g, ".")),
-                    spacing: parseFloat(pathSpcIn.text.replace(/,/g, "."))
+                    number: GM.Validation.parseNumber(pathNumIn.text),
+                    spacing: GM.Validation.parseNumber(pathSpcIn.text)
                 }
             };
         }
@@ -741,7 +740,7 @@ GM.UI = {
                 .concat(rightUI.getConvertFields());
 
             for (var i = 0; i < fields.length; i++) {
-                var v = parseFloat(fields[i].text.replace(/,/g, "."));
+                var v = GM.Validation.parseNumber(fields[i].text);
                 if (!isNaN(v)) {
                     fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
                 }
@@ -800,7 +799,7 @@ GM.UI = {
         }
 
         function fieldInRange(et, rule) {
-            var n = parseFloat(String(et.text || "").replace(/,/g, "."));
+            var n = GM.Validation.parseNumber(et.text);
             if (isNaN(n)) return false;
             if (rule.integer && n !== Math.floor(n)) return false;
             return n >= rule.min && n <= rule.max;

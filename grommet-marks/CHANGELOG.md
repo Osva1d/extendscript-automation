@@ -64,6 +64,10 @@ z auditu UI 2026-09-29
   víc objektů. Teď podle důvodu: nic není vybráno; výběr není jedna
   jednoduchá cesta (s radou Přímý výběr, rozdělit složenou cestu, nechat
   jeden objekt); cesta má méně než 2 body.
+- **Překlep v čísle už neprojde jako jiné číslo (audit A9).** Pole brala
+  číslice ze začátku a zbytek zahodila: „1O5" se četlo jako 1, „1 000" jako 1
+  a pole zůstalo platné — rozestup 1 mm pak dal tisíce značek. Takový zápis
+  teď pole zčervená a Generovat zablokuje. Desetinná čárka i tečka platí dál.
 
 ## [1.1.0] — 2026-07-23
 

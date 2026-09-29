@@ -342,6 +342,24 @@ console.log("--- UI: tooltips of greyed-out controls match the reason (audit A3,
     done();
 })();
 
+// ===== TEST: a typo turns the field invalid instead of being read as a prefix (audit A9) =====
+console.log("--- UI: typos in number fields block Generate (audit A9) ---");
+(function () {
+    var ui = buildUI();
+    var w = SUI.lastWindow();
+    var okBtn = w.findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    var top = ui.edgeUI.top;
+    top.spcRB.value = true; top.spcRB.onClick();
+    top.spcIn.text = "1O5"; top.spcIn.onChange();
+    assert(okBtn.enabled === false, "'1O5' in Spacing blocks Generate");
+    assert(isNaN(ui.gatherAll().top.spacing), "'1O5' gathers as NaN, not 1");
+    top.spcIn.text = "1 000"; top.spcIn.onChange();
+    assert(okBtn.enabled === false, "'1 000' in Spacing blocks Generate");
+    top.spcIn.text = "12,5"; top.spcIn.onChange();
+    assert(okBtn.enabled === true && ui.gatherAll().top.spacing === 12.5, "'12,5' is valid and read as 12.5");
+    done();
+})();
+
 // ===== TEST: disabled "Selected path" says why (audit A5) =====
 console.log("--- UI: disabled 'Selected path' names the reason (audit A5) ---");
 (function () {
