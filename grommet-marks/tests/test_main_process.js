@@ -198,6 +198,36 @@ console.log("--- process: overlap with existing marks is reported (G4) ---");
     assert(alerts.length === 0, "a mark 3.5 mm off a 3 mm mark does not overlap");
 })();
 
+// ===== TEST: several artboards are reported (audit A8) =====
+// Artboard mode marks every artboard; with more than one, an artboard outside
+// the view gets marks too. The run says so, but only then — a note after every
+// single-artboard run would train the operator to click it away.
+console.log("--- process: marks on several artboards are reported (audit A8) ---");
+(function () {
+    function allMsg(n) {
+        return GM.L.WARN_ALL_ARTBOARDS
+            ? GM.L.WARN_PREFIX + GM.L.format(GM.L.WARN_ALL_ARTBOARDS, n)
+            : "(WARN_ALL_ARTBOARDS missing)";
+    }
+    var two = [[0, 300 * MM, 300 * MM, 0], [400 * MM, 300 * MM, 500 * MM, 200 * MM]];
+    var rec = fakeDoc({ artboards: two });
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(rec.marks.length > 36, "both artboards get marks (got " + rec.marks.length + ")");
+    assert(alerts.length === 1 && alerts[0] === allMsg(2),
+        "one note naming 2 artboards (got " + alerts.join(" | ") + ")");
+
+    fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(alerts.length === 0, "single artboard: no note");
+
+    fakeDoc({ artboards: two, pathInfo: squarePathInfo(100 * MM) });
+    alerts = [];
+    GM.Main.process(settings({ placementMode: "path" }));
+    assert(alerts.length === 0, "path mode marks the path only: no note (got " + alerts.join(" | ") + ")");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

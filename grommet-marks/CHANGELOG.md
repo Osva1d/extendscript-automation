@@ -11,6 +11,13 @@ Opravy z code review 2026-09-26
 z auditu UI 2026-09-29
 ([audit](../docs/reports/2026-09-29-audit-ui-grommet-marks.md)).
 
+### Přidáno
+
+- **Upozornění, když značky dostaly všechny artboardy (audit A8).** V režimu
+  hran skript značkuje každý artboard dokumentu. Když je jich víc, řekne to
+  s počtem — artboard mimo obrazovku (štítek, nátisk) se jinak snadno
+  přehlédne. U dokumentu s jedním artboardem se nic neukáže.
+
 ### Opraveno
 
 - **Značky v dokumentech Large Canvas mají správnou velikost a polohu (G1).**

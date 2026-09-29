@@ -203,6 +203,12 @@ GM.Main = {
                         for (var ri = 0; ri < rPos.length; ri++) place(rX, abTop - offY - rPos[ri]);
                     }
                 }
+
+                // Every artboard gets marks. Say so when there is more than one:
+                // an artboard outside the view (a label, a proof) is easy to miss.
+                if (doc.artboards.length > 1) {
+                    addWarning(GM.L.format(GM.L.WARN_ALL_ARTBOARDS, doc.artboards.length));
+                }
             }
 
             // Restore the lock only. A layer that was hidden stays visible —
