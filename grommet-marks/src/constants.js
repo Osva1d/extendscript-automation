@@ -23,6 +23,7 @@ GM.CONSTANTS = {
     CORNER_ANGLE_MIN: 15,      // deg — tangent deviation above this = corner
     SAMPLES_PER_SEGMENT: 64,   // arc-length table resolution per Bézier
     MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
+    SEGMENT_EPS: 0.01,         // doc pt — anchors closer than this count as one
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },

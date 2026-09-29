@@ -21,6 +21,10 @@ Opravy z code review 2026-09-26
   kontura (perforace, big, výsekový obrys), vyšly registrační kruh, kříž
   i bílé halo čárkovaně a s kulatými konci. Skript teď čárky a zakončení
   nastaví sám.
+- **Roh cesty se zdvojeným bodem dostane značku (G6).** Cesta uzavřená kopií
+  svého prvního bodu (typické pro kontury z PDF nebo DXF) měla v tom místě
+  úsek nulové délky a skript roh na něm nepoznal — roh zůstal bez značky, bez
+  varování. Body na stejném místě se teď berou jako jeden.
 
 ## [1.1.0] — 2026-07-23
 

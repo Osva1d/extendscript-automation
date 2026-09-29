@@ -290,5 +290,48 @@ console.log("--- Core.distributeOnCircuit ---");
     assert(hasStart && hasEnd, "open path: both endpoints marked");
 })();
 
+// ===== TEST: coincident anchors (review G6) =====
+// A closed path whose last anchor repeats the first (PDF/DXF contours; kept as
+// 5 pathPoints by Illustrator 30.8.1) has a zero-length closing segment. Its
+// tangent is [0, 0], so the corner it sits on went undetected and got no mark.
+console.log("--- Core.dropDegenerateSegments (G6) ---");
+(function () {
+    function nearly(a, b) { return Math.abs(a - b) < 1e-6; }
+    function seg(a, b) { return { p0: a, p1: a, p2: b, p3: b }; }
+    var W = 1000, H = 500;
+    var rect = [seg([0, 0], [W, 0]), seg([W, 0], [W, H]), seg([W, H], [0, H]), seg([0, H], [0, 0])];
+    var dup = rect.concat([seg([0, 0], [0, 0])]);
+
+    var cleaned = GM.Core.dropDegenerateSegments(dup, GM.CONSTANTS.SEGMENT_EPS);
+    assert(cleaned.length === 4, "zero-length closing segment dropped (got " + cleaned.length + ")");
+    var corners = GM.Core.detectCorners(cleaned, true, GM.CONSTANTS.CORNER_ANGLE_MIN);
+    assert(corners.length === 4, "all 4 corners detected (got " + corners.length + ")");
+    var marks = GM.Core.distributeOnCircuit(GM.Core.buildCircuit(cleaned, true), corners,
+        { enabled: false, count: 1, pitch: 0 }, { useNumber: false, number: 1, spacing: 300 });
+    var pts = [[0, 0], [W, 0], [W, H], [0, H]], allCorners = true;
+    for (var c = 0; c < 4; c++) {
+        var hit = false;
+        for (var m = 0; m < marks.length; m++) {
+            if (nearly(marks[m][0], pts[c][0]) && nearly(marks[m][1], pts[c][1])) hit = true;
+        }
+        if (!hit) allCorners = false;
+    }
+    assert(allCorners, "every corner carries a mark");
+
+    // A coincident pair in the middle of an edge is dropped too, the edge stays one span.
+    var mid = [seg([0, 0], [500, 0]), seg([500, 0], [500, 0]), seg([500, 0], [W, 0])];
+    assert(GM.Core.dropDegenerateSegments(mid, GM.CONSTANTS.SEGMENT_EPS).length === 2,
+        "coincident anchors mid-edge dropped");
+
+    // A loop (end on the start, handles pulled out) has length — it stays.
+    var loop = [{ p0: [0, 0], p1: [100, 100], p2: [-100, 100], p3: [0, 0] }];
+    assert(GM.Core.dropDegenerateSegments(loop, GM.CONSTANTS.SEGMENT_EPS).length === 1,
+        "closed loop with extended handles is kept");
+
+    // Clean input passes through unchanged.
+    assert(GM.Core.dropDegenerateSegments(rect, GM.CONSTANTS.SEGMENT_EPS).length === 4,
+        "clean rectangle unchanged");
+})();
+
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 if (fail > 0) process.exit(1);

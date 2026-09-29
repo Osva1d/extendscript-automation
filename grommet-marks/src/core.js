@@ -105,6 +105,26 @@ GM.Core = {
     },
 
     /**
+     * Drops zero-length segments: consecutive anchors on the same spot with
+     * retracted handles, as left by a path closed with a copy of its first
+     * anchor (typical of PDF/DXF contours). Their tangent is [0, 0], so
+     * detectCorners would miss the corner they sit on.
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...]
+     * @param {number} eps - Coincidence tolerance (document units).
+     * @returns {Array<Object>} The segments without the degenerate ones.
+     */
+    dropDegenerateSegments: function (segments, eps) {
+        function same(a, b) { return Math.abs(a[0] - b[0]) <= eps && Math.abs(a[1] - b[1]) <= eps; }
+        var out = [];
+        for (var i = 0; i < segments.length; i++) {
+            var s = segments[i];
+            if (same(s.p0, s.p1) && same(s.p0, s.p2) && same(s.p0, s.p3)) continue;
+            out.push(s);
+        }
+        return out;
+    },
+
+    /**
      * Builds a circuit: samples every segment into a cumulative arc-length
      * table so positions along the circuit can be resolved by distance.
      * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...] in draw order.

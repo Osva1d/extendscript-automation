@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * GM.Illustrator mark drawing — against a fake DOM.
- * New paths in Illustrator inherit the document's current stroke style
+ * GM.Illustrator DOM adapter — mark drawing and path extraction, against a
+ * fake DOM. New paths in Illustrator inherit the document's current stroke style
  * (measured in 30.8.1: dashes, cap, join after selecting a dashed path), so the
  * fake hands out paths that already carry an inherited dashed, round-capped
  * stroke — whatever placeMarkGroup does not set explicitly shows up here.
@@ -67,6 +67,19 @@ console.log("--- placeMarkGroup: explicit stroke style (G2) ---");
     }
     assert(solid, "every path has a solid stroke (no inherited dashes)");
     assert(butt, "every path has butt caps (no inherited round caps)");
+})();
+
+// ===== TEST: selected path with a duplicated closing anchor (review G6) =====
+console.log("--- getSelectedPathInfo: duplicated closing anchor (G6) ---");
+(function () {
+    function pp(x, y) { return { anchor: [x, y], leftDirection: [x, y], rightDirection: [x, y] }; }
+    var rect = { typename: "PathItem", closed: true,
+                 pathPoints: [pp(0, 0), pp(1000, 0), pp(1000, 500), pp(0, 500), pp(0, 0)] };
+    GM.Illustrator.doc.selection = [rect];
+    var info = GM.Illustrator.getSelectedPathInfo();
+    assert(info.ok === true, "5-point closed rectangle is a usable path");
+    assert(info.cornerCount === 4, "all 4 corners found (got " + info.cornerCount + ")");
+    assert(Math.abs(info.totalLen - 3000) < 1e-6, "perimeter unchanged: 3000 (got " + info.totalLen + ")");
 })();
 
 // ===== SUMMARY =====

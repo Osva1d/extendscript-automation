@@ -74,6 +74,7 @@ GM.Illustrator = {
                 p3: [bP.anchor[0], bP.anchor[1]]
             });
         }
+        segments = GM.Core.dropDegenerateSegments(segments, GM.CONSTANTS.SEGMENT_EPS);
 
         var circuit = GM.Core.buildCircuit(segments, !!item.closed);
         var corners = GM.Core.detectCorners(segments, !!item.closed,
