@@ -16,6 +16,11 @@ Opravy z code review 2026-09-26
   v měřítku 1:10 a skript s tím nepočítal: značky vycházely desetkrát větší,
   desetkrát dál od kraje, s desetkrát tlustšími tahy a s desetkrát větším
   rozestupem. Skript teď všechny rozměry přepočítá podle měřítka dokumentu.
+- **Značky mají vždy plný tah (G2).** Nová cesta ze skriptu přebírá styl tahu
+  naposledy vybraného objektu. Když byla při spuštění vybraná čárkovaná
+  kontura (perforace, big, výsekový obrys), vyšly registrační kruh, kříž
+  i bílé halo čárkovaně a s kulatými konci. Skript teď čárky a zakončení
+  nastaví sám.
 
 ## [1.1.0] — 2026-07-23
 

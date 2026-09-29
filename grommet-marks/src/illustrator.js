@@ -143,6 +143,19 @@ GM.Illustrator = {
         }
     },
 
+    /**
+     * Resets the stroke style a new path inherits from the document. Scripted
+     * paths take the dashes and caps of whatever was last selected (measured
+     * in Illustrator 30.8.1: a selected dashed die-line gives dashed marks).
+     * Joins and the miter limit are inherited too but do not apply here: the
+     * circle is smooth and the cross arms have no inner corners.
+     * @param {PathItem} p - Freshly created path.
+     */
+    _plainStroke: function (p) {
+        p.strokeDashes = [];
+        p.strokeCap = StrokeCap.BUTTENDCAP;
+    },
+
     /** Stroked (unfilled) circle centred at (x,y); size = diameter. */
     _strokeEllipse: function (grp, x, y, size, color, weight, overprint) {
         var r = size / 2;
@@ -152,6 +165,7 @@ GM.Illustrator = {
         el.strokeColor = color;
         el.strokeWidth = weight;
         el.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(el);
         return el;
     },
 
@@ -163,11 +177,13 @@ GM.Illustrator = {
         hLine.filled = false; hLine.stroked = true;
         hLine.strokeColor = color; hLine.strokeWidth = weight;
         hLine.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(hLine);
         var vLine = grp.pathItems.add();
         vLine.setEntirePath([[x, y - r], [x, y + r]]);
         vLine.filled = false; vLine.stroked = true;
         vLine.strokeColor = color; vLine.strokeWidth = weight;
         vLine.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(vLine);
     },
 
 };
