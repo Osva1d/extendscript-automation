@@ -62,7 +62,8 @@ function fakeDoc(o) {
             rec.marks.push({ x: x, y: y, size: size, opts: opts });
             return true;
         },
-        getSelectedPathInfo: function () { return o.pathInfo || { ok: false, reason: "no-selection" }; }
+        getSelectedPathInfo: function () { return o.pathInfo || { ok: false, reason: "no-selection" }; },
+        itemCentres: function () { return o.existing || []; }
     };
     return rec;
 }
@@ -149,6 +150,52 @@ console.log("--- process: hidden target layer stays visible (G5) ---");
     GM.Main.process(settings({}));
     assert(rec2.layer.visible === true && rec2.layer.locked === true, "visible locked layer: state unchanged");
     assert(alerts.length === 0, "no warning for a visible layer (got " + alerts.join(" | ") + ")");
+})();
+
+// ===== TEST: marks landing on existing marks (review G4) =====
+// A second run adds a second set on top of the first. Nothing is removed (that
+// would be a new feature), but the run must not stay silent about it.
+console.log("--- process: overlap with existing marks is reported (G4) ---");
+(function () {
+    function dupMsg(n) {
+        return GM.L.WARN_DUPLICATE_MARKS
+            ? GM.L.WARN_PREFIX + GM.L.format(GM.L.WARN_DUPLICATE_MARKS, n)
+            : "(WARN_DUPLICATE_MARKS missing)";
+    }
+    var ab = [0, 300 * MM, 300 * MM, 0];
+    var first = fakeDoc({ artboards: [ab] });
+    GM.Main.process(settings({}));
+    var previous = [];
+    for (var i = 0; i < first.marks.length; i++) previous.push([first.marks[i].x, first.marks[i].y]);
+
+    var rerun = fakeDoc({ artboards: [ab], existing: previous });
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(rerun.marks.length === 36, "rerun still places its marks");
+    assert(alerts.length === 1 && alerts[0] === dupMsg(36),
+        "one warning with the overlap count 36 (got " + alerts.join(" | ") + ")");
+
+    // Different spacing: only the shared corner marks overlap.
+    var other = fakeDoc({ artboards: [ab], existing: previous });
+    alerts = [];
+    var s = settings({});
+    s.top = GM.Config.createEdgeDef(true, true, 3, 105);
+    s.left = GM.Config.createEdgeDef(true, true, 3, 105);
+    GM.Main.process(s);
+    assert(alerts.length === 1 && alerts[0] === dupMsg(4),
+        "changed count: the 4 corner marks overlap (got " + alerts.join(" | ") + ")");
+
+    // Unrelated content elsewhere on the layer (e.g. another shape's marks): no warning.
+    var far = fakeDoc({ artboards: [ab], existing: [[1000 * MM, 1000 * MM]] });
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(alerts.length === 0, "no warning without overlap (got " + alerts.join(" | ") + ")");
+
+    // Near but clear of a mark (more than one diameter away): no warning.
+    var clear = fakeDoc({ artboards: [ab], existing: [[7 * MM + 3.5 * MM, 293 * MM]] });
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(alerts.length === 0, "a mark 3.5 mm off a 3 mm mark does not overlap");
 })();
 
 // ===== SUMMARY =====

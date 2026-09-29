@@ -36,6 +36,26 @@ GM.Illustrator = {
     },
 
     /**
+     * Centres of the items already on a layer (direct children), so a
+     * repeated run can be told from a first one. Reads bounds only.
+     * @param {Layer} layer - Mark layer.
+     * @returns {Array<Array<number>>} [[x, y], ...] in document units.
+     */
+    itemCentres: function (layer) {
+        var out = [];
+        try {
+            var items = layer.pageItems;
+            for (var i = 0; i < items.length; i++) {
+                var b = items[i].geometricBounds;   // [left, top, right, bottom]
+                out.push([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]);
+            }
+        } catch (e) {
+            GM.Utils.log("itemCentres: " + e.message);
+        }
+        return out;
+    },
+
+    /**
      * Inspects the current selection for path-mode placement.
      * Pure read — never mutates the selection. Everything computable is
      * delegated to GM.Core so this stays a thin DOM extraction layer.

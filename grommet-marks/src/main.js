@@ -91,12 +91,23 @@ GM.Main = {
             try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
 
+            // Marks already on the layer, typically from a previous run. The run
+            // only adds, so a new mark landing on an old one (centres closer
+            // than one mark diameter) is counted and reported at the end.
+            var existing = GM.Illustrator.itemCentres(targetLayer);
+            var overlapTol2 = markSizePoints * markSizePoints;
+            var overlaps = 0;
+
             var placed = {};
             var failedMarks = 0;
             function place(x, y) {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
+                for (var e = 0; e < existing.length; e++) {
+                    var dx = existing[e][0] - x, dy = existing[e][1] - y;
+                    if (dx * dx + dy * dy < overlapTol2) { overlaps++; break; }
+                }
                 var ok = GM.Illustrator.placeMarkGroup(targetLayer, x, y, markSizePoints, markOpts);
                 if (!ok) failedMarks++;
             }
@@ -201,6 +212,10 @@ GM.Main = {
                 if (!prevVisible) {
                     addWarning(GM.L.format(GM.L.WARN_LAYER_UNHIDDEN, GM.CONSTANTS.LAYER_NAME));
                 }
+            }
+
+            if (overlaps > 0) {
+                addWarning(GM.L.format(GM.L.WARN_DUPLICATE_MARKS, overlaps));
             }
 
             if (failedMarks > 0) {

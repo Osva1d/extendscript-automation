@@ -29,6 +29,11 @@ Opravy z code review 2026-09-26
   kvůli zápisu zviditelnil a pak znovu skryl, takže nové značky nebyly vidět
   a nevytiskly se — bez jakékoli hlášky. Vrstva teď zůstane viditelná a skript
   to oznámí. Zámek vrstvy se vrací jako dřív.
+- **Zdvojené značky po opakovaném běhu už nezůstanou bez upozornění (G4).**
+  Druhé spuštění přidalo do vrstvy druhou sadu značek přes první, bez hlášky;
+  při jiném rozestupu tak vznikla směs starých a nových značek. Skript dál jen
+  přidává a nic nemaže, ale když nové značky padnou na značky, které ve vrstvě
+  už byly, oznámí to s počtem a poradí Zpět nebo smazání starých.
 
 ## [1.1.0] — 2026-07-23
 
