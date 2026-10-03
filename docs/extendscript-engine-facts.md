@@ -68,6 +68,7 @@ Vše `typeof`, ověřeno jednotlivě.
 | `Function.prototype.bind` | |
 | `JSON` (proto `shared/lib/json2.js`) | |
 | `PageItemType` (enum vůbec neexistuje) | |
+| `Date.prototype.toISOString` (naměřeno 2026-10-03, AI 30.8.2; `json2.js` přidává jen `toJSON`) | |
 
 ## Syntaxe
 
