@@ -1,8 +1,8 @@
 # Tile Export — nálezy
 
-Vady a návrhy z ručního testu (2026-09-15 až 18), přetestu a běhů harnessu
-(do 2026-09-26). Číslování je stálé: na nález se odkazuj číslem, i když je
-opravený. Plné znění uzavřených nálezů, s příčinou a měřením, je v historii
+Vady a návrhy z ručního testu (2026-09-15 až 18), přetestu, běhů harnessu
+(do 2026-09-26) a kontrol kódu (od 2026-10-03). Číslování je stálé: na nález
+se odkazuj číslem, i když je opravený. Plné znění uzavřených nálezů, s příčinou a měřením, je v historii
 gitu — soubor `docs/testing/2026-09-15-tile-export-test-findings.md`.
 
 Postup testu: [ruční testy](manual-test.md).
@@ -10,6 +10,19 @@ Postup testu: [ruční testy](manual-test.md).
 ---
 
 ## Otevřené
+
+### N27 — ručně přepsaný čistý formát platí jen v náhledu
+
+`tile-export/src/ui.js` (`resolveClean`, `collect`), `src/main.js`.
+
+Pole Čistý formát v panelu Dokument přepíše rozměr jen pro Výsledek
+a validaci. `collect()` přepis nepředá a Jen pláty i export dělí artboard
+(`clean.rect` v `main.js`). Dialog tak ukazuje pláty, které běh nevyrobí.
+Spec (§6) slibuje přepis pro celý běh. Zjištěno z kódu při kontrole
+2026-10-03; v Illustratoru neověřeno. **Oprava, k rozhodnutí:** přepis předat
+do běhu i do předvolby, nebo pole zrušit a nechat artboard jediným zdrojem
+pravdy, jak ho spec popisuje pro opakovaný běh; artboard jde opravit přímo
+v Illustratoru.
 
 ### N24 — Zünd: kontura, která do plátu nezasahuje, nechá rám jako řez
 
@@ -26,27 +39,6 @@ a dialog cesty v barvě řezu ohlásí varováním. **Oprava:** předem vyřadit
 které plát neprotínají; po Pathfinderu brát jen výsledné kusy, ne všechny cesty
 dokumentu; sondou ověřit i konturu, která plát obkružuje (ohraničení se protíná,
 tvar ne). Související N22 je opravený, ale do té doby se nepoužívá.
-
-### N23 — rozlišení rastru pod 72 DPI selže až při exportu
-
-`tile-export/src/ui.js` (`collect`, `rasterDPI`), `src/lib/validation.js`.
-
-Illustrator přijme rozlišení rastru od **72 DPI** (naměřeno: 71 selže, 72
-projde). Dialog pustí i menší číslo a export pak na každém plátu vrátí surové
-`Specified value less than minimum allowed value`. **Oprava:** validační chyba
-v rastrovém režimu pod 72, s hláškou, co je minimum.
-
-### N20 — neexistující PDF preset spadne až při uložení
-
-`tile-export/src/main.js` (`try { pdfOpts.pDFPreset = … } catch`), `src/ui.js`
-(náhradní položka `[High Quality Print]`).
-
-Přiřazení neznámého názvu nevyhodí, chyba přijde až v `saveAs` jako `FNOC`, pro
-každý plát zvlášť (naměřeno). V běžném provozu se to nestane — dialog nabízí jen
-presety, které Illustrator vrátí. Cesty, kudy to přijde: náhradní anglický název
-na české instalaci (`[High Quality Print]` tu neexistuje, je `[Kvalitní tisk]`)
-a ručně upravený `settings.json`. **Oprava**, až se bude sahat do `main.js`:
-ověřit název proti `app.PDFPresetsList` a neznámý nepoužít, s varováním.
 
 ### N5 — po načtení předvolby jsou desetiny s tečkou (dluh)
 
@@ -88,9 +80,12 @@ všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
 | N17 | chyba velikosti výstupu šedila i Jen pláty | `66a6f40` |
 | N18 | Výsledek přesunut do pravého sloupce, dialog o 130 px nižší | `ae7d81d` |
 | N19 | v rastrovém exportu byla linka schovaná pod rastrem | `dd14cc7` |
+| N20 | bez seznamu presetů dialog nabídl `[High Quality Print]`, který česká instalace nemá (je `[Kvalitní tisk]`), a každý plát spadl v `saveAs`; teď nabídne „žádný — výchozí nastavení PDF". Jiná cesta k neznámému názvu není — `settings.json` jde přes `apply()`, které ho nahradí první položkou | `3381a07` |
 | N21 | Zünd kontura se ořezávala podle zvětšeného artboardu, ne podle plátu | `ca7c673` |
 | N22 | Zünd kontura se nezvětšovala s měřítkem výstupu (kód se zatím nepoužívá, N24) | `666ab22` |
+| N23 | rozlišení rastru pod 72 DPI selhalo až při exportu, na každém plátu surovou hláškou; dialog teď export zastaví a řekne minimum | `fd3c1e8` |
 | N25 | registrace se brala jako `swatches[1]` bez kontroly typu — bez registrace na indexu 1 je tam Bílá a značky by kamera Zündu neviděla; teď se hledá podle typu (z kontroly po prompt-auditu 2026-10-03) | `16e7317` |
+| N26 | Zünd značky, které by na tisku splynuly — orientační bod na rohové značce u úzkého plátu (maska 85–95 mm při výchozím nastavení), rozteč pod průměrem značky — nikdo nehlásil; dialog teď jmenuje plát a zastaví export, plát s víc než 200 značkami zkontroluje `main.js` před exportem | `2500e03` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

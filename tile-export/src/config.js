@@ -35,6 +35,18 @@ TE.Config = {
     layerGraphics: "Graphics",
     layerRegmarks: "Regmarks",
 
+    // The dialog checks Zünd marks for collisions on every keystroke, and the
+    // shared findMarkConflict compares every pair: the cost grows with the
+    // square of the count. A panel with more marks than this — a spacing of
+    // a few centimetres — is left to the check main.js runs once before the
+    // export, without a limit (N26).
+    MARK_CHECK_LIVE_MAX: 200,
+
+    // Illustrator rasterises from 72 DPI up: 71 fails with "Specified value
+    // less than minimum allowed value", 72 passes (measured, N23). The dialog
+    // stops the export below it instead of every panel failing on its own.
+    RASTER_DPI_MIN: 72,
+
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
     PRESET_KEY_DEFAULT: "[Default]",

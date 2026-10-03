@@ -14,11 +14,18 @@ TE.L = {
     ERR_AB_TOO_BIG:    "artboard-too-big",
     ERR_LARGE_CANVAS:  "large-canvas-source-scale",
     WARN_MEDIA:        "media-too-narrow",
+    ERR_DPI_MIN:       "dpi-below-minimum",
+    ERR_MARKS_OVERLAP: "marks-overlap",
+    ERR_MARKS_ORIENT:  "marks-orient",
+    ERR_MARKS_OUTSIDE: "marks-outside",
     format: function (t) { return t; }
 };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "grid.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "export.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
+buildCutMarks(TE);
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
 
 var mm = TE.Utils.mm2pt;
@@ -38,14 +45,15 @@ function has(list, code) { return TE.Utils.indexOf(list, code) !== -1; }
 var D = TE.Config.getDefaults();
 var CLEAN = [0, mm(1000), mm(3000), 0];
 
-function job(over) {
+function job(over, clean) {
+    var c = clean || CLEAN;
     var s = merge(D, merge({
         direction: "horizontal", divideMode: "count", tileCount: 3,
         overlap: 20, overlapMode: "symmetric",
         addTop: 40, addBottom: 40, addLeft: 0, addRight: 40
     }, over));
-    var cuts = TE.Grid.computeCuts(s, { start: CLEAN[0], end: CLEAN[2] }, null);
-    return { tiles: TE.Grid.computeTiles(cuts, CLEAN, s), s: s };
+    var cuts = TE.Grid.computeCuts(s, { start: c[0], end: c[2] }, null);
+    return { tiles: TE.Grid.computeTiles(cuts, c, s), s: s };
 }
 
 function ctx(over) {
@@ -150,6 +158,72 @@ assert(has(rb3.exportErrors, "bleed-beyond-overhang"), "hrana načisto potřebuj
 var jn = job({ zundMode: false, cutBleed: 15 });
 var rb4 = TE.Validate.check(jn.tiles, ctx(), jn.s);
 assert(!has(rb4.exportErrors, "bleed-beyond-overhang"), "mimo Zünd režim se spad nekontroluje");
+
+console.log("\n=== N23: rastr pod 72 DPI blokuje export ===");
+// Illustrator rasterises from 72 DPI up (71 fails, 72 passes — measured).
+// Below that every panel used to fail on its own with a raw DOM message.
+var jr71 = job({ exportMode: "raster", rasterDPI: 71 });
+var rr71 = TE.Validate.check(jr71.tiles, ctx(), jr71.s);
+assert(has(rr71.exportErrors, "dpi-below-minimum"), "71 DPI: Illustrator ho nepřijme, export je blokovaný");
+assert(!has(rr71.errors, "dpi-below-minimum"), "Jen pláty nic nerastrují a zůstávají dostupné");
+var jr72 = job({ exportMode: "raster", rasterDPI: 72 });
+assert(!has(TE.Validate.check(jr72.tiles, ctx(), jr72.s).exportErrors, "dpi-below-minimum"), "72 DPI projde");
+var jrv = job({ exportMode: "vector", rasterDPI: 10 });
+assert(!has(TE.Validate.check(jrv.tiles, ctx(), jrv.s).exportErrors, "dpi-below-minimum"),
+    "ve vektorovém exportu na rozlišení nezáleží");
+
+console.log("\n=== N26: Zünd značky, které by na tisku splynuly, blokují export ===");
+// A 240 mm graphic in three 80 mm panels, no overlap or adds: the mask is
+// 90 mm wide. The orientation dot sits 100 + 5 mm right of the bottom-left
+// mark, and the bottom-right mark is 90 + 2 x (5 gap + 2.5 radius) = 105 mm
+// away — the two land on each other. Default settings otherwise.
+var flat = { zundMode: true, overlap: 0, addTop: 0, addBottom: 0, addLeft: 0, addRight: 0 };
+var jzOk = job({ zundMode: true });
+assert(TE.Validate.markConflict(jzOk.tiles, ctx(), jzOk.s) === null, "běžné pláty po 1000 mm: bez kolize");
+var rzOk = TE.Validate.check(jzOk.tiles, ctx(), jzOk.s);
+assert(!has(rzOk.exportErrors, "marks-orient") && !has(rzOk.exportErrors, "marks-overlap"),
+    "a dialog nic nehlásí");
+
+var jNar = job(flat, [0, mm(1000), mm(240), 0]);
+var cNar = TE.Validate.markConflict(jNar.tiles, ctx(), jNar.s);
+assert(cNar !== null && cNar.type === "orient", "pláty po 80 mm: orientační bod na rohové značce");
+assert(cNar !== null && cNar.index === 1 && cNar.dist < 0.01, "hlášen plát 1, středy v jednom bodě");
+var rNar = TE.Validate.check(jNar.tiles, ctx(), jNar.s);
+assert(has(rNar.exportErrors, "marks-orient"), "chyba exportu");
+assert(!has(rNar.errors, "marks-orient"), "Jen pláty značky nekreslí, zůstávají dostupné");
+var jNarOff = job(merge(flat, { zundMode: false }), [0, mm(1000), mm(240), 0]);
+assert(!has(TE.Validate.check(jNarOff.tiles, ctx(), jNarOff.s).exportErrors, "marks-orient"),
+    "mimo Zünd režim se značky nekontrolují");
+
+// Only the last panel is narrow: the message names that panel, not panel 1.
+var jLast = job(merge(flat, { divideMode: "width", tileWidth: 1000 }), [0, mm(1000), mm(2080), 0]);
+var cLast = TE.Validate.markConflict(jLast.tiles, ctx(), jLast.s);
+assert(jLast.tiles.length === 3, "šířka 1000 na 2080 mm: tři pláty (1000, 1000, 80)");
+assert(cLast !== null && cLast.index === 3, "kolize je jen na posledním, úzkém plátu");
+
+// The marks are checked in real millimetres whatever the scale (N11): the
+// same job drawn 1:10 collides the same, at either output scale.
+var jN10 = job(merge(flat, { scaleN: 10 }), [0, mm(100), mm(24), 0]);
+var cN10 = TE.Validate.markConflict(jN10.tiles, ctx(), jN10.s);
+assert(cN10 !== null && cN10.type === "orient", "1:10, výstup jako dokument: stejná kolize");
+var jN10a = job(merge(flat, { scaleN: 10, exportScale: "actual" }), [0, mm(100), mm(24), 0]);
+var cN10a = TE.Validate.markConflict(jN10a.tiles, ctx(), jN10a.s);
+assert(cN10a !== null && cN10a.type === "orient", "1:10, výstup 1:1: stejná kolize");
+
+// Spacing below the mark diameter merges neighbours along an edge.
+var jSm = job(merge(flat, { maxDist: 4 }), [0, mm(100), mm(300), 0]);
+assert(has(TE.Validate.check(jSm.tiles, ctx(), jSm.s).exportErrors, "marks-overlap"),
+    "rozteč 4 mm u značky 5 mm: značky splynou");
+
+// findMarkConflict compares every pair of marks. The dialog re-checks on
+// every keystroke, so a panel with more marks than the live limit is left to
+// main.js, which checks once before the export, without the limit.
+var jMany = job({ zundMode: true, maxDist: 4 });
+assert(!has(TE.Validate.check(jMany.tiles, ctx(), jMany.s).exportErrors, "marks-overlap"),
+    "plát s tisíci značek dialog nekontroluje");
+var cMany = TE.Validate.markConflict(jMany.tiles, ctx(), jMany.s);
+assert(cMany !== null && cMany.type === "overlap", "kontrola před exportem bez limitu ho najde");
+assert(TE.Validate.describeMarkConflict(cMany, jMany.s) === "marks-overlap", "a hlášení odpovídá typu");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

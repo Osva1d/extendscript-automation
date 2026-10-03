@@ -96,5 +96,19 @@ var ui = fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8");
 var bare = ui.match(/(?<![\w.])Number\(\s*r\.et\w+\.text\s*\)/g) || [];
 eq(bare.length, 0, "collect() uses TE.Utils.toNumber for every field (found: " + bare.join(", ") + ")");
 
+console.log("\n=== N20: the PDF preset list never names a preset Illustrator lacks ===");
+// The old fallback, "[High Quality Print]", does not exist on a Czech install
+// ([Kvalitní tisk]); saveAs then failed with FNOC on every panel.
+var items = TE.UI.pdfPresetItems(["[Výchozí Illustratoru]", "[Kvalitní tisk]"]);
+eq(items.length === 2 && items[1] === "[Kvalitní tisk]", true, "Illustrator's own list is offered as it is");
+var none = TE.UI.pdfPresetItems([]);
+eq(none.length === 1 && none[0] === TE.L.PDF_PRESET_NONE, true, "no list: one item that says so");
+eq(ui.indexOf("\"[High Quality Print]\""), -1, "the dialog has no preset name of its own");
+var rpn = refs({});
+rpn.ddPdf = { selection: { text: TE.L.PDF_PRESET_NONE } };
+eq(TE.UI.collect(rpn).pdfPreset, "", "that item reads as no preset, like [Default]");
+rpn.ddPdf = { selection: { text: "[Kvalitní tisk]" } };
+eq(TE.UI.collect(rpn).pdfPreset, "[Kvalitní tisk]", "a real preset is read as it is");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

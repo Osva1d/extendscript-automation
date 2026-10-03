@@ -39,7 +39,8 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
 - Export **do PDF přes dočasný dokument na každý plát** — zdroj se nemění
   a linka souseda se nemá jak propsat.
 - **Vektorový i rastrový** režim. Rastrový rastruje jen grafiku, plát je velký
-  podle své plochy a DPI; linka zůstane navrchu jako vektor.
+  podle své plochy a DPI; linka zůstane navrchu jako vektor. Rozlišení pod
+  72 DPI, které Illustrator nepřijme, dialog do exportu nepustí.
 - **Měřítko výstupu:** stejné jako dokument (co ukazují pravítka; Large Canvas
   tedy ve skutečné velikosti), nebo 1:1. Velké zakázky nenarážejí na strop
   Illustratoru pro nastavení velikosti (~5,77 m).
@@ -60,6 +61,9 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
   geometrie je sdílená se Zünd Summa Marks. Značky, řez i stránka jsou v obou
   souborech shodné (ověřeno na 0,0000 mm).
 - Kontrola, že PDF na vnějších hranách unese přídavek + spad za řezem.
+- Kontrola, že se značky na žádném plátu nedotknou ani nepřekryjí — typicky
+  orientační bod na rohové značce u úzkého plátu. Dialog jmenuje plát a export
+  zastaví; při kolizi se neexportuje nic.
 
 **Dialog**
 

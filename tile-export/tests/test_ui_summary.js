@@ -153,6 +153,28 @@ has(summary(zund({ etBleed: { text: "10" } })), "se značkami: 105 × 104 |", "b
 has(summary(zund({ etAddRight: { text: "40" }, etAddTop: { text: "40" } })),
     "Stránky PDF (1:10) se značkami: 104 × 107 | 105 × 107 | 108 × 107 mm", "adds widen the cut and the page");
 
+console.log("\n=== N26: marks that would merge are named before the export ===");
+// Three 80 mm panels without overlap: the mask is 90 mm wide and the
+// orientation dot lands on the bottom-right mark (see test_validation).
+var rOk = refs(zund({}));
+TE.UI.refresh(null, rOk, ctx);
+eq(rOk.stCalc.text.indexOf("✗") === -1 && rOk.btnExport.enabled, true,
+    "the default Zünd job has no conflict and can be exported");
+var rNar = refs(zund({ etCleanW: { text: "240" }, etCleanH: { text: "1000" }, etOverlap: { text: "0" } }));
+TE.UI.refresh(null, rNar, ctx);
+has(rNar.stCalc.text, "✗ Plát 1: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)",
+    "the message names the panel, the distance and the diameter");
+eq(rNar.btnExport.enabled, false, "and the export is blocked");
+eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
+
+console.log("\n=== N23: raster resolution below 72 DPI ===");
+var rDpi = refs({ rbExpMode: [{ value: false }, { value: true }], etDPI: { text: "71", enabled: true } });
+TE.UI.refresh(null, rDpi, ctx);
+has(rDpi.stCalc.text, "✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI.",
+    "the message says what the minimum is");
+eq(rDpi.btnExport.enabled, false, "and the export is blocked");
+eq(rDpi.btnTiles.enabled, true, "Panels only rasterises nothing");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more

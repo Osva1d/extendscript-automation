@@ -225,6 +225,10 @@ v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
 - **Na vnějších hranách musí PDF nést přídavek + spad za řezem.** Jinak by maska
   sáhla za konec grafiky; dialog to hlásí a export zablokuje. Na švech se to
   nekontroluje, tam grafika pokračuje.
+- **Značky se nesmí slít.** U úzkého plátu padne orientační bod na rohovou
+  značku (při výchozím nastavení, když je maska široká 85–95 mm), při rozteči
+  pod průměrem značky splynou sousední. Dialog jmenuje plát a export zablokuje;
+  pomůže jiná vzdálenost orientačního bodu, případně rozteč.
 - **Cesty v barvě řezu v dokumentu se zatím nepoužijí.** Dialog na ně upozorní
   a řeže se obdélník plátu.
 - **Starší předvolby** mají barvu `cut` s malým písmenem a odstup 10 mm, který
@@ -243,10 +247,9 @@ v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
 | Stejné jako dokument | plátno 1:10 zůstane 1:10, zvětšuje až RIP |
 | 1:1 skutečná velikost | výstup ve skutečném rozměru |
 
-**Large Canvas dokument musí exportovat 1:1.** Dočasný dokument, přes který
-export běží, nemůže být Large Canvas — `scaleFactor` u nově vytvořeného
-dokumentu nejde nastavit a selže tiše. Nástroj tuhle kombinaci odmítne, protože
-jinak by výstup vyšel desetinásobně zmenšený a vypadal by správně.
+**Large Canvas** se při „Stejné jako dokument" zapíše ve skutečné velikosti —
+tak ho ukazují pravítka. Ruční měřítko 1:N se s jeho faktorem skládá: Large
+Canvas s ručním 1:10 vyjde v 1:10.
 
 ## Známá omezení
 
