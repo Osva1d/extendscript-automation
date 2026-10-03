@@ -73,6 +73,9 @@ tisíc už ne.
 **Uložená délka je ~40 % rychlejší** — `for (var i = 0, len = a.length; i < len; i++)`:
 20 000 prvků 280 → 163 ms (5 kol, stabilně), 200 prvků × 500 průchodů 30 → 17 ms.
 
+Vše měřeno přes `tools/ai-eval.sh` (`do javascript` z AppleScriptu); běh přes
+Soubor › Skripty neměřen.
+
 ---
 
 ## Co engine má a nemá
@@ -404,6 +407,43 @@ rezervuje dál. Nepomůže ani `group.maximumSize.height = 0`. Naměřeno na dia
 Důsledek: dynamickou viditelnost nelze použít jako nástroj na výšku dialogu.
 Výšku musí vyřešit rozložení (sloupce, zkrácení polí). `visible` má smysl jen
 na to, aby nerušil obsah, který právě neplatí.
+
+### ScriptUI: `layout(true)` nepřeměří změněný text (naměřeno 2026-10-03, AI 30.8.2)
+
+Sondy přes `tools/ai-eval.sh`, okna nezobrazená i krátce zobrazená (`onShow` →
+měření → `close()`); obojí dalo stejné výsledky.
+
+| po prvním rozvržení okna | výsledek |
+|---|---|
+| label „Ready" (35 px) dostane delší text, pak `layout(true)` | label **35 px**, okno beze změny |
+| totéž + `preferredSize = [-1, -1]`, nebo `measureString` → `preferredSize` | 35 px |
+| totéž + `layout.resize()` | 35 px |
+| `size = [400, 15]` bez layoutu | label 400 px, okno zůstane 65 px |
+| label vytvořený s delším textem, pak kratší a znovu delší | drží **280 px** |
+| `preferredSize.width = 420` nastavené před zobrazením | drží 420 px |
+| prvek přidaný po `show()` | bez rozměru, dokud nepřijde `layout(true)`; ten ho umístí a okno zvětší (75 → 105 px) |
+| skupina skrytá při zobrazení, pak `visible = true` | místo už má, layout netřeba (viz výš) |
+
+Důsledek: label se dimenzuje jednou, při prvním rozvržení. Text, který se mění
+po zobrazení, potřebuje šířku předem — vytvořit label s nejdelším textem, nebo
+rezervu v bloku `M`. `layout(true)` má po zobrazení smysl jen po přidání či
+odebrání prvku.
+
+### ScriptUI: víceřádkový `statictext` se zalamuje na 200 px (naměřeno 2026-10-03, AI 30.8.2)
+
+`{ multiline: true }` bez šířky: text, který jednořádkově měří 760 px, dostane
+**200 × 60 px** (okno 230 px). Nastavená šířka výšku nepřepočítá:
+
+| `preferredSize` | výsledek |
+|---|---|
+| `width = 120` | 120 × 60 — text by potřeboval ~7 řádků, prostor má na 4 |
+| `width = 200` | 200 × 60 |
+| `width = 500` | 500 × 60 — prázdné řádky |
+| `[120, 120]` | 120 × 120 |
+
+Text rozdělený `\n` na krátké řádky se bez šířky přizpůsobí obsahu (3 řádky →
+59 × 45 px). Že se text ve 120 × 60 skutečně ořízne, je odvozené z rozměrů,
+vizuálně neověřeno.
 
 ### Spot barva a artboardy
 
