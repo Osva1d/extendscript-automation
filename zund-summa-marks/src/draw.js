@@ -1005,19 +1005,31 @@ ZSM.Draw = {
     },
 
     /**
-     * Returns the localized name of the [Registration] swatch.
-     * Registration is always at swatches index 1 in any Illustrator locale
-     * (index 0 = [None]). This avoids hardcoding locale-specific names
-     * like [Registrační] (CS), [Passermarke] (DE), etc.
+     * Returns the localized name of the [Registration] swatch, found by TYPE.
+     * The name is localized ([Registrační] CS, [Passermarke] DE, …) and index
+     * 1, where registration sits in every document measured, is not trusted:
+     * without registration there, swatches[1] is White and the marks would be
+     * drawn invisible to the cutter's camera. With no registration swatch the
+     * English default comes back; it names nothing on a Czech install, so
+     * getCol / registrationColor fall through to 100 % K. Same check as
+     * grommet-marks and tile-export.
      *
      * @returns {string} Localized Registration swatch name.
      */
     getRegistrationName: function () {
         try {
-            return app.activeDocument.swatches[1].name;
+            var sw = app.activeDocument.swatches;
+            for (var i = 0; i < sw.length; i++) {
+                var c = sw[i].color;
+                if (c && c.typename === "SpotColor" && c.spot &&
+                        c.spot.colorType === ColorModel.REGISTRATION) {
+                    return sw[i].name;
+                }
+            }
         } catch (e) {
-            return "[Registration]";
+            ZSM.Utils.log("getRegistrationName: swatches unreadable — " + e.message);
         }
+        return "[Registration]";
     },
 
     /**

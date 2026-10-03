@@ -90,6 +90,7 @@ všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
 | N19 | v rastrovém exportu byla linka schovaná pod rastrem | `dd14cc7` |
 | N21 | Zünd kontura se ořezávala podle zvětšeného artboardu, ne podle plátu | `ca7c673` |
 | N22 | Zünd kontura se nezvětšovala s měřítkem výstupu (kód se zatím nepoužívá, N24) | `666ab22` |
+| N25 | registrace se brala jako `swatches[1]` bez kontroly typu — bez registrace na indexu 1 je tam Bílá a značky by kamera Zündu neviděla; teď se hledá podle typu (z kontroly po prompt-auditu 2026-10-03) | `16e7317` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

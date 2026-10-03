@@ -105,6 +105,11 @@ z auditu UI 2026-09-28
   grafiky se měří k okraji značky, ne k jejímu středu. Nabídka předvoleb už
   neradí vybrat [Last Settings], která v ní není. Pouze značky upozorní, že
   artboard se přizpůsobí i v tomto režimu, pokud není zvoleno Dle Artboardu.
+- **Registrační barva se pozná podle typu, ne podle pozice ve Vzornících.**
+  Skript bral jako registraci druhou položku Vzorníku. V dokumentu, kde tam
+  registrace není, stojí na tom místě Bílá — značky by vyšly bílé a kamera
+  řezacího stroje by je neviděla. Teď skript registraci najde podle typu barvy;
+  když v dokumentu chybí, kreslí značky 100 % K.
 
 ## [1.0.0] — 2026-06-28
 
