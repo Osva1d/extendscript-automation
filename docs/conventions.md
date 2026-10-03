@@ -16,8 +16,8 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
 ## ENFORCED — hlídá stroj
 
 - **Parity guard verze** — build spadne, když se rozejde `package.json` ↔ verzní
-  konstanta (`src/constants.js` u GM, `src/config.js` u ZSM/BRE) ↔ **nejnovější
-  položka v `CHANGELOG.md`**. Běží ve všech třech buildech. Chytá „release
+  konstanta (`src/constants.js` u GM, `src/config.js` u ZSM/BRE/TE) ↔ **nejnovější
+  položka v `CHANGELOG.md`**. Běží ve všech čtyřech buildech. Chytá „release
   napůl": verze bumpnutá, changelog zapomenutý (nebo naopak).
 - **Commit na `main`** — `tools/hooks/pre-commit` ho odmítne; merge do main pustí
   (rozpozná probíhající merge přes `MERGE_HEAD`). Instaluje `tools/install-hooks.sh`.
