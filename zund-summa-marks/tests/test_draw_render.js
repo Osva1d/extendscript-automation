@@ -1222,6 +1222,37 @@ global.alert = origAlertA7;
 
 
 // =====================================================
+// TEST 35: the registration swatch is found by type, not by position
+// =====================================================
+// getRegistrationName took swatches[1] unchecked. Without registration there,
+// index 1 is White (measured in a new CMYK document), so the marks would come
+// out white — invisible to the Zünd camera.
+console.log("\n=== TEST 35: registration swatch found by type ===");
+function swatchList(entries) {
+    var a = entries.slice();
+    a.getByName = function (n) {
+        for (var i = 0; i < a.length; i++) { if (a[i].name === n) return a[i]; }
+        throw new Error("Not found: " + n);
+    };
+    return a;
+}
+var REG35 = { typename: "SpotColor", tint: 100,
+    spot: { name: "[Registrační]", colorType: ColorModel.REGISTRATION } };
+var WHITE35 = { typename: "CMYKColor", cyan: 0, magenta: 0, yellow: 0, black: 0 };
+var doc35 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+doc35.swatches = swatchList([{ name: "[Žádná]" }, { name: "Bílá", color: WHITE35 },
+                             { name: "[Registrační]", color: REG35 }]);
+assertEq(ZSM.Draw.getRegistrationName(), "[Registrační]",
+    "registration away from index 1 is found by type, not White from index 1");
+doc35.swatches = swatchList([{ name: "[Žádná]" }, { name: "Bílá", color: WHITE35 }]);
+assertEq(ZSM.Draw.getRegistrationName(), "[Registration]",
+    "no registration swatch: the English default, not White");
+var col35 = ZSM.Draw.getCol("[Registration]");
+assert(col35.typename === "CMYKColor" && col35.black === 100,
+    "marks then fall back to 100 % K, not to White");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

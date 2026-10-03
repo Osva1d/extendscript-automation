@@ -438,7 +438,11 @@
             }
         });
         this.swatches = wrapCollection(
-            [{ name: "[None]" }, { name: "[Registration]", color: {} }].concat(spec.swatches || []),
+            // Registration as Illustrator reports it: a SpotColor whose spot has
+            // colorType REGISTRATION (measured) — production finds it by type.
+            [{ name: "[None]" }, { name: "[Registration]", color: { typename: "SpotColor",
+                spot: { name: "[Registration]", colorType: "REGISTRATION" }, tint: 100 } }]
+                .concat(spec.swatches || []),
             {
                 add: function () { var s = {}; self.swatches.push(s); return s; }
             }
@@ -505,7 +509,7 @@
     var origGlobals = {};
     function install() {
         var keys = ["app", "Layer", "GroupItem", "PathItem", "CompoundPathItem",
-                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor"];
+                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor", "ColorModel"];
         for (var i = 0; i < keys.length; i++) {
             origGlobals[keys[i]] = global[keys[i]];
         }
@@ -537,6 +541,7 @@
             this.typename = "CMYKColor";
             this.cyan = this.magenta = this.yellow = this.black = 0;
         };
+        global.ColorModel = { SPOT: "SPOT", PROCESS: "PROCESS", REGISTRATION: "REGISTRATION" };
         global.SpotColor = function () {
             this.typename = "SpotColor";
             this.spot = null;
