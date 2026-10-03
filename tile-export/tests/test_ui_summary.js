@@ -47,7 +47,6 @@ function refs(o) {
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
         cbSkip: cb(true), cbZund: null,
-        etCleanW: et(""), etCleanH: et(""),
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -154,16 +153,17 @@ has(summary(zund({ etAddRight: { text: "40" }, etAddTop: { text: "40" } })),
     "Stránky PDF (1:10) se značkami: 104 × 107 | 105 × 107 | 108 × 107 mm", "adds widen the cut and the page");
 
 console.log("\n=== N26: marks that would merge are named before the export ===");
-// Three 80 mm panels without overlap: the mask is 90 mm wide and the
-// orientation dot lands on the bottom-right mark (see test_validation).
+// Panel width 1460 on the 3000 mm sheet, no overlap: panels of 1460, 1460
+// and 80 mm. The last mask is 90 mm wide and its orientation dot lands on
+// the bottom-right mark (see test_validation). The manual test uses this row.
 var rOk = refs(zund({}));
 TE.UI.refresh(null, rOk, ctx);
 eq(rOk.stCalc.text.indexOf("✗") === -1 && rOk.btnExport.enabled, true,
     "the default Zünd job has no conflict and can be exported");
-var rNar = refs(zund({ etCleanW: { text: "240" }, etCleanH: { text: "1000" }, etOverlap: { text: "0" } }));
+var rNar = refs(zund({ rbMode: widthMode, etWidth: { text: "1460", enabled: true }, etOverlap: { text: "0" } }));
 TE.UI.refresh(null, rNar, ctx);
-has(rNar.stCalc.text, "✗ Plát 1: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)",
-    "the message names the panel, the distance and the diameter");
+has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)",
+    "the message names the narrow panel, the distance and the diameter");
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
 

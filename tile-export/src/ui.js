@@ -136,9 +136,10 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns, balanced by measured heights (2026-09-25): left
-        // 593 px, right Export 276 + Result filling the rest; the dialog is
-        // 695 px. With the Zünd panel built (280 px) the Result drops to its
+        // Two columns, balanced by measured heights (2026-09-25; re-measured
+        // 2026-10-03 after N27 took a row out of the left column): left
+        // 560 px, right Export 276 + Result filling the rest; the dialog is
+        // 662 px. With the Zünd panel built (280 px) the Result drops to its
         // 85 px floor and the dialog grows to 793 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
@@ -202,20 +203,9 @@ TE.UI = {
         etScaleN.enabled = cbScale.value;
         gScale.add("statictext", undefined,
             l.format(l.LBL_LARGE_CANVAS, String(ctx.validation.scaleFactor)));
-
-        var gClean = pDoc.add("group");
-        gClean.alignment = ["fill", "top"];
-        var stCleanLbl = gClean.add("statictext", undefined, l.LBL_CLEAN);
-        this.lockW(stCleanLbl, this.M.LABEL_COL);
-        stCleanLbl.helpTip = l.TIP_CLEAN;
-        var etCleanW = gClean.add("edittext", undefined, "");
-        etCleanW.characters = this.M.NUM_FIELD;
-        etCleanW.helpTip = l.TIP_CLEAN;
-        gClean.add("statictext", undefined, "×");
-        var etCleanH = gClean.add("edittext", undefined, "");
-        etCleanH.characters = this.M.NUM_FIELD;
-        etCleanH.helpTip = l.TIP_CLEAN;
-        gClean.add("statictext", undefined, "mm");
+        // No clean-format fields: the artboard is the clean format. Typed
+        // values changed only the preview, while the run kept dividing the
+        // artboard (N27); a wrong artboard is fixed in Illustrator.
 
         // --- Split -----------------------------------------------------------
         var pSplit = colL.add("panel", undefined, l.PANEL_SPLIT);
@@ -489,7 +479,6 @@ TE.UI = {
         // --- wiring ----------------------------------------------------------
         var refs = {
             cbScale: cbScale, etScaleN: etScaleN,
-            etCleanW: etCleanW, etCleanH: etCleanH,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, etRound: etRound,
             cbEqual: cbEqual,
@@ -519,7 +508,7 @@ TE.UI = {
             ctrl.onChanging = refresh;
         }
 
-        var i, all = [cbScale, etScaleN, etCleanW, etCleanH, etCount, etWidth,
+        var i, all = [cbScale, etScaleN, etCount, etWidth,
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
@@ -899,7 +888,8 @@ TE.UI = {
         r.etSpot.enabled  = s.drawLine;
         r.etLineW.enabled = s.drawLine;
 
-        var clean = this.resolveClean(r, ctx, s);
+        // The artboard, the same rect the run divides (N27).
+        var clean = ctx.cleanRect;
 
         try {
             var ext = (s.direction === "horizontal")
@@ -987,28 +977,5 @@ TE.UI = {
         r.stCalc.text = alerts.concat(lines).join("\n");
         r.btnTiles.enabled = ok;
         r.btnExport.enabled = ok && exportOk;
-    },
-
-    /**
-     * The clean-format rect the preview should use: the artboard, unless the
-     * user typed an override. An override is a way out when the artboard does
-     * not match the graphic; empty fields mean "take the artboard".
-     * @param {Object} r - Control references.
-     * @param {Object} ctx - Document context.
-     * @param {Object} s - Settings.
-     * @returns {Array} [l, t, r, b] in document points.
-     */
-    resolveClean: function (r, ctx, s) {
-        var wTxt = String(r.etCleanW.text).replace(/^\s+|\s+$/g, "");
-        var hTxt = String(r.etCleanH.text).replace(/^\s+|\s+$/g, "");
-        if (wTxt === "" || hTxt === "") { return ctx.cleanRect; }
-
-        var wmm = Number(wTxt.replace(/,/g, "."));
-        var hmm = Number(hTxt.replace(/,/g, "."));
-        if (isNaN(wmm) || isNaN(hmm) || wmm <= 0 || hmm <= 0) { return ctx.cleanRect; }
-
-        // Keep the artboard's top-left corner; only the size is overridden.
-        var c = ctx.cleanRect;
-        return [c[0], c[1], c[0] + TE.Utils.toDoc(wmm, s), c[1] - TE.Utils.toDoc(hmm, s)];
     }
 };

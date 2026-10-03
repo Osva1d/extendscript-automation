@@ -210,8 +210,9 @@ var jN10a = job(merge(flat, { scaleN: 10, exportScale: "actual" }), [0, mm(100),
 var cN10a = TE.Validate.markConflict(jN10a.tiles, ctx(), jN10a.s);
 assert(cN10a !== null && cN10a.type === "orient", "1:10, výstup 1:1: stejná kolize");
 
-// Spacing below the mark diameter merges neighbours along an edge.
-var jSm = job(merge(flat, { maxDist: 4 }), [0, mm(100), mm(300), 0]);
+// Spacing below the mark diameter merges neighbours along an edge. Small
+// panels (50 mm) keep the count under the live limit: about 80 marks.
+var jSm = job(merge(flat, { maxDist: 4 }), [0, mm(50), mm(150), 0]);
 assert(has(TE.Validate.check(jSm.tiles, ctx(), jSm.s).exportErrors, "marks-overlap"),
     "rozteč 4 mm u značky 5 mm: značky splynou");
 

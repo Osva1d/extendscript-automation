@@ -56,8 +56,6 @@ TE.L = (function () {
             // --- document ---
             LBL_SCALE:           "Manual scale 1:N",
             TIP_SCALE:           "Tick when the document is drawn to scale, for example a 1:10 canvas of a large graphic. Values below are always entered in real-world millimetres.",
-            LBL_CLEAN:           "Clean format",
-            TIP_CLEAN:           "Width and height of the graphic without adds. Taken from the artboard; overwrite only when the artboard does not match.",
             LBL_LARGE_CANVAS:    "Large Canvas factor: %s",
 
             // --- split ---
@@ -217,8 +215,6 @@ TE.L = (function () {
             // --- document ---
             LBL_SCALE:           "Ruční měřítko 1:N",
             TIP_SCALE:           "Zaškrtni, když je dokument ve zmenšeném měřítku, třeba plátno 1:10 velké grafiky. Hodnoty níž se vždy zadávají ve skutečných milimetrech.",
-            LBL_CLEAN:           "Čistý formát",
-            TIP_CLEAN:           "Šířka a výška grafiky bez přídavků. Bere se z artboardu; přepiš jen tehdy, když artboard nesedí.",
             LBL_LARGE_CANVAS:    "Faktor Large Canvas: %s",
 
             // --- split ---

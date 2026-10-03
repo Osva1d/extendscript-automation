@@ -11,19 +11,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N27 — ručně přepsaný čistý formát platí jen v náhledu
-
-`tile-export/src/ui.js` (`resolveClean`, `collect`), `src/main.js`.
-
-Pole Čistý formát v panelu Dokument přepíše rozměr jen pro Výsledek
-a validaci. `collect()` přepis nepředá a Jen pláty i export dělí artboard
-(`clean.rect` v `main.js`). Dialog tak ukazuje pláty, které běh nevyrobí.
-Spec (§6) slibuje přepis pro celý běh. Zjištěno z kódu při kontrole
-2026-10-03; v Illustratoru neověřeno. **Oprava, k rozhodnutí:** přepis předat
-do běhu i do předvolby, nebo pole zrušit a nechat artboard jediným zdrojem
-pravdy, jak ho spec popisuje pro opakovaný běh; artboard jde opravit přímo
-v Illustratoru.
-
 ### N24 — Zünd: kontura, která do plátu nezasahuje, nechá rám jako řez
 
 **Patří do etapy tvarového ořezu.** `tile-export/src/cut.js`, `renderTileContour`.
@@ -85,7 +72,8 @@ všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
 | N22 | Zünd kontura se nezvětšovala s měřítkem výstupu (kód se zatím nepoužívá, N24) | `666ab22` |
 | N23 | rozlišení rastru pod 72 DPI selhalo až při exportu, na každém plátu surovou hláškou; dialog teď export zastaví a řekne minimum | `fd3c1e8` |
 | N25 | registrace se brala jako `swatches[1]` bez kontroly typu — bez registrace na indexu 1 je tam Bílá a značky by kamera Zündu neviděla; teď se hledá podle typu (z kontroly po prompt-auditu 2026-10-03) | `16e7317` |
-| N26 | Zünd značky, které by na tisku splynuly — orientační bod na rohové značce u úzkého plátu (maska 85–95 mm při výchozím nastavení), rozteč pod průměrem značky — nikdo nehlásil; dialog teď jmenuje plát a zastaví export, plát s víc než 200 značkami zkontroluje `main.js` před exportem | `2500e03` |
+| N26 | Zünd značky, které by na tisku splynuly — orientační bod na rohové značce u úzkého plátu (maska 85–95 mm při výchozím nastavení), rozteč pod průměrem značky — nikdo nehlásil; dialog teď jmenuje plát a zastaví export, plát s víc než 100 značkami zkontroluje `main.js` před exportem (hranice podle měření, `acdd723`) | `2500e03` |
+| N27 | pole Čistý formát měnilo jen náhled a validaci, běh dál dělil artboard — dialog mohl ukázat pláty, které běh nevyrobí; pole zrušena, artboard je jediný zdroj pravdy (rozhodnutí uživatele 2026-10-03) | `29640be` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
