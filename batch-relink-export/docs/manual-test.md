@@ -38,7 +38,8 @@ soubor kratší) a prázdnou výstupní složku.
 
 - [ ] **1.1 Okem.** Nic uříznutého, pole zarovnaná. Při prvním spuštění (bez
   souboru s nastavením) je vzor předvyplněný `{n}_{template}_{source}`
-  a náhled názvu ukazuje `01_sablona_zdroj.pdf` (B8).
+  a náhled názvu ukazuje `01_sablona_zdroj.pdf` (B8). Předvybraný PDF preset
+  je `[Kvalitní tisk]` (B9).
   Nápověda u „Přeskočit existující soubory" říká, že se přeskočí jen výstup
   novější než zdroj i šablona.
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Spustit.
@@ -169,9 +170,7 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | nastavení nejde zapsat | „Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje." a dávka proběhne |
 | předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v náhledu, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
 
-**Známé, vědomě neopravené** (minor z review): výchozí PDF preset se liší podle
-jazyka — platí jen do první volby, pak si dialog pamatuje poslední (B9);
-v detailu chyby zůstává anglická hláška Illustratoru (T5); titulek okna je
+**Známé, vědomě neopravené** (minor z review): v detailu chyby zůstává anglická hláška Illustratoru (T5); titulek okna je
 anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte složku:" (T8).
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2

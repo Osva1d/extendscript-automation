@@ -31,7 +31,9 @@ BRE.Config = {
         panelSpacing: 10
     },
 
-    presetSearchPatterns: ["High Quality", "Tisková kvalita"],
+    // High Quality Print in both languages. Its Czech name is [Kvalitní tisk];
+    // [Tisková kvalita] is Press Quality (order in app.PDFPresetsList, engine-facts).
+    presetSearchPatterns: ["High Quality", "Kvalitní tisk"],
 
     artboardRange: "",
 

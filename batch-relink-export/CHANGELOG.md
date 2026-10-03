@@ -12,8 +12,8 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
   Šablona, výstupní složka, vzor, PDF preset a „Po dokončení otevřít výstupní
   složku" se předvyplní z minulého běhu; uloží se po Spustit, když dialog
   projde kontrolou. Konec výběru presetu při každém běhu — výchozí preset
-  podle jazyka Illustratoru (`[Tisková kvalita]` / `[High Quality Print]`)
-  platí jen do první volby. Zdrojová složka se mění se zakázkou a „Přeskočit
+  `[Kvalitní tisk]` (anglicky `[High Quality Print]`) platí jen do první
+  volby. Zdrojová složka se mění se zakázkou a „Přeskočit
   existující" je rozhodnutí pro jeden běh, proto se nepamatují. Nastavení je
   v `~/Library/Application Support/batch-relink-export/settings.json`.
 
@@ -103,6 +103,10 @@ Opravy z code review 2026-09-27
   v nich zůstala strana a ořez poslední pozice šablony — po reálné zakázce
   strana 12 a BleedBox, a to i po Stornu v náhledu. Skript teď předvolbu na
   začátku běhu uloží a na konci vrátí, ať běh skončí jakkoli.
+- **Výchozí PDF preset je stejný v české i anglické instalaci (B9).** Česká
+  instalace předvybírala `[Tisková kvalita]`, což je Press Quality, kdežto
+  anglická `[High Quality Print]`. Výchozí je teď v obou High Quality Print,
+  česky `[Kvalitní tisk]`.
 
 Opravy z auditu UI 2026-09-28
 ([report](../docs/reports/2026-09-28-audit-ui-batch-relink-export.md)).
