@@ -110,5 +110,10 @@ eq(TE.UI.collect(rpn).pdfPreset, "", "that item reads as no preset, like [Defaul
 rpn.ddPdf = { selection: { text: "[Kvalitní tisk]" } };
 eq(TE.UI.collect(rpn).pdfPreset, "[Kvalitní tisk]", "a real preset is read as it is");
 
+console.log("\n=== N27: no clean-format override — the dialog divides what the run divides ===");
+// The fields changed only the preview and the validation; Panels only and the
+// export kept dividing the artboard. The artboard is the one source of truth.
+eq(/etClean|resolveClean/.test(ui), false, "no override field or resolver left in the dialog");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
