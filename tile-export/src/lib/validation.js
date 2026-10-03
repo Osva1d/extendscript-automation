@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Validate — §5 rules. Errors stop the run, warnings do not.
 // Part of: Illustrator Tile Export
-// Depends on: TE.Utils, TE.L
+// Depends on: TE.Config, TE.Core, TE.Export, TE.Utils, TE.L
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -19,7 +19,7 @@ TE.Validate = {
     check: function (tiles, ctx, s) {
         var errors = [], exportErrors = [], warnings = [];
         var eps = 1e-6;
-        var i, t, w, h, k, shortest, overlapPt;
+        var i, t, w, h, k, shortest, overlapPt, conflict;
 
         // Exactly one placed graphic — export builds a temporary document that
         // carries only the graphic, so anything else would be silently dropped.
@@ -56,6 +56,13 @@ TE.Validate = {
             this.checkBleed(exportErrors, Number(s.addRight),  ctx.overhang.right,  TE.L.EDGE_RIGHT,  s);
             this.checkBleed(exportErrors, Number(s.addTop),    ctx.overhang.top,    TE.L.EDGE_TOP,    s);
             this.checkBleed(exportErrors, Number(s.addBottom), ctx.overhang.bottom, TE.L.EDGE_BOTTOM, s);
+
+            // Marks that would print as one shape (N26): on a narrow panel the
+            // orientation dot lands on a corner mark, a short spacing merges
+            // neighbours. Live, so only up to MARK_CHECK_LIVE_MAX marks a
+            // panel; main.js checks the rest before the export.
+            conflict = this.markConflict(tiles, ctx, s, TE.Config.MARK_CHECK_LIVE_MAX);
+            if (conflict) { exportErrors.push(this.describeMarkConflict(conflict, s)); }
         }
 
         // Panel must fit an Illustrator artboard once the output scale applies.
@@ -136,6 +143,53 @@ TE.Validate = {
                 TE.Utils.formatMM(add + bleed, TE.L.DECIMAL),
                 TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
         }
+    },
+
+    /**
+     * Zünd: the first panel whose marks would print as one shape or stick out
+     * of the page — the shared check zund-summa-marks runs before it draws
+     * (review K7), on the geometry the export builds (buildZundPanel).
+     *
+     * Panels of one size carry the same marks, so each size is checked once.
+     * findMarkConflict compares every pair of marks; with maxMarks, a panel
+     * that carries more is skipped, so a spacing typed on the way to its final
+     * value cannot stall the dialog.
+     *
+     * @param {Array} tiles - Panels from computeTiles().
+     * @param {Object} ctx - {scaleFactor}.
+     * @param {Object} s - Settings.
+     * @param {number} [maxMarks] - Skip panels with more marks than this.
+     * @returns {Object|null} {index, type, dist} with dist in real mm, or null.
+     */
+    markConflict: function (tiles, ctx, s, maxMarks) {
+        var k = TE.Utils.outputScale(s, ctx.scaleFactor);
+        var ratio = TE.Utils.pageRatio(s, ctx.scaleFactor);
+        var seen = [], i, tf, size, geo, c;
+        for (i = 0; i < tiles.length; i++) {
+            tf = TE.Export.tileTransform(tiles[i], [0, 0, 0, 0], k);
+            size = Math.round(tf.artboard[2] * 1000) + "x" + Math.round(tf.artboard[3] * 1000);
+            if (TE.Utils.indexOf(seen, size) !== -1) { continue; }
+            seen.push(size);
+            geo = TE.Core.calculateAll(s, TE.Export.zundLayout(tf, s, ratio).mask, ratio);
+            if (maxMarks && geo.marksZ.length > maxMarks) { continue; }
+            c = TE.Core.findMarkConflict(geo, s, ratio);
+            if (c) { return { index: tiles[i].index, type: c.type, dist: c.dist }; }
+        }
+        return null;
+    },
+
+    /**
+     * The message for a markConflict() result.
+     * @param {Object} c - {index, type, dist} from markConflict().
+     * @param {Object} s - Settings (markSizeZ).
+     * @returns {string} Localized message.
+     */
+    describeMarkConflict: function (c, s) {
+        var tpl = { overlap: TE.L.ERR_MARKS_OVERLAP, orient: TE.L.ERR_MARKS_ORIENT,
+                    outside: TE.L.ERR_MARKS_OUTSIDE }[c.type];
+        return TE.L.format(tpl, c.index,
+            TE.Utils.formatMM(c.dist, TE.L.DECIMAL),
+            TE.Utils.formatMM(Number(s.markSizeZ), TE.L.DECIMAL));
     },
 
     /**

@@ -90,6 +90,17 @@
         var cuts = TE.Grid.computeCuts(s, ext, guides.positions);
         var tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
 
+        // Zünd marks that would print as one shape stop the export before
+        // anything changes (N26). The dialog checks the same live, but leaves
+        // panels with very many marks to this one check without a limit.
+        if (res.action === "export" && s.zundMode) {
+            var conflict = TE.Validate.markConflict(tiles, ctx.validation, s);
+            if (conflict) {
+                alert(TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
+                return;
+            }
+        }
+
         var replaced = TE.Draw.removeTileArtboards(doc);
         // The lines layer exists exactly when lines are drawn: a run without
         // them clears last run's lines and takes the empty layer with it.
