@@ -167,6 +167,14 @@ has(rNar.stCalc.text, "✗ Plát 1: orientační bod by se dotýkal jiné značk
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
 
+console.log("\n=== N23: raster resolution below 72 DPI ===");
+var rDpi = refs({ rbExpMode: [{ value: false }, { value: true }], etDPI: { text: "71", enabled: true } });
+TE.UI.refresh(null, rDpi, ctx);
+has(rDpi.stCalc.text, "✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI.",
+    "the message says what the minimum is");
+eq(rDpi.btnExport.enabled, false, "and the export is blocked");
+eq(rDpi.btnTiles.enabled, true, "Panels only rasterises nothing");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more

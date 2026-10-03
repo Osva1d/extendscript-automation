@@ -14,6 +14,7 @@ TE.L = {
     ERR_AB_TOO_BIG:    "artboard-too-big",
     ERR_LARGE_CANVAS:  "large-canvas-source-scale",
     WARN_MEDIA:        "media-too-narrow",
+    ERR_DPI_MIN:       "dpi-below-minimum",
     ERR_MARKS_OVERLAP: "marks-overlap",
     ERR_MARKS_ORIENT:  "marks-orient",
     ERR_MARKS_OUTSIDE: "marks-outside",
@@ -157,6 +158,19 @@ assert(has(rb3.exportErrors, "bleed-beyond-overhang"), "hrana načisto potřebuj
 var jn = job({ zundMode: false, cutBleed: 15 });
 var rb4 = TE.Validate.check(jn.tiles, ctx(), jn.s);
 assert(!has(rb4.exportErrors, "bleed-beyond-overhang"), "mimo Zünd režim se spad nekontroluje");
+
+console.log("\n=== N23: rastr pod 72 DPI blokuje export ===");
+// Illustrator rasterises from 72 DPI up (71 fails, 72 passes — measured).
+// Below that every panel used to fail on its own with a raw DOM message.
+var jr71 = job({ exportMode: "raster", rasterDPI: 71 });
+var rr71 = TE.Validate.check(jr71.tiles, ctx(), jr71.s);
+assert(has(rr71.exportErrors, "dpi-below-minimum"), "71 DPI: Illustrator ho nepřijme, export je blokovaný");
+assert(!has(rr71.errors, "dpi-below-minimum"), "Jen pláty nic nerastrují a zůstávají dostupné");
+var jr72 = job({ exportMode: "raster", rasterDPI: 72 });
+assert(!has(TE.Validate.check(jr72.tiles, ctx(), jr72.s).exportErrors, "dpi-below-minimum"), "72 DPI projde");
+var jrv = job({ exportMode: "vector", rasterDPI: 10 });
+assert(!has(TE.Validate.check(jrv.tiles, ctx(), jrv.s).exportErrors, "dpi-below-minimum"),
+    "ve vektorovém exportu na rozlišení nezáleží");
 
 console.log("\n=== N26: Zünd značky, které by na tisku splynuly, blokují export ===");
 // A 240 mm graphic in three 80 mm panels, no overlap or adds: the mask is

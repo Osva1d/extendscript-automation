@@ -65,6 +65,14 @@ TE.Validate = {
             if (conflict) { exportErrors.push(this.describeMarkConflict(conflict, s)); }
         }
 
+        // Illustrator rasterises from 72 DPI up; below that every panel failed
+        // on its own with a raw DOM message (N23). An export error: Panels
+        // only rasterises nothing.
+        if (s.exportMode === "raster" && Number(s.rasterDPI) < TE.Config.RASTER_DPI_MIN) {
+            exportErrors.push(TE.L.format(TE.L.ERR_DPI_MIN,
+                TE.Utils.formatMM(Number(s.rasterDPI), TE.L.DECIMAL), TE.Config.RASTER_DPI_MIN));
+        }
+
         // Panel must fit an Illustrator artboard once the output scale applies.
         // TE.Utils.outputScale is the export's own rule, so this measures the
         // size the export will actually produce. The message names the panel,
