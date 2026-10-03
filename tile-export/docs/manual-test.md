@@ -55,8 +55,8 @@ vrať (nebo ulož jako předvolbu):
 
 ## 1. Co umí jen člověk
 
-**1.1 Dialog okem.** Bez Zünd režimu 1178 × 695 px, se Zünd panelem 1178 ×
-793 px. Nic uříznutého, sloupce zarovnané. Výsledek je v pravém sloupci; dlouhá
+**1.1 Dialog okem.** 1178 × 793 px se Zünd režimem i bez něj — panel Zünd je
+v dialogu vždy a vypnutý režim místo nevrací. Nic uříznutého, sloupce zarovnané. Výsledek je v pravém sloupci; dlouhá
 chybová hláška (Large Canvas, ruční 1:10, výstup 1:1) se v poli **zalomí**,
 neuřízne.
 
@@ -106,7 +106,7 @@ v milimetrech.
 | zeď, Zünd, 1:1 | „se značkami: 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030"; „Řez: obdélník plátu v barvě Cut." | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
 | zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
 | arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)…"; stránky 149 × 103 \| 149 × 103 \| 11 × 103 | export šedý, Jen pláty aktivní |
-| zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 200 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
+| zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
 | arch, Rastr, Rozlišení 71 | „✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI." | export šedý; se 72 projde |
 
 **Hlášky** (česky): šířka 0 → „Šířka plátu musí být kladné číslo."; Rovnoměrně

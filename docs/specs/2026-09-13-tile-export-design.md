@@ -127,8 +127,9 @@ Souřadnice dokumentové, Y kladné nahoru.
 - čistý formát grafiky = **aktivní artboard bez prefixu `TE_`**, obdélník
   `[X0, Y0, X1, Y1]`. Pláty vznikají jako **nové** artboardy s prefixem, původní
   zůstane nedotčený — je to jediný zdroj pravdy o čistém formátu při opakovaném
-  spuštění a export ho vynechává. V dopočtu dialogu je vypsaný číselně a jde
-  přepsat ručně (§6)
+  spuštění a export ho vynechává. V dopočtu dialogu je vypsaný číselně (§6).
+  Ruční přepis v dialogu byl zrušen (N27, 2026-10-03): měnil jen náhled, běh
+  dál dělil artboard; nesedí-li artboard, opraví se artboard
 - směr dělení: `horizontal` (svislé řezy, pláty vedle sebe) nebo `vertical`
 - režim dělení: `count` (n) | `width` (w) | `guides`
 - přelep `O ≥ 0`, režim `symmetric` | `onesided`
@@ -273,9 +274,10 @@ Dialog nabízí obě fáze naráz, takže jistý běh nezdržuje.
   `scaleFactor`, ať je vidět, se kterým se počítá
 - **Dělení** — směr, režim (počet / šířka / vodítka), vstup toho režimu.
   U režimu `guides` navíc krok zaokrouhlení pozic (nula = brát je, jak jsou)
-- **Dopočet** — přepisuje se při každé změně: **čistý formát** (přepsatelný
-  ručně), rozměr plátu čistý i rozšířený, počet plátů, **dostupný přesah per
-  hrana** vedle zadaného přídavku. Varování při nevejití na médium
+- **Dopočet** — přepisuje se při každé změně: **čistý formát** (z artboardu;
+  ruční přepis zrušen, N27), rozměr plátu čistý i rozšířený, počet plátů,
+  **dostupný přesah per hrana** vedle zadaného přídavku. Varování při
+  nevejití na médium
 - **Přelep** — hodnota + přepínač symetricky / jednostranně
 - **Přídavky** — čtyři pole: nahoře, dole, vlevo, vpravo
 - **Linka** — zapnuto, název přímé barvy, tloušťka
