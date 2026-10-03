@@ -88,7 +88,7 @@ NS.Storage = {
      */
     save: function (data) {
         if (typeof JSON === "undefined") {
-            this._logError("JSON not available — load polyfills/json2.js first");
+            this._logError("JSON not available — the build must concatenate shared/lib/json2.js first");
             return false;
         }
 
@@ -96,7 +96,7 @@ NS.Storage = {
             var wrapper = {
                 _meta: {
                     version:       this.version,
-                    savedAt:       new Date().toISOString(),
+                    savedAt:       new Date().getTime(),   // ms; toISOString does not exist in ExtendScript
                     scriptVersion: NS.CONSTANTS ? NS.CONSTANTS.VERSION : "unknown"
                 },
                 settings: data
@@ -367,6 +367,10 @@ NS.Main = function () {
 ### 3.3 With validation
 
 Useful when settings can come from outside (imported preset, manually edited file):
+
+`validate` belongs to the reference module in §2 — the tools' real `storage.js`
+has none. There, check loaded JSON with `Validate.settings` from the
+`robust-error-handling` skill.
 
 ```javascript
 var schema = {
