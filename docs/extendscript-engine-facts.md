@@ -50,7 +50,28 @@ Lineární, ~1 % režie. `Date.now` je v enginu rovněž přítomné (`function`
 
 **Engine není pomalý.** Smyčka 200 000 iterací `s += i` = **20 ms**
 (~10 M op/s, měřeno přes `Date`). Úzké hrdlo skriptů je DOM, ne JS —
-profiling JS kódu tady nic nevyřeší.
+profiling JS kódu tady nic nevyřeší. **Výjimkou jsou velká pole**, viz níž.
+
+### Velká pole: čtení `a[i]` zdražuje s velikostí pole (naměřeno 2026-10-03, AI 30.8.2)
+
+Průchod polem je zhruba kvadratický — jedno čtení `a[i]` je tím dražší, čím
+je pole větší. Měřeno přes `Date`, uložená délka:
+
+| prvků | prázdná smyčka | průchod se čtením `a[i]` |
+|---|---|---|
+| 10 000 | 1 ms | 40 ms |
+| 20 000 | 1 ms | 163 ms |
+| 40 000 | 2 ms | 669 ms |
+
+Platí pro pole skládané postupně: `push`, `a[k] = k` i `new Array(N)` dávají
+při 20 000 prvcích ~190 ms. Pole stejné délky z `"…".split(",")` se čte za
+30 ms; proč, neměřeno. 300 000 prvků × 10 průchodů zablokovalo Illustrator na
+desítky minut (AppleEvent timeout `-1712`, nakonec vynucené ukončení). Pro
+běžná pole nástrojů (desítky až stovky položek) platí věta výš, pro desítky
+tisíc už ne.
+
+**Uložená délka je ~40 % rychlejší** — `for (var i = 0, len = a.length; i < len; i++)`:
+20 000 prvků 280 → 163 ms (5 kol, stabilně), 200 prvků × 500 průchodů 30 → 17 ms.
 
 ---
 
@@ -661,6 +682,12 @@ výstup jde porovnat vedle sebe.
   v dalším volání zase DOCUMENT (bez otevřeného dokumentu). Že by nastavení
   přežívalo mezi skripty, se neprojevilo; s otevřeným dokumentem a přes
   Soubor › Skripty neměřeno.
+- **Y roste nahoru v obou souřadnicových systémech** (naměřeno 2026-10-03,
+  AI 30.8.2). `rectangle(80, 10, 50, 20)` na artboardu 200 × 100 pt:
+  DOCUMENT `geometricBounds` `[10,80,60,60]`, artboard `[0,100,200,0]`;
+  ARTBOARD `[10,-20,60,-40]`, artboard `[0,0,200,-100]`. ARTBOARD jen posouvá
+  počátek do levého horního rohu artboardu — pod jeho horní hranou je Y
+  záporné. Nic se nepřeklápí.
 - ScriptUI: `edittext.text = null` zobrazí text „null", `undefined` text
   „undefined", bez výjimky. `parseFloat` z nich dá `NaN`.
 
