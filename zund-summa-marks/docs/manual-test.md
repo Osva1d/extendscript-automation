@@ -165,6 +165,8 @@ Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchoz�
   v řezové barvě ‘Cut’, které mají i tiskovou výplň…"
 - cesta v barvě Cut v ořezové masce nebo zamčené podvrstvě (K2) → „Vrstva ‘Cut’:
   některé cesty v barvě ‘Cut’ zůstaly na místě…"
+- přímá barva Cut, kterou nemá žádná cesta, řádek Cut ← Cut (A7) → „Vrstva
+  ‘Cut’: v barvě ‘Cut’ není v dokumentu žádná cesta, nic se nepřesunulo…"
 - vlastní objekt ve vrstvě Trim (K6) → zůstane, „Vrstva ‘Trim’ obsahuje
   i objekty, které nevytvořil skript…"
 - řádek mapování s barvou a bez názvu → „Řádek vrstvy má barvu (‘Cut’), ale

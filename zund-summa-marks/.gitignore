@@ -11,4 +11,4 @@ node_modules/
 .idea/
 .vscode/
 
-# Note: dist/illustrator-zund-summa-marks.jsx IS committed (release artifact) — do not ignore.
+# dist/ is ignored by the repo-root .gitignore — builds ship as GitHub Release assets.
