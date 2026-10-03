@@ -105,18 +105,31 @@ TE.Draw = {
 
 
     /**
-     * Name of the registration swatch. It is always index 1 and its name is
-     * LOCALIZED — "[Registrační]" on a Czech install — so it must be read,
-     * never assumed. Same approach as zund-summa-marks.
+     * Name of the registration swatch, found by TYPE. The name is localized —
+     * "[Registrační]" on a Czech install — and index 1, where registration
+     * sits in every document measured, is not trusted: without registration
+     * there, swatches[1] is White and marks would be drawn invisible to the
+     * cutter's camera. With no registration swatch the English default comes
+     * back; it names nothing on a Czech install, so resolveMarkColor falls
+     * through to 100 % K instead of a neighbouring swatch. Same check as
+     * grommet-marks and zund-summa-marks.
      * @param {Document} doc - Document to read from.
      * @returns {string} The registration swatch name.
      */
     getRegistrationName: function (doc) {
         try {
-            return doc.swatches[1].name;
+            var sw = doc.swatches;
+            for (var i = 0; i < sw.length; i++) {
+                var c = sw[i].color;
+                if (c && c.typename === "SpotColor" && c.spot &&
+                        c.spot.colorType === ColorModel.REGISTRATION) {
+                    return sw[i].name;
+                }
+            }
         } catch (e) {
-            return "[Registration]";
+            TE.Utils.log("getRegistrationName: swatches unreadable: " + e.message);
         }
+        return "[Registration]";
     },
 
     /**

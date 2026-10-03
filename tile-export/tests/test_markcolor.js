@@ -9,6 +9,7 @@ var path = require("path");
 
 var TE = {};
 global.app = { documents: { length: 1 }, activeDocument: { scaleFactor: 1 } };
+global.ColorModel = { SPOT: "SPOT", REGISTRATION: "REGISTRATION" };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
@@ -30,7 +31,12 @@ function mockDoc(spots, swatchNames) {
         spots: spots,
         swatches: (function () {
             var arr = [];
-            for (var i = 0; i < swatchNames.length; i++) { arr.push({ name: swatchNames[i] }); }
+            for (var i = 0; i < swatchNames.length; i++) {
+                var n = swatchNames[i], reg = (n === "[Registrační]" || n === "[Registration]");
+                arr.push({ name: n, color: reg
+                    ? { typename: "SpotColor", spot: { name: n, colorType: ColorModel.REGISTRATION } }
+                    : { typename: "CMYKColor", cyan: 0, magenta: 0, yellow: 0, black: 0 } });
+            }
             arr.getByName = function (n) {
                 for (var j = 0; j < arr.length; j++) { if (arr[j].name === n) { return arr[j]; } }
                 throw new Error("no swatch " + n);
@@ -41,7 +47,7 @@ function mockDoc(spots, swatchNames) {
 }
 
 console.log("\n=== getRegistrationName ===");
-// The registration swatch is always index 1 and its name is LOCALIZED.
+// Found by type: the name is LOCALIZED and index 1 is not trusted.
 var czDoc = mockDoc([], ["Nic", "[Registrační]", "cut"]);
 assert(TE.Draw.getRegistrationName(czDoc) === "[Registrační]",
     "bere swatches[1], nespoléhá na anglický název");
@@ -49,6 +55,12 @@ var enDoc = mockDoc([], ["None", "[Registration]"]);
 assert(TE.Draw.getRegistrationName(enDoc) === "[Registration]", "a v angličtině taky");
 assert(TE.Draw.getRegistrationName({}) === "[Registration]",
     "dokument bez swatchů nespadne, vrátí anglický default");
+var movedDoc = mockDoc([], ["Nic", "Bílá", "Černá", "[Registrační]"]);
+assert(TE.Draw.getRegistrationName(movedDoc) === "[Registrační]",
+    "registrace jinde než na indexu 1 se najde podle typu, ne Bílá z indexu 1");
+var noRegDoc = mockDoc([], ["Nic", "Bílá", "Černá"]);
+assert(TE.Draw.getRegistrationName(noRegDoc) === "[Registration]",
+    "bez registrace vrátí anglický default, ne Bílou");
 
 console.log("\n=== listMarkColors ===");
 var d = mockDoc(
