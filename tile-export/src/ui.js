@@ -84,6 +84,23 @@ TE.UI = {
     },
 
     /**
+     * Items for the PDF preset list: Illustrator's own presets, or — when it
+     * returns none — one item that says there is no preset, which collect()
+     * reads as "" and the export saves with Illustrator's PDF defaults.
+     * Never a name of our own: the old fallback named High Quality Print in
+     * English, which a Czech install calls [Kvalitní tisk], and saveAs then
+     * failed with FNOC on every panel (N20).
+     * @param {Array} list - app.PDFPresetsList, or [] when unreadable.
+     * @returns {Array} Item texts.
+     */
+    pdfPresetItems: function (list) {
+        var out = [], i;
+        for (i = 0; i < list.length; i++) { out.push(list[i]); }
+        if (out.length === 0) { out.push(TE.L.PDF_PRESET_NONE); }
+        return out;
+    },
+
+    /**
      * Builds the dialog and shows it.
      * @param {Object} pData - Preset wrapper {activePreset, presets}.
      * @param {Object} ctx - {cleanRect, guides, validation}.
@@ -301,13 +318,12 @@ TE.UI = {
 
         var pdfList = [];
         try { pdfList = app.PDFPresetsList; }
-        catch (pdfErr) { pdfList = []; }
-        var pj;
-        for (pj = 0; pj < pdfList.length; pj++) { ddPdf.add("item", pdfList[pj]); }
-        if (ddPdf.items.length === 0) {
-            // No list available: fall back to the one preset every install has.
-            ddPdf.add("item", "[High Quality Print]");
+        catch (pdfErr) {
+            pdfList = [];
+            TE.Utils.log("PDFPresetsList unreadable: " + pdfErr.message);
         }
+        var pdfItems = this.pdfPresetItems(pdfList), pj;
+        for (pj = 0; pj < pdfItems.length; pj++) { ddPdf.add("item", pdfItems[pj]); }
         ddPdf.selection = 0;
         for (pj = 0; pj < ddPdf.items.length; pj++) {
             if (ddPdf.items[pj].text === s.pdfPreset) { ddPdf.selection = pj; break; }
@@ -749,7 +765,9 @@ TE.UI = {
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
         s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
-        s.pdfPreset   = r.ddPdf.selection ? r.ddPdf.selection.text : "";
+        // The "no preset" item (N20) stands for "", like [Default]'s value.
+        s.pdfPreset   = (r.ddPdf.selection && r.ddPdf.selection.text !== TE.L.PDF_PRESET_NONE)
+            ? r.ddPdf.selection.text : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
