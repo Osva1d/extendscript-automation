@@ -4,7 +4,7 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
-## [1.0.0] — nevydáno
+## [1.0.0] — 2026-10-04
 
 První verze. Plátování velké grafiky na tiskové pláty pro **ruční ořez** —
 případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
