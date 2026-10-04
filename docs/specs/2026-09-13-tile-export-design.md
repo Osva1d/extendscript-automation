@@ -2,7 +2,7 @@
 
 Nástroj: `tile-export`, namespace `TE`.
 
-Datum: 2026-09-13 · Stav: **implementováno** (tile-export 1.0.0, nevydáno)
+Datum: 2026-09-13 · Stav: **implementováno** (tile-export 1.0.0, vydáno 2026-10-04)
 
 Záznam návrhu, ne popis dnešního chování — ten drží [README](../../tile-export/README.md).
 Pozdější změny jsou zapsané v textu tam, kde se návrh změnil; seznam oprav
