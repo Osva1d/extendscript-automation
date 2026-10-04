@@ -111,13 +111,12 @@ GM.Illustrator = {
     },
 
     /**
-     * Returns the document's [Registration] swatch colour (swatches[1] in any
-     * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
-     * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
-     * the user can delete [Registration] from the Swatches panel, and then
-     * swatches[1] is an arbitrary swatch that would silently mis-colour the
-     * fallback marks. Used when a named fill/stroke swatch is missing — marks
-     * degrade to a safe, cutter-readable colour instead of being dropped.
+     * Returns the document's registration colour, the stroke colour of every
+     * mark: swatches[1] in any AI locale ([Registration], [Registrační];
+     * index 0 is [None]), or 100% K CMYK as a fallback. The index is checked,
+     * not trusted — the swatch must be a spot of colorType REGISTRATION.
+     * A script cannot remove [Registration] (measured: remove() passes with no
+     * effect); whether the Swatches panel can is unverified, so the check stays.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
