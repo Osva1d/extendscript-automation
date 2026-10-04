@@ -159,6 +159,7 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
   s dírami a víc tvary.
 - **Stroj.** Jestli Zünd Cut Center přečte `_cut` PDF tak, jak ho uděláme
   (barva, tloušťka, značky), ověří jen první řez. To je obdoba R9.
+  **Uzavřeno 2026-10-04:** ruční test u stroje prošel (viz §9).
 - **Velikost PDF se maskou nezmenší.** Illustrator obsah neořezává, v tiskovém
   PDF zůstane celá grafika jako dnes. Menší soubor dá jen rastrový režim.
 - **Rastr a maska:** rastr zabírá celý artboard, maska ho jen skryje. Přesnost
@@ -216,6 +217,12 @@ se artboard mění až v kroku 5, takže pořadí bude správně samo.
   Naměřeno: editovatelnost stojí pevných ~320 KB na soubor (malá i 6× větší
   grafika), skrytý řez není v tisknutém obsahu, grafika zůstává propojená
   absolutní cestou.
+- **2026-10-04: ruční test prošel, včetně řezu na Zündu** (uživatel; ostrá
+  zakázka zbývá). Cut Center načetl `_cut`, podle ručního testu 1.7: značky
+  nalezené, řez po obdélníku, bez bílé hrany. Z testu vzešly N28–N31: v Zünd
+  režimu se nekreslí ořezová linka, nahoře je vrstva `Regmarks`. Nové měření
+  editovatelnosti: na stránce 300 × 300 mm ~0,9 MB a rastr uložený dvakrát
+  (`extendscript-engine-facts.md`).
 
 ## 10. Doporučené pořadí
 

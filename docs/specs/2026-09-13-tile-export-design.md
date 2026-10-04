@@ -185,6 +185,9 @@ Dvě věci, které z toho plynou a nejsou samozřejmé:
 po přetestu 2026-09-18: původních 0,3 pt, vybraných podle tiskových specifikací
 (providéři garantují minimum mezi 0,25 a 1 pt, pod 0,25 pt je hairline, který
 se při 300 dpi vykreslí jako jediný pixel), bylo v praxi příliš slabých.
+Ruční test 2026-10-04 (prohlížeč i tisk) to potvrdil: 1 pt je v tisku vidět na
+všech čtyřech hranách a ořez nezvětšuje. Výchozí hodnota tím přestala být jen
+volbou.
 
 ## 4b. Vstupní stav dokumentu a přesah grafiky
 

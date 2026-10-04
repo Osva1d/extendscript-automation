@@ -74,8 +74,8 @@ s hvězdičkou.
 a v **Náhledu**, zvětšit na maximum: linka na všech čtyřech hranách (P1).
 
 **1.5 Tisk.** Výřez rohu plátu v 1:1: linka 1 pt bezpečně vidět, nezvětšuje
-ořez, je na všech čtyřech hranách. Výsledek zapsat do specu — výchozí tloušťka
-je zatím volba, ne měření.
+ořez, je na všech čtyřech hranách. Výsledek zapsat do specu (§4); 2026-10-04
+prošel.
 
 **1.6 Zünd v Illustratoru.** Zeď 1:10, Zünd režim, výstup 1:1. Řádek ořezové
 linky je šedý a ve zdroji nepřibudou červené linky. Obě PDF otevřít
