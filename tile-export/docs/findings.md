@@ -37,13 +37,6 @@ jako dluh** (uživatel, 2026-09-18): udělat, až se bude do `apply()` sahat
 z jiného důvodu. Oprava: `String(v).replace(".", TE.L.DECIMAL)` v číselných
 polích.
 
-### P1 — linka v prohlížeči jen dole a vpravo (ověřit)
-
-Hlášeno u linky 0,3 pt, jejíž vnější hrana ležela přesně na hraně stránky. Data
-PDF byla symetrická; šlo o vykreslení. **N13 to nejspíš odstranilo** — linka
-teď leží středem na hraně s dvojnásobným tahem a Poppler ji vykreslí 0,96 pt na
-všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
-
 ---
 
 ## Uzavřené
@@ -78,6 +71,7 @@ všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
 | N28 | v Zünd režimu zůstal řádek linky aktivní a zdrojový dokument dostal červené náhledové linky, ač se do PDF linka nekreslí; řádek je teď šedý a linka se nekreslí nikde (ruční test 2026-10-04) | `29fe1cd` |
 | N29 | testovací dokumenty měly pravítka v bodech; generátor je zakládá v mm přes `addDocument` (nástroj sám na jednotkách nezávisí) | `a24779d` |
 | N30 | v Zünd souborech byla nahoře vrstva řezu, ne `Regmarks`; teď shora `Regmarks`, řez, `Graphics` jako v Zünd Summa Marks | `29fe1cd` |
+| P1 | linka 0,3 pt, jejíž vnější hrana ležela přesně na hraně stránky, se v prohlížeči vykreslila jen dole a vpravo; po N13 (linka středem na hraně, tah ×2) prošel ruční test v prohlížeči i tisku (2026-10-04) | `bb777c2` |
 | N31 | v běžném exportu ležela linka ve vrstvě s grafikou a obyčejné PDF vrstvy nenese; linka má vlastní vrstvu podle své barvy nad `Graphics` a vektorová PDF jsou editovatelná. Rastrová zůstala obyčejná — editovatelné PDF nese obraz dvakrát (naměřeno) | `29fe1cd` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
