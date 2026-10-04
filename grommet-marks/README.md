@@ -10,7 +10,7 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
 - **Jednotný vzhled značky** — registrační Esko-styl terč (bílé halo + registrační tah, kruh a/nebo kříž); vždy na samostatnou vrstvu „Grommet Marks".
 - **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); indikátor neuložených změn.
-- **Robustnost** — chybějící vrstva „Grommet Marks" se vytvoří; zamčená vrstva se dočasně odemkne a zase zamkne.
+- **Robustnost** — chybějící vrstva „Grommet Marks" se vytvoří; zamčená vrstva se dočasně odemkne a zase zamkne; skrytá se zviditelní a skript to oznámí.
 - **Živá validace** — neplatná číselná pole zčervenají a zablokují tlačítko Generovat.
 - **Lokalizace** — čeština / angličtina podle jazyka Illustratoru.
 

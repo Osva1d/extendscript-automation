@@ -104,10 +104,21 @@ GM.UI = {
         spcIn.preferredSize.width = 50;
         spcIn.helpTip = GM.L.TIP_SPACING;
 
+        // Corner zones override Count: distributeOnSpan fills the middle of a
+        // zoned edge by spacing and ignores the count. While zones are on the
+        // row shows Spacing with Count greyed out; a Count choice switched
+        // away that way comes back when zones are turned off.
+        var countAllowed = true, forcedSpacing = false;
+        function forceSpacing() {
+            if (!numRB.value) return;
+            forcedSpacing = true;
+            numRB.value = false; spcRB.value = true;
+        }
+
         function setModeEnabled(state) {
-            numRB.enabled = state;
+            numRB.enabled = state && countAllowed;
             spcRB.enabled = state;
-            numIn.enabled = state && numRB.value;
+            numIn.enabled = state && countAllowed && numRB.value;
             spcIn.enabled = state && spcRB.value;
         }
 
@@ -148,11 +159,10 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                // parseFloat (not parseInt) — parseInt would silently truncate
-                // "10.5" to 10 before GM.Validation ever sees it, making the
-                // edgeCount integer rule unenforceable on the submit path.
-                number: parseFloat(numIn.text.replace(/,/g, ".")),
-                spacing: parseFloat(spcIn.text.replace(/,/g, "."))
+                // parseNumber keeps "10.5" as 10.5, so the edgeCount integer
+                // rule sees it, and makes a typo like "1O5" NaN instead of 1.
+                number: GM.Validation.parseNumber(numIn.text),
+                spacing: GM.Validation.parseNumber(spcIn.text)
             };
         };
         api.apply = function (e) {
@@ -161,6 +171,21 @@ GM.UI = {
             spcRB.value = !e.useNumber;
             numIn.text = e.number;
             spcIn.text = e.spacing;
+            forcedSpacing = false;
+            if (!countAllowed) forceSpacing();
+            refresh();
+        };
+        api.setCountAllowed = function (allowed) {
+            if (allowed === countAllowed) return;
+            countAllowed = allowed;
+            if (!allowed) {
+                forceSpacing();
+            } else if (forcedSpacing) {
+                forcedSpacing = false;
+                numRB.value = true; spcRB.value = false;
+            }
+            numRB.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_COUNT_ZONES;
+            numIn.helpTip = numRB.helpTip;
             refresh();
         };
         api.getConvertFields = function () { return [spcIn]; };
@@ -264,7 +289,14 @@ GM.UI = {
         artboardRB.value = true;
         var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
         pathRB.enabled = pathOk;
-        pathRB.helpTip = pathOk ? "" : GM.L.TIP_MODE_PATH_DISABLED;
+        // Say why the mode is unavailable: customer contours often arrive as a
+        // group or a compound path, and "select a path" would not help there.
+        var pathReasonTips = {
+            "no-selection": GM.L.ERR_PATH_NO_SELECTION,
+            "not-a-path":   GM.L.ERR_PATH_NOT_A_PATH,
+            "too-short":    GM.L.ERR_PATH_TOO_SHORT
+        };
+        pathRB.helpTip = pathOk ? "" : (pathReasonTips[pathInfo && pathInfo.reason] || GM.L.ERR_PATH_NOT_A_PATH);
 
         // Units — global switch lives at the top. Fill spacer pushes it right.
         var modeSpacer = modePanel.add("group");
@@ -501,10 +533,18 @@ GM.UI = {
             var cornersOnly = pathMode && hasCorners && pathNumRB.value;
             var zonesPossible = (!pathMode || hasCorners) && !cornersOnly;
             zoneCB.enabled = zonesPossible;
-            zoneCB.helpTip = zonesPossible ? GM.L.TIP_ZONES : GM.L.TIP_ZONES_NO_CORNERS;
+            var zoneTip = GM.L.TIP_ZONES;
+            if (!zonesPossible) zoneTip = cornersOnly ? GM.L.TIP_ZONES_CORNERS_ONLY : GM.L.TIP_ZONES_NO_CORNERS;
+            zoneCB.helpTip = zoneTip;
             var fieldsOn = zonesPossible && zoneCB.value;
             zoneCountIn.enabled = fieldsOn;
             zonePitchIn.enabled = fieldsOn;
+            // Zones on the artboard edges replace Count by Spacing.
+            var countOnEdges = pathMode || !fieldsOn;
+            topUI.setCountAllowed(countOnEdges);
+            bottomUI.setCountAllowed(countOnEdges);
+            leftUI.setCountAllowed(countOnEdges);
+            rightUI.setCountAllowed(countOnEdges);
         }
         zoneCB.onClick = function () { refreshZonesEnabled(); onUserChange(); };
 
@@ -609,8 +649,8 @@ GM.UI = {
         // =================================================================
         function gatherAll() {
             return {
-                offsetX: parseFloat(offsetXIn.text.replace(/,/g, ".")),
-                offsetY: parseFloat(offsetYIn.text.replace(/,/g, ".")),
+                offsetX: GM.Validation.parseNumber(offsetXIn.text),
+                offsetY: GM.Validation.parseNumber(offsetYIn.text),
                 top: topUI.gather(),
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
@@ -618,11 +658,11 @@ GM.UI = {
                 bottomMirror: mirrorTopCB.value,
                 rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
-                markSize: parseFloat(sizeInput.text.replace(/,/g, ".")),
+                markSize: GM.Validation.parseNumber(sizeInput.text),
                 markCircle: circleCB.value,
                 markCross: crossCB.value,
-                regWeight: parseFloat(regWIn.text.replace(/,/g, ".")),
-                haloWeight: parseFloat(haloWIn.text.replace(/,/g, ".")),
+                regWeight: GM.Validation.parseNumber(regWIn.text),
+                haloWeight: GM.Validation.parseNumber(haloWIn.text),
                 placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
                 cornerZone: {
                     // Effective state: a checked-but-disabled box (zones are
@@ -630,13 +670,13 @@ GM.UI = {
                     // validate() would check count/pitch fields that live
                     // validation skipped as disabled — OK enabled, submit alerts.
                     enabled: zoneCB.value && zoneCB.enabled,
-                    count: parseFloat(zoneCountIn.text.replace(/,/g, ".")),
-                    pitch: parseFloat(zonePitchIn.text.replace(/,/g, "."))
+                    count: GM.Validation.parseNumber(zoneCountIn.text),
+                    pitch: GM.Validation.parseNumber(zonePitchIn.text)
                 },
                 pathDist: {
                     useNumber: pathNumRB.value,
-                    number: parseFloat(pathNumIn.text.replace(/,/g, ".")),
-                    spacing: parseFloat(pathSpcIn.text.replace(/,/g, "."))
+                    number: GM.Validation.parseNumber(pathNumIn.text),
+                    spacing: GM.Validation.parseNumber(pathSpcIn.text)
                 }
             };
         }
@@ -700,7 +740,7 @@ GM.UI = {
                 .concat(rightUI.getConvertFields());
 
             for (var i = 0; i < fields.length; i++) {
-                var v = parseFloat(fields[i].text.replace(/,/g, "."));
+                var v = GM.Validation.parseNumber(fields[i].text);
                 if (!isNaN(v)) {
                     fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
                 }
@@ -759,7 +799,7 @@ GM.UI = {
         }
 
         function fieldInRange(et, rule) {
-            var n = parseFloat(String(et.text || "").replace(/,/g, "."));
+            var n = GM.Validation.parseNumber(et.text);
             if (isNaN(n)) return false;
             if (rule.integer && n !== Math.floor(n)) return false;
             return n >= rule.min && n <= rule.max;

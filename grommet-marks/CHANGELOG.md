@@ -4,6 +4,71 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+Opravy z code review 2026-09-26
+([report](../docs/reports/2026-09-26-code-review-grommet-marks.md)) a úpravy
+z auditu UI 2026-09-29
+([audit](../docs/reports/2026-09-29-audit-ui-grommet-marks.md)).
+
+### Přidáno
+
+- **Upozornění, když značky dostaly všechny artboardy (audit A8).** V režimu
+  hran skript značkuje každý artboard dokumentu. Když je jich víc, řekne to
+  s počtem — artboard mimo obrazovku (štítek, nátisk) se jinak snadno
+  přehlédne. U dokumentu s jedním artboardem se nic neukáže.
+
+### Opraveno
+
+- **Značky v dokumentech Large Canvas mají správnou velikost a polohu (G1).**
+  Dokument s velkým plátnem (od šířky zhruba 5,8 m) ukládá Illustrator
+  v měřítku 1:10 a skript s tím nepočítal: značky vycházely desetkrát větší,
+  desetkrát dál od kraje, s desetkrát tlustšími tahy a s desetkrát větším
+  rozestupem. Skript teď všechny rozměry přepočítá podle měřítka dokumentu.
+- **Značky mají vždy plný tah (G2).** Nová cesta ze skriptu přebírá styl tahu
+  naposledy vybraného objektu. Když byla při spuštění vybraná čárkovaná
+  kontura (perforace, big, výsekový obrys), vyšly registrační kruh, kříž
+  i bílé halo čárkovaně a s kulatými konci. Skript teď čárky a zakončení
+  nastaví sám.
+- **Roh cesty se zdvojeným bodem dostane značku (G6).** Cesta uzavřená kopií
+  svého prvního bodu (typické pro kontury z PDF nebo DXF) měla v tom místě
+  úsek nulové délky a skript roh na něm nepoznal — roh zůstal bez značky, bez
+  varování. Body na stejném místě se teď berou jako jeden.
+- **Skrytá vrstva „Grommet Marks" po běhu zůstane viditelná (G5).** Skript ji
+  kvůli zápisu zviditelnil a pak znovu skryl, takže nové značky nebyly vidět
+  a nevytiskly se — bez jakékoli hlášky. Vrstva teď zůstane viditelná a skript
+  to oznámí. Zámek vrstvy se vrací jako dřív.
+- **Zdvojené značky po opakovaném běhu už nezůstanou bez upozornění (G4).**
+  Druhé spuštění přidalo do vrstvy druhou sadu značek přes první, bez hlášky;
+  při jiném rozestupu tak vznikla směs starých a nových značek. Skript dál jen
+  přidává a nic nemaže, ale když nové značky padnou na značky, které ve vrstvě
+  už byly, oznámí to s počtem a poradí Zpět nebo smazání starých.
+- **S rohovými zónami ukazuje dialog u hran to, co se opravdu použije (G3).**
+  Se zapnutými zónami skript střed hrany vždy plnil podle rozestupu a zadaný
+  počet ignoroval — dialog ale dál ukazoval aktivní „Počet ok" a pole
+  Rozestup zašedlé, takže hrana s počtem 10 dostala třeba 32 značek a hodnota
+  v zašedlém poli se ani nekontrolovala. Zapnutí zón teď hrany přepne na
+  Rozestup a Počet zašedne; po vypnutí zón se vrátí původní volba.
+- **Nápovědy říkají, co platí (audit A1, A3, A4).** Nápověda Velikosti
+  mluvila o straně čtverce, který skript nekreslí, a o kříži mlčela. Rohové
+  zóny zašedlé kvůli Počtu ok na cestě s rohy tvrdily, že cesta rohy nemá.
+  Nápověda zón odkazovala na „rozteč hrany", i když se pole jmenuje Rozestup,
+  a zašedlý Počet ok při zapnutých zónách nevysvětloval proč. Tyto nápovědy
+  teď popisují skutečný stav.
+- **Tloušťky tahů mají u sebe jednotku (audit A2).** Popisky Reg. tah a Bílé
+  halo teď uvádějí „(pt)" a nápověda jednotek už netvrdí, že platí pro
+  všechny rozměry — tloušťky jsou vždy v bodech. Kdo zadal halo 1
+  s milimetry v hlavě, dostal 0,35 mm.
+- **Zašedlá „Vybraná cesta" říká proč (audit A5).** Nápověda vždy radila
+  „nejdřív vyberte cestu", i když byla vybraná skupina, složená cesta nebo
+  víc objektů. Teď podle důvodu: nic není vybráno; výběr není jedna
+  jednoduchá cesta (s radou Přímý výběr, rozdělit složenou cestu, nechat
+  jeden objekt); cesta má méně než 2 body.
+- **Překlep v čísle už neprojde jako jiné číslo (audit A9).** Pole brala
+  číslice ze začátku a zbytek zahodila: „1O5" se četlo jako 1, „1 000" jako 1
+  a pole zůstalo platné — rozestup 1 mm pak dal tisíce značek. Takový zápis
+  teď pole zčervená a Generovat zablokuje. Desetinná čárka i tečka platí dál.
+
 ## [1.1.0] — 2026-07-23
 
 ### Přidáno

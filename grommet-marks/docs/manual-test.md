@@ -7,13 +7,13 @@
 >
 > Čísla `v6.x` a dřívější v textu jsou **historické reference** k interní
 > řadě před veřejným vydáním, ne tvrzení o aktuálním stavu.
-> **Aktualizováno:** 2026-06-13
+> **Aktualizováno:** 2026-09-29 (sekce H a I)
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
 > migrace, ui_state, validace, UI dialog). Tento protokol jsou **manuální P0 kontroly**,
 > které vyžadují běžící Illustrator.
 >
-> **Priorita, když není čas na všechno:** G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
+> **Priorita, když není čas na všechno:** H1–H6 (opravy z review) → I1–I5 (audit UI) → G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
 
 ---
 
@@ -133,7 +133,8 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 ### E1 — Zapnutí path mode
 1. Otevři dokument, **nevybírej nic** a spusť skript.
 - [ ] V panelu Umístění je radio **Vybraná cesta** zašedlé (disabled).
-- [ ] Tooltip na zašedlém radiu říká: „Nejdřív vyberte cestu…"
+- [ ] Tooltip na zašedlém radiu říká: „Nic není vybráno. Vyberte jednu cestu…"
+- [ ] Vyber **skupinu** s obdélníkem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt.
 
 2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
 - [ ] Radio **Vybraná cesta** je aktivní.
@@ -213,6 +214,91 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 
 ### G6 — Pevná vrstva
 - [ ] Značky vždy na vrstvě „Grommet Marks" (vytvoří se když chybí); zamčená vrstva se odemkne a zase zamkne.
+
+---
+
+## H) Opravy z code review 2026-09-26
+
+> Opravy nálezů critical a major z
+> [code review](../../docs/reports/2026-09-26-code-review-grommet-marks.md).
+> Každou už ověřil skutečný build v Illustratoru 30.8.2 (dialog bez zobrazení,
+> výsledek změřený a vykreslený). Tady zůstává, co se tak ověřit nedá: běh
+> z menu, výběr myší, pohled na dialog, Cmd+Z a skutečná data. Číslo v závorce
+> je nález v reportu — „nález G1" není test G1 výš.
+
+### H1 — Velké plátno (nález G1)
+1. Nový dokument **6000 × 1000 mm** (nad ~5,8 m ho Illustrator založí jako velké plátno).
+2. Spusť skript z `Soubor ▸ Skripty`, výchozí nastavení (Odsazení 7 mm, Velikost 3 mm), Generovat.
+- [ ] Rohová značka má **průměr 3 mm** a její střed je **7 mm** od levého i horního kraje (nástroj Měřítko nebo panel Informace).
+- [ ] Značky nejsou obří a nepřekrývají se (před opravou 30 mm a 70 mm od kraje).
+
+### H2 — Plný tah i při vybrané čárkované kontuře (nález G2)
+1. Nakresli obdélník a dej mu **přerušovaný tah** s kulatými konci (panel Tah).
+2. Vyber ho **myší** a spusť skript. Zapni **Kruh i Kříž**, přepni na **Vybraná cesta**, Generovat.
+- [ ] Registrační kruh, kříž i bílé halo jsou **plné**, konce kříže rovné.
+3. Vyber čárkovaný obdélník znovu myší a spusť skript v režimu **Hrany artboardu**.
+- [ ] I tady jsou značky plné.
+
+### H3 — Roh pod zdvojeným bodem (nález G6) *(volitelné, chce skutečná data)*
+1. Otevři výsekový obrys z PDF nebo DXF od zákazníka, vyber ho a spusť skript v režimu **Vybraná cesta**.
+- [ ] Informační řádek hlásí tolik rohů, kolik jich obrys opravdu má.
+- [ ] Po Generovat má **každý roh značku**.
+
+### H4 — Skrytá vrstva „Grommet Marks" (nález G5)
+1. Vytvoř vrstvu **„Grommet Marks"**, **skryj** ji a **zamkni**.
+2. Generovat.
+- [ ] Přijde upozornění, že skrytá vrstva byla zviditelněna; text se dobře čte a nic není uříznuté.
+- [ ] Po běhu je vrstva **viditelná** a **zamčená**, značky jsou vidět.
+3. Jednou **Cmd+Z**.
+- [ ] Značky zmizí a vrstva je zase **skrytá** — celý běh je jeden krok Zpět.
+
+### H5 — Opakovaný běh (nález G4)
+1. Generovat s výchozím nastavením, pak skript spusť **znovu** se stejným nastavením a Generovat.
+- [ ] Po druhém běhu přijde upozornění, že se nové značky kryjí se staršími, s počtem; radí Zpět nebo smazání starých.
+2. Jednou **Cmd+Z**.
+- [ ] Zmizí jen značky druhého běhu, první sada zůstane.
+3. Nakresli dva obdélníky daleko od sebe. Vyber první, spusť skript v režimu **Vybraná cesta**, Generovat; pak totéž s druhým.
+- [ ] Druhý běh **nic nehlásí** — značky jiného tvaru se nepočítají.
+
+### H6 — Rohové zóny přepnou hrany na Rozestup (nález G3)
+1. Spusť skript s výchozím nastavením (hrany v režimu **Počet ok**).
+2. Zaškrtni **Zhustit u rohů**.
+- [ ] Řádky hran se přepnou na **Rozestup** a **Počet ok zešedne**; tooltip na zašedlém Počtu popisuje zóny.
+3. Zóny odškrtni.
+- [ ] Hrany se vrátí na **Počet ok** s původními hodnotami.
+4. Zóny znovu zaškrtni (Počet 3, Rozteč 50 mm) a Generovat.
+- [ ] Značky na hraně odpovídají **Rozestupu**, který dialog ukazoval.
+
+---
+
+## I) Úpravy z auditu UI 2026-09-29
+
+> Top 5 z [auditu UI](../../docs/reports/2026-09-29-audit-ui-grommet-marks.md).
+> Texty a stavy ověřil skutečný build v Illustratoru 30.8.2 bez zobrazení okna;
+> tady zůstává, jak se nápovědy a hlášky ukážou na obrazovce.
+
+### I1 — Nápovědy (audit A1, A3, A4)
+- [ ] Najeď na pole **Velikost** → nápověda mluví o průměru kruhu a délce ramen kříže, ne o čtverci.
+- [ ] Zaškrtni **Zhustit u rohů** a najeď na zašedlé rádio **Počet ok** v řádku hrany → nápověda vysvětluje, že se zónami se hrana plní podle rozestupu. (Ukáže se nápověda i na zašedlém prvku?)
+- [ ] Obdélník v režimu **Vybraná cesta**, zvol **Počet ok** → najeď na zašedlé **Zhustit u rohů** → nápověda radí zvolit Rozestup, netvrdí „nemá rohy".
+
+### I2 — Jednotky tlouštěk (audit A2)
+- [ ] Popisky jsou **„Reg. tah (pt):"** a **„Bílé halo (pt):"**, nic není uříznuté a řádek je zarovnaný jako dřív.
+- [ ] Nápověda u **Jednotek** říká, že tloušťky tahů jsou vždy v bodech.
+
+### I3 — Proč je „Vybraná cesta" zašedlá (audit A5)
+1. Vyber **dva objekty** (nebo složenou cestu) a spusť skript.
+- [ ] Nápověda na zašedlé „Vybraná cesta" radí nechat vybraný jeden objekt a rozdělit složenou cestu.
+
+### I4 — Víc artboardů (audit A8)
+1. Dokument se **dvěma artboardy**, režim **Hrany artboardu**, Generovat.
+- [ ] Na konci přijde upozornění, že značky dostaly všechny artboardy, s počtem 2.
+2. Totéž v dokumentu s **jedním** artboardem.
+- [ ] Žádné upozornění.
+
+### I5 — Překlep v čísle (audit A9)
+- [ ] Do **Rozestupu** napiš `1O5` (písmeno O) → pole zčervená a **Generovat zešedne**.
+- [ ] `1 000` → totéž. `12,5` → pole je v pořádku.
 
 ---
 

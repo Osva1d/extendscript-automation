@@ -36,6 +36,26 @@ GM.Illustrator = {
     },
 
     /**
+     * Centres of the items already on a layer (direct children), so a
+     * repeated run can be told from a first one. Reads bounds only.
+     * @param {Layer} layer - Mark layer.
+     * @returns {Array<Array<number>>} [[x, y], ...] in document units.
+     */
+    itemCentres: function (layer) {
+        var out = [];
+        try {
+            var items = layer.pageItems;
+            for (var i = 0; i < items.length; i++) {
+                var b = items[i].geometricBounds;   // [left, top, right, bottom]
+                out.push([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]);
+            }
+        } catch (e) {
+            GM.Utils.log("itemCentres: " + e.message);
+        }
+        return out;
+    },
+
+    /**
      * Inspects the current selection for path-mode placement.
      * Pure read — never mutates the selection. Everything computable is
      * delegated to GM.Core so this stays a thin DOM extraction layer.
@@ -74,6 +94,7 @@ GM.Illustrator = {
                 p3: [bP.anchor[0], bP.anchor[1]]
             });
         }
+        segments = GM.Core.dropDegenerateSegments(segments, GM.CONSTANTS.SEGMENT_EPS);
 
         var circuit = GM.Core.buildCircuit(segments, !!item.closed);
         var corners = GM.Core.detectCorners(segments, !!item.closed,
@@ -90,13 +111,12 @@ GM.Illustrator = {
     },
 
     /**
-     * Returns the document's [Registration] swatch colour (swatches[1] in any
-     * AI locale; index 0 is [None]), or 100% K CMYK as a last-resort fallback.
-     * The index assumption is VERIFIED (spot.colorType must be REGISTRATION) —
-     * the user can delete [Registration] from the Swatches panel, and then
-     * swatches[1] is an arbitrary swatch that would silently mis-colour the
-     * fallback marks. Used when a named fill/stroke swatch is missing — marks
-     * degrade to a safe, cutter-readable colour instead of being dropped.
+     * Returns the document's registration colour, the stroke colour of every
+     * mark: swatches[1] in any AI locale ([Registration], [Registrační];
+     * index 0 is [None]), or 100% K CMYK as a fallback. The index is checked,
+     * not trusted — the swatch must be a spot of colorType REGISTRATION.
+     * A script cannot remove [Registration] (measured: remove() passes with no
+     * effect); whether the Swatches panel can is unverified, so the check stays.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
@@ -143,6 +163,19 @@ GM.Illustrator = {
         }
     },
 
+    /**
+     * Resets the stroke style a new path inherits from the document. Scripted
+     * paths take the dashes and caps of whatever was last selected (measured
+     * in Illustrator 30.8.1: a selected dashed die-line gives dashed marks).
+     * Joins and the miter limit are inherited too but do not apply here: the
+     * circle is smooth and the cross arms have no inner corners.
+     * @param {PathItem} p - Freshly created path.
+     */
+    _plainStroke: function (p) {
+        p.strokeDashes = [];
+        p.strokeCap = StrokeCap.BUTTENDCAP;
+    },
+
     /** Stroked (unfilled) circle centred at (x,y); size = diameter. */
     _strokeEllipse: function (grp, x, y, size, color, weight, overprint) {
         var r = size / 2;
@@ -152,6 +185,7 @@ GM.Illustrator = {
         el.strokeColor = color;
         el.strokeWidth = weight;
         el.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(el);
         return el;
     },
 
@@ -163,11 +197,13 @@ GM.Illustrator = {
         hLine.filled = false; hLine.stroked = true;
         hLine.strokeColor = color; hLine.strokeWidth = weight;
         hLine.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(hLine);
         var vLine = grp.pathItems.add();
         vLine.setEntirePath([[x, y - r], [x, y + r]]);
         vLine.filled = false; vLine.stroked = true;
         vLine.strokeColor = color; vLine.strokeWidth = weight;
         vLine.strokeOverprint = overprint;
+        GM.Illustrator._plainStroke(vLine);
     },
 
 };

@@ -279,6 +279,124 @@ console.log("--- UI: cornerZone.enabled reflects availability ---");
     done();
 })();
 
+// ===== TEST: corner zones switch edges to Spacing (review G3) =====
+// With zones on, the core fills zoned edges by spacing and ignores the count;
+// the dialog used to keep showing Count with Spacing greyed out.
+console.log("--- UI: corner zones switch edges to Spacing (G3) ---");
+(function () {
+    var ui = buildUI();
+    var top = ui.edgeUI.top;
+    assert(ui.gatherAll().top.useNumber === true, "precheck: default top edge in count mode");
+    ui.zonesUI.enableCB.value = true; ui.zonesUI.enableCB.onClick();
+    var g = ui.gatherAll();
+    assert(g.top.useNumber === false && g.left.useNumber === false, "zones on: edges report spacing mode");
+    assert(top.numRB.enabled === false, "zones on: Count radio disabled");
+    assert(top.spcRB.value === true && top.spcIn.enabled === true, "zones on: Spacing selected and editable");
+    ui.zonesUI.enableCB.value = false; ui.zonesUI.enableCB.onClick();
+    assert(ui.gatherAll().top.useNumber === true, "zones off: Count choice restored");
+    assert(top.numRB.enabled === true && top.numIn.enabled === true, "zones off: Count editable again");
+    done();
+
+    // A stored preset with zones on and Count edges opens in Spacing.
+    var p = freshPData();
+    p.presets["[Default]"].cornerZone = { enabled: true, count: 3, pitch: 50 };
+    var ui2 = buildUI(p);
+    assert(ui2.gatherAll().top.useNumber === false, "preset with zones: edges open in spacing mode");
+    done();
+
+    // An edge the user set to Spacing stays in Spacing when zones go off.
+    var ui3 = buildUI();
+    ui3.edgeUI.left.spcRB.value = true; ui3.edgeUI.left.spcRB.onClick();
+    ui3.zonesUI.enableCB.value = true; ui3.zonesUI.enableCB.onClick();
+    ui3.zonesUI.enableCB.value = false; ui3.zonesUI.enableCB.onClick();
+    var g3 = ui3.gatherAll();
+    assert(g3.left.useNumber === false && g3.top.useNumber === true,
+        "zones off: only edges switched by zones return to Count");
+    done();
+})();
+
+// ===== TEST: tooltips of greyed-out controls name the actual reason (audit A3, A4) =====
+console.log("--- UI: tooltips of greyed-out controls match the reason (audit A3, A4) ---");
+(function () {
+    // Zones greyed because Count on a cornered path puts marks on the corners only.
+    var ui = buildUI(null, mockPathInfo(4, true));
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    ui.pathUI.numRB.value = true; ui.pathUI.numRB.onClick();
+    assert(ui.zonesUI.enableCB.enabled === false, "precheck: zones greyed with Count on a cornered path");
+    assert(ui.zonesUI.enableCB.helpTip === GM.L.TIP_ZONES_CORNERS_ONLY,
+        "cornered path + Count: zones tooltip explains corners-only, not 'no corners'");
+    done();
+
+    // Zones greyed because the path has no corners.
+    var ui2 = buildUI(null, mockPathInfo(0, true));
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    assert(ui2.zonesUI.enableCB.helpTip === GM.L.TIP_ZONES_NO_CORNERS, "smooth path: 'no corners' tooltip");
+    done();
+
+    // Count greyed by corner zones gets its own tooltip, and gets the old one back.
+    var ui3 = buildUI();
+    ui3.zonesUI.enableCB.value = true; ui3.zonesUI.enableCB.onClick();
+    assert(ui3.edgeUI.top.numRB.helpTip === GM.L.TIP_COUNT_ZONES, "zones on: Count tooltip explains why");
+    ui3.zonesUI.enableCB.value = false; ui3.zonesUI.enableCB.onClick();
+    assert(ui3.edgeUI.top.numRB.helpTip === GM.L.TIP_COUNT, "zones off: Count tooltip back to normal");
+    done();
+})();
+
+// ===== TEST: a typo turns the field invalid instead of being read as a prefix (audit A9) =====
+console.log("--- UI: typos in number fields block Generate (audit A9) ---");
+(function () {
+    var ui = buildUI();
+    var w = SUI.lastWindow();
+    var okBtn = w.findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    var top = ui.edgeUI.top;
+    top.spcRB.value = true; top.spcRB.onClick();
+    top.spcIn.text = "1O5"; top.spcIn.onChange();
+    assert(okBtn.enabled === false, "'1O5' in Spacing blocks Generate");
+    assert(isNaN(ui.gatherAll().top.spacing), "'1O5' gathers as NaN, not 1");
+    top.spcIn.text = "1 000"; top.spcIn.onChange();
+    assert(okBtn.enabled === false, "'1 000' in Spacing blocks Generate");
+    top.spcIn.text = "12,5"; top.spcIn.onChange();
+    assert(okBtn.enabled === true && ui.gatherAll().top.spacing === 12.5, "'12,5' is valid and read as 12.5");
+    done();
+})();
+
+// ===== TEST: disabled "Selected path" says why (audit A5) =====
+console.log("--- UI: disabled 'Selected path' names the reason (audit A5) ---");
+(function () {
+    var cases = [
+        ["no-selection", GM.L.ERR_PATH_NO_SELECTION],
+        ["not-a-path",   GM.L.ERR_PATH_NOT_A_PATH],
+        ["too-short",    GM.L.ERR_PATH_TOO_SHORT]
+    ];
+    for (var i = 0; i < cases.length; i++) {
+        var ui = buildUI(null, { ok: false, reason: cases[i][0] });
+        assert(ui.modeUI.pathRB.enabled === false, cases[i][0] + ": radio disabled");
+        assert(!!cases[i][1] && ui.modeUI.pathRB.helpTip === cases[i][1],
+            cases[i][0] + ": tooltip names the reason (got '" + ui.modeUI.pathRB.helpTip + "')");
+        done();
+    }
+})();
+
+// ===== TEST: both locales define the same keys =====
+console.log("--- Locale: CS and EN key sets are identical ---");
+(function () {
+    function keysFor(locale) {
+        var saved = global.app.locale, NSx = {};
+        global.app.locale = locale;
+        var fn = new Function("GM", src("locale.js") + "\nreturn GM.L;");
+        var table = fn(NSx);
+        global.app.locale = saved;
+        var keys = [];
+        for (var k in table) if (table.hasOwnProperty(k) && k !== "format") keys.push(k);
+        return keys.sort();
+    }
+    var cs = keysFor("cs_CZ"), en = keysFor("en_US");
+    var onlyCs = cs.filter(function (k) { return en.indexOf(k) < 0; });
+    var onlyEn = en.filter(function (k) { return cs.indexOf(k) < 0; });
+    assert(onlyCs.length === 0 && onlyEn.length === 0,
+        "same keys (only CS: " + onlyCs.join(",") + "; only EN: " + onlyEn.join(",") + ")");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

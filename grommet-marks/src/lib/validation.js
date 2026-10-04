@@ -25,8 +25,21 @@ GM.Validation = {
     },
 
     /**
+     * Reads a number the way the operator typed it: surrounding spaces are
+     * ignored, the decimal separator may be a comma or a dot. Anything else
+     * ("1O5", "1 000", "10.5.2", an empty field) is NaN — never the number
+     * its first digits spell, which parseFloat would silently return.
+     * Shared by the dialog fields, live validation and validate().
+     * @param {string|number} val - Raw field value.
+     * @returns {number} The number, or NaN.
+     */
+    parseNumber: function (val) {
+        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
+        return (str === "") ? NaN : Number(str);
+    },
+
+    /**
      * Validates a numeric value against a rule.
-     * Normalizes Czech decimal separator (comma -> dot).
      * @param {string|number} val - Raw value.
      * @param {Object} rule - {min, max, integer}.
      * @param {string} label - Display name for error messages.
@@ -34,8 +47,7 @@ GM.Validation = {
      * @returns {number|null} Parsed number or null if invalid.
      */
     validateNumber: function (val, rule, label, L) {
-        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
-        var n = (str === "") ? NaN : Number(str);
+        var n = GM.Validation.parseNumber(val);
         if (isNaN(n)) {
             alert(L.format(L.ERR_MUST_BE_NUMBER || "%s must be a number!", label));
             return null;
@@ -124,7 +136,9 @@ GM.Validation = {
             for (var i = 0; i < edgeKeys.length; i++) {
                 var e = cfg[edgeKeys[i]];
                 if (!e.enabled) continue;
-                if (e.useNumber) {
+                // With corner zones on, the core fills every edge by spacing
+                // and ignores the count (distributeOnSpan) — check what is used.
+                if (e.useNumber && !zone.enabled) {
                     var cnt = vn(e.number, rules.edgeCount, L.COUNT || "Count", L);
                     if (cnt === null) return { valid: false, settings: null };
                 } else {

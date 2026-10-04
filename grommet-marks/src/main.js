@@ -61,7 +61,12 @@ GM.Main = {
     process: function (cfg) {
         try {
             var doc = GM.Illustrator.doc;
-            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units];
+            // Large Canvas documents (scaleFactor 10) keep geometry at
+            // 1/scaleFactor: every point value written into the document comes
+            // out scaleFactor times larger. Convert physical sizes to document
+            // units once, here — everything below works in document units.
+            var scale = doc.scaleFactor || 1;
+            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units] / scale;
 
             var warnings = [];
             function addWarning(msg) {
@@ -78,13 +83,20 @@ GM.Main = {
             var markOpts = {
                 circle: !!cfg.markCircle,
                 cross: !!cfg.markCross,
-                regWeight: cfg.regWeight,
-                haloWeight: cfg.haloWeight
+                regWeight: cfg.regWeight / scale,
+                haloWeight: cfg.haloWeight / scale
             };
 
             var prevLocked = false, prevVisible = true, sessionOpen = false;
             try { prevLocked = targetLayer.locked; prevVisible = targetLayer.visible; } catch (eLk) {}
             try { targetLayer.locked = false; targetLayer.visible = true; sessionOpen = true; } catch (eLk2) {}
+
+            // Marks already on the layer, typically from a previous run. The run
+            // only adds, so a new mark landing on an old one (centres closer
+            // than one mark diameter) is counted and reported at the end.
+            var existing = GM.Illustrator.itemCentres(targetLayer);
+            var overlapTol2 = markSizePoints * markSizePoints;
+            var overlaps = 0;
 
             var placed = {};
             var failedMarks = 0;
@@ -92,6 +104,10 @@ GM.Main = {
                 var key = Math.round(x * 10) / 10 + "|" + Math.round(y * 10) / 10;
                 if (placed[key]) return;
                 placed[key] = true;
+                for (var e = 0; e < existing.length; e++) {
+                    var dx = existing[e][0] - x, dy = existing[e][1] - y;
+                    if (dx * dx + dy * dy < overlapTol2) { overlaps++; break; }
+                }
                 var ok = GM.Illustrator.placeMarkGroup(targetLayer, x, y, markSizePoints, markOpts);
                 if (!ok) failedMarks++;
             }
@@ -187,10 +203,25 @@ GM.Main = {
                         for (var ri = 0; ri < rPos.length; ri++) place(rX, abTop - offY - rPos[ri]);
                     }
                 }
+
+                // Every artboard gets marks. Say so when there is more than one:
+                // an artboard outside the view (a label, a proof) is easy to miss.
+                if (doc.artboards.length > 1) {
+                    addWarning(GM.L.format(GM.L.WARN_ALL_ARTBOARDS, doc.artboards.length));
+                }
             }
 
+            // Restore the lock only. A layer that was hidden stays visible —
+            // hidden again, the new marks would neither show nor print.
             if (sessionOpen) {
-                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst) {}
+                try { targetLayer.locked = prevLocked; } catch (eRst) {}
+                if (!prevVisible) {
+                    addWarning(GM.L.format(GM.L.WARN_LAYER_UNHIDDEN, GM.CONSTANTS.LAYER_NAME));
+                }
+            }
+
+            if (overlaps > 0) {
+                addWarning(GM.L.format(GM.L.WARN_DUPLICATE_MARKS, overlaps));
             }
 
             if (failedMarks > 0) {
@@ -200,7 +231,7 @@ GM.Main = {
             if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
         } catch (e) {
             if (sessionOpen) {
-                try { targetLayer.locked = prevLocked; targetLayer.visible = prevVisible; } catch (eRst2) {}
+                try { targetLayer.locked = prevLocked; } catch (eRst2) {}
             }
             alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " + e.message);
         }

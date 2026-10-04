@@ -257,6 +257,43 @@ console.log("--- Validation v6: shape requirement + weights ---");
     assert(ok.valid === true && ok.settings.regWeight === 1.0, "defaults valid, regWeight parsed");
 })();
 
+// ===== TEST: strict number parsing (audit A9) =====
+// parseFloat read the digits at the start and dropped the rest: "1O5" became
+// 1, "1 000" became 1, and the field looked valid. A typo must be NaN.
+console.log("--- Validation.parseNumber: typos are not numbers (audit A9) ---");
+(function () {
+    var P = GM.Validation.parseNumber;
+    assert(typeof P === "function", "parseNumber exists");
+    if (typeof P !== "function") return;
+    var bad = ["1O5", "1 000", "10.5.2", "5o", "", "   ", "abc", "null"];
+    for (var i = 0; i < bad.length; i++) {
+        assert(isNaN(P(bad[i])), "'" + bad[i] + "' is not a number (got " + P(bad[i]) + ")");
+    }
+    assert(P("12,5") === 12.5, "decimal comma");
+    assert(P("12.5") === 12.5, "decimal dot");
+    assert(P(" 7 ") === 7, "surrounding spaces ignored");
+    assert(P(7) === 7, "numbers pass through");
+    assert(P("0") === 0, "zero is a number (range rules decide)");
+})();
+
+// ===== TEST: corner zones fill edges by spacing (review G3) =====
+// With zones on, distributeOnSpan uses the edge spacing even for a Count edge,
+// so that spacing must be validated — it used to go through unchecked.
+console.log("--- Validation: zones validate the spacing that is used (G3) ---");
+(function () {
+    var zoned = validCfg({ cornerZone: { enabled: true, count: 3, pitch: 50 } });
+    zoned.top.spacing = "abc";
+    lastAlert = null;
+    assert(GM.Validation.validate(zoned, L).valid === false,
+        "zones on: Count edge with invalid spacing -> invalid");
+
+    var plain = validCfg({ cornerZone: { enabled: false, count: 3, pitch: 50 } });
+    plain.top.spacing = "abc";
+    lastAlert = null;
+    assert(GM.Validation.validate(plain, L).valid === true,
+        "zones off: spacing of a Count edge is unused and not checked");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
