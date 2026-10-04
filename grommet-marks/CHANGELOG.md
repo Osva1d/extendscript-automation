@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [1.2.0] — 2026-10-04
 
 Opravy z code review 2026-09-26
 ([report](../docs/reports/2026-09-26-code-review-grommet-marks.md)) a úpravy
