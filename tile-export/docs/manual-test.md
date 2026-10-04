@@ -28,7 +28,8 @@ dokumentu) do `~/Desktop/tile-export-test/data/`; existující soubory nepřepí
 | `zed-6000x1000-1ku10.ai` | zeď 6000 × 1000 mm při 1:10; NEŘEZAT 1850–2450, vodítka 1800 a 3900 |
 | `lc-6000x1000.ai` | stejná zeď jako Large Canvas (faktor 10), ruční měřítko vypnout |
 
-Všechny mají spad 50 mm na každé hraně. **Jak číst plát:** čistý formát je
+Všechny mají spad 50 mm na každé hraně a pravítka v mm (od generátoru 2.1.0;
+starší data jsou v bodech). **Jak číst plát:** čistý formát je
 šachovnice 100 × 100 mm, velké číslo pole je jeho vodorovná poloha v mm, „y"
 svislá — na kraji plátu tedy přečteš, kde začíná a končí, a v přelepu uvidíš
 stejná čísla jako u souseda. Spad za hranou je v pásech **tmavě šedá 0–5,
@@ -76,9 +77,10 @@ a v **Náhledu**, zvětšit na maximum: linka na všech čtyřech hranách (P1).
 ořez, je na všech čtyřech hranách. Výsledek zapsat do specu — výchozí tloušťka
 je zatím volba, ne měření.
 
-**1.6 Zünd v Illustratoru.** Zeď 1:10, Zünd režim, výstup 1:1. Obě PDF otevřít
-v Illustratoru: tiskové má vrstvy `Cut` (vypnutá), `Regmarks`, `Graphics`
-s grafikou v masce; řezové `Cut` a `Regmarks`, žádnou grafiku.
+**1.6 Zünd v Illustratoru.** Zeď 1:10, Zünd režim, výstup 1:1. Řádek ořezové
+linky je šedý a ve zdroji nepřibudou červené linky. Obě PDF otevřít
+v Illustratoru: tiskové má shora vrstvy `Regmarks`, `Cut` (vypnutá) a `Graphics`
+s grafikou v masce; řezové `Regmarks` a `Cut`, žádnou grafiku.
 
 **1.7 Zünd u stroje — rozhoduje.** Vytisknout tiskové PDF, do Cut Center načíst
 `_cut`. Stroj najde značky, ořízne po obdélníku, na hraně nezůstane bílá.
@@ -96,9 +98,9 @@ v milimetrech.
 
 | dokument, nastavení | Výsledek v dialogu | export |
 |---|---|---|
-| arch, §0 | tiskové 1010 \| 1020 \| 1010 × 1000; „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100" | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka |
+| arch, §0 | tiskové 1010 \| 1020 \| 1010 × 1000; „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100" | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka; otevřené v Illustratoru mají shora vrstvy `CutContour` (linka) a `Graphics` |
 | arch, výstup 1:1 | „Stránky PDF: skutečná velikost…" | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
-| arch, 1:1, Rastr 150 DPI | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu |
+| arch, 1:1, Rastr 150 DPI | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu; obyčejné PDF, otevřené má jednu vrstvu |
 | Large Canvas, výstup jako dokument | faktor 10; spad 50/50/50/50 | 2010 \| 2020 \| 2010 × 1000 |
 | Large Canvas + ruční 1:10 | „(1:10): 2001 × 1000 \| …" | náhled 2001 \| 2002 \| 2001 × 1000 |
 | Large Canvas + 1:10, výstup 1:1 | „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
@@ -119,4 +121,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N27.
+další číslo v [nálezech](findings.md), naposledy N31.

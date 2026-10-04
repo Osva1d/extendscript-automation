@@ -1,7 +1,8 @@
 # Tile Export — nálezy
 
 Vady a návrhy z ručního testu (2026-09-15 až 18), přetestu, běhů harnessu
-(do 2026-09-26) a kontrol kódu (od 2026-10-03). Číslování je stálé: na nález
+(do 2026-09-26), kontrol kódu (od 2026-10-03) a druhého ručního testu
+(2026-10-04). Číslování je stálé: na nález
 se odkazuj číslem, i když je opravený. Plné znění uzavřených nálezů, s příčinou a měřením, je v historii
 gitu — soubor `docs/testing/2026-09-15-tile-export-test-findings.md`.
 
@@ -74,6 +75,10 @@ všech čtyřech hranách. Uzavře ruční test v prohlížeči a tisku.
 | N25 | registrace se brala jako `swatches[1]` bez kontroly typu — bez registrace na indexu 1 je tam Bílá a značky by kamera Zündu neviděla; teď se hledá podle typu (z kontroly po prompt-auditu 2026-10-03) | `16e7317` |
 | N26 | Zünd značky, které by na tisku splynuly — orientační bod na rohové značce u úzkého plátu (maska 85–95 mm při výchozím nastavení), rozteč pod průměrem značky — nikdo nehlásil; dialog teď jmenuje plát a zastaví export, plát s víc než 100 značkami zkontroluje `main.js` před exportem (hranice podle měření, `acdd723`) | `2500e03` |
 | N27 | pole Čistý formát měnilo jen náhled a validaci, běh dál dělil artboard — dialog mohl ukázat pláty, které běh nevyrobí; pole zrušena, artboard je jediný zdroj pravdy (rozhodnutí uživatele 2026-10-03) | `29640be` |
+| N28 | v Zünd režimu zůstal řádek linky aktivní a zdrojový dokument dostal červené náhledové linky, ač se do PDF linka nekreslí; řádek je teď šedý a linka se nekreslí nikde (ruční test 2026-10-04) | `29fe1cd` |
+| N29 | testovací dokumenty měly pravítka v bodech; generátor je zakládá v mm přes `addDocument` (nástroj sám na jednotkách nezávisí) | `a24779d` |
+| N30 | v Zünd souborech byla nahoře vrstva řezu, ne `Regmarks`; teď shora `Regmarks`, řez, `Graphics` jako v Zünd Summa Marks | `29fe1cd` |
+| N31 | v běžném exportu ležela linka ve vrstvě s grafikou a obyčejné PDF vrstvy nenese; linka má vlastní vrstvu podle své barvy nad `Graphics` a vektorová PDF jsou editovatelná. Rastrová zůstala obyčejná — editovatelné PDF nese obraz dvakrát (naměřeno) | `29fe1cd` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
