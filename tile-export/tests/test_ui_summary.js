@@ -167,6 +167,17 @@ has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značk
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
 
+console.log("\n=== N28: Zünd mode greys out the trim line ===");
+// The cut path takes the line's place; the line row would only steer a
+// preview in the source document that misleads.
+var rL = refs(zund({}));
+TE.UI.refresh(null, rL, ctx);
+eq(rL.cbLine.enabled || rL.etSpot.enabled || rL.etLineW.enabled, false, "with Zünd on the whole line row is off");
+eq(TE.UI.collect(rL).drawLine, true, "greyed out, the stored choice stays as it was");
+var rL2 = refs({});
+TE.UI.refresh(null, rL2, ctx);
+eq(rL2.cbLine.enabled && rL2.etSpot.enabled && rL2.etLineW.enabled, true, "without Zünd the row is back");
+
 console.log("\n=== N23: raster resolution below 72 DPI ===");
 var rDpi = refs({ rbExpMode: [{ value: false }, { value: true }], etDPI: { text: "71", enabled: true } });
 TE.UI.refresh(null, rDpi, ctx);

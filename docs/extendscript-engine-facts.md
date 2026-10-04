@@ -280,6 +280,29 @@ obsahuje, ho přečte s rozbitou diakritikou a skončí stejně; v sondách psá
 
 Vzniklo při návrhu `tile-export`; platí ale mimo něj.
 
+### Editovatelné PDF: vrstvy po otevření a cena (naměřeno 2026-10-04, AI 30.8.2)
+
+- **Vrstvy dokumentu přežijí jen v editovatelném PDF**
+  (`preserveEditability = true`). Obyčejné PDF s `acrobatLayers = false`
+  Illustrator po otevření načte do jedné vrstvy. Ověřeno produkčním
+  `exportTile` z tile-exportu: vektor `CutContour | Graphics`, rastr jediná
+  `Vrstva 1`, Zünd `Regmarks | Cut | Graphics`.
+- **Nastavení až po presetu platí:** `preserveEditability` přiřazené po
+  `pDFPreset = "[Kvalitní tisk]"` se v uloženém souboru projeví oběma směry.
+- **Cena**, stránka 300 × 300 mm s umístěným PDF, preset `[Kvalitní tisk]`:
+
+  | obsah | obyčejné | editovatelné |
+  |---|---|---|
+  | vektor | 74 KB | 933 KB |
+  | rastr 100 DPI | 91 KB | 995 KB |
+  | rastr 200 DPI | 141 KB | 1103 KB |
+
+  Pevná část kolem 0,9 MB; u plátu ze Zünd režimu 2026-09-26 vyšlo ~320 KB.
+  Propojená grafika se nezdvojuje, **rastr ano**: ze 100 na 200 DPI přibylo
+  obyčejnému PDF 50 KB, editovatelnému 108 KB.
+- S `[PDF/X-4:2008]` (1570 KB) i `[PDF/X-1a:2001]` (1025 KB) se editovatelné
+  PDF uloží bez chyby. Shodu s normou nikdo neověřoval.
+
 ### Illustrator neořezává obsah. Nikdy.
 
 Export výřezu nese **celá** zdrojová data. Artboard mění jen rozměr stránky —
@@ -508,10 +531,20 @@ musí počítat poměr z masky sám a zvětšovat přes `resize()`.
 plátna (16 383 pt ≈ 5779 mm) založí **Large Canvas s `scaleFactor` 10** — bez
 dialogu, za ~0,3 s. Změřeno na 6000 × 1000 mm: artboard vnitřně 600 × 100 mm.
 
-Dřívější sonda, která navíc zkoušela `app.documents.addDocument("Print",
-DocumentPreset)`, vypršela na časový limit a nechala **oba** dokumenty otevřené;
-příčina nezjištěná. V sondách proto jen `documents.add()`, s úklidem ve `finally`
-a s `app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS`.
+**Jednotky dokumentu jdou zadat jen přes `addDocument()`** (naměřeno 2026-10-04,
+AI 30.8.2). `documents.add()` je nastavit neumí a `Document.rulerUnits` je jen
+pro čtení (typings). `app.documents.addDocument(app.startupPresetsList[0],
+preset, false)` s `DocumentPreset` (`units = RulerUnits.Millimeters`,
+`colorMode`, `width` a `height` v bodech) dá dokument s pravítky v mm, nad
+stropem plátna Large Canvas s faktorem 10 jako `documents.add()`, za 0,4–1,4 s.
+Názvy úvodních předvoleb jsou lokalizované: `Tisk ; Mobilní ; Sociální sítě ;
+Branding ; Umění a ilustrace ; Web ; Film a video`.
+
+Dřívější sonda volala `addDocument("Print", DocumentPreset)`, tedy předvolbu,
+která na české instalaci neexistuje, vypršela na časový limit a nechala **oba**
+dokumenty otevřené. Nejspíš právě kvůli názvu; znovu nezkoušeno. V sondách
+dál úklid ve `finally` a `app.userInteractionLevel =
+UserInteractionLevel.DONTDISPLAYALERTS`.
 
 ## Undo, kolekce, skryté vrstvy a masky (naměřeno 2026-09-26, AI 30.8.1)
 

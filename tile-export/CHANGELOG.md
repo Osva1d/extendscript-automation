@@ -38,6 +38,10 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
   v tisku, výchozí 1 pt.
 - Export **do PDF přes dočasný dokument na každý plát** — zdroj se nemění
   a linka souseda se nemá jak propsat.
+- Ve vektorovém exportu má linka **vlastní vrstvu** nad vrstvou `Graphics`,
+  pojmenovanou podle své barvy, a PDF je editovatelné v Illustratoru, aby
+  vrstvy po otevření zůstaly. Rastrové PDF zůstává obyčejné: editovatelné
+  by neslo obraz dvakrát.
 - **Vektorový i rastrový** režim. Rastrový rastruje jen grafiku, plát je velký
   podle své plochy a DPI; linka zůstane navrchu jako vektor. Rozlišení pod
   72 DPI, které Illustrator nepřijme, dialog do exportu nepustí.
@@ -54,9 +58,11 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
   obdélníkem plátu v přímé barvě `Cut`, hairline 0,125 pt. Řez zahrnuje
   přídavky i přelep.
 - Obě PDF se **zachovanou editovatelností v Illustratoru** a vrstvami jako
-  ze Zünd Summa Marks: `Graphics`, `Regmarks`, vrstva řezu podle barvy.
+  ze Zünd Summa Marks, shora `Regmarks`, vrstva řezu podle barvy a `Graphics`.
   V tiskovém je vrstva řezu vypnutá a do tištěné stránky se nedostane,
   z řezového je vrstva grafiky odstraněná.
+- Ořezová linka se v Zünd režimu nekreslí nikam, ani do zdrojového dokumentu;
+  její řádek v dialogu je šedý a po vypnutí režimu se vrátí, jak byl.
 - Registrační značky se měří od konce grafiky (odstup 5 mm, značka 5 mm);
   geometrie je sdílená se Zünd Summa Marks. Značky, řez i stránka jsou v obou
   souborech shodné (ověřeno na 0,0000 mm).

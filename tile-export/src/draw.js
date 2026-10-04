@@ -85,14 +85,16 @@ TE.Draw = {
      * @param {number} lineScale - Stroke points per printed point:
      *        1 / TE.Utils.getEffectiveSF(s) for the preview in the source
      *        document, TE.Utils.outputLineScale(s) in a temporary one.
+     * @param {Layer} [target] - Layer to draw into; the document's current
+     *        one when omitted. The export passes the line's own layer (N31).
      * @returns {PathItem} The drawn rectangle.
      */
-    drawTileLine: function (doc, rect, s, lineScale) {
+    drawTileLine: function (doc, rect, s, lineScale, target) {
         var spot = this.getOrCreateSpot(doc, s.lineSpot);
         // Visible width in document points; the stroke is twice that (see 2).
         var sw = (Number(s.lineWidth) || 1) * (Number(lineScale) || 1);
 
-        var p = doc.pathItems.rectangle(rect[1], rect[0],
+        var p = (target || doc).pathItems.rectangle(rect[1], rect[0],
             rect[2] - rect[0], rect[1] - rect[3]);
         p.filled = false;
         p.stroked = true;

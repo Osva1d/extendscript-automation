@@ -1,8 +1,8 @@
 ﻿// ===========================================================================
 // Script:      make-test-document.jsx
-// Version:     2.0.0
+// Version:     2.1.0
 // Author:      Ladislav Osvald
-// Updated:     2026-09-26
+// Updated:     2026-10-04
 //
 // Description:
 //   Builds the test data for tile-export: source PDFs carrying bleed, and
@@ -22,6 +22,8 @@
 //     mask of 5 mm in the dark grey one). No red: the trim line is red;
 //   - a NEŘEZAT block across the first seam of an even three-way split, and
 //     two guides that dodge it.
+//
+//   Every document has millimetre rulers, as the shop works (N29).
 //
 //   Writes into ~/Desktop/tile-export-test/data/ and never overwrites a file
 //   that is already there. Leaves no document open.
@@ -81,6 +83,26 @@
         return t;
     }
 
+    /**
+     * A CMYK document with millimetre rulers. documents.add() cannot set the
+     * units and Document.rulerUnits is read-only, so it goes through a
+     * DocumentPreset. The startup preset is taken by index: its name is
+     * localized ("Tisk" on a Czech install) and the English one does not
+     * exist there. Past the canvas ceiling it becomes a Large Canvas, as
+     * documents.add() does (measured 2026-10-04, AI 30.8.2).
+     * @param {number} w - Width in points.
+     * @param {number} h - Height in points.
+     * @returns {Document} The new document.
+     */
+    function newDoc(w, h) {
+        var p = new DocumentPreset();
+        p.units = RulerUnits.Millimeters;
+        p.colorMode = DocumentColorSpace.CMYK;
+        p.width = w;
+        p.height = h;
+        return app.documents.addDocument(app.startupPresetsList[0], p, false);
+    }
+
     /** Never overwrite: a taken name gets a numeric suffix. */
     function freeFile(folder, base, ext) {
         var f = new File(folder.fsName + "/" + base + ext), n = 2;
@@ -96,7 +118,7 @@
      */
     function buildSource(W, H, folder) {
         var docW = mm(W + 2 * BLEED), docH = mm(H + 2 * BLEED);
-        var src = app.documents.add(DocumentColorSpace.CMYK, docW, docH);
+        var src = newDoc(docW, docH);
         made.push(src);
         src.artboards[0].artboardRect = [0, 0, docW, -docH];
         var L = src.layers[0];
@@ -185,9 +207,7 @@
         // times too small here (measured 2026-09-26 — the first version of
         // this script assumed 100 % and covered a tenth of the wall).
         var CW = mm(W), CH = mm(H);
-        var doc = largeCanvas
-            ? app.documents.add(DocumentColorSpace.CMYK, W * PT, H * PT)
-            : app.documents.add(DocumentColorSpace.CMYK, CW, CH);
+        var doc = largeCanvas ? newDoc(W * PT, H * PT) : newDoc(CW, CH);
         made.push(doc);
         doc.artboards[0].artboardRect = [0, 0, CW, -CH];
         var pi = doc.placedItems.add();

@@ -114,12 +114,12 @@ TE.Export = {
      * artwork clipped by the mask. See the study,
      * docs/reports/2026-09-25-maskovani-platu.md §3.
      *
-     *   Graphics — artwork in the mask     (print PDF; removed from _cut)
-     *   Regmarks — registration marks      (both PDFs)
+     *   Regmarks — registration marks      (both PDFs; the top layer)
      *   <cutSpot> — cut path, e.g. "Cut"   (hidden in print, shown in _cut)
-
-     * Names as in zund-summa-marks. Both files are editable PDFs (main.js),
-     * so these layers are what an operator sees on reopening.
+     *   Graphics — artwork in the mask     (print PDF; removed from _cut)
+     *
+     * Names and order as in zund-summa-marks. Both files are editable PDFs
+     * (main.js), so these layers are what an operator sees on reopening.
      *
      * Order matters: a raster is made after the page has grown, because
      * rasterize() crops to the artboard and the bleed lies outside the panel.
@@ -136,10 +136,13 @@ TE.Export = {
         var zl = this.zundLayout(tf, s, ratio);
         var layPrint = tmp.layers[0];
         layPrint.name = TE.Config.layerGraphics;
-        var layMarks = tmp.layers.add();
-        layMarks.name = TE.Config.layerRegmarks;
+        // layers.add() puts the new layer on top (measured), so the cut layer
+        // comes first and Regmarks ends above it, as zund-summa-marks has it
+        // (N30). It used to be the other way round: the cut layer on top.
         var layCut = tmp.layers.add();
         layCut.name = s.cutSpot;
+        var layMarks = tmp.layers.add();
+        layMarks.name = TE.Config.layerRegmarks;
 
         // 1. The cut: the panel rectangle. A shaped contour is the next stage
         //    — TE.Cut.renderTileContour is kept for it but not called: on a
@@ -265,10 +268,17 @@ TE.Export = {
                 return { file: new File(zDir + zName + ".pdf"), cutFile: zCut, contourPaths: contourPaths };
             }
 
+            // The artwork's layer has the name it has in a Zünd file, and the
+            // trim line a layer of its own on top, named after its colour like
+            // the Zünd cut layer (N31). Reopened in Illustrator the layers are
+            // there only in an editable PDF; main.js decides which those are.
+            tmp.layers[0].name = TE.Config.layerGraphics;
             if (s.drawLine) {
+                var layLine = tmp.layers.add();
+                layLine.name = s.lineSpot || TE.Config.layerLines;
                 // The panel's outer rect maps exactly onto the temporary
                 // artboard, so the line marks the MediaBox of this PDF.
-                TE.Draw.drawTileLine(tmp, tf.artboard, s, lineScale);
+                TE.Draw.drawTileLine(tmp, tf.artboard, s, lineScale, layLine);
             }
 
             if (s.exportMode === "raster") {

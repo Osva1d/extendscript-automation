@@ -165,6 +165,13 @@ Přímá barva se v dokumentu vytvoří, pokud tam není; když ji vytvořit nel
 nástroj se zastaví místo aby tiše přepadl na CMYK — linka ve špatné barvě
 vypadá správně a dojede až k finišerovi.
 
+Ve vektorovém exportu má linka v PDF **vlastní vrstvu** pojmenovanou podle
+barvy (výchozí `CutContour`) nad vrstvou `Graphics` s grafikou. Aby vrstvy po
+otevření v Illustratoru zůstaly, ukládá se PDF jako editovatelné (zhruba
+0,3–0,9 MB navíc na soubor, naměřeno). Rastrové PDF zůstává obyčejné, bez
+vrstev: editovatelné by neslo obraz dvakrát. V Zünd režimu se linka nekreslí
+vůbec, ani do zdrojového dokumentu — nahrazuje ji řezová cesta.
+
 ## Vodítka
 
 Režim **Vodítek** čte vodítka kolmá na směr dělení: při horizontálním dělení
@@ -188,12 +195,13 @@ Zapnutý udělá z každého plátu **dvě PDF se stejnou stránkou**:
 | `{doc}_{n}_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
 
 Obě PDF se ukládají **se zachovanou editovatelností v Illustratoru**. Otevřené
-mají vrstvy jako soubor ze Zünd Summa Marks: `Graphics` (grafika v masce),
-`Regmarks` a vrstvu řezu pojmenovanou podle barvy (`Cut`). Stojí to zhruba
-320 KB navíc na soubor (naměřeno; data grafiky se nezdvojují). Grafika zůstává
-**propojená** s původním PDF — tisk to neovlivní, ale na počítači, kde původní
-soubor na stejné cestě není, Illustrator při otevření ohlásí chybějící
-propojení.
+mají vrstvy jako soubor ze Zünd Summa Marks, shora `Regmarks`, vrstvu řezu
+pojmenovanou podle barvy (`Cut`) a `Graphics` (grafika v masce). Stojí to
+zhruba 0,3–0,9 MB navíc na soubor (naměřeno); propojená grafika se
+nezdvojuje, rastr v rastrovém režimu ano, takže Zünd soubor je pak o obraz
+větší. Grafika zůstává **propojená** s původním PDF — tisk to neovlivní, ale
+na počítači, kde původní soubor na stejné cestě není, Illustrator při otevření
+ohlásí chybějící propojení.
 
 Na materiál se tiskne první, do Cut Center se načte druhý. Kamera najde
 značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. Spad za
