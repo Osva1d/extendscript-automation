@@ -884,8 +884,12 @@ TE.UI = {
         r.cbEqual.enabled = (s.divideMode !== "guides");
         r.etRound.enabled = (s.divideMode === "guides");
         r.etDPI.enabled   = (s.exportMode === "raster");
-        r.etSpot.enabled  = s.drawLine;
-        r.etLineW.enabled = s.drawLine;
+        // Zünd mode draws no trim line — the cut path takes its place — so the
+        // whole line row greys out; the stored choice comes back with the mode
+        // off (N28).
+        r.cbLine.enabled  = !s.zundMode;
+        r.etSpot.enabled  = s.drawLine && !s.zundMode;
+        r.etLineW.enabled = s.drawLine && !s.zundMode;
 
         // The artboard, the same rect the run divides (N27).
         var clean = ctx.cleanRect;

@@ -133,6 +133,11 @@ assertClose(line.strokeWidth, 0.2, 1e-9, "1:10 output: scaled first, then double
 line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: "" }, 1);
 assertClose(line.strokeWidth, 2, 1e-9, "no width given: the 1 pt default, doubled");
 assertClose(TE.Config.getDefaults().lineWidth, 1, 1e-9, "the default is 1 pt visible");
+// N31: the export draws the line into a layer of its own.
+var drawnIn = null;
+var fakeLayer = { pathItems: { rectangle: function () { drawnIn = "layer"; return {}; } } };
+TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: 1 }, 1, fakeLayer);
+assert(drawnIn === "layer", "with a target the line is drawn into that container, not the document");
 
 console.log("\n=== raster mode rasterises the graphic only (N19) ===");
 // Everything drawn on top — trim line, Zünd marks, cut paths — must stay
@@ -169,13 +174,35 @@ assert(TE.Config.layerGraphics === "Graphics" && TE.Config.layerRegmarks === "Re
     "layer names match zund-summa-marks");
 var zb = exSrc.slice(exSrc.indexOf("buildZundPanel: function"), exSrc.indexOf("rasterizeArt: function"));
 assert(/layCut\.name\s*=\s*s\.cutSpot/.test(zb), "the cut layer is named after the cut colour");
+// N30: layers.add() puts a layer on top (measured), so the cut layer has to
+// be added first for Regmarks to end on top: Regmarks, cut, Graphics.
+assert(zb.indexOf("layCut = tmp.layers.add()") !== -1
+    && zb.indexOf("layCut = tmp.layers.add()") < zb.indexOf("layMarks = tmp.layers.add()"),
+    "the cut layer is added before Regmarks, so Regmarks is the top layer");
 var ex2 = exSrc.slice(exSrc.indexOf("exportTile: function"));
 assert(/layPrint\.remove\(\)/.test(ex2) && ex2.indexOf("layPrint.remove()") > ex2.indexOf("layCut.visible = false"),
     "the graphics layer is removed only after the print file is saved");
 var mainSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8"));
-assert(/if\s*\(\s*s\.zundMode\s*\)\s*\{?\s*pdfOpts\.preserveEditability\s*=\s*true/.test(mainSrc),
-    "Zünd files keep Illustrator editing capabilities");
+// N31: editable unless a plain raster export — an editable PDF stores the
+// raster a second time (measured 2026-10-04).
+assert(/pdfOpts\.preserveEditability\s*=\s*s\.zundMode\s*\|\|\s*s\.exportMode\s*!==\s*"raster"/.test(mainSrc),
+    "Zünd files and vector exports keep Illustrator editing capabilities, a plain raster export does not");
 assert(TE.Utils.indexOf(TE.Config.CUT_SPOTS, "Cut") !== -1 && TE.Config.CUT_SPOTS.length === 1, "the offered cut colour is Cut");
+
+console.log("\n=== N31: the trim line has a layer of its own in the export ===");
+var plain = ex2.slice(ex2.indexOf("if (s.drawLine)"));
+plain = plain.slice(0, plain.indexOf("buildName"));
+assert(/tmp\.layers\[0\]\.name\s*=\s*TE\.Config\.layerGraphics/.test(ex2),
+    "the artwork layer is called Graphics, as in a Zünd file");
+assert(/layLine\.name\s*=\s*s\.lineSpot/.test(plain) && /drawTileLine\([^)]*layLine\s*\)/.test(plain),
+    "the line goes into a layer named after its colour");
+
+console.log("\n=== N28: Zünd mode draws no trim line, not even in the source ===");
+var mainRaw = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+var phase1 = mainRaw.slice(mainRaw.indexOf("--- phase 1"), mainRaw.indexOf("--- phase 2"));
+assert(/drawLine\s*=\s*s\.drawLine\s*&&\s*!s\.zundMode/.test(phase1), "phase 1 switches the line off in Zünd mode");
+assert(!/s\.drawLine/.test(code(phase1).replace(/drawLine\s*=\s*s\.drawLine/, "")),
+    "and nothing else in phase 1 reads the stored choice directly");
 
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",

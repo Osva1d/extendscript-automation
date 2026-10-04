@@ -102,14 +102,18 @@
         }
 
         var replaced = TE.Draw.removeTileArtboards(doc);
+        // Zünd mode draws no trim line, not even this preview: the cut path
+        // takes its place, and a red line here would promise a printed one
+        // (N28). The stored choice is left alone for the next ordinary run.
+        var drawLine = s.drawLine && !s.zundMode;
         // The lines layer exists exactly when lines are drawn: a run without
         // them clears last run's lines and takes the empty layer with it.
-        var lay = s.drawLine ? TE.Draw.clearLinesLayer(doc) : null;
-        if (!s.drawLine) { TE.Draw.removeLinesLayer(doc); }
+        var lay = drawLine ? TE.Draw.clearLinesLayer(doc) : null;
+        if (!drawLine) { TE.Draw.removeLinesLayer(doc); }
         TE.Draw.createTileArtboards(doc, tiles);
 
         var i, item;
-        if (s.drawLine) {
+        if (drawLine) {
             for (i = 0; i < tiles.length; i++) {
                 item = TE.Draw.drawTileLine(doc, tiles[i].expanded, s,
                     1 / TE.Utils.getEffectiveSF(s));
@@ -142,7 +146,6 @@
         }
 
         var pdfOpts = new PDFSaveOptions();
-        pdfOpts.preserveEditability = false;
         if (s.pdfPreset) {
             try { pdfOpts.pDFPreset = s.pdfPreset; }
             catch (presetErr) { TE.Utils.log("PDF preset rejected: " + presetErr.message); }
@@ -152,12 +155,16 @@
         // would carry the cut data (measured 2026-09-25). Reading the
         // property says false either way, so it is set, not checked.
         pdfOpts.acrobatLayers = false;
-        // Zünd files are editable PDFs (user, 2026-09-26): reopened in
-        // Illustrator they show the Graphics, Regmarks and cut layers, like a
-        // zund-summa-marks file. Cost measured: a fixed ~320 KB per file; the
-        // placed artwork stays linked, not duplicated. Other exports stay
-        // plain, as before.
-        if (s.zundMode) { pdfOpts.preserveEditability = true; }
+        // Editable PDFs keep their layers when reopened in Illustrator: the
+        // Zünd marks, cut and graphics (user, 2026-09-26), and Graphics with
+        // the trim line on its own layer (user, 2026-10-04, N31). Set after
+        // the preset, like acrobatLayers, so the preset cannot undo it.
+        // Cost, measured: 0.3-0.9 MB a file (a Zünd panel on 2026-09-26, a
+        // 300 x 300 mm page on 2026-10-04; the placed artwork stays linked),
+        // and a raster is stored twice — going from 100 to 200 DPI added
+        // 50 KB to a plain PDF and 108 KB to an editable one. Raster mode is
+        // there for small files, so outside Zünd it stays a plain PDF.
+        pdfOpts.preserveEditability = s.zundMode || s.exportMode !== "raster";
 
         var eCtx = {
             graphicFile: graphics[0].file,
