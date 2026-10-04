@@ -116,10 +116,10 @@ TE.UI = {
     /**
      * Builds the dialog WITHOUT showing it.
      *
-     * Kept separate from show() on purpose: a Window that builds and displays
-     * in one call cannot be measured, because ScriptUI Window is a host object
-     * whose show() cannot be overridden. With this seam a probe can lay the
-     * dialog out, read real bounds and close it — see the standard, §11.
+     * Kept separate from show() on purpose: a probe can build the dialog, lay
+     * it out, read real bounds and close it without ever showing it — see the
+     * standard, §11. The 2026-10-03 sizes in the layout comment below were
+     * measured that way.
      *
      * @param {Object} pData - Preset wrapper.
      * @param {Object} ctx - Document context.
@@ -368,10 +368,9 @@ TE.UI = {
         cbZund.helpTip = l.TIP_ZUND_MODE;
         cbZund.value = !!s.zundMode;
 
-        // Everything below lives in one group so it hides as a unit. The dialog
-        // is 767 px tall without it and this panel adds ~150 px, which is past
-        // the usable height of a 1512x982 logical screen. Hidden when the mode
-        // is off, nobody pays for it in vertical space.
+        // Everything below lives in one group so it hides as a unit when the
+        // mode is off. Hiding gives no height back; see the note after the
+        // fields.
         var gZundBody = pZund.add("group");
         gZundBody.orientation = "column";
         gZundBody.alignChildren = ["fill", "top"];
