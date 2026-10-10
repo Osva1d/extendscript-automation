@@ -557,6 +557,24 @@ cestou 293 pt kolem umístěného PDF o šířce 879 pt má `width = 879`. Nasta
 a masku jen 2051 pt, ne zamýšlených 6153. Kdo chce masku dostat na přesný rozměr,
 musí počítat poměr z masky sám a zvětšovat přes `resize()`.
 
+### Plátno: kde leží a co se děje za jeho okrajem (naměřeno 2026-10-10, AI 30.8.2)
+
+- Plátno má **16 383 × 16 383 pt** a je vycentrované na první artboard tak, jak
+  dokument vznikl. Posun artboardu ho nehne. Dokument 600 × 300 mm: x −7341 …
+  9042, y −7766,6 … 8616,4. Large Canvas má plátno stejně velké ve vnitřních
+  jednotkách, ve skutečnosti tedy 57,8 m.
+- DOM ho neukazuje. Najde se bisekcí: `artboards.add()` mimo plátno hází,
+  zhruba sto přidání a odebrání trvá 0,1 s.
+- **Cesta přes okraj se zdeformuje.** Obdélník 300 pt přes pravý okraj
+  posunutý `translate()` o 1000 pt vyšel 1200 pt široký: levá hrana zůstala na
+  okraji, pravá se posunula. Generované cesty i artboardy proto patří dovnitř.
+- **Umístěná grafika přes okraj smí.** Kopie posunutá tak, že přesahuje okraj
+  o 670 pt, zachovala šířku 1729,13 pt a ořezová skupina s maskou uvnitř
+  plátna funguje.
+- Deset zamaskovaných kopií téže umístěné grafiky stojí pod 2 ms a 93 ms
+  překreslení. `.ai` s 11 umístěními jednoho linku má 2,1 MB při zdrojovém PDF
+  1,75 MB — obraz je v souboru jednou.
+
 ### Large Canvas jde založit skriptem
 
 `app.documents.add(DocumentColorSpace.CMYK, w, h)` s rozměrem nad strop běžného

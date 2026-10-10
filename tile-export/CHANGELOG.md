@@ -22,6 +22,13 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Changed
 
+- **Jen pláty staví kontrolní pláty.** Místo artboardů a červených linek přes
+  originál vznikne vedle něj každý plát zamaskovaný na vlastním artboardu,
+  s linkou, nebo se Zünd značkami a řezem — tak, jak ho zapíše export, v měřítku
+  kresby. Svisle v řadě pod originálem, Vodorovně ve sloupci vpravo; co by
+  vyjelo z plátna, se zalomí. Hranice načisto je vodítko. Originál zůstane, jak
+  je, a další běh vrstvu `TE_panels` nahradí. Když se pláty na plátno nevejdou,
+  Jen pláty to ohlásí a export proběhne bez nich.
 - **Typ výstupu: ruční ořez, nebo Zünd.** Jedna volba místo řádku linky
   v panelu Export a panelu Zünd se zaškrtávátkem; pod ní jen pole zvoleného
   typu. Panel Export se jmenuje Soubory.

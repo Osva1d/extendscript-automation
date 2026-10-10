@@ -54,9 +54,15 @@ Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než
    spad na každé hraně, **Výsledek** průběžně přepočítává rozměr každého plátu
    načisto i s přídavky. Chybné zadání zašedne obě akční tlačítka. **Typ výstupu**
    volí mezi ručním ořezem (červená linka) a Zündem (značky a řezová cesta).
-2. **Jen pláty** — vzniknou artboardy `TE_01`…`TE_0n` a červené linky. Prohlédni
-   si je. Když šev nesedí, uprav nastavení nebo vodítka a spusť znovu — ručně
-   posunutý artboard export nepřevezme, pláty počítá z nastavení znovu.
+2. **Jen pláty** — vedle originálu vzniknou **kontrolní pláty**: každý plát
+   zamaskovaný na vlastním artboardu `TE_01`…`TE_0n`, s červenou linkou, nebo se
+   Zünd značkami a řezem — tak, jak ho zapíše export, jen v měřítku kresby.
+   U Svisle jsou v řadě pod originálem, u Vodorovně ve sloupci vpravo od něj;
+   řada, která by vyjela z plátna Illustratoru, se zalomí. Hranici načisto
+   (šev a konec přelepu) ukazuje vodítko. Originál zůstane, jak je; vše leží ve
+   vrstvě `TE_panels`, kterou další běh nahradí. Když šev nesedí, uprav
+   nastavení nebo vodítka a spusť znovu — ruční úpravy kontrolních plátů
+   export nepřevezme, pláty počítá z nastavení znovu.
 3. Spusť znovu a dej **Vytvořit a exportovat**.
 
 Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
@@ -172,7 +178,7 @@ barvy (výchozí `CutContour`) nad vrstvou `Graphics` s grafikou. Aby vrstvy po
 otevření v Illustratoru zůstaly, ukládá se PDF jako editovatelné (zhruba
 0,3–0,9 MB navíc na soubor, naměřeno). Rastrové PDF zůstává obyčejné, bez
 vrstev: editovatelné by neslo obraz dvakrát. V Zünd režimu se linka nekreslí
-vůbec, ani do zdrojového dokumentu — nahrazuje ji řezová cesta.
+vůbec, ani na kontrolní pláty — nahrazuje ji řezová cesta.
 
 ## Vodítka
 
@@ -322,7 +328,12 @@ stranu.
 - **„Dokument musí obsahovat právě jednu umístěnou grafiku"** — export přes
   dočasný dokument přenáší jen jednu navázanou grafiku.
 - **Pláty zůstaly v dokumentu po neúspěšném běhu** — další spuštění je najde
-  podle prefixu a přepočítá. Vrstva `TE_lines` se vyprazdňuje při každém startu.
+  podle prefixu a přepočítá: artboardy `TE_` i vrstvu `TE_panels` nahradí,
+  vrstvu `TE_lines` ze starších verzí odstraní.
+- **„Kontrolní pláty se vedle originálu nevejdou na plátno"** — kresba ve
+  skutečné velikosti je pro plátno Illustratoru (5,78 m) i se zalomením moc
+  velká. Pomůže kresba v měřítku 1:10 nebo Large Canvas; export kontrolní
+  pláty nepotřebuje a proběhne i bez nich.
 
 ## Vývoj
 
@@ -335,6 +346,7 @@ src/
 ├── draw.js         TE.Draw     — přímá barva, ořezová linka, značky, artboardy
 ├── cut.js          TE.Cut      — detekce a ořez ořezové kontury
 ├── export.js       TE.Export   — transformace a dočasný dokument na plát
+├── check.js        TE.Check    — kontrolní pláty v pracovním dokumentu
 ├── ui.js           TE.UI       — ScriptUI dialog, živý dopočet, předvolby
 ├── main.js                     — entry point, error boundary, dvoufázový běh
 └── lib/

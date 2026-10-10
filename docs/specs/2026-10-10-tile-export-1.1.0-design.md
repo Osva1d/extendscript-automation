@@ -253,5 +253,10 @@ poměr vynechává (§7); rámeček-vodítko ukazuje hranici načisto (§6.4).
    s náhledem (1:10, 1:1, Zünd).
 4. **1.1.0 c** — kontrolní pláty: rozložení (Node testy aritmetiky zalomení
    a mezer), vrstvy, opakovaný běh, případně vodítka. Sondy v Illustratoru,
-   ruční test.
+   ruční test. **Hotovo** (modul `TE.Check`): stejná geometrie jako export,
+   v měřítku kresby a bez přestavby exportu; plátno se hledá bisekcí
+   artboardů; mezera = 10 mm na pravítkách, nejméně 5 % nejdelší strany
+   stránky; vodítko načisto; čtení grafiky, vodítek a kontur vrstvu TE
+   vynechá. V Illustratoru postaveno na archu, zdi (i Zünd a 12 plátů)
+   a Large Canvasu, dvakrát za sebou, rozložení vyrenderované a prohlédnuté.
 5. **1.2.0** — export z kontrolních plátů.
