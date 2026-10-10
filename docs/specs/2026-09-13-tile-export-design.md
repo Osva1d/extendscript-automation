@@ -73,6 +73,11 @@ Clipping maska nepomůže, naopak přidá bajty za masku. Embedded ani linked na
 nic nemění. V `PDFSaveOptions` neexistuje ekvivalent InDesignového
 „Crop Image Data to Frames".
 
+Upřesněno 2026-10-10 (N34): zdroj tohoto měření měl několik velkých objektů.
+Illustrator neořízne objekt přes hranu stránky, ale objekty, které do stránky
+nezasahují, do PDF nedá — u zdroje z 20 000 malých objektů nesl čtvrtinový plát
+27 % obdélníků. Měření je v `docs/extendscript-engine-facts.md`.
+
 **Rasterizace je jediný únik.** Poslední dva řádky: rasterizovaný plát váží
 51 406 B ze zdroje vektorového i rastrového, na bajt stejně. Velikost přestává
 záviset na zdroji a začíná záviset na ploše plátu a DPI.
@@ -130,7 +135,9 @@ Souřadnice dokumentové, Y kladné nahoru.
   spuštění a export ho vynechává. V dopočtu dialogu je vypsaný číselně (§6).
   Ruční přepis v dialogu byl zrušen (N27, 2026-10-03): měnil jen náhled, běh
   dál dělil artboard; nesedí-li artboard, opraví se artboard
-- směr dělení: `horizontal` (svislé řezy, pláty vedle sebe) nebo `vertical`
+- směr dělení: `horizontal` (svislé řezy, pláty vedle sebe) nebo `vertical`.
+  Dialog je od 1.0.1 pojmenovává podle dílny, podle výsledku: „Svisle" (svislé
+  pláty vedle sebe) a „Vodorovně" (N32); uložené hodnoty se nezměnily
 - režim dělení: `count` (n) | `width` (w) | `guides`
 - přelep `O ≥ 0`, režim `symmetric` | `onesided`
 - přídavky `T`, `B`, `L`, `R` — každý `≥ 0`
