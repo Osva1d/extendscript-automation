@@ -12,6 +12,22 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N38 — u směru Vodorovně čte náhled vodítka pro Svisle
+
+`tile-export/src/ui.js:908` počítá švy náhledu z `ctx.guides`, které
+`main.js:59` plní svislými vodítky (směr Svisle) bez ohledu na zvolený směr.
+Běh (`main.js:86`) bere vodítka zvoleného směru. Zreprodukováno v Node nad
+skutečným `refresh()` (2026-10-10), artboard 600 × 300 mm, Vodorovně + Vodítek:
+
+- jen vodorovné vodítko (100 mm) → „Nenalezena použitelná vodítka",
+  obě tlačítka šedá, přitom běh by dělil na 100 mm;
+- navíc svislé vodítko (x = 200 mm) → náhled ukáže pláty 100 + 200 mm,
+  běh vyrobí 200 + 100 mm.
+
+Dělení podle vodítek tak funguje jen u směru Svisle. **Oprava:** náhled
+z `ctx.guidesByDirection[s.direction]`, test v `test_ui_summary.js`.
+Kandidát do 1.0.1.
+
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
