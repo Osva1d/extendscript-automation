@@ -12,18 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N41 — u Vodorovně jde zbytek šířky plátu na horní plát, ne na poslední
-
-`tile-export/src/grid.js`, `computeCuts()`, větev `width` — řezy se odměřují
-od začátku osy a ta u Vodorovně začíná dole (souřadnice Y rostou nahoru). Pláty
-se ale číslují shora, takže kratší zbytek vyjde na plát 1 nahoře. U Svisle je
-zbytek vpravo, na posledním plátu. README, nápověda Šířky plátu i CHANGELOG
-1.0.0 slibují „poslední plát kratší". Spočítáno 2026-10-10 nad skutečným
-`refresh()`: arch 3000 × 1000 mm, Vodorovně, šířka 600 → plát 1 načisto 400 mm,
-plát 2 600 mm. Týká se jen šířky plátu bez Rovnoměrně. **Oprava:** u Vodorovně
-odměřovat od horní hrany, aby zbytek šel na poslední, dolní plát — podle
-rozhodnutí uživatele.
-
 ### N40 — u Vodorovně znamená Šířka plátu výšku a chyba neřekne proč
 
 Ruční test 1.0.1 (2026-10-10): arch (1000 mm vysoký), Vodorovně, Šířka plátu
@@ -152,6 +140,7 @@ polích.
 | N34 | nápověda a README tvrdily, že vektorový plát nese vždy celou grafiku; plát nese jen objekty, které do něj zasahují, celý jen objekt přes hranu (naměřeno 2026-10-10) | `8369e3c` |
 | N38 | náhled dělení podle vodítek četl u Vodorovně svislá vodítka: se samými vodorovnými šedil obě tlačítka, s oběma ukázal jiné dělení, než běh udělal; teď čte vodítka zvoleného směru jako běh (z popisu voleb 2026-10-10) | `eff1de8` |
 | N39 | každý plát umisťoval PDF znovu ze souboru s ořezem z předvolby importu, ne z pozice: PDF umístěné se spadávkou (214 × 102 mm) vyšlo ořezané na TrimBox (210 × 98) a roztažené, bez varování; teď plát dostává `duplicate()` pozice, kopie se odemkne a zviditelní (dědí obojí). Sondy proti starému kódu: past s ořezem shodná se správným výstupem na 0,0009 pt, Large Canvas vektor, Zünd i rastr stejné až na švy vyhlazování (2026-10-10) | `c240bb4` |
+| N41 | u Vodorovně šel kratší zbytek šířky plátu na horní plát (řezy se odměřovaly od spodní hrany osy), dokumentace slibuje poslední; teď se odměřuje shora a zbytek jde na spodní plát (rozhodnutí uživatele, ruční test 1.0.1 2026-10-10) | `6d1710c` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
