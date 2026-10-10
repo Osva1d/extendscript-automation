@@ -746,6 +746,11 @@ TE.UI = {
         btnExport.onClick = function () { state.outcome = "export"; w.close(1); };
         btnCancel.onClick = function () { state.outcome = null; w.close(0); };
 
+        // One layout with the widest texts still in place, before refresh()
+        // writes the real ones. A statictext keeps the width of its first
+        // layout (measured), and without this pass the first layout came
+        // after the real values: a longer number later was cut (1.1.0).
+        w.layout.layout(true);
         refresh();
 
         return {
