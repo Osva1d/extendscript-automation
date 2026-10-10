@@ -4,7 +4,8 @@ Nástroj: `tile-export`, namespace `TE`.
 Navazuje na [návrh 1.0](2026-09-13-tile-export-design.md) a
 [Zünd režim](2026-09-13-tile-export-zund-design.md).
 
-Datum: 2026-10-10 · Stav: **návrh**, čeká na schválení
+Datum: 2026-10-10 · Stav: **schváleno** (uživatel, 2026-10-10); 1.1.0 a
+implementováno, nevydáno
 
 Vzniklo z prvního provozu (2026-10-10) a z popisu všech voleb dialogu, který
 uživatel prošel bod po bodu. Nálezy z té doby jsou v
@@ -243,7 +244,9 @@ poměr vynechává (§7); rámeček-vodítko ukazuje hranici načisto (§6.4).
    požádání jsou hotové), vydání.
 2. **1.1.0 a** — dialog: typ výstupu, pořadí panelů, měřítko kresby v dokumentu,
    výstup pojmenovaný číslem, rastr pryč. Node testy collect/apply/refresh,
-   headless měření výšky.
+   headless měření výšky. **Hotovo** (větev `feat/tile-export-1.1.0`): dialog
+   1178 × 712 px ve všech stavech, popisky s měnícím se textem mají rezervu;
+   k tomu N40. Název prvního souboru ve Výsledku přijde s pojmenováním (b).
 3. **1.1.0 b** — pojmenování: `{n}` dvoumístné, `{size}` ve skutečné velikosti, `{scale}`.
 4. **1.1.0 c** — kontrolní pláty: rozložení (Node testy aritmetiky zalomení
    a mezer), vrstvy, opakovaný běh, případně vodítka. Sondy v Illustratoru,

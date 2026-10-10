@@ -12,15 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N40 — u Vodorovně znamená Šířka plátu výšku a chyba neřekne proč
-
-Ruční test 1.0.1 (2026-10-10): arch (1000 mm vysoký), Vodorovně, Šířka plátu
-1000 → „Jsou potřeba aspoň 2 pláty." a obě tlačítka šedá. Nastavení je platné:
-u Vodorovně se dělí výška a plát 1000 mm na grafice vysoké 1000 mm je jeden.
-Popisek ani hláška to nenaznačí. **Návrh (1.1.0 a):** u Vodorovně popisek
-„Výška plátu" i v nápovědách a hláška s délkou ve směru dělení, např.
-„Výška plátu 1000 mm dá jen 1 plát: grafika měří ve směru dělení 1000 mm."
-
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
@@ -32,6 +23,8 @@ Dialog píše jen „Rozlišení rastru v DPI", přitom všechny ostatní hodnot
 zadávají ve skutečné velikosti. **Návrh:** DPI ve finální velikosti, v 1:N
 rastrovat N× jemněji — data pak vyjdou stejná jako v 1:1. Předtím změřit
 strop `RasterizeOptions.resolution` (300 DPI v 1:10 = 3000 na stránce).
+Od 1.1.0 je rastr v dialogu schovaný (`RASTER_ENABLED`), past se tedy
+neuplatní; oprava čeká na rozhodnutí, jestli se rastr vrátí.
 
 ### N36 — export 1:N s presetem, který převzorkovává, sníží rozlišení obrazu N×
 
@@ -142,6 +135,7 @@ polích.
 | N38 | náhled dělení podle vodítek četl u Vodorovně svislá vodítka: se samými vodorovnými šedil obě tlačítka, s oběma ukázal jiné dělení, než běh udělal; teď čte vodítka zvoleného směru jako běh (z popisu voleb 2026-10-10) | `eff1de8` |
 | N39 | každý plát umisťoval PDF znovu ze souboru s ořezem z předvolby importu, ne z pozice: PDF umístěné se spadávkou (214 × 102 mm) vyšlo ořezané na TrimBox (210 × 98) a roztažené, bez varování; teď plát dostává `duplicate()` pozice, kopie se odemkne a zviditelní (dědí obojí). Sondy proti starému kódu: past s ořezem shodná se správným výstupem na 0,0009 pt, Large Canvas vektor, Zünd i rastr stejné až na švy vyhlazování (2026-10-10) | `c240bb4` |
 | N41 | u Vodorovně šel kratší zbytek šířky plátu na horní plát (řezy se odměřovaly od spodní hrany osy), dokumentace slibuje poslední; teď se odměřuje shora a zbytek jde na spodní plát (rozhodnutí uživatele, ruční test 1.0.1 2026-10-10) | `6d1710c` |
+| N40 | u Vodorovně se pole jmenovalo Šířka plátu, ač dělilo výšku, a jediný plát hlásilo jen „Jsou potřeba aspoň 2 pláty"; teď Výška plátu i v nápovědě a hláškách a hláška s délkou grafiky ve směru dělení (1.1.0, ruční test 1.0.1) | `0909105` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

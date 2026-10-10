@@ -35,8 +35,9 @@ Strojní ořez na Zündu (druhý případ) nástroj umí zatím **rovný** — v
 Nástroj počítá s dokumentem v tomhle tvaru:
 
 1. **Plátno na rozměr čistého formátu.** U velké grafiky ve zmenšeném měřítku,
-   typicky 1:10 — pak zaškrtni v dialogu **Ruční měřítko 1:N** a zadej 10.
-   Všechny hodnoty v dialogu se pak zadávají ve **skutečných milimetrech**.
+   typicky 1:10 — pak zadej v dialogu **Měřítko kresby 1:** 10. Dokument si
+   měřítko zapamatuje a příště ho dialog nabídne sám. Všechny hodnoty v dialogu
+   se pak zadávají ve **skutečných milimetrech**.
 2. **Navázané PDF umístěné do plátna, už se spadem pro přídavky.** Grafika tedy
    plátno přesahuje. Nástroj ten přesah změří a odmítne přídavek, který by ho
    překročil — jinak by plát měl prázdný okraj, který se pozná až na výtisku.
@@ -49,9 +50,10 @@ v dočasném dokumentu, kam se přenáší jen ona; cokoli dalšího by se ztrat
 
 Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než se exportuje.
 
-1. Spusť skript, vyplň dialog. Pod nastavením se průběžně přepočítává, co z toho
-   vyjde — rozměr každého plátu načisto i s přídavky a dostupný spad na každé
-   hraně. Chybné zadání zašedne obě akční tlačítka.
+1. Spusť skript, vyplň dialog. Panel **Dokument** ukáže čistý formát a dostupný
+   spad na každé hraně, **Výsledek** průběžně přepočítává rozměr každého plátu
+   načisto i s přídavky. Chybné zadání zašedne obě akční tlačítka. **Typ výstupu**
+   volí mezi ručním ořezem (červená linka) a Zündem (značky a řezová cesta).
 2. **Jen pláty** — vzniknou artboardy `TE_01`…`TE_0n` a červené linky. Prohlédni
    si je. Když šev nesedí, uprav nastavení nebo vodítka a spusť znovu — ručně
    posunutý artboard export nepřevezme, pláty počítá z nastavení znovu.
@@ -187,7 +189,8 @@ u vodorovných (Vodorovně) vodorovná.
 Pro strojní přesný ořez na Zündu, **zatím rovný**: řeže se obdélník plátu.
 Tvarový ořez podle kontury přijde v další verzi.
 
-Zapnutý udělá z každého plátu **dvě PDF se stejnou stránkou**:
+Zvolený jako **Typ výstupu** udělá z každého plátu **dvě PDF se stejnou
+stránkou**:
 
 | soubor | obsah |
 |---|---|
@@ -252,12 +255,13 @@ v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
 
 | volba | kdy |
 |---|---|
-| Stejné jako dokument | plátno 1:10 zůstane 1:10, zvětšuje až RIP |
+| 1:N jako kresba (třeba „1:10 jako kresba") | data zůstanou v měřítku kresby, zvětšuje až RIP |
 | 1:1 skutečná velikost | výstup ve skutečném rozměru |
 
-**Large Canvas** se při „Stejné jako dokument" zapíše ve skutečné velikosti —
-tak ho ukazují pravítka. Ruční měřítko 1:N se s jeho faktorem skládá: Large
-Canvas s ručním 1:10 vyjde v 1:10.
+U kresby 1:1 se nevolí nic, obě volby dají totéž. **Large Canvas** se zapíše
+ve skutečné velikosti — tak ho ukazují pravítka — a jeho faktor dialog
+neukazuje. Měřítko kresby se s ním skládá: Large Canvas s 1:10 vyjde jako
+kresba v 1:10.
 
 ## Známá omezení
 
@@ -266,10 +270,10 @@ Canvas s ručním 1:10 vyjde v 1:10.
   ani clipping maskou — velký obrázek tak jde celý do každého plátu, kam sahá.
   `PDFSaveOptions` nemá ekvivalent InDesignového „Crop Image Data to Frames".
   Měření je v [../docs/extendscript-engine-facts.md](../docs/extendscript-engine-facts.md).
-  Když na velikosti záleží, použij **rastrový** režim — velikost plátu pak
-  závisí na jeho ploše a DPI, ne na zdroji.
-- **Rastrový režim rasterizuje celou grafiku plátu**, tedy i text a vektorová
-  loga. Ořezová linka zůstává navrchu jako vektor.
+- **Rastrový export je od 1.1.0 z dialogu schovaný** (`TE.Config.RASTER_ENABLED`).
+  Dílna rastruje ve Photoshopu, a to jen při potížích na RIPu; jestli jde věřit
+  rastru Illustratoru, se teprve ověří. Uložené předvolby s rastrem exportují
+  vektor.
 - **Dělení jen jedním směrem.** 2D mřížka pro desky zatím není.
 - **Zünd jen s rovným ořezem.** Tvarový ořez podle kontury je další etapa.
 - Velký plát se při výstupu 1:1 nemusí vejít do artboardu Illustratoru
@@ -283,7 +287,7 @@ Canvas s ručním 1:10 vyjde v 1:10.
 
 - **„Přídavek vpravo překračuje přesah grafiky"** — nalinkované PDF nenese
   dost spadu na té hraně. Buď zmenši přídavek, nebo si vyžádej data s větším
-  spadem. Dostupný spad je vidět v dopočtu dialogu.
+  spadem. Dostupný spad ukazuje panel Dokument.
 - **„Nenalezen artboard čistého formátu"** — všechny artboardy v dokumentu
   začínají na `TE_`, tedy jsou to vygenerované pláty. Původní artboard se
   nesmí přejmenovat ani smazat.
