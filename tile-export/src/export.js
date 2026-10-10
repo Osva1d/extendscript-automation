@@ -45,22 +45,103 @@ TE.Export = {
     },
 
     /**
-     * Output file name from the pattern. {n} is zero-padded to the width of
-     * the total, so twelve panels sort correctly in Finder.
-     * @param {string} pattern - Carries {doc}, {n}, {total}.
+     * Output file name from the pattern. PURE FUNCTION.
+     *
+     * {n} has at least two digits, as the shop numbers panels (01, 02), and
+     * more when the total needs them, so twelve panels sort in Finder. A
+     * placeholder with no value — {scale} at real size — goes with one
+     * separator next to it, so "_{size}_{scale}_1x" leaves "_2020x1020mm_1x"
+     * (user, 2026-10-10). Values go in through a function: a "$" in a
+     * document name would otherwise be read as a replacement pattern.
+     *
+     * @param {string} pattern - Carries {doc}, {n}, {total}, {size}, {scale}.
      * @param {string} docName - Source document name without extension.
      * @param {number} index - 1-based panel number.
      * @param {number} total - How many panels there are.
+     * @param {Object} [extra] - {size, scale}; missing ones count as empty.
      * @returns {string} File name without extension.
      */
-    buildName: function (pattern, docName, index, total) {
-        var width = String(total).length;
+    buildName: function (pattern, docName, index, total, extra) {
+        var width = Math.max(2, String(total).length);
         var n = String(index);
         while (n.length < width) { n = "0" + n; }
-        return String(pattern)
-            .replace(/\{doc\}/g, docName)
-            .replace(/\{n\}/g, n)
-            .replace(/\{total\}/g, String(total));
+        var x = extra || {};
+        var vals = [["doc", String(docName)], ["n", n], ["total", String(total)],
+                    ["size", x.size ? String(x.size) : ""], ["scale", x.scale ? String(x.scale) : ""]];
+        var out = String(pattern), i;
+        for (i = 0; i < vals.length; i++) {
+            out = this.fillToken(out, vals[i][0], vals[i][1]);
+        }
+        return out;
+    },
+
+    /**
+     * One placeholder of a name pattern filled in. PURE FUNCTION.
+     * @param {string} text - Pattern so far.
+     * @param {string} key - Placeholder name without braces.
+     * @param {string} value - Its value; empty removes it with a separator.
+     * @returns {string} The pattern with the placeholder filled.
+     */
+    fillToken: function (text, key, value) {
+        var token = "\\{" + key + "\\}";
+        if (value === "") {
+            return text.replace(new RegExp("[_\\-. ]" + token, "g"), "")
+                       .replace(new RegExp(token + "[_\\-. ]?", "g"), "");
+        }
+        return text.replace(new RegExp(token, "g"), function () { return value; });
+    },
+
+    /**
+     * Real size of a panel's PDF page in mm, [w, h]: the printed panel, or in
+     * Zünd mode the page with its marks, at real size whatever the output
+     * scale. PURE FUNCTION — computed the way the export lays the page out
+     * (zundLayout, calculateAll), so the name's {size} is the page it names.
+     * @param {Object} tile - Panel.
+     * @param {Object} s - Settings.
+     * @param {number} sf - The SOURCE document's Large Canvas factor.
+     * @returns {Array} [width, height] in real millimetres.
+     */
+    pageSizeMm: function (tile, s, sf) {
+        var k = TE.Utils.outputScale(s, sf);
+        var ratio = TE.Utils.pageRatio(s, sf);
+        var w, h, e, ab;
+        if (s.zundMode) {
+            ab = TE.Core.calculateAll(s,
+                this.zundLayout(this.tileTransform(tile, [0, 0, 0, 0], k), s, ratio).mask, ratio).ab;
+            w = ab[2] - ab[0];
+            h = ab[1] - ab[3];
+        } else {
+            e = tile.expanded;
+            w = (e[2] - e[0]) * k;
+            h = (e[1] - e[3]) * k;
+        }
+        return [TE.Utils.pt2mm(w) * ratio, TE.Utils.pt2mm(h) * ratio];
+    },
+
+    /**
+     * A panel's file name without extension, every placeholder filled: the
+     * one place the export, the skip check and the dialog build it, so the
+     * three cannot disagree.
+     *
+     * {size} is the page at REAL size in whole millimetres, and {scale} the
+     * ratio of data left at the drawing's scale, "1ku10" — the shop names a
+     * 1:10 file by its real size and the ratio, and writes no ratio at real
+     * size (user, 2026-10-10). The decimal comma is the shop's convention,
+     * not the dialog's language.
+     *
+     * @param {Object} tile - Panel.
+     * @param {Object} ctx - {docName, total, scaleFactor}.
+     * @param {Object} s - Settings.
+     * @returns {string} File name without extension.
+     */
+    fileName: function (tile, ctx, s) {
+        var mm = this.pageSizeMm(tile, s, ctx.scaleFactor);
+        var n = TE.Utils.manualScale(s);
+        var asDrawn = (s.exportScale !== "actual") && Math.abs(n - 1) > 1e-9;
+        return this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total, {
+            size: Math.round(mm[0]) + "x" + Math.round(mm[1]) + "mm",
+            scale: asDrawn ? TE.Config.namingScalePrefix + TE.Utils.formatMM(n, ",") : ""
+        });
     },
 
     /**
@@ -73,7 +154,7 @@ TE.Export = {
      * @returns {boolean} True when the output exists.
      */
     outputExists: function (tile, ctx, s) {
-        var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
+        var name = this.fileName(tile, ctx, s);
         var dir = ctx.outFolder.fsName + "/";
         if (!new File(dir + name + ".pdf").exists) { return false; }
         // Zünd writes two files; a panel is finished only when both are there.
@@ -261,7 +342,7 @@ TE.Export = {
                 // the _cut PDF takes its place.
                 var zp = this.buildZundPanel(tmp, pi, tf, ctx, s);
                 contourPaths = zp.cutPaths;
-                var zName = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
+                var zName = this.fileName(tile, ctx, s);
                 var zDir = ctx.outFolder.fsName + "/";
                 // Print file: the cut layer hidden, not removed — it is there
                 // on reopening. Hidden layers stay out of the printed page
@@ -297,7 +378,7 @@ TE.Export = {
                 this.rasterizeArt(tmp, pi, s);
             }
 
-            var name = this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total);
+            var name = this.fileName(tile, ctx, s);
             var out = new File(ctx.outFolder.fsName + "/" + name + ".pdf");
             tmp.saveAs(out, ctx.pdfOptions);
             return { file: out, contourPaths: contourPaths };

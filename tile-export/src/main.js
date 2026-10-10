@@ -55,6 +55,8 @@
 
         var ctx = {
             cleanRect: clean.rect,
+            // Without the extension: the {doc} of the file names.
+            docName: String(doc.name).replace(/\.[^.]+$/, ""),
             // The scale this document was last run at, null for a new one.
             drawingScale: TE.Doc.loadDrawingScale(doc),
             spotNames: spotNames,
@@ -180,7 +182,7 @@
             // The SOURCE's Large Canvas factor, read while the source is still
             // the active document. exportTile must not read it itself.
             scaleFactor: ctx.validation.scaleFactor,
-            docName: String(doc.name).replace(/\.[^.]+$/, ""),
+            docName: ctx.docName,
             outFolder: outFolder,
             total: tiles.length,
             pdfOptions: pdfOpts,
