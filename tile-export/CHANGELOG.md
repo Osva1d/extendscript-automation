@@ -31,7 +31,6 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Dělení podle vodítek u směru Vodorovně: náhled v dialogu četl svislá
   vodítka. Se samými vodorovnými hlásil „Nenalezena použitelná vodítka"
   a nepustil dál, s oběma ukazoval jiné dělení, než běh udělal.
-
 - Kontrola spadu za řezem a přídavků odmítala 3 mm u PDF se spadem 3 mm:
   Illustrator v něm kvůli zaokrouhleným souřadnicím naměří třeba 2,9986 mm
   a hláška pak tvrdila „potřebují 3 mm, PDF nese 3 mm". Kontroly teď platí
