@@ -207,6 +207,11 @@ TE.UI.refresh(null, r38, ctx);
 eq(r38.btnTiles.enabled && r38.btnExport.enabled, true, "horizontal guides alone are enough for Vodorovně");
 ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [] } };
 
+console.log("\n=== N41: a width split puts the remainder on the last panel, going down too ===");
+var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", enabled: true } });
+has(t41, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně: the top panel is a full 600");
+has(t41, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and the bottom one takes the remainder");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more

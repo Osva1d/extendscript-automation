@@ -230,4 +230,41 @@ fc.assert(fc.property(arbJob, function (j) {
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 
+console.log("\n=== Property 8: a width split leaves the remainder on the LAST panel ===");
+// Panels are numbered left to right and top down. Every panel but the last
+// carries exactly the entered clean width and the remainder goes last, going
+// down as well as across. Going down it used to land on the top panel: the
+// axis runs bottom up and the cuts were measured from its start (N41).
+var arbWidth = fc.record({
+    w:      fc.integer({ min: 300, max: 4000 }),
+    width:  fc.integer({ min: 600, max: 12000 }),
+    height: fc.integer({ min: 600, max: 6000 }),
+    dir:    fc.constantFrom("horizontal", "vertical")
+}).filter(function (j) {
+    // Wider than the panel, so there are at least two of them.
+    return j.w < ((j.dir === "horizontal") ? j.width : j.height);
+});
+
+fc.assert(fc.property(arbWidth, function (j) {
+    var s = merge(D, { direction: j.dir, divideMode: "width", tileWidth: j.w, equalPanels: false });
+    var clean = [0, mm(j.height), mm(j.width), 0];
+    var ext = (j.dir === "horizontal")
+        ? { start: clean[0], end: clean[2] }
+        : { start: clean[3], end: clean[1] };
+    var t = TE.Grid.computeTiles(TE.Grid.computeCuts(s, ext, null), clean, s);
+    var i, c, want = TE.Utils.toDoc(j.w, s);
+    for (i = 0; i < t.length; i++) {
+        c = (j.dir === "horizontal")
+            ? t[i].clean[2] - t[i].clean[0]
+            : t[i].clean[1] - t[i].clean[3];
+        if (i < t.length - 1) {
+            if (Math.abs(c - want) > 1e-6) { return false; }
+        } else if (c > want + 1e-6 || c <= 0) {
+            return false;
+        }
+    }
+    return t.length >= 2;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
 console.log("\nALL PROPERTIES HOLD");
