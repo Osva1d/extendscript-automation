@@ -19,6 +19,13 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Export bral ořez PDF z předvolby importu, ne z umístěné grafiky.** Každý
+  plát umisťoval PDF znovu ze souboru a ořez (Trim, Bleed, Media) převzal
+  z globální předvolby Illustratoru, kterou přepíše každé otevření dokumentu
+  s navázaným PDF. PDF umístěné se spadávkou pak vyšlo ořezané na TrimBox
+  a roztažené na rozměr pozice — obsah nerovnoměrně zvětšený, místo spadávky
+  roztažený okraj, bez varování. Plát teď dostává kopii umístěné grafiky, ořez
+  zůstane, jak ho máš v dokumentu.
 - Dělení podle vodítek u směru Vodorovně: náhled v dialogu četl svislá
   vodítka. Se samými vodorovnými hlásil „Nenalezena použitelná vodítka"
   a nepustil dál, s oběma ukazoval jiné dělení, než běh udělal.

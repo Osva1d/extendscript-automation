@@ -211,8 +211,9 @@ TE.Export = {
      * The source document is not touched at all.
      *
      * @param {Object} tile - One entry from TE.Grid.computeTiles().
-     * @param {Object} ctx - {graphicFile, graphicBounds, docName, outFolder,
-     *        total, pdfOptions, contour, markDef}.
+     * @param {Object} ctx - {graphic, graphicBounds, docName, outFolder,
+     *        total, pdfOptions, contour, markDef}. graphic is the placed item
+     *        in the working document; each panel gets a copy of it.
      * @param {Object} s - Settings.
      * @returns {Object} {file: File, cutFile: File|undefined, contourPaths:
      *          number}. cutFile only in Zünd mode. contourPaths counts the cut
@@ -236,8 +237,17 @@ TE.Export = {
                                     tf.artboard[2], -tf.artboard[3]);
             tmp.artboards[0].artboardRect = tf.artboard;
 
-            var pi = tmp.placedItems.add();
-            pi.file = ctx.graphicFile;
+            // A copy of the item in the working document, not a new place of
+            // its file. A new place takes the crop from Illustrator's PDF
+            // import preference, which every opened document with linked PDFs
+            // rewrites: a bleed-cropped item came back trim-cropped and was
+            // stretched to the item's size (N39, measured). duplicate() keeps
+            // the item's own crop. The copy also inherits locked and hidden
+            // (measured): hidden prints nothing, locked would travel into the
+            // editable PDF. Both are cleared.
+            var pi = ctx.graphic.duplicate(tmp.layers[0], ElementPlacement.PLACEATBEGINNING);
+            pi.locked = false;
+            pi.hidden = false;
             // resize(), not width/height. The .width setter refuses anything
             // above 16347.7 pt (about 5767 mm), wherever the item sits, and the
             // WHOLE graphic of a large job passes that at 1:1 long before any

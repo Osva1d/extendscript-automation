@@ -12,30 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N39 — export umisťuje PDF podle předvolby importu, ne podle pozice v dokumentu
-
-`tile-export/src/export.js`, `exportTile()` — dočasný dokument dostane grafiku
-přes `placedItems.add()` a `file =`, tedy s ořezem z globální předvolby importu
-PDF, ne s tím, jak je PDF umístěné v pracovním dokumentu. Tu předvolbu
-Illustrator přepíše při každém otevření dokumentu s navázaným PDF
-(engine-facts). Naměřeno 2026-10-10 (AI 30.8.2) na PDF s TrimBoxem
-210 × 98 mm a BleedBoxem 214 × 102 mm:
-
-| grafika | rozměr |
-|---|---|
-| pozice v pracovním dokumentu, umístěná s ořezem Bleed | 214 × 102 mm |
-| nové umístění v dočasném dokumentu, předvolba Trim | 210 × 98 mm |
-| `duplicate()` pozice do dočasného dokumentu | 214 × 102 mm |
-
-Export pak ořezaný obsah roztáhne na rozměr pozice. Plát nese obsah
-nerovnoměrně zvětšený (tady o 1,9 % a 4,1 %) a místo spadávky roztažený
-okraj, bez chyby a bez varování. Testovací PDF nástroje mají všechny boxy
-stejné, proto se to v testech neprojevilo. Strana vícestránkového PDF se
-z předvolby bere nejspíš stejně — neměřeno, stranu pozice skript zjistit
-nemůže. Na stranu, kterou jednostránkové PDF nemá, export nespadne (strany 2
-a 4 prošly, 2026-10-10). **Oprava:** grafiku do dočasného dokumentu kopírovat
-`duplicate()` z pozice; ověřit Large Canvas, Zünd i rastr. Kandidát do 1.0.1.
-
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
@@ -154,6 +130,7 @@ polích.
 | N33 | kontrola spadu a přídavků porovnávala přesně na body, dialog ukazuje desetiny; PDF se spadem 3 mm (naměřeno 2,9986 mm) pak „potřebovalo 3 mm, neslo 3 mm" a export byl zablokovaný; teď tolerance 0,05 mm (provoz 2026-10-10) | `d0bae05` |
 | N34 | nápověda a README tvrdily, že vektorový plát nese vždy celou grafiku; plát nese jen objekty, které do něj zasahují, celý jen objekt přes hranu (naměřeno 2026-10-10) | `8369e3c` |
 | N38 | náhled dělení podle vodítek četl u Vodorovně svislá vodítka: se samými vodorovnými šedil obě tlačítka, s oběma ukázal jiné dělení, než běh udělal; teď čte vodítka zvoleného směru jako běh (z popisu voleb 2026-10-10) | `eff1de8` |
+| N39 | každý plát umisťoval PDF znovu ze souboru s ořezem z předvolby importu, ne z pozice: PDF umístěné se spadávkou (214 × 102 mm) vyšlo ořezané na TrimBox (210 × 98) a roztažené, bez varování; teď plát dostává `duplicate()` pozice, kopie se odemkne a zviditelní (dědí obojí). Sondy proti starému kódu: past s ořezem shodná se správným výstupem na 0,0009 pt, Large Canvas vektor, Zünd i rastr stejné až na švy vyhlazování (2026-10-10) | `c240bb4` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
