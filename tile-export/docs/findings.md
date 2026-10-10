@@ -1,8 +1,8 @@
 # Tile Export — nálezy
 
 Vady a návrhy z ručního testu (2026-09-15 až 18), přetestu, běhů harnessu
-(do 2026-09-26), kontrol kódu (od 2026-10-03) a druhého ručního testu
-(2026-10-04). Číslování je stálé: na nález
+(do 2026-09-26), kontrol kódu (od 2026-10-03), druhého ručního testu
+(2026-10-04) a provozu (od 2026-10-10). Číslování je stálé: na nález
 se odkazuj číslem, i když je opravený. Plné znění uzavřených nálezů, s příčinou a měřením, je v historii
 gitu — soubor `docs/testing/2026-09-15-tile-export-test-findings.md`.
 
@@ -11,6 +11,21 @@ Postup testu: [ruční testy](manual-test.md).
 ---
 
 ## Otevřené
+
+### N35 — Zünd export čtyř rovnoměrných plátů skončil s nula pláty
+
+Hlášeno z provozu (2026-10-10, verze 1.0.0): navázané PDF se spadem 3 mm,
+4 rovnoměrné pláty, Zünd režim, spad za řezem 2,9 mm (3 mm bránila N33).
+Export proběhl, každý plát skončil chybou a souhrn hlásil 0 exportovaných.
+Text chyby se nezachoval; souhrn ho u každého plátu píše za
+`<číslo>: TE_EXPORT:<číslo>:`.
+
+**Nezreprodukováno** (kód 1.0.0, Illustrator 30.8.2): stejná sestava se
+syntetickým PDF (2006 × 1006 mm, spad 3 mm, dokument 1:1, preset
+`[Kvalitní tisk]`) vyexportovala všechny čtyři pláty. Preset to nejspíš není:
+Zünd plát prošel s každým z dvanácti presetů vývojového stroje, včetně PDF/X
+a pass4press, i bez presetu. Čeká na text chyby z opakování v provozu,
+s nastavením dialogu a verzí Illustratoru.
 
 ### N24 — Zünd: kontura, která do plátu nezasahuje, nechá rám jako řez
 
@@ -73,6 +88,9 @@ polích.
 | N30 | v Zünd souborech byla nahoře vrstva řezu, ne `Regmarks`; teď shora `Regmarks`, řez, `Graphics` jako v Zünd Summa Marks | `29fe1cd` |
 | P1 | linka 0,3 pt, jejíž vnější hrana ležela přesně na hraně stránky, se v prohlížeči vykreslila jen dole a vpravo; po N13 (linka středem na hraně, tah ×2) prošel ruční test v prohlížeči i tisku (2026-10-04) | `bb777c2` |
 | N31 | v běžném exportu ležela linka ve vrstvě s grafikou a obyčejné PDF vrstvy nenese; linka má vlastní vrstvu podle své barvy nad `Graphics` a vektorová PDF jsou editovatelná. Rastrová zůstala obyčejná — editovatelné PDF nese obraz dvakrát (naměřeno) | `29fe1cd` |
+| N32 | volby směru se jmenovaly obráceně, než říká dílna: „Horizontálně" dělilo na pláty vedle sebe; teď „Svisle" (svislé pláty vedle sebe, jako tapety) a „Vodorovně", uložené hodnoty beze změny (provoz 2026-10-10) | `1db21b5` |
+| N33 | kontrola spadu a přídavků porovnávala přesně na body, dialog ukazuje desetiny; PDF se spadem 3 mm (naměřeno 2,9986 mm) pak „potřebovalo 3 mm, neslo 3 mm" a export byl zablokovaný; teď tolerance 0,05 mm (provoz 2026-10-10) | `d0bae05` |
+| N34 | nápověda a README tvrdily, že vektorový plát nese vždy celou grafiku; plát nese jen objekty, které do něj zasahují, celý jen objekt přes hranu (naměřeno 2026-10-10) | `8369e3c` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
