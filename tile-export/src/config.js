@@ -50,6 +50,13 @@ TE.Config = {
     // stops the export below it instead of every panel failing on its own.
     RASTER_DPI_MIN: 72,
 
+    // The add and bleed checks compare at the precision the dialog shows:
+    // half its 0.1 mm step. A PDF with a 3 mm bleed carried 2.9986 mm on two
+    // edges in Illustrator (its coordinates are rounded, measured 2026-10-10),
+    // and the exact comparison refused a 3 mm bleed with "needs 3 mm, the PDF
+    // carries 3 mm" (N33). Under 0.05 mm of edge is below any cut's accuracy.
+    OVERHANG_TOLERANCE_MM: 0.05,
+
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
     PRESET_KEY_DEFAULT: "[Default]",

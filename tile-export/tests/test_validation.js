@@ -226,5 +226,26 @@ var cMany = TE.Validate.markConflict(jMany.tiles, ctx(), jMany.s);
 assert(cMany !== null && cMany.type === "overlap", "kontrola před exportem bez limitu ho najde");
 assert(TE.Validate.describeMarkConflict(cMany, jMany.s) === "marks-overlap", "a hlášení odpovídá typu");
 
+console.log("\n=== N33: kontrola spadu a přídavků platí v přesnosti, jakou dialog ukazuje ===");
+// A PDF with a 3 mm bleed carried 2.9986 and 2.9987 mm on two edges in
+// Illustrator (measured 2026-10-10): coordinates are rounded in the PDF. The
+// dialog shows tenths, so it read "needs 3 mm, the PDF carries 3 mm" and
+// refused. Whatever shows as 3 must pass a 3 mm check.
+var flatZ = merge(flat, { cutBleed: 3 });
+var near3 = { left: mm(3), right: mm(2.9986), top: mm(3), bottom: mm(2.9987) };
+var jB3 = job(flatZ);
+assert(!has(TE.Validate.check(jB3.tiles, ctx({ overhang: near3 }), jB3.s).exportErrors, "bleed-beyond-overhang"),
+    "spad 3 mm na PDF, které nese 2,9986 mm: projde");
+var short3 = { left: mm(3), right: mm(2.94), top: mm(3), bottom: mm(3) };
+assert(has(TE.Validate.check(jB3.tiles, ctx({ overhang: short3 }), jB3.s).exportErrors, "bleed-beyond-overhang"),
+    "2,94 mm se ukáže jako 2,9 — tam 3 mm neprojde");
+var jA40 = job({ addTop: 40, addBottom: 40, addRight: 40 });
+var near40 = { left: mm(50), right: mm(39.97), top: mm(39.98), bottom: mm(40) };
+assert(!has(TE.Validate.check(jA40.tiles, ctx({ overhang: near40 }), jA40.s).errors, "add-exceeds-overhang"),
+    "přídavek 40 mm na přesahu 39,97 mm: projde, stejně jako u spadu");
+var short40 = { left: mm(50), right: mm(39.9), top: mm(40), bottom: mm(40) };
+assert(has(TE.Validate.check(jA40.tiles, ctx({ overhang: short40 }), jA40.s).errors, "add-exceeds-overhang"),
+    "39,9 mm na 40 mm nestačí");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
