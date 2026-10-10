@@ -173,7 +173,7 @@ vždy **skutečná velikost**, poměr říká, v jakém měřítku jsou data:
 | 1:10 | `26_13456_a_01_2020x1020mm_1ku10_1x` | 202 × 102 mm |
 | 1:1 | `26_13456_a_01_2020x1020mm_1x` | 2020 × 1020 mm |
 
-U dat 1:1 poměr v názvu chybí — tak to ukazuje první příklad, potvrdit (§10).
+U dat 1:1 se poměr v názvu vynechává (uživatel, 2026-10-10).
 
 Pevné části píše uživatel do vzoru, mezi ně placeholdery:
 `26_13456_a_{n}_{size}_{scale}_1x`.
@@ -220,13 +220,11 @@ Pevné části píše uživatel do vzoru, mezi ně placeholdery:
 
 ## 10. Otevřené otázky
 
-1. **Poměr u dat 1:1** — v názvu chybí (předpoklad z prvního příkladu), nebo se
-   píše `1ku1`?
-2. **Rastr** — rozhodne test rastrování Illustrator vs Photoshop.
-3. **Mezera mezi pláty** — 10 mm v kresbě, nebo jinak.
+1. **Rastr** — rozhodne test rastrování Illustrator vs Photoshop.
+2. **Mezera mezi pláty** — 10 mm v kresbě, nebo jinak.
 
-Uzavřené 2026-10-10: poměr se píše `1ku10` a rozměr je skutečný (§7);
-rámeček-vodítko ukazuje hranici načisto (§6.4).
+Uzavřené 2026-10-10: poměr se píše `1ku10` a rozměr je skutečný, u dat 1:1 se
+poměr vynechává (§7); rámeček-vodítko ukazuje hranici načisto (§6.4).
 
 ## 11. Co změřit před implementací
 
