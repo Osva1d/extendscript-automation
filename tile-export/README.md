@@ -263,6 +263,34 @@ ve skutečné velikosti — tak ho ukazují pravítka — a jeho faktor dialog
 neukazuje. Měřítko kresby se s ním skládá: Large Canvas s 1:10 vyjde jako
 kresba v 1:10.
 
+Pro data v měřítku kresby použij PDF preset **bez převzorkování**. Preset
+převzorkovává podle rozlišení na stránce, a to je v 1:10 desetkrát vyšší: obraz,
+který má ve skutečné velikosti 72 ppi, by po zvětšení v RIPu měl 30 ppi
+(naměřeno, nález N36).
+
+## Pojmenování souborů
+
+Vzor pojmenování skládá název každého PDF. Pevné části se píšou, jak jsou, mezi
+ně proměnné:
+
+| proměnná | hodnota |
+|---|---|
+| `{n}` | číslo plátu, vždy aspoň dvoumístné (`01`) |
+| `{size}` | skutečný rozměr stránky v celých mm (`2020x1020mm`), u Zündu stránka se značkami |
+| `{scale}` | poměr dat v měřítku kresby (`1ku10`); ve skutečné velikosti zmizí i s jedním oddělovačem |
+| `{doc}` | název dokumentu bez přípony |
+| `{total}` | počet plátů |
+
+Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
+`26_13456_a_{n}_{size}_{scale}_1x`. Data 1:10 pak dostanou
+`26_13456_a_01_2020x1020mm_1ku10_1x.pdf`, data 1:1
+`26_13456_a_01_2020x1020mm_1x.pdf`. Zünd přidá k řezovému souboru `_cut`.
+
+Výsledek v dialogu ukazuje název prvního souboru. Prázdný název, lomítko nebo
+dvojtečku export odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
+spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
+stranu.
+
 ## Známá omezení
 
 - **Vektorový plát nese celý každý objekt, který do něj zasahuje.** Objekty mimo

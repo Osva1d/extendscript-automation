@@ -218,10 +218,32 @@ assert(!/s\.drawLine/.test(code(phase1).replace(/drawLine\s*=\s*s\.drawLine/, ""
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",
     "index is zero-padded to the width of the total");
-assert(TE.Export.buildName("{doc}_{n}_of_{total}", "b", 1, 4) === "b_1_of_4",
-    "single-digit total needs no padding");
+assert(TE.Export.buildName("{doc}_{n}_of_{total}", "b", 1, 4) === "b_01_of_4",
+    "a single-digit total still gets two digits, as the shop numbers panels (1.1.0)");
 assert(TE.Export.buildName("plat_{n}", "ignored", 7, 100) === "plat_007",
     "three-digit total pads to three");
+
+console.log("\n=== 1.1.0: the shop's naming — real size and ratio ===");
+// 26_13456_a_01_2020x1020mm_1ku10_1x: year, job, motif typed by hand,
+// then panel, real size, ratio, copies (user, 2026-10-10).
+var PAT = "26_13456_a_{n}_{size}_{scale}_1x";
+assert(TE.Export.buildName(PAT, "x", 1, 3, { size: "2020x1020mm", scale: "1ku10" })
+    === "26_13456_a_01_2020x1020mm_1ku10_1x", "1:10 data: real size and the ratio");
+assert(TE.Export.buildName(PAT, "x", 1, 3, { size: "2020x1020mm", scale: "" })
+    === "26_13456_a_01_2020x1020mm_1x", "real size: no ratio, and no double separator");
+assert(TE.Export.buildName("{scale}_{doc}", "zed", 1, 2, {}) === "zed",
+    "an empty placeholder at the start takes the separator after it");
+assert(TE.Export.buildName("{doc}_{n}", "Cena$1", 1, 2) === "Cena$1_01",
+    "a $ in the document name is kept, not read as a replacement");
+assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12, { size: "1x1mm" }) === "banner_03",
+    "patterns without the new placeholders are unchanged");
+
+console.log("\n=== 1.1.0: one name builder for export, skip check and dialog ===");
+var exAll = code(fs.readFileSync(path.join(__dirname, "..", "src", "export.js"), "utf8"));
+assert((exAll.match(/this\.fileName\(tile, ctx, s\)/g) || []).length === 3,
+    "exportTile (print and Zünd) and outputExists all name files through fileName()");
+assert((exAll.match(/buildName\(s\.namePattern/g) || []).length === 1,
+    "and only fileName() itself calls buildName with the pattern");
 
 console.log("\n=== sourceOrigin, tileOrigin, k ===");
 assertClose(r.sourceOrigin[0], GRAPHIC[0], 0.001, "sourceOrigin drží levý okraj grafiky");

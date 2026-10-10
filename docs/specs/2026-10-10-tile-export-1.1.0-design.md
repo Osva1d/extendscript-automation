@@ -248,6 +248,9 @@ poměr vynechává (§7); rámeček-vodítko ukazuje hranici načisto (§6.4).
    1178 × 712 px ve všech stavech, popisky s měnícím se textem mají rezervu;
    k tomu N40. Název prvního souboru ve Výsledku přijde s pojmenováním (b).
 3. **1.1.0 b** — pojmenování: `{n}` dvoumístné, `{size}` ve skutečné velikosti, `{scale}`.
+   **Hotovo**: jedna funkce názvu pro export, kontrolu hotových výstupů
+   i dialog; v Illustratoru ověřeno, že zapsaný název a stránka sedí
+   s náhledem (1:10, 1:1, Zünd).
 4. **1.1.0 c** — kontrolní pláty: rozložení (Node testy aritmetiky zalomení
    a mezer), vrstvy, opakovaný běh, případně vodítka. Sondy v Illustratoru,
    ruční test.

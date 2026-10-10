@@ -60,7 +60,7 @@ function refs(o) {
 var mm10 = function (real) { return TE.Utils.mm2pt(real / 10); };
 var bleed = mm10(50);
 var ctx = {
-    cleanRect: [0, mm10(1000), mm10(3000), 0],
+    cleanRect: [0, mm10(1000), mm10(3000), 0], docName: "arch",
     spotNames: ["CutContour"],
     guidesByDirection: { horizontal: { positions: [] }, vertical: { positions: [] } },
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
@@ -270,6 +270,26 @@ var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", e
 has(t41, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně: the top panel is a full 600");
 has(t41, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and the bottom one takes the remainder");
 
+console.log("\n=== 1.1.0: the Result shows the first file's name ===");
+// The arch sheet is 3000 x 1000 mm at 1:10; panel 1 prints 1010 x 1000 mm.
+has(summary({}), "Soubor plátu 1: arch_01.pdf", "the default pattern, {n} with two digits");
+var shopPat = { text: "26_13456_a_{n}_{size}_{scale}_1x", enabled: true };
+has(summary({ etPattern: shopPat }), "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku10_1x.pdf",
+    "1:10 as drawn: real size and the ratio");
+has(summary({ etPattern: shopPat, rbExpScale: [{ value: false }, { value: true }] }),
+    "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1x.pdf", "1:1: real size, no ratio, no double separator");
+has(summary(zund({ etPattern: shopPat })),
+    "Soubory plátu 1: 26_13456_a_01_1040x1030mm_1ku10_1x.pdf a 26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf",
+    "Zünd: the page with its marks, and the _cut file beside it");
+var rSlash = refs({ etPattern: { text: "zakazka/{n}", enabled: true } });
+TE.UI.refresh(null, rSlash, ctx);
+has(rSlash.stCalc.text, "✗ Název souboru zakazka/01 obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
+    "a slash in the name is named");
+eq(rSlash.btnExport.enabled === false && rSlash.btnTiles.enabled === true, true,
+    "it stops the export only: Panels only writes no file");
+has(summary({ etPattern: { text: "   ", enabled: true } }), "✗ Vzor pojmenování dává prázdný název souboru.",
+    "an empty pattern is caught before the export");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more
@@ -301,6 +321,9 @@ var r43 = refs({ etScaleN: { text: "10" } });
 TE.UI.refresh(null, r43, lcCtx);
 has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 × 1000 mm",
     "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");
+var rLcName = refs({ etScaleN: { text: "1" }, etPattern: { text: "{n}_{size}_{scale}", enabled: true } });
+TE.UI.refresh(null, rLcName, lcCtx);
+has(rLcName.stCalc.text, "Soubor plátu 1: 01_2010x1000mm.pdf", "Large Canvas at drawing scale 1: real size, no ratio");
 app.activeDocument.scaleFactor = 1;
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");

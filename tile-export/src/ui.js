@@ -1054,12 +1054,22 @@ TE.UI = {
                 lines.push(l.format(l.INFO_PAGES, TE.Utils.formatMM(ratio, l.DECIMAL), pages.join(" | ")));
             }
 
+            // The first panel's file name as the export will write it, so the
+            // pattern can be checked before anything is written (1.1.0).
+            var first = TE.Export.fileName(tiles[0],
+                { docName: ctx.docName || "", total: tiles.length, scaleFactor: sf }, s);
+            lines.push(s.zundMode
+                ? l.format(l.INFO_FILE_ZUND, first, TE.Export.cutName(first))
+                : l.format(l.INFO_FILE, first));
+            // Only the export writes files, so only the export is stopped.
+            var nameErr = TE.Validate.nameError(first);
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
             for (i = 0; i < v.exportErrors.length; i++) { alerts.push("✗ " + v.exportErrors[i]); }
+            if (nameErr) { alerts.push("✗ " + nameErr); }
             for (i = 0; i < v.warnings.length; i++) { alerts.push("! " + v.warnings[i]); }
             ok = (v.errors.length === 0);
-            exportOk = (v.exportErrors.length === 0);
+            exportOk = (v.exportErrors.length === 0) && !nameErr;
         } catch (err) {
             alerts.push("✗ " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;

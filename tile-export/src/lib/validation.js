@@ -217,5 +217,18 @@ TE.Validate = {
             if (len < min) { min = len; }
         }
         return min;
+    },
+
+    /**
+     * Whether the export can write a file of this name: not empty, and no
+     * slash or colon, which macOS reads as a folder (1.1.0).
+     * @param {string} name - File name without extension.
+     * @returns {string|null} Localized message, or null when it is fine.
+     */
+    nameError: function (name) {
+        var n = String(name);
+        if (!/\S/.test(n)) { return TE.L.ERR_NAME_EMPTY; }
+        if (/[\/:]/.test(n)) { return TE.L.format(TE.L.ERR_NAME_CHARS, n); }
+        return null;
     }
 };

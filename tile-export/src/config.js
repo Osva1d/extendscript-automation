@@ -23,6 +23,11 @@ TE.Config = {
     // fetched, so it cannot collide with anyone else's.
     xmpNamespace: "https://codeberg.org/Osva1d/extendscript-automation/ns/tile-export/1.0/",
 
+    // How the shop writes the ratio in a file name: 1:10 data are named by
+    // their real size and "1ku10" (user, 2026-10-10). A naming convention of
+    // the shop, not dialog text, so it does not follow the dialog's language.
+    namingScalePrefix: "1ku",
+
     // Zünd mode is in the dialog again since the print mask (2026-09-25,
     // docs/reports/2026-09-25-maskovani-platu.md): the artwork now ends a
     // bleed past the cut, which frees the space the marks need on a split
