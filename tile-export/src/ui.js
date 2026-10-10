@@ -103,7 +103,7 @@ TE.UI = {
     /**
      * Builds the dialog and shows it.
      * @param {Object} pData - Preset wrapper {activePreset, presets}.
-     * @param {Object} ctx - {cleanRect, guides, validation}.
+     * @param {Object} ctx - {cleanRect, guidesByDirection, validation}.
      * @returns {Object|null} {action: "tiles"|"export", wrapper} or null on cancel.
      */
     show: function (pData, ctx) {
@@ -905,7 +905,11 @@ TE.UI = {
             var mm = function (pt) {
                 return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
             };
-            var cuts = TE.Grid.computeCuts(s, ext, ctx.guides);
+            // The guides of the chosen direction, as the run reads them. One
+            // list for both directions previewed Vodorovně on the vertical
+            // guides (N38).
+            var cuts = TE.Grid.computeCuts(s, ext,
+                ctx.guidesByDirection[s.direction].positions);
             var tiles = TE.Grid.computeTiles(cuts, clean, s);
             var v = TE.Validate.check(tiles, ctx.validation, s);
 

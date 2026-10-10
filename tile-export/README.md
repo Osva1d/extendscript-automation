@@ -53,7 +53,8 @@ Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než
    vyjde — rozměr každého plátu načisto i s přídavky a dostupný spad na každé
    hraně. Chybné zadání zašedne obě akční tlačítka.
 2. **Jen pláty** — vzniknou artboardy `TE_01`…`TE_0n` a červené linky. Prohlédni
-   si je, švy můžeš ručně posunout.
+   si je. Když šev nesedí, uprav nastavení nebo vodítka a spusť znovu — ručně
+   posunutý artboard export nepřevezme, pláty počítá z nastavení znovu.
 3. Spusť znovu a dej **Vytvořit a exportovat**.
 
 Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.

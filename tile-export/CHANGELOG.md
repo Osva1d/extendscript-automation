@@ -12,8 +12,16 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   vedle sebe, jako tapety od stropu k podlaze; „Vodorovně" na vodorovné pláty
   nad sebou. Dřív se tytéž volby jmenovaly obráceně, Horizontálně
   a Vertikálně. Uložené předvolby dělí dál stejně.
+- **Přeskočit hotové výstupy je ve výchozím stavu vypnuté.** Zapnuté nechávalo
+  při opakovaném exportu po opravě staré soubory se stejnými názvy a hlásilo
+  je jen jako přeskočené. Volba zůstává pro navázání běhu, který spadl
+  v půlce. Uložené předvolby a poslední běh si nesou svou hodnotu.
 
 ### Fixed
+
+- Dělení podle vodítek u směru Vodorovně: náhled v dialogu četl svislá
+  vodítka. Se samými vodorovnými hlásil „Nenalezena použitelná vodítka"
+  a nepustil dál, s oběma ukazoval jiné dělení, než běh udělal.
 
 - Kontrola spadu za řezem a přídavků odmítala 3 mm u PDF se spadem 3 mm:
   Illustrator v něm kvůli zaokrouhleným souřadnicím naměří třeba 2,9986 mm
@@ -22,6 +30,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Nápověda k obsahu exportu a README tvrdily, že vektorový plát nese vždy
   celou grafiku. Plát nese jen objekty, které do něj zasahují; celý zůstane
   objekt přes hranu plátu, typicky velký obrázek.
+- README radilo po Jen pláty posunout šev ručně. Ručně posunutý artboard
+  export nepřevezme, pláty počítá z nastavení znovu.
 
 ## [1.0.0] — 2026-10-04
 
