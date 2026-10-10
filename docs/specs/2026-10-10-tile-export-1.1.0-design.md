@@ -136,13 +136,14 @@ a v té podvrstvy podle role: `Graphics`, linka podle své barvy, u Zündu
 
 ### 6.4 Rámeček jako vodítko (volitelné)
 
-Obdélník plátu převedený na vodítko — netiskne se a do PDF nejde. Naměřeno
-2026-10-10: obdélník jde skriptem převést (`guides = true`) a přežije uložení
+Obdélník plátu **načisto** převedený na vodítko: ukazuje, kde je šev a kde
+končí přelep (uživatel, 2026-10-10). Hranici řezu ukazuje linka, u Zündu
+řezová cesta. Vodítko se netiskne a do PDF nejde. Naměřeno 2026-10-10:
+obdélník jde skriptem převést (`guides = true`) a přežije uložení
 i znovuotevření.
 
 Vodítka TE musí ležet ve vrstvě TE a čtení vodítek tu vrstvu vynechá. Jinak by
-režim Vodítek četl rámečky jako švy. Kterou hranici rámeček ukazuje, je
-otevřené (§10).
+režim Vodítek četl rámečky jako švy.
 
 ### 6.5 Opakovaný běh
 
@@ -163,31 +164,38 @@ Dnešní náhled — artboardy přes původní grafiku a vrstva `TE_lines` — z
 
 ## 7. Pojmenování
 
-Konvence dílny: `RR_zakázka_motiv_plát_rozměr_kopie`, například
-`26_13456_a_01_2020x1020mm_1x` — rok, číslo zakázky, motiv, číslo plátu,
-rozměr MediaBoxu, počet kopií.
+Konvence dílny (uživatel, 2026-10-10): `RR_zakázka_motiv_plát_rozměr_poměr_kopie`
+— rok, číslo zakázky, motiv, číslo plátu, rozměr, poměr, počet kopií. Rozměr je
+vždy **skutečná velikost**, poměr říká, v jakém měřítku jsou data:
+
+| data | název | stránka PDF |
+|---|---|---|
+| 1:10 | `26_13456_a_01_2020x1020mm_1ku10_1x` | 202 × 102 mm |
+| 1:1 | `26_13456_a_01_2020x1020mm_1x` | 2020 × 1020 mm |
+
+U dat 1:1 poměr v názvu chybí — tak to ukazuje první příklad, potvrdit (§10).
 
 Pevné části píše uživatel do vzoru, mezi ně placeholdery:
-`26_13456_a_{n}_{size}_1x`.
+`26_13456_a_{n}_{size}_{scale}_1x`.
 
 | placeholder | hodnota |
 |---|---|
 | `{n}` | číslo plátu, **vždy aspoň dvě číslice** (`01`); dnes se doplňuje jen na délku počtu, u tří plátů je to `1` |
-| `{size}` | rozměr stránky PDF v měřítku výstupu, celé mm: `2020x1020mm`; u Zündu stránka se značkami |
+| `{size}` | **skutečný** rozměr stránky PDF v celých mm: `2020x1020mm`; u výstupu 1:10 tedy desetinásobek stránky; u Zündu stránka se značkami |
+| `{scale}` | `1ku10` u výstupu 1:N, u 1:1 prázdný; prázdný placeholder vezme s sebou jeden sousední oddělovač, aby v názvu nezůstalo `__` |
 | `{doc}`, `{total}` | beze změny |
 
-- `{size}` je MediaBox, když preset nepřidá spadávku ani značky. Preset
+- `{size}` odpovídá MediaBoxu, když preset nepřidá spadávku ani značky. Preset
   pass4press stránku zvětší o 12,5 mm na každou stranu (N36).
 - Zünd dál přidává k řezovému souboru `_cut`.
 - Výsledek ukáže název prvního souboru, aby šel vzor zkontrolovat před exportem.
 - Znak, který do názvu souboru nepatří (`/`, `:`), je chyba v dialogu.
-- **Poměr u dat 1:N** je otevřený (§10).
 
 ## 8. Export
 
 - **1.1.0:** dál dočasný dokument na plát, týmž kódem jako kontrolní pláty, takže
   vyjde totéž, co pláty ukazují. Grafika se do dočasného dokumentu **kopíruje
-  z pozice** (`duplicate()`), ne umisťuje znovu (N39).
+  z pozice** (`duplicate()`) už od 1.0.1 (N39).
 - Měřítko výstupu se chová jako dnes, jen je pojmenované číslem.
 - **Do budoucna:** export z kontrolních plátů v pracovním dokumentu, převezme
   i ruční úpravy. Plát je podvrstva (§6.2), export ji zkopíruje do dočasného
@@ -212,12 +220,13 @@ Pevné části píše uživatel do vzoru, mezi ně placeholdery:
 
 ## 10. Otevřené otázky
 
-1. **Poměr v názvu u dat 1:N** — jak se píše (příklad názvu pro 1:10)? A je
-   rozměr v názvu u 1:10 stránka v 1:10 (`202x102mm`), nebo skutečnost?
-2. **Rámeček jako vodítko** — kterou hranici: načisto (kde je šev a kde končí
-   přelep)? Hranici řezu ukazuje už linka, u Zündu řezová cesta.
-3. **Rastr** — rozhodne test rastrování Illustrator vs Photoshop.
-4. **Mezera mezi pláty** — 10 mm v kresbě, nebo jinak.
+1. **Poměr u dat 1:1** — v názvu chybí (předpoklad z prvního příkladu), nebo se
+   píše `1ku1`?
+2. **Rastr** — rozhodne test rastrování Illustrator vs Photoshop.
+3. **Mezera mezi pláty** — 10 mm v kresbě, nebo jinak.
+
+Uzavřené 2026-10-10: poměr se píše `1ku10` a rozměr je skutečný (§7);
+rámeček-vodítko ukazuje hranici načisto (§6.4).
 
 ## 11. Co změřit před implementací
 
@@ -225,17 +234,19 @@ Pevné části píše uživatel do vzoru, mezi ně placeholdery:
   `artboards.add` mimo plátno hází, to je pojistka, ne výpočet.
 - Výkon a paměť N kopií velkého PDF (§6.6).
 - Hairline v 1:10 a v Large Canvas (§6.6).
-- `duplicate()` z Large Canvas do běžného dokumentu: oprava N39 i budoucí
-  export (§8).
+- Pro budoucí export z dokumentu: zvětšení tahů a značek kopie. Samotné
+  `duplicate()` z Large Canvas do běžného dokumentu je změřené při opravě N39
+  (rozměr shodný, obsah ve vnitřních jednotkách).
 - Čtení vodítek s vynechanou vrstvou TE (§6.4).
 
 ## 12. Pořadí prací
 
-1. **1.0.1** — N35 po pondělním testu, N39 (navrženo), vydání.
+1. **1.0.1** — N35 po pondělním testu (N32–N34, N38, N39 a přeskakování na
+   požádání jsou hotové), vydání.
 2. **1.1.0 a** — dialog: typ výstupu, pořadí panelů, měřítko kresby v dokumentu,
    výstup pojmenovaný číslem, rastr pryč. Node testy collect/apply/refresh,
    headless měření výšky.
-3. **1.1.0 b** — pojmenování: `{n}` dvoumístné, `{size}`, poměr podle §10.
+3. **1.1.0 b** — pojmenování: `{n}` dvoumístné, `{size}` ve skutečné velikosti, `{scale}`.
 4. **1.1.0 c** — kontrolní pláty: rozložení (Node testy aritmetiky zalomení
    a mezer), vrstvy, opakovaný běh, případně vodítka. Sondy v Illustratoru,
    ruční test.
