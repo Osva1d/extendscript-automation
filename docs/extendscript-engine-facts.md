@@ -303,10 +303,28 @@ Vzniklo při návrhu `tile-export`; platí ale mimo něj.
 - S `[PDF/X-4:2008]` (1570 KB) i `[PDF/X-1a:2001]` (1025 KB) se editovatelné
   PDF uloží bez chyby. Shodu s normou nikdo neověřoval.
 
-### Illustrator neořezává obsah. Nikdy.
+### Illustrator objekty neořezává, jen vynechá ty mimo stránku
 
-Export výřezu nese **celá** zdrojová data. Artboard mění jen rozměr stránky —
-`pdfinfo` na výstupu hlásí správných 500 × 500 pt, ale uvnitř je celá grafika.
+**Opraveno 2026-10-10** (AI 30.8.2). Původní titulek zněl „Illustrator neořezává
+obsah. Nikdy." a vycházel ze zdroje z několika velkých objektů (tabulka níž).
+Přesně platí: **každý objekt, který do stránky zasahuje, jde do PDF celý**,
+i přes hranu; **objekty, které do stránky nezasahují, PDF nenese**. Zdroj
+2006 × 1006 mm, plát 520 × 1000 mm (čtvrtina s přelepem), preset `[Kvalitní tisk]`:
+
+| zdroj | celé PDF | plát z dočasného dokumentu | plát jako artboard v jednom dokumentu | 4 pláty v jednom PDF |
+|---|---|---|---|---|
+| vektor, 20 000 obdélníků | 553 KB | 210 KB (5 448 obdélníků) | 203 KB | 572 KB (21 083 obdélníků) |
+| jeden obrázek, 72 DPI | 1710 KB | 1716 KB (celý obrázek) | 1716 KB | 1718 KB (obrázek jednou) |
+
+- Samostatný soubor na plát má stejnou velikost, ať vznikne v dočasném
+  dokumentu, nebo jako artboard v jednom dokumentu.
+- **Vícestránkové PDF z jednoho dokumentu uloží umístěný obrázek jednou** a
+  všechny stránky ho sdílejí. Objekty se na stránky rozdělí, přebývají jen ty na
+  švech.
+- Počty obdélníků z rozbalených proudů obsahu PDF (`re` operátory).
+
+Měření 2026-09-13, zdroj z několika velkých objektů — proto tu plát nesl
+skoro všechno:
 
 | Co | Velikost | Poměr k celku |
 |---|---|---|
@@ -324,8 +342,9 @@ Export výřezu nese **celá** zdrojová data. Artboard mění jen rozměr strá
 - **Clipping maska nepomůže** — přidá pár bajtů za masku samotnou.
 - **Embedded ani linked** na tom nic nemění.
 - `PDFSaveOptions` nemá ekvivalent InDesignového „Crop Image Data to Frames".
-- **Rasterizace je jediný únik.** Poslední dva řádky: stejná velikost na bajt
-  bez ohledu na zdroj. Velikost pak závisí na ploše a DPI, ne na zdroji.
+- **U obrázku přes hranu plátu je rasterizace jediný únik.** Poslední dva
+  řádky: stejná velikost na bajt bez ohledu na zdroj. Velikost pak závisí na
+  ploše a DPI, ne na zdroji.
 
 ### `scaleFactor` nejde nastavit a selže tiše
 
