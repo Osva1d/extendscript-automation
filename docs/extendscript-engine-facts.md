@@ -382,6 +382,19 @@ kolem přiřazení `artboardRect` — konstanta zestárne s verzí.
 - **Čitelná i na zamčené i na skryté vrstvě** (3 ze 3). Skryté je nutné
   ignorovat: uživatel je nevidí, nemůže podle nich chtít dělit.
 - Pořadí v kolekci je stacking order, ne prostorové — řadit podle souřadnice.
+- **Vodítko jde udělat skriptem** (naměřeno 2026-10-10, AI 30.8.2): obdélník
+  s `guides = true` čte `guides` jako `true`, má dál 4 body a jako vodítko
+  přežije uložení i znovuotevření. Kód, který čte vodítka jen z prvních dvou
+  bodů, takový rámeček vezme za vodítko své strany — vlastní vodítka skriptu
+  je proto nutné od uživatelových odlišit (vrstvou).
+
+### Vlastní hodnota v metadatech dokumentu (naměřeno 2026-10-10, AI 30.8.2)
+
+`doc.XMPString` jde přepsat. Vlastní `rdf:Description` s vlastním jmenným
+prostorem, vložený řetězcem před `</rdf:RDF>`, je hned čitelný a přežije
+`saveAs` do `.ai`, zavření i znovuotevření. Dokument si tak může pamatovat
+hodnotu skriptu (tile-export: měřítko kresby), aniž by kreslil cokoli na
+plátno.
 
 ### Pathfinder z ExtendScriptu
 
@@ -864,6 +877,24 @@ otevřeními téhož souboru bylo stejné; obecně to prokázané není.
 Po skriptu tedy zůstane taková, jakou měl poslední načtený link. Jestli to ovlivní
 i Umístit s dialogem možností importu, neměřeno. Vlastnost se jmenuje
 `pDFCropToBox`; `pDFCropBounds` neexistuje a čte se bez chyby jako `undefined`.
+
+### Nové umístění bere ořez z předvolby, `duplicate()` ho drží (naměřeno 2026-10-10, AI 30.8.2)
+
+PDF s TrimBoxem 210 × 98 mm a BleedBoxem i MediaBoxem 214 × 102 mm:
+
+| grafika | rozměr |
+|---|---|
+| `placedItems.add()` + `file`, předvolba PDFBLEEDBOX | 214 × 102 mm |
+| totéž v jiném dokumentu, předvolba PDFTRIMBOX | 210 × 98 mm |
+| totéž, předvolba PDFMEDIABOX | 214 × 102 mm |
+| `duplicate()` první pozice do jiného dokumentu (`layers[0]`) | 214 × 102 mm, `PlacedItem` |
+
+Skript, který grafiku do jiného dokumentu umisťuje znovu ze souboru, dostane
+ořez podle toho, co v předvolbě zrovna je — po otevření jiné zakázky třeba
+TrimBox. Kopie pozice přes `duplicate()` ořez drží. Stranu tím ověřit nešlo
+(`pageNumber` neexistuje), ale `pageToOpen` větší než počet stran
+jednostránkového PDF umístění nerozbije: se stranou 2 i 4 prošel celý export
+plátu bez chyby.
 
 ### Drobnosti
 
