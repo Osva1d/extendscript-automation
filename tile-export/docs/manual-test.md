@@ -101,6 +101,7 @@ v milimetrech.
 | arch, §0 | tiskové 1010 \| 1020 \| 1010 × 1000; „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100" | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka; otevřené v Illustratoru mají shora vrstvy `CutContour` (linka) a `Graphics` |
 | arch, výstup 1:1 | „Stránky PDF: skutečná velikost…" | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
 | arch, Vodorovně, Vodítek, vodorovné vodítko tažené ~60 mm pod horní hranou artboardu, Zaokrouhlit 100 | 2 pláty: tiskové 3000 × 610 \| 3000 × 410; „Stránky PDF (1:10): 300 × 61 \| 300 × 41" | 2 PDF 300 × 61 \| 300 × 41 (N38) |
+| arch, Vodorovně, Šířky plátu 600 | „1: načisto 3000 × 600…, 2: načisto 3000 × 400…" — zbytek na spodním plátu | 2 PDF 300 × 61 \| 300 × 41 (N41) |
 | arch, 1:1, Rastr 150 DPI | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu; obyčejné PDF, otevřené má jednu vrstvu |
 | Large Canvas, výstup jako dokument | faktor 10; spad 50/50/50/50 | 2010 \| 2020 \| 2010 × 1000 |
 | Large Canvas + ruční 1:10 | „(1:10): 2001 × 1000 \| …" | náhled 2001 \| 2002 \| 2001 × 1000 |

@@ -118,6 +118,14 @@ assertClose(c3[1], mm(2800), 0.001, "cut at 2800 mm, last panel is 200 mm");
 var c4 = TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 1500 }), EXT, null);
 assert(c4.length === 1, "exact fit gives 1 cut, not 2");
 
+// Going down the axis runs bottom up, but panels are numbered top down: the
+// cuts are measured from the TOP so the remainder is the last, bottom panel
+// (N41). The same 3000 mm, now as a height.
+var cv = TE.Grid.computeCuts(merge(D, { direction: "vertical", divideMode: "width", tileWidth: 1400 }), EXT, null);
+assert(cv.length === 2, "vertical: 2 cuts as well");
+assertClose(cv[0], mm(200), 0.001, "vertical: the remainder, 200 mm, is at the bottom");
+assertClose(cv[1], mm(1600), 0.001, "vertical: full 1400 mm panels from the top");
+
 throwsWith(function () {
     TE.Grid.computeCuts(merge(D, { divideMode: "width", tileWidth: 0 }), EXT, null);
 }, "TE_BAD_WIDTH", "zero width is rejected");

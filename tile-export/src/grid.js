@@ -79,7 +79,14 @@ TE.Grid = {
             // not 3 with a zero-width trailing one, despite float arithmetic.
             n = Math.ceil(span / w - 1e-9);
             if (n < 2) { throw new Error("TE_MIN_TILES"); }
-            for (i = 1; i < n; i++) { cuts.push(start + w * i); }
+            // Full panels from where the numbering starts, the remainder on
+            // the last panel. Going down the axis runs bottom up while the
+            // panels are numbered top down, so there the cuts are measured
+            // from the top — from the start they left the remainder on the
+            // top panel (N41). Ascending either way.
+            for (i = 1; i < n; i++) {
+                cuts.push((s.direction === "vertical") ? extent.end - w * (n - i) : start + w * i);
+            }
             return cuts;
         }
 

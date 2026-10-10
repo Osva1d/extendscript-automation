@@ -26,6 +26,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   a roztažené na rozměr pozice — obsah nerovnoměrně zvětšený, místo spadávky
   roztažený okraj, bez varování. Plát teď dostává kopii umístěné grafiky, ořez
   zůstane, jak ho máš v dokumentu.
+- Šířka plátu u směru Vodorovně: kratší zbytek vycházel na horní plát, ne na
+  poslední, jak slibuje nápověda. Teď jde na spodní plát.
 - Dělení podle vodítek u směru Vodorovně: náhled v dialogu četl svislá
   vodítka. Se samými vodorovnými hlásil „Nenalezena použitelná vodítka"
   a nepustil dál, s oběma ukazoval jiné dělení, než běh udělal.
