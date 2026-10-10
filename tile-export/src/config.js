@@ -70,6 +70,10 @@ TE.Config = {
      */
     getDefaults: function () {
         return {
+            // The axis the cuts advance along: "horizontal" makes panels side
+            // by side, which the shop and the dialog call vertical panels
+            // ("Svisle"); "vertical" makes them stacked ("Vodorovně"). Kept
+            // as stored so saved presets split as before (N32).
             direction:   "horizontal",  // "horizontal" | "vertical"
             divideMode:  "count",       // "count" | "width" | "guides"
             tileCount:   3,

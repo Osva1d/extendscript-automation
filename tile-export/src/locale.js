@@ -60,9 +60,9 @@ TE.L = (function () {
 
             // --- split ---
             LBL_DIRECTION:       "Direction",
-            DIR_HORIZONTAL:      "Horizontal",
-            DIR_VERTICAL:        "Vertical",
-            TIP_DIRECTION:       "Horizontal splits into panels side by side, vertical into panels above each other.",
+            DIR_SIDE_BY_SIDE:    "Vertical",
+            DIR_STACKED:         "Horizontal",
+            TIP_DIRECTION:       "Vertical makes vertical panels side by side, like wallpaper hung from ceiling to floor. Horizontal makes horizontal panels above each other; the cuts run from left to right.",
             LBL_MODE:            "Split by",
             MODE_COUNT:          "Panel count",
             MODE_WIDTH:          "Panel width",
@@ -219,9 +219,9 @@ TE.L = (function () {
 
             // --- split ---
             LBL_DIRECTION:       "Směr",
-            DIR_HORIZONTAL:      "Horizontálně",
-            DIR_VERTICAL:        "Vertikálně",
-            TIP_DIRECTION:       "Horizontálně dělí na pláty vedle sebe, vertikálně na pláty nad sebou.",
+            DIR_SIDE_BY_SIDE:    "Svisle",
+            DIR_STACKED:         "Vodorovně",
+            TIP_DIRECTION:       "Svisle dělí na svislé pláty vedle sebe, jako tapety od stropu k podlaze. Vodorovně dělí na vodorovné pláty nad sebou, řezy vedou zleva doprava.",
             LBL_MODE:            "Dělit podle",
             MODE_COUNT:          "Počtu plátů",
             MODE_WIDTH:          "Šířky plátu",

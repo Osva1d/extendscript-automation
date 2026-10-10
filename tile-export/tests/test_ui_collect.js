@@ -110,6 +110,17 @@ eq(TE.UI.collect(rpn).pdfPreset, "", "that item reads as no preset, like [Defaul
 rpn.ddPdf = { selection: { text: "[Kvalitní tisk]" } };
 eq(TE.UI.collect(rpn).pdfPreset, "[Kvalitní tisk]", "a real preset is read as it is");
 
+console.log("\n=== N32: the direction is named the way the shop says it ===");
+// The shop calls panels side by side "vertical" — vertical strips, like
+// wallpaper from ceiling to floor — and stacked ones "horizontal". The stored
+// values keep their meaning ("horizontal" = the cuts advance along X), so
+// saved presets split as before; only what the dialog says changed.
+eq(TE.L.DIR_SIDE_BY_SIDE, "Svisle", "panels side by side read Svisle");
+eq(TE.L.DIR_STACKED, "Vodorovně", "panels above each other read Vodorovně");
+eq(/addRadioRow\(pSplit,\s*l\.LBL_DIRECTION,\s*\[l\.DIR_SIDE_BY_SIDE,\s*l\.DIR_STACKED\]/.test(ui), true,
+    "the first button, stored as \"horizontal\", is the side-by-side one");
+eq(/r\.rbDir\[1\]\.value \? "vertical" : "horizontal"/.test(ui), true, "collect() still stores the old values");
+
 console.log("\n=== N27: no clean-format override — the dialog divides what the run divides ===");
 // The fields changed only the preview and the validation; Panels only and the
 // export kept dividing the artboard. The artboard is the one source of truth.
