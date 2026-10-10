@@ -14,6 +14,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   a načtená předvolba ho nemění.
 - Panel **Dokument** ukazuje čistý formát a dostupný spad ve skutečných
   milimetrech, i když dělení hlásí chybu.
+- **Pojmenování podle konvence dílny.** Vzor zná `{size}`, skutečný rozměr
+  stránky (`2020x1020mm`), a `{scale}`, poměr dat v měřítku kresby (`1ku10`),
+  který ve skutečné velikosti zmizí i s jedním oddělovačem:
+  `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje název prvního souboru;
+  prázdný název, lomítko nebo dvojtečku export odmítne.
 
 ### Changed
 
@@ -27,6 +32,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   jde věřit rastru Illustratoru, se teprve ověří. Uložené předvolby s rastrem
   exportují vektor.
 - Dialog je o 81 px nižší, 712 px.
+- `{n}` má vždy aspoň dvě číslice, jak dílna čísluje pláty: `zed_01`, ne
+  `zed_1`.
 
 ### Fixed
 
