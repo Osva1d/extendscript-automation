@@ -197,6 +197,17 @@ assert(/tmp\.layers\[0\]\.name\s*=\s*TE\.Config\.layerGraphics/.test(ex2),
 assert(/layLine\.name\s*=\s*s\.lineSpot/.test(plain) && /drawTileLine\([^)]*layLine\s*\)/.test(plain),
     "the line goes into a layer named after its colour");
 
+console.log("\n=== N39: each panel copies the placed item, it does not place the file again ===");
+// A new place takes the crop from Illustrator's PDF import preference, not
+// from the item: a bleed-cropped PDF came back trim-cropped and stretched.
+// duplicate() keeps the crop (measured, engine facts).
+assert(/ctx\.graphic\.duplicate\(tmp\.layers\[0\]/.test(exBody), "exportTile copies the item from the working document");
+assert(!/placedItems\.add\(/.test(exBody), "and never places the file anew");
+assert(/pi\.locked\s*=\s*false/.test(exBody) && /pi\.hidden\s*=\s*false/.test(exBody),
+    "the copy is unlocked and shown: it inherits both (measured)");
+assert(/graphic:\s*graphics\[0\]/.test(code(fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8"))),
+    "main.js hands over the placed item itself");
+
 console.log("\n=== N28: Zünd mode draws no trim line, not even in the source ===");
 var mainRaw = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
 var phase1 = mainRaw.slice(mainRaw.indexOf("--- phase 1"), mainRaw.indexOf("--- phase 2"));

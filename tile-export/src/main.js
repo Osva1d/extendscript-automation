@@ -165,8 +165,13 @@
         // there for small files, so outside Zünd it stays a plain PDF.
         pdfOpts.preserveEditability = s.zundMode || s.exportMode !== "raster";
 
+        // The export copies the placed item (N39), not its file. The file is
+        // still checked first: reading it throws for a missing link, and the
+        // run stops here instead of exporting the low-resolution proxy.
+        if (!graphics[0].file.exists) { throw new Error(graphics[0].file.fsName); }
+
         var eCtx = {
-            graphicFile: graphics[0].file,
+            graphic: graphics[0],
             graphicBounds: gBounds,
             // The SOURCE's Large Canvas factor, read while the source is still
             // the active document. exportTile must not read it itself.
