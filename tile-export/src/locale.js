@@ -41,6 +41,8 @@ TE.L = (function () {
             ERR_SPOT_FAILED:     "Cannot create spot colour %s.",
             ERR_OUT_DIR:         "Output folder is not writable: %s",
             ERR_NAME_EMPTY:      "The naming pattern gives an empty file name.",
+            ERR_CHECK_NO_ROOM:   "The check panels do not fit on the Illustrator canvas beside the original: the drawing is too large for that. A drawing at 1:10, or a Large Canvas, leaves the room.",
+            WARN_CHECK_SKIPPED:  "The check panels did not fit on the canvas; the export ran without them.",
             ERR_NAME_CHARS:      "File name %s contains a slash or a colon, which macOS reads as a folder.",
             ERR_CRITICAL:        "CRITICAL ERROR: ",
             WARN_MEDIA:          "Panel %s mm is wider than the media (%s mm).",
@@ -186,7 +188,7 @@ TE.L = (function () {
             ASK_PRESET_OVERWRITE: "Preset %s already exists. Overwrite it?",
             ERR_RESERVED_NAME:   "Names in square brackets are reserved. Choose another.",
             BTN_TILES_ONLY:      "Panels only",
-            TIP_TILES_ONLY:      "Creates the panel artboards (and lines, when on) in this document without exporting. Panels from an earlier run are replaced.",
+            TIP_TILES_ONLY:      "Builds check panels beside the original: each panel masked on its own artboard, with its trim line or its Zünd marks and cut, as the export will write it. Nothing is exported; panels from an earlier run are replaced.",
             BTN_TILES_EXPORT:    "Create and export",
             BTN_CANCEL:          "Cancel"
         },
@@ -216,6 +218,8 @@ TE.L = (function () {
             ERR_SPOT_FAILED:     "Nelze vytvořit přímou barvu %s.",
             ERR_OUT_DIR:         "Do cílové složky nelze zapisovat: %s",
             ERR_NAME_EMPTY:      "Vzor pojmenování dává prázdný název souboru.",
+            ERR_CHECK_NO_ROOM:   "Kontrolní pláty se vedle originálu nevejdou na plátno Illustratoru, kresba je na to moc velká. Místo dá kresba v měřítku 1:10 nebo Large Canvas.",
+            WARN_CHECK_SKIPPED:  "Kontrolní pláty se na plátno nevešly, export proběhl bez nich.",
             ERR_NAME_CHARS:      "Název souboru %s obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
             ERR_CRITICAL:        "KRITICKÁ CHYBA: ",
             WARN_MEDIA:          "Plát %s mm je širší než médium (%s mm).",
@@ -361,7 +365,7 @@ TE.L = (function () {
             ASK_PRESET_OVERWRITE: "Předvolba %s už existuje. Přepsat?",
             ERR_RESERVED_NAME:   "Názvy v hranatých závorkách jsou vyhrazené. Zvol jiný.",
             BTN_TILES_ONLY:      "Jen pláty",
-            TIP_TILES_ONLY:      "Vytvoří v dokumentu artboardy plátů (a linky, jsou-li zapnuté), bez exportu. Pláty z dřívějšího běhu nahradí.",
+            TIP_TILES_ONLY:      "Postaví vedle originálu kontrolní pláty: každý plát zamaskovaný na vlastním artboardu, s linkou, nebo se Zünd značkami a řezem, jak ho zapíše export. Nic neexportuje; pláty z dřívějšího běhu nahradí.",
             BTN_TILES_EXPORT:    "Vytvořit a exportovat",
             BTN_CANCEL:          "Storno"
         }

@@ -80,6 +80,29 @@ var gv = TE.Doc.readGuides(d4, "vertical");
 assert(gv.positions.length === 1, "vertical split uses horizontal guides only");
 assertClose(gv.positions[0], 400, 0.001, "horizontal guide position is its Y");
 
+console.log("\n=== 1.1.0: what TE reads leaves the check panels out ===");
+// The check panels live in one top-level layer, a sublayer per panel and
+// its role sublayers below that. Their copies, cut paths and guide frames
+// are TE's own: read back, they would count as a second graphic, a contour
+// or a seam.
+var docLayer = { typename: "Document" };
+var checkRoot = { name: TE.Config.layerCheck, typename: "Layer", parent: docLayer, visible: true };
+var panelLay = { name: "TE_01", typename: "Layer", parent: checkRoot, visible: true };
+var graphicsLay = { name: "Graphics", typename: "Layer", parent: panelLay, visible: true };
+var userLay = { name: "Layer 1", typename: "Layer", parent: docLayer, visible: true };
+assert(TE.Doc.inCheckLayer({ layer: graphicsLay }) === true, "an item two sublayers deep in the check layer");
+assert(TE.Doc.inCheckLayer({ layer: panelLay }) === true, "an item in a panel sublayer");
+assert(TE.Doc.inCheckLayer({ layer: userLay }) === false, "the user's own layer");
+var dCheck = M.mockDoc({
+    placedItems: [{ layer: userLay, geometricBounds: [0, 100, 100, 0] }, { layer: graphicsLay }, { layer: graphicsLay }],
+    pathItems: [M.mockGuide(400, -9000, 400, 9000, userLay), M.mockGuide(700, -9000, 700, 9000, panelLay)],
+    layers: [checkRoot, userLay]
+});
+assert(TE.Doc.readGraphics(dCheck).length === 1, "the panels' placed copies are not a second graphic");
+var gCheck = TE.Doc.readGuides(dCheck, "horizontal");
+assert(gCheck.positions.length === 1 && gCheck.positions[0] === 400, "a panel's guide frame is not a seam");
+assert(TE.Doc.findCheckLayer(dCheck) === checkRoot, "the check layer is found by its name");
+
 console.log("\n=== the drawing scale lives in the document's XMP (1.1.0) ===");
 // What Illustrator writes, trimmed to its shape: one rdf:RDF holding one or
 // more rdf:Description elements.

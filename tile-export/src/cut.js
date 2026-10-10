@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Cut — cut contour detection and per-panel clipping
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Draw, TE.L, TE.Utils
+// Depends on: TE.Config, TE.Doc, TE.Draw, TE.L, TE.Utils
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -35,8 +35,11 @@ TE.Cut = {
         }
 
         try {
+            // The check panels' cut paths are TE's own, not a contour.
             for (i = 0; i < doc.pathItems.length; i++) {
-                if (matches(doc.pathItems[i])) { out.push(doc.pathItems[i]); }
+                if (matches(doc.pathItems[i]) && !TE.Doc.inCheckLayer(doc.pathItems[i])) {
+                    out.push(doc.pathItems[i]);
+                }
             }
         } catch (e3) {
             TE.Utils.log("findContour: pathItems unreadable: " + e3.message);
@@ -46,7 +49,8 @@ TE.Cut = {
             for (i = 0; i < doc.compoundPathItems.length; i++) {
                 // A compound path reports its colour on the first sub-path —
                 // measured on a real ring built through Make Compound Path.
-                if (matches(doc.compoundPathItems[i].pathItems[0])) {
+                if (matches(doc.compoundPathItems[i].pathItems[0])
+                        && !TE.Doc.inCheckLayer(doc.compoundPathItems[i])) {
                     out.push(doc.compoundPathItems[i]);
                 }
             }

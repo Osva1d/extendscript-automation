@@ -32,6 +32,7 @@ SUITES=(
     "tests/test_cut.js"
     "tests/test_markcolor.js"
     "tests/test_export_transform.js"
+    "tests/test_check.js"
     "tests/test_presets.js"
     "tests/test_zund_scale.js"
     "tests/test_properties.js"

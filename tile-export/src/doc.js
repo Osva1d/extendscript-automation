@@ -40,14 +40,48 @@ TE.Doc = {
     },
 
     /**
-     * Placed (linked) graphics in the document.
+     * The check layer a run of Panels only built, or null.
+     * @param {Document} doc - Active document.
+     * @returns {Layer|null} The layer.
+     */
+    findCheckLayer: function (doc) {
+        var i;
+        for (i = 0; i < doc.layers.length; i++) {
+            if (doc.layers[i].name === TE.Config.layerCheck) { return doc.layers[i]; }
+        }
+        return null;
+    },
+
+    /**
+     * Whether an item belongs to the check panels: its top-level layer is
+     * the check layer. What TE reads from the document leaves those out —
+     * their placed copies, cut paths and guide frames are TE's own.
+     * @param {Object} item - A page item.
+     * @returns {boolean} True inside the check layer.
+     */
+    inCheckLayer: function (item) {
+        try {
+            var lay = item.layer;
+            while (lay && lay.parent && lay.parent.typename === "Layer") { lay = lay.parent; }
+            return !!lay && lay.name === TE.Config.layerCheck;
+        } catch (e) {
+            TE.Utils.log("inCheckLayer: " + e.message);
+            return false;
+        }
+    },
+
+    /**
+     * Placed (linked) graphics in the document, the check panels' copies
+     * left out: a second run would otherwise find one graphic per panel.
      * @param {Document} doc - Active document.
      * @returns {Array} Placed items.
      */
     readGraphics: function (doc) {
         var out = [], i;
         try {
-            for (i = 0; i < doc.placedItems.length; i++) { out.push(doc.placedItems[i]); }
+            for (i = 0; i < doc.placedItems.length; i++) {
+                if (!this.inCheckLayer(doc.placedItems[i])) { out.push(doc.placedItems[i]); }
+            }
         } catch (e) {
             TE.Utils.log("readGraphics failed: " + e.message);
         }
@@ -103,6 +137,8 @@ TE.Doc = {
             p = doc.pathItems[i];
             if (!p.guides) { continue; }
             if (p.pathPoints.length < 2) { continue; }
+            // The check panels' guide frames are TE's own, not seams.
+            if (this.inCheckLayer(p)) { continue; }
 
             a = p.pathPoints[0].anchor;
             b = p.pathPoints[1].anchor;

@@ -106,29 +106,26 @@
             }
         }
 
-        var replaced = TE.Draw.removeTileArtboards(doc);
-        // Zünd mode draws no trim line, not even this preview: the cut path
-        // takes its place, and a red line here would promise a printed one
-        // (N28). The stored choice is left alone for the next ordinary run.
-        var drawLine = s.drawLine && !s.zundMode;
-        // The lines layer exists exactly when lines are drawn: a run without
-        // them clears last run's lines and takes the empty layer with it.
-        var lay = drawLine ? TE.Draw.clearLinesLayer(doc) : null;
-        if (!drawLine) { TE.Draw.removeLinesLayer(doc); }
-        TE.Draw.createTileArtboards(doc, tiles);
-
-        var i, item;
-        if (drawLine) {
-            for (i = 0; i < tiles.length; i++) {
-                item = TE.Draw.drawTileLine(doc, tiles[i].expanded, s,
-                    1 / TE.Utils.getEffectiveSF(s));
-                item.move(lay, ElementPlacement.PLACEATEND);
-            }
-        }
+        // Phase 1 builds the check panels beside the original: every panel
+        // masked on its own artboard, with its trim line or its Zünd cut and
+        // marks — what the export writes, at the drawing's scale (1.1.0). They
+        // replace the 1.0 overview of artboards and red lines laid over the
+        // original, which now stays as it is. Zünd mode draws no trim line
+        // here either: the cut path takes its place (N28).
+        var replaced = TE.Check.removeAll(doc);
+        var check = TE.Check.build(doc, tiles,
+            { graphic: graphics[0], scaleFactor: ctx.validation.scaleFactor, markDef: markDef }, s);
 
         var msg = [];
         if (guides.hiddenCount > 0) {
             msg.push(TE.L.format(TE.L.WARN_GUIDE_HIDDEN, guides.hiddenCount));
+        }
+        // Too big to sit beside the original on the canvas, the check panels
+        // are left out. Panels only has nothing else to show; the export does
+        // not need them.
+        if (!check.fits) {
+            if (res.action === "tiles") { alert(TE.L.ERR_CHECK_NO_ROOM); return; }
+            msg.push(TE.L.WARN_CHECK_SKIPPED);
         }
 
         if (res.action === "tiles") {
@@ -189,7 +186,7 @@
             markDef: markDef
         };
 
-        var done = 0, skipped = 0, failed = [], res;
+        var i, done = 0, skipped = 0, failed = [], res;
         for (i = 0; i < tiles.length; i++) {
             try {
                 if (s.skipExisting && TE.Export.outputExists(tiles[i], eCtx, s)) {

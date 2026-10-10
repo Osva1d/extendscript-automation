@@ -208,12 +208,16 @@ assert(/pi\.locked\s*=\s*false/.test(exBody) && /pi\.hidden\s*=\s*false/.test(ex
 assert(/graphic:\s*graphics\[0\]/.test(code(fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8"))),
     "main.js hands over the placed item itself");
 
-console.log("\n=== N28: Zünd mode draws no trim line, not even in the source ===");
+console.log("\n=== N28: Zünd mode draws no trim line, not even on the check panels ===");
+// Since 1.1.0 phase 1 builds check panels (TE.Check) instead of lines over
+// the original; the check panel takes the line or the Zünd cut, never both.
+var chkRaw = code(fs.readFileSync(path.join(__dirname, "..", "src", "check.js"), "utf8"));
+assert(/if \(s\.zundMode\) \{[\s\S]*\} else if \(s\.drawLine\) \{[\s\S]*drawTileLine/.test(chkRaw),
+    "a check panel draws the trim line only outside Zünd mode");
 var mainRaw = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
 var phase1 = mainRaw.slice(mainRaw.indexOf("--- phase 1"), mainRaw.indexOf("--- phase 2"));
-assert(/drawLine\s*=\s*s\.drawLine\s*&&\s*!s\.zundMode/.test(phase1), "phase 1 switches the line off in Zünd mode");
-assert(!/s\.drawLine/.test(code(phase1).replace(/drawLine\s*=\s*s\.drawLine/, "")),
-    "and nothing else in phase 1 reads the stored choice directly");
+assert(!/drawTileLine|s\.drawLine|createTileArtboards/.test(code(phase1)),
+    "and phase 1 draws nothing over the original any more");
 
 console.log("\n=== buildName ===");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12) === "banner_03",

@@ -83,10 +83,10 @@ TE.Draw = {
      * @param {Array} rect - Outer rect [l, t, r, b] of the panel, top > bottom.
      * @param {Object} s - Settings (lineSpot, lineWidth).
      * @param {number} lineScale - Stroke points per printed point:
-     *        1 / TE.Utils.getEffectiveSF(s) for the preview in the source
-     *        document, TE.Utils.outputLineScale(s) in a temporary one.
+     *        1 / the drawing's ratio for a check panel in the working
+     *        document (TE.Check), TE.Utils.outputLineScale(s) in a temporary one.
      * @param {Layer} [target] - Layer to draw into; the document's current
-     *        one when omitted. The export passes the line's own layer (N31).
+     *        one when omitted. Both callers pass the line's own layer (N31).
      * @returns {PathItem} The drawn rectangle.
      */
     drawTileLine: function (doc, rect, s, lineScale, target) {
@@ -382,32 +382,6 @@ TE.Draw = {
             TE.Utils.log("cannot remove lines layer: " + e.message);
             return false;
         }
-    },
-
-    /**
-     * Creates one artboard per panel, named with the prefix and a zero-padded
-     * index. The name is how a second run recognises them.
-     * @param {Document} doc - Active document.
-     * @param {Array} tiles - Panels from TE.Grid.computeTiles().
-     * @returns {number} How many artboards were created.
-     * @throws {Error} TE_AB_ADD when Illustrator rejects a rect.
-     */
-    createTileArtboards: function (doc, tiles) {
-        var made = 0, i, ab, num;
-        for (i = 0; i < tiles.length; i++) {
-            num = String(tiles[i].index);
-            while (num.length < 2) { num = "0" + num; }
-            try {
-                ab = doc.artboards.add(tiles[i].expanded);
-                ab.name = TE.Config.tilePrefix + num;
-                made++;
-            } catch (e) {
-                // artboards.add throws MRAP when the rect is malformed or too
-                // large; TE.Validate should have caught the size case already.
-                throw new Error("TE_AB_ADD:" + num + ":" + e.message);
-            }
-        }
-        return made;
     },
 
     /**

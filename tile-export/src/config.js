@@ -13,9 +13,14 @@ TE.Config = {
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
     tilePrefix: "TE_",
-    // Layer that holds the red trim lines. Cleared on every start, so a crash
-    // mid-run leaves nothing behind.
+    // Layer that held the red trim lines over the original in 1.0. Only
+    // removed now, when a document from then is run again.
     layerLines: "TE_lines",
+
+    // Top-level layer of the check panels Panels only builds beside the
+    // original (1.1.0): one sublayer per panel, named like its artboard. A
+    // run replaces it whole; what TE reads from the document leaves it out.
+    layerCheck: "TE_panels",
 
     // XMP namespace of the values tile-export keeps in a document: the drawing
     // scale, which belongs to the document rather than to a preset or the
