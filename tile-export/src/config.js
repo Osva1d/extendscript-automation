@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.0.0",
+    version: "1.0.1",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
@@ -50,6 +50,13 @@ TE.Config = {
     // stops the export below it instead of every panel failing on its own.
     RASTER_DPI_MIN: 72,
 
+    // The add and bleed checks compare at the precision the dialog shows:
+    // half its 0.1 mm step. A PDF with a 3 mm bleed carried 2.9986 mm on two
+    // edges in Illustrator (its coordinates are rounded, measured 2026-10-10),
+    // and the exact comparison refused a 3 mm bleed with "needs 3 mm, the PDF
+    // carries 3 mm" (N33). Under 0.05 mm of edge is below any cut's accuracy.
+    OVERHANG_TOLERANCE_MM: 0.05,
+
     // Preset keys. "[Last Settings]" always mirrors what the user last
     // submitted; named presets stay immutable until explicitly saved.
     PRESET_KEY_DEFAULT: "[Default]",
@@ -70,6 +77,10 @@ TE.Config = {
      */
     getDefaults: function () {
         return {
+            // The axis the cuts advance along: "horizontal" makes panels side
+            // by side, which the shop and the dialog call vertical panels
+            // ("Svisle"); "vertical" makes them stacked ("Vodorovně"). Kept
+            // as stored so saved presets split as before (N32).
             direction:   "horizontal",  // "horizontal" | "vertical"
             divideMode:  "count",       // "count" | "width" | "guides"
             tileCount:   3,

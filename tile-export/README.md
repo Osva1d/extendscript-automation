@@ -12,9 +12,8 @@ vyhnout textu nebo logu a RIP to neumí.
 
 Dosud to znamenalo nakopírovat grafiku tolikrát, kolik je plátů, každou kopii
 zamaskovat a naskládat artboardy ručně. Kromě času to má měřitelný vedlejší
-účinek: **clipping maska data neořízne**, takže každá zamaskovaná kopie nese
-celou grafiku. Dvanáct plátů znamená dvanáctinásobek dat v dokumentu i ve všech
-výstupech.
+účinek: **clipping maska data neořízne** — obrázek, který přes plát přechází,
+nese každý plát celý.
 
 Strojní ořez na Zündu (druhý případ) nástroj umí zatím **rovný** — viz
 [Zünd režim](#zünd-režim).
@@ -174,8 +173,8 @@ vůbec, ani do zdrojového dokumentu — nahrazuje ji řezová cesta.
 
 ## Vodítka
 
-Režim **Vodítek** čte vodítka kolmá na směr dělení: při horizontálním dělení
-svislá, při vertikálním vodorovná.
+Režim **Vodítek** čte vodítka podél švů: u svislých plátů (Svisle) svislá,
+u vodorovných (Vodorovně) vodorovná.
 
 - Vodítka na **zamčené** vrstvě se použijí, na **skryté** se ignorují a nástroj
   je spočítá do souhrnu. Vodítko, které nevidíš, nemůže rozhodovat o dělení.
@@ -261,10 +260,11 @@ Canvas s ručním 1:10 vyjde v 1:10.
 
 ## Známá omezení
 
-- **Vektorový export nese v každém plátu celou grafiku.** Není to chyba nástroje:
-  Illustrator obsah neořezává ani artboardem, ani clipping maskou, a
+- **Vektorový plát nese celý každý objekt, který do něj zasahuje.** Objekty mimo
+  plát do PDF nejdou, ale objekt přes hranu Illustrator neořízne ani artboardem,
+  ani clipping maskou — velký obrázek tak jde celý do každého plátu, kam sahá.
   `PDFSaveOptions` nemá ekvivalent InDesignového „Crop Image Data to Frames".
-  Měření je v [../docs/specs/2026-09-13-tile-export-design.md](../docs/specs/2026-09-13-tile-export-design.md) §3.
+  Měření je v [../docs/extendscript-engine-facts.md](../docs/extendscript-engine-facts.md).
   Když na velikosti záleží, použij **rastrový** režim — velikost plátu pak
   závisí na jeho ploše a DPI, ne na zdroji.
 - **Rastrový režim rasterizuje celou grafiku plátu**, tedy i text a vektorová

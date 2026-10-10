@@ -124,11 +124,12 @@ TE.Validate = {
     checkAdd: function (errors, addMm, overhangPt, edge, s) {
         var add = Number(addMm) || 0;
         if (add <= 0) { return; }
-        var addPt = TE.Utils.toDoc(add, s);
-        if (addPt > overhangPt + 1e-6) {
+        // Compared at the precision the dialog shows (N33), see the config.
+        var have = TE.Utils.fromDoc(overhangPt, s);
+        if (add > have + TE.Config.OVERHANG_TOLERANCE_MM) {
             errors.push(TE.L.format(TE.L.ERR_ADD_OVERHANG, edge,
                 TE.Utils.formatMM(add, TE.L.DECIMAL),
-                TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
+                TE.Utils.formatMM(have, TE.L.DECIMAL)));
         }
     },
 
@@ -144,12 +145,14 @@ TE.Validate = {
     checkBleed: function (out, addMm, overhangPt, edge, s) {
         var add = Number(addMm) || 0;
         var bleed = Number(s.cutBleed) || 0;
-        if (TE.Utils.toDoc(add + bleed, s) > overhangPt + 1e-6) {
+        // Compared at the precision the dialog shows (N33), see the config.
+        var have = TE.Utils.fromDoc(overhangPt, s);
+        if (add + bleed > have + TE.Config.OVERHANG_TOLERANCE_MM) {
             out.push(TE.L.format(TE.L.ERR_BLEED_OVERHANG,
                 TE.Utils.formatMM(bleed, TE.L.DECIMAL), edge,
                 TE.Utils.formatMM(add, TE.L.DECIMAL),
                 TE.Utils.formatMM(add + bleed, TE.L.DECIMAL),
-                TE.Utils.formatMM(TE.Utils.fromDoc(overhangPt, s), TE.L.DECIMAL)));
+                TE.Utils.formatMM(have, TE.L.DECIMAL)));
         }
     },
 

@@ -60,9 +60,9 @@ TE.L = (function () {
 
             // --- split ---
             LBL_DIRECTION:       "Direction",
-            DIR_HORIZONTAL:      "Horizontal",
-            DIR_VERTICAL:        "Vertical",
-            TIP_DIRECTION:       "Horizontal splits into panels side by side, vertical into panels above each other.",
+            DIR_SIDE_BY_SIDE:    "Vertical",
+            DIR_STACKED:         "Horizontal",
+            TIP_DIRECTION:       "Vertical makes vertical panels side by side, like wallpaper hung from ceiling to floor. Horizontal makes horizontal panels above each other; the cuts run from left to right.",
             LBL_MODE:            "Split by",
             MODE_COUNT:          "Panel count",
             MODE_WIDTH:          "Panel width",
@@ -96,7 +96,7 @@ TE.L = (function () {
             LBL_EXPORT_MODE:     "Content",
             EXPORT_VECTOR:       "Vector",
             EXPORT_RASTER:       "Raster",
-            TIP_EXPORT_MODE:     "Vector keeps text sharp but every panel carries the whole graphic, because Illustrator never crops content. Raster makes each panel only as big as its own area and rasterises its text too; the trim line stays vector on top.",
+            TIP_EXPORT_MODE:     "Vector keeps text sharp, but every panel carries each object that touches it whole — a large image goes into every panel it reaches. Raster makes each panel only as big as its own area and rasterises its text too; the trim line stays vector on top.",
             LBL_EXPORT_SCALE:    "Output scale",
             SCALE_SOURCE:        "Same as document",
             SCALE_ACTUAL:        "1:1 actual size",
@@ -219,9 +219,9 @@ TE.L = (function () {
 
             // --- split ---
             LBL_DIRECTION:       "Směr",
-            DIR_HORIZONTAL:      "Horizontálně",
-            DIR_VERTICAL:        "Vertikálně",
-            TIP_DIRECTION:       "Horizontálně dělí na pláty vedle sebe, vertikálně na pláty nad sebou.",
+            DIR_SIDE_BY_SIDE:    "Svisle",
+            DIR_STACKED:         "Vodorovně",
+            TIP_DIRECTION:       "Svisle dělí na svislé pláty vedle sebe, jako tapety od stropu k podlaze. Vodorovně dělí na vodorovné pláty nad sebou, řezy vedou zleva doprava.",
             LBL_MODE:            "Dělit podle",
             MODE_COUNT:          "Počtu plátů",
             MODE_WIDTH:          "Šířky plátu",
@@ -255,7 +255,7 @@ TE.L = (function () {
             LBL_EXPORT_MODE:     "Obsah",
             EXPORT_VECTOR:       "Vektor",
             EXPORT_RASTER:       "Rastr",
-            TIP_EXPORT_MODE:     "Vektor drží text ostrý, ale každý plát nese celou grafiku, protože Illustrator obsah neořezává. Rastr udělá plát velký jen podle jeho plochy a rasterizuje s ním i text; ořezová linka zůstane navrchu jako vektor.",
+            TIP_EXPORT_MODE:     "Vektor drží text ostrý, ale plát nese celý každý objekt, který do něj zasahuje — velký obrázek jde celý do každého plátu, kam sahá. Rastr udělá plát velký jen podle jeho plochy a rasterizuje s ním i text; ořezová linka zůstane navrchu jako vektor.",
             LBL_EXPORT_SCALE:    "Měřítko výstupu",
             SCALE_SOURCE:        "Stejné jako dokument",
             SCALE_ACTUAL:        "1:1 skutečná velikost",

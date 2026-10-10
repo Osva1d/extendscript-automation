@@ -211,8 +211,11 @@ TE.UI = {
         var pSplit = colL.add("panel", undefined, l.PANEL_SPLIT);
         pSplit.alignChildren = ["fill", "top"];
 
+        // Named the shop's way (N32): panels side by side are vertical panels,
+        // "Svisle". The stored values keep their meaning — "horizontal" is the
+        // axis the cuts advance along — so saved presets split as before.
         var rbDir = this.addRadioRow(pSplit, l.LBL_DIRECTION,
-            [l.DIR_HORIZONTAL, l.DIR_VERTICAL],
+            [l.DIR_SIDE_BY_SIDE, l.DIR_STACKED],
             (s.direction === "vertical") ? 1 : 0, l.TIP_DIRECTION);
 
         // No chained ?: here — ExtendScript evaluates it left to right and

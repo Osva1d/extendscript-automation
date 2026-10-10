@@ -44,7 +44,7 @@ vrať (nebo ulož jako předvolbu):
 | pole | hodnota |
 |---|---|
 | Ruční měřítko 1:N | zaškrtnuto, 10 (u Large Canvasu vypnuto) |
-| Směr / Dělit podle | Horizontálně / Počtu plátů, 3 |
+| Směr / Dělit podle | Svisle / Počtu plátů, 3 |
 | Rovnoměrně | nezaškrtnuto |
 | Přelep / umístění | 20 mm / Půl na každou stranu |
 | Přídavky | 0 / 0 / 0 / 0 |
@@ -121,4 +121,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N31.
+další číslo v [nálezech](findings.md), naposledy N35.

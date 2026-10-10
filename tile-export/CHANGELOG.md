@@ -4,6 +4,25 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.0.1] — nevydáno
+
+### Changed
+
+- **Směr plátování se jmenuje jako v dílně.** „Svisle" dělí na svislé pláty
+  vedle sebe, jako tapety od stropu k podlaze; „Vodorovně" na vodorovné pláty
+  nad sebou. Dřív se tytéž volby jmenovaly obráceně, Horizontálně
+  a Vertikálně. Uložené předvolby dělí dál stejně.
+
+### Fixed
+
+- Kontrola spadu za řezem a přídavků odmítala 3 mm u PDF se spadem 3 mm:
+  Illustrator v něm kvůli zaokrouhleným souřadnicím naměří třeba 2,9986 mm
+  a hláška pak tvrdila „potřebují 3 mm, PDF nese 3 mm". Kontroly teď platí
+  v přesnosti, jakou dialog ukazuje.
+- Nápověda k obsahu exportu a README tvrdily, že vektorový plát nese vždy
+  celou grafiku. Plát nese jen objekty, které do něj zasahují; celý zůstane
+  objekt přes hranu plátu, typicky velký obrázek.
+
 ## [1.0.0] — 2026-10-04
 
 První verze. Plátování velké grafiky na tiskové pláty pro **ruční ořez** —
