@@ -26,7 +26,7 @@ dokumentu) do `~/Desktop/tile-export-test/data/`; existující soubory nepřepí
 |---|---|
 | `arch-3000x1000-1ku10.ai` | 3000 × 1000 mm při 1:10; NEŘEZAT na 850–1450 mm, vodítka 800 a 1900 mm |
 | `zed-6000x1000-1ku10.ai` | zeď 6000 × 1000 mm při 1:10; NEŘEZAT 1850–2450, vodítka 1800 a 3900 |
-| `lc-6000x1000.ai` | stejná zeď jako Large Canvas (faktor 10), ruční měřítko vypnout |
+| `lc-6000x1000.ai` | stejná zeď jako Large Canvas (faktor 10), měřítko kresby 1 |
 
 Všechny mají spad 50 mm na každé hraně a pravítka v mm (od generátoru 2.1.0;
 starší data jsou v bodech). **Jak číst plát:** čistý formát je
@@ -43,23 +43,25 @@ vrať (nebo ulož jako předvolbu):
 
 | pole | hodnota |
 |---|---|
-| Ruční měřítko 1:N | zaškrtnuto, 10 (u Large Canvasu vypnuto) |
+| Měřítko kresby 1: | 10 (u Large Canvasu 1) — dokument si ho pamatuje |
 | Směr / Dělit podle | Svisle / Počtu plátů, 3 |
 | Rovnoměrně | nezaškrtnuto |
 | Přelep / umístění | 20 mm / Půl na každou stranu |
 | Přídavky | 0 / 0 / 0 / 0 |
-| Linka | zaškrtnuto, CutContour, 1 pt |
-| Měřítko výstupu | Stejné jako dokument |
+| Typ výstupu | Ruční ořez; linka zaškrtnutá, CutContour, 1 pt |
+| Měřítko výstupu | 1:10 jako kresba |
 | Přeskočit hotové | nezaškrtnuto — opakovaný export do stejné složky soubory přepíše |
 
 ---
 
 ## 1. Co umí jen člověk
 
-**1.1 Dialog okem.** 1178 × 793 px se Zünd režimem i bez něj — panel Zünd je
-v dialogu vždy a vypnutý režim místo nevrací. Nic uříznutého, sloupce zarovnané. Výsledek je v pravém sloupci; dlouhá
-chybová hláška (Large Canvas, ruční 1:10, výstup 1:1) se v poli **zalomí**,
-neuřízne.
+**1.1 Dialog okem.** 1178 × 712 px s ručním ořezem i se Zündem — pole obou typů
+výstupu se střídají na jednom místě (naměřeno headless 2026-10-10). Nic
+uříznutého, sloupce zarovnané. Panel Dokument ukáže čistý formát a dostupný
+spad; měřítko kresby 100 nebo 12,5 se v nich i v „1:… jako kresba" vejde celé.
+Výsledek je v pravém sloupci; dlouhá chybová hláška (Large Canvas, měřítko
+kresby 10, výstup 1:1) se v poli **zalomí**, neuřízne.
 
 **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Vytvořit
 a exportovat.
@@ -77,8 +79,8 @@ a v **Náhledu**, zvětšit na maximum: linka na všech čtyřech hranách (P1).
 ořez, je na všech čtyřech hranách. Výsledek zapsat do specu (§4); 2026-10-04
 prošel.
 
-**1.6 Zünd v Illustratoru.** Zeď 1:10, Zünd režim, výstup 1:1. Řádek ořezové
-linky je šedý a ve zdroji nepřibudou červené linky. Obě PDF otevřít
+**1.6 Zünd v Illustratoru.** Zeď 1:10, typ výstupu Zünd, výstup 1:1. Pole
+linky nejsou vidět a v pracovním dokumentu nepřibudou červené linky. Obě PDF otevřít
 v Illustratoru: tiskové má shora vrstvy `Regmarks`, `Cut` (vypnutá) a `Graphics`
 s grafikou v masce; řezové `Regmarks` a `Cut`, žádnou grafiku.
 
@@ -88,6 +90,11 @@ PDF preset bez tiskových značek — preset platí pro oba soubory.
 
 **1.8 Ostrá zakázka.** Jedna skutečná zakázka od začátku do konce. Podmínka pro
 vydání a push.
+
+**1.9 Měřítko kresby v dokumentu (1.1.0).** Na zdi zadat měřítko 10, Jen pláty,
+dokument uložit, zavřít a znovu otevřít, spustit: pole ukáže 10. Nový dokument
+začne na 1. Předvolba uložená se starším měřítkem ho nezmění a po úpravě
+měřítka se u předvolby neobjeví hvězdička.
 
 ---
 
@@ -102,16 +109,16 @@ v milimetrech.
 | arch, výstup 1:1 | „Stránky PDF: skutečná velikost…" | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
 | arch, Vodorovně, Vodítek, vodorovné vodítko tažené ~60 mm pod horní hranou artboardu, Zaokrouhlit 100 | 2 pláty: tiskové 3000 × 610 \| 3000 × 410; „Stránky PDF (1:10): 300 × 61 \| 300 × 41" | 2 PDF 300 × 61 \| 300 × 41 (N38) |
 | arch, Vodorovně, Šířky plátu 600 | „1: načisto 3000 × 600…, 2: načisto 3000 × 400…" — zbytek na spodním plátu | 2 PDF 300 × 61 \| 300 × 41 (N41) |
-| arch, 1:1, Rastr 150 DPI | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu; obyčejné PDF, otevřené má jednu vrstvu |
-| Large Canvas, výstup jako dokument | faktor 10; spad 50/50/50/50 | 2010 \| 2020 \| 2010 × 1000 |
-| Large Canvas + ruční 1:10 | „(1:10): 2001 × 1000 \| …" | náhled 2001 \| 2002 \| 2001 × 1000 |
-| Large Canvas + 1:10, výstup 1:1 | „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
+| arch, 1:1, Rastr 150 DPI (jen s `RASTER_ENABLED`, od 1.1.0 skrytý) | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu; obyčejné PDF, otevřené má jednu vrstvu |
+| Large Canvas, měřítko kresby 1 | Dokument: spad 50/50/50/50; měřítko výstupu „1:1 — kresba je ve skutečné velikosti" | 2010 \| 2020 \| 2010 × 1000 |
+| Large Canvas + měřítko kresby 10, „1:10 jako kresba" | „(1:10): 2001 × 1000 \| …" | náhled 2001 \| 2002 \| 2001 × 1000 |
+| Large Canvas + měřítko kresby 10, výstup 1:1 | „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
 | zeď 1:10, výstup 1:1 | tiskové 2010 \| 2020 \| 2010 | 2010 \| 2020 \| 2010 × 1000; plát 2 začíná polem 1990 (přelep), končí 4010 |
 | zeď, Zünd, 1:1 | „se značkami: 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030"; „Řez: obdélník plátu v barvě Cut." | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
 | zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
 | arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)…"; stránky 149 × 103 \| 149 × 103 \| 11 × 103 | export šedý, Jen pláty aktivní |
 | zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
-| arch, Rastr, Rozlišení 71 | „✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI." | export šedý; se 72 projde |
+| arch, Rastr, Rozlišení 71 (jen s `RASTER_ENABLED`) | „✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI." | export šedý; se 72 projde |
 
 **Hlášky** (česky): šířka 0 → „Šířka plátu musí být kladné číslo."; Rovnoměrně
 se stropem 15 a přelepem 20 → „…musí být větší než přelep."; přídavek vlevo 60

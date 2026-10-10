@@ -38,7 +38,7 @@ function refs(o) {
     function cb(v) { return { value: !!v, enabled: true }; }
     function rb(n, on) { var a = [], i; for (i = 0; i < n; i++) { a.push({ value: i === on }); } return a; }
     var r = {
-        cbScale: cb(true), etScaleN: et(10),
+        etScaleN: et(10),
         rbDir: rb(2, 0), rbMode: rb(3, 0),
         etCount: et(3), etWidth: et(1000), cbEqual: cb(false),
         etRound: et(0), etOverlap: et(20), rbOverlapMode: rb(3, 0),
@@ -46,7 +46,10 @@ function refs(o) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
-        cbSkip: cb(true), cbZund: null,
+        cbSkip: cb(true), rbOutType: null,
+        gManual: { visible: true }, gZundFields: { visible: false },
+        gScaleRow: { visible: true }, gScaleOne: { visible: false },
+        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -86,9 +89,21 @@ has(t32, "3: načisto 976,7 × 1000 mm, s přídavky 1026,7 × 1080 mm", "panel 
 
 console.log("\n=== whole millimetres still read as whole millimetres ===");
 var t11 = summary({});
-has(t11, "Čistý formát: 3000 × 1000 mm", "clean format");
 has(t11, "1: načisto 1000 × 1000 mm, s přídavky 1010 × 1000 mm", "T1.1 panel 1 has no ,0");
-has(t11, "Dostupný spad: vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "bleed line");
+
+console.log("\n=== 1.1.0: the Document panel shows what TE found ===");
+// Clean format and available bleed moved from the Result into the Document
+// panel, in real millimetres, and show even when the split cannot be made.
+var rDoc = refs({});
+TE.UI.refresh(null, rDoc, ctx);
+eq(rDoc.stCleanInfo.text, "3000 × 1000 mm", "clean format at real size");
+eq(rDoc.stBleedInfo.text, "vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "available bleed on each edge");
+eq(rDoc.stCalc.text.indexOf("Čistý formát") === -1 && rDoc.stCalc.text.indexOf("Dostupný spad") === -1, true,
+    "and the Result no longer repeats them");
+var rDocErr = refs({ etCount: { text: "1", enabled: true } });
+TE.UI.refresh(null, rDocErr, ctx);
+eq(rDocErr.stCleanInfo.text === "3000 × 1000 mm" && rDocErr.stCalc.text.indexOf("✗") === 0, true,
+    "a split that fails still leaves the document info in place");
 
 console.log("\n=== error messages carry the same precision ===");
 // Since the decimal comma is read, a 12,5 mm overlap is a real value — and a
@@ -116,6 +131,20 @@ has(summary({ etAddBottom: { text: "60" } }), "Přídavek dole (60 mm)", "bottom
 has(summary({ etAddRight: { text: "60" } }), "Přídavek vpravo (60 mm)", "right");
 has(summary({ etAddTop: { text: "60" } }), "Přídavek nahoře (60 mm)", "top");
 
+console.log("\n=== 1.1.0: the output scale carries the drawing's number ===");
+// "Same as document" meant 1:10 for a drawing at 1:10 and real size for a
+// Large Canvas. The option now names the number; a 1:1 drawing has no choice.
+var rs10 = refs({});
+TE.UI.refresh(null, rs10, ctx);
+eq(rs10.rbExpScale[0].text, "1:10 jako kresba", "1:10 drawing: the option reads 1:10 jako kresba");
+eq(rs10.gScaleRow.visible && !rs10.gScaleOne.visible, true, "and the choice is shown");
+var rs125 = refs({ etScaleN: { text: "12,5", enabled: true } });
+TE.UI.refresh(null, rs125, ctx);
+eq(rs125.rbExpScale[0].text, "1:12,5 jako kresba", "a decimal scale keeps its comma");
+var rs1 = refs({ etScaleN: { text: "1", enabled: true } });
+TE.UI.refresh(null, rs1, ctx);
+eq(!rs1.gScaleRow.visible && rs1.gScaleOne.visible, true, "1:1 drawing: no choice, the row says 1:1");
+
 console.log("\n=== N16: the summary shows what the output scale does ===");
 // The panel lines are in real millimetres and do not move with the output
 // scale; only the PDF page does. Without this line the choice was invisible
@@ -129,7 +158,7 @@ console.log("\n=== Zünd: pages carry the marks, and the cut is named ===");
 // Defaults: bleed 5 past the cut, marks 5 mm, 5 mm clear of the mask, so
 // the page grows by 15 mm per side. The test sheet is 1:10.
 function zund(extra) {
-    var o = { cbZund: { value: true, enabled: true },
+    var o = { rbOutType: [{ value: false }, { value: true }],
         ddCutSpot: { selection: { text: "Cut" } }, ddMarkColor: { selection: { text: "[Registration]" } },
         etMarkSize: { text: "5" }, etGapInner: { text: "5" }, etMaxDist: { text: "500" },
         etOrient: { text: "100" }, etBleed: { text: "5" } };
@@ -168,16 +197,25 @@ has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značk
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
 
-console.log("\n=== N28: Zünd mode greys out the trim line ===");
-// The cut path takes the line's place; the line row would only steer a
-// preview in the source document that misleads.
+console.log("\n=== 1.1.0: one output type, only its fields show (N28) ===");
+// Manual trim and Zünd exclude each other. The cut path takes the line's
+// place, so in Zünd mode the line's fields are not shown at all.
 var rL = refs(zund({}));
 TE.UI.refresh(null, rL, ctx);
-eq(rL.cbLine.enabled || rL.etSpot.enabled || rL.etLineW.enabled, false, "with Zünd on the whole line row is off");
-eq(TE.UI.collect(rL).drawLine, true, "greyed out, the stored choice stays as it was");
-var rL2 = refs({});
+eq(rL.gManual.visible === false && rL.gZundFields.visible === true, true,
+    "Zünd shows the Zünd fields and hides the trim line");
+eq(TE.UI.collect(rL).drawLine, true, "hidden, the line's stored choice stays as it was");
+// The real dialog builds the Zünd fields whenever it offers the choice.
+var manual = [{ value: true }, { value: false }];
+var rL2 = refs(zund({ rbOutType: manual }));
 TE.UI.refresh(null, rL2, ctx);
-eq(rL2.cbLine.enabled && rL2.etSpot.enabled && rL2.etLineW.enabled, true, "without Zünd the row is back");
+eq(rL2.gManual.visible === true && rL2.gZundFields.visible === false, true,
+    "manual trim shows the line and hides the Zünd fields");
+eq(TE.UI.collect(rL2).zundMode, false, "and is read as manual trim");
+eq(rL2.etSpot.enabled && rL2.etLineW.enabled, true, "the line's fields follow its checkbox");
+var rL3 = refs(zund({ rbOutType: manual, cbLine: { value: false, enabled: true } }));
+TE.UI.refresh(null, rL3, ctx);
+eq(rL3.etSpot.enabled || rL3.etLineW.enabled, false, "with no line the colour and width grey out");
 
 console.log("\n=== N23: raster resolution below 72 DPI ===");
 var rDpi = refs({ rbExpMode: [{ value: false }, { value: true }], etDPI: { text: "71", enabled: true } });
@@ -207,6 +245,26 @@ TE.UI.refresh(null, r38, ctx);
 eq(r38.btnTiles.enabled && r38.btnExport.enabled, true, "horizontal guides alone are enough for Vodorovně");
 ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [] } };
 
+console.log("\n=== N40: stacked panels split the height, and the dialog says so ===");
+var r40s = refs({ rbMode: widthMode });
+TE.UI.refresh(null, r40s, ctx);
+eq(r40s.stWidthLbl.text, "Šířka plátu", "Svisle: the field is the panel width");
+var r40v = refs({ rbDir: stacked, rbMode: widthMode });
+TE.UI.refresh(null, r40v, ctx);
+eq(r40v.stWidthLbl.text, "Výška plátu", "Vodorovně: the field is the panel height");
+eq(r40v.etWidth.helpTip.indexOf("Výška plátu načisto") === 0, true, "and so is its tooltip");
+// The reported case: 1000 mm on a graphic 1000 mm tall is one panel.
+has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "1000", enabled: true } }),
+    "✗ Výška plátu 1000 mm dá jen 1 plát: grafika měří ve směru dělení 1000 mm.",
+    "one panel: the message names the height and how tall the artwork is");
+has(summary({ rbMode: widthMode, etWidth: { text: "3000", enabled: true } }),
+    "✗ Šířka plátu 3000 mm dá jen 1 plát: grafika měří ve směru dělení 3000 mm.",
+    "the same going across names the width");
+has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "0", enabled: true } }),
+    "✗ Výška plátu musí být kladné číslo.", "a bad height says height");
+has(summary({ etCount: { text: "1", enabled: true } }), "✗ Jsou potřeba aspoň 2 pláty.",
+    "a count of one keeps the general message");
+
 console.log("\n=== N41: a width split puts the remainder on the last panel, going down too ===");
 var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", enabled: true } });
 has(t41, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně: the top panel is a full 600");
@@ -224,7 +282,7 @@ var lcCtx = {
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
         graphicCount: 1, scaleFactor: 10, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
 };
-var r63 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" },
+var r63 = refs({ etScaleN: { text: "10" },
     rbExpScale: [{ value: false }, { value: true }] });
 TE.UI.refresh(null, r63, lcCtx);
 has(r63.stCalc.text,
@@ -234,12 +292,12 @@ eq(r63.btnExport.enabled, false, "and the export stays blocked");
 eq(r63.btnTiles.enabled, true, "Panels only stays available: it draws at the document's own scale (N17)");
 
 console.log("\n=== T6.2a: Large Canvas at same-as-document now just works (N1) ===");
-var r62 = refs({ cbScale: { value: false, enabled: true } });
+var r62 = refs({ etScaleN: { text: "1" } });
 TE.UI.refresh(null, r62, lcCtx);
 eq(r62.btnExport.enabled, true, "no Large Canvas error, export enabled");
 eq(r62.stCalc.text.indexOf("Large Canvas") === -1, true, "and the old message is gone");
 has(r62.stCalc.text, "Stránky PDF: skutečná velikost", "Large Canvas at same-as-document prints real size (N16)");
-var r43 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" } });
+var r43 = refs({ etScaleN: { text: "10" } });
 TE.UI.refresh(null, r43, lcCtx);
 has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 × 1000 mm",
     "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");

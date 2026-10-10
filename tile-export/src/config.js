@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.0.1",
+    version: "1.1.0",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
@@ -17,12 +17,25 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
+    // XMP namespace of the values tile-export keeps in a document: the drawing
+    // scale, which belongs to the document rather than to a preset or the
+    // last run (1.1.0). An identifier under the project's own address, never
+    // fetched, so it cannot collide with anyone else's.
+    xmpNamespace: "https://codeberg.org/Osva1d/extendscript-automation/ns/tile-export/1.0/",
+
     // Zünd mode is in the dialog again since the print mask (2026-09-25,
     // docs/reports/2026-09-25-maskovani-platu.md): the artwork now ends a
     // bleed past the cut, which frees the space the marks need on a split
     // panel. The mask is the panel rectangle; a shaped mask follows the
     // contour in a later stage. False hides the panel and the mode with it.
     ZUND_ENABLED: true,
+
+    // Raster output is out of the dialog in 1.1.0 (user, 2026-10-10): the shop
+    // rasterises in Photoshop, and only when a RIP chokes, while whether
+    // Illustrator's rasterising can be trusted is still to be tested. Its
+    // resolution also counts on the PDF page, so a 1:10 export lost N times
+    // the detail (N37). The code stays; true brings the rows back.
+    RASTER_ENABLED: false,
 
     // The spot colour the shop's Zünd setup reads as a cut path (user,
     // 2026-09-26: "Cut" is enough). Offered in the cut colour list even when

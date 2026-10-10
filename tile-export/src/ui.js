@@ -57,6 +57,27 @@ TE.UI = {
     },
 
     /**
+     * Adds a labeled read-only value row. The value is created with the
+     * longest text it will show: a statictext keeps its first width even
+     * after a relayout (measured), and refresh() writes the real value.
+     * @param {Object} parent - ScriptUI container.
+     * @param {string} label - Row label.
+     * @param {string} widest - The longest value the row will show.
+     * @param {string} tip - HelpTip shared by the label and the value.
+     * @returns {Object} The value statictext.
+     */
+    addInfoRow: function (parent, label, widest, tip) {
+        var g = parent.add("group");
+        g.alignment = ["fill", "top"];
+        var st = g.add("statictext", undefined, label);
+        this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        st.helpTip = tip;
+        var val = g.add("statictext", undefined, widest);
+        val.helpTip = tip;
+        return val;
+    },
+
+    /**
      * Adds a labeled radio group in one row.
      * @param {Object} parent - ScriptUI container.
      * @param {string} label - Row label.
@@ -189,20 +210,20 @@ TE.UI = {
         var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
         pDoc.alignChildren = ["fill", "top"];
 
-        var gScale = pDoc.add("group");
-        gScale.alignment = ["fill", "top"];
-        var stScaleLbl = gScale.add("statictext", undefined, l.LBL_SCALE);
-        this.lockW(stScaleLbl, this.M.LABEL_COL);
-        stScaleLbl.helpTip = l.TIP_SCALE;
-        var cbScale = gScale.add("checkbox", undefined, "");
-        cbScale.helpTip = l.TIP_SCALE;
-        cbScale.value = (Number(s.scaleN) > 1);
-        var etScaleN = gScale.add("edittext", undefined, String(s.scaleN));
-        etScaleN.characters = 4;
-        etScaleN.helpTip = l.TIP_SCALE;
-        etScaleN.enabled = cbScale.value;
-        gScale.add("statictext", undefined,
-            l.format(l.LBL_LARGE_CANVAS, String(ctx.validation.scaleFactor)));
+        // The drawing scale comes from the document, which remembers it: not
+        // from the last run, which carried a 1:10 into the next job's 1:1
+        // document, nor from a preset (1.1.0). No checkbox — 1 is a scale like
+        // any other. Large Canvas is not shown: its rulers already read real
+        // size, so it is not a scale the user deals with.
+        var etScaleN = this.addRow(pDoc, l.LBL_SCALE, ctx.drawingScale || 1, l.TIP_SCALE);
+        // What TE found in the document, in real millimetres — once the
+        // Result's first and last lines (1.1.0). Shown whatever the split
+        // settings, which do not change it.
+        var wide = "9999" + l.DECIMAL + "9";
+        var stCleanInfo = this.addInfoRow(pDoc, l.LBL_CLEAN,
+            l.format(l.INFO_CLEAN_VAL, "9" + wide, "9" + wide), l.TIP_CLEAN);
+        var stBleedInfo = this.addInfoRow(pDoc, l.LBL_BLEED,
+            l.format(l.INFO_BLEED_VAL, wide, wide, wide, wide), l.TIP_BLEED);
         // No clean-format fields: the artboard is the clean format. Typed
         // values changed only the preview, while the run kept dividing the
         // artboard (N27); a wrong artboard is fixed in Illustrator.
@@ -228,6 +249,9 @@ TE.UI = {
 
         var etCount = this.addRow(pSplit, l.LBL_COUNT, s.tileCount, l.TIP_COUNT);
         var etWidth = this.addRow(pSplit, l.LBL_WIDTH, s.tileWidth, l.TIP_WIDTH, "mm");
+        // Its label reads Šířka or Výška with the direction (N40); both fit
+        // the locked label column.
+        var stWidthLbl = etWidth.parent.children[0];
         var etRound = this.addRow(pSplit, l.LBL_ROUND, s.guideRound, l.TIP_ROUND, "mm");
 
         // A row of its own because it belongs to BOTH numbers above it: with a
@@ -269,19 +293,32 @@ TE.UI = {
         var etAddLeft   = this.addRow(pEdges, l.LBL_ADD_LEFT,   s.addLeft,   l.TIP_ADD, "mm");
         var etAddRight  = this.addRow(pEdges, l.LBL_ADD_RIGHT,  s.addRight,  l.TIP_ADD, "mm");
 
-        // --- Export ----------------------------------------------------------
-        var pExp = colR.add("panel", undefined, l.PANEL_EXPORT);
-        pExp.alignChildren = ["fill", "top"];
+        // --- Output type -----------------------------------------------------
+        // One choice between the two outputs that exclude each other (1.1.0):
+        // a red trim line the finisher cuts along, printed; or Zünd marks and
+        // a cut path for the machine, never printed. Each has its own fields,
+        // stacked in one place so only the chosen ones show: a hidden group
+        // keeps its space (measured), stacked groups share it.
+        var pType = colR.add("panel", undefined, l.PANEL_OUT_TYPE);
+        pType.alignChildren = ["fill", "top"];
 
-        var rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
-            [l.EXPORT_VECTOR, l.EXPORT_RASTER],
-            (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
-        var rbExpScale = this.addRadioRow(pExp, l.LBL_EXPORT_SCALE,
-            [l.SCALE_SOURCE, l.SCALE_ACTUAL],
-            (s.exportScale === "actual") ? 1 : 0, l.TIP_EXPORT_SCALE);
-        var etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
+        // Without Zünd mode there is nothing to choose: no row, manual only.
+        var rbOutType = null;
+        if (c.ZUND_ENABLED) {
+            rbOutType = this.addRadioRow(pType, l.LBL_OUT_TYPE,
+                [l.OUT_MANUAL, l.OUT_ZUND], s.zundMode ? 1 : 0, l.TIP_OUT_TYPE);
+        }
 
-        var gLine = pExp.add("group");
+        var gTypeStack = pType.add("group");
+        gTypeStack.orientation = "stack";
+        gTypeStack.alignChildren = ["fill", "top"];
+        gTypeStack.alignment = ["fill", "top"];
+
+        var gManual = gTypeStack.add("group");
+        gManual.orientation = "column";
+        gManual.alignChildren = ["fill", "top"];
+
+        var gLine = gManual.add("group");
         gLine.alignment = ["fill", "top"];
         var stLineLbl = gLine.add("statictext", undefined, l.LBL_LINE);
         this.lockW(stLineLbl, this.M.LABEL_COL);
@@ -296,6 +333,99 @@ TE.UI = {
         etLineW.characters = 4;
         etLineW.helpTip = l.TIP_LINE_WIDTH;
         gLine.add("statictext", undefined, "pt");
+
+        // Hidden behind TE.Config.ZUND_ENABLED — see the comment there. The
+        // fields are not built at all rather than merely made invisible.
+        var gZundFields = null, ddCutSpot = null, ddMarkColor = null;
+        var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
+        var etBleed = null;
+
+        if (c.ZUND_ENABLED) {
+        gZundFields = gTypeStack.add("group");
+        gZundFields.orientation = "column";
+        gZundFields.alignChildren = ["fill", "top"];
+
+        var gCutSpot = gZundFields.add("group");
+        gCutSpot.alignment = ["fill", "top"];
+        var stCutSpotLbl = gCutSpot.add("statictext", undefined, l.LBL_CUT_SPOT);
+        this.lockW(stCutSpotLbl, this.M.LABEL_COL);
+        stCutSpotLbl.helpTip = l.TIP_CUT_SPOT;
+        ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
+        ddCutSpot.alignment = ["fill", "center"];
+        ddCutSpot.helpTip = l.TIP_CUT_SPOT;
+        // The document's spots plus the shop's cut colours and the stored
+        // one: a straight cut needs no contour, so its colour need not be in
+        // the document yet — the export creates it.
+        var spotList = [], zj;
+        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
+        for (zj = 0; zj < candidates.length; zj++) {
+            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
+                spotList.push(candidates[zj]);
+            }
+        }
+        for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
+        ddCutSpot.selection = 0;
+        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
+            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
+        }
+
+        var gMarkCol = gZundFields.add("group");
+        gMarkCol.alignment = ["fill", "top"];
+        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
+        this.lockW(stMarkColLbl, this.M.LABEL_COL);
+        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
+        ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
+        ddMarkColor.alignment = ["fill", "center"];
+        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
+        var mcList = ctx.markColors || [];
+        var mj;
+        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
+        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
+        ddMarkColor.selection = 0;
+        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
+            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
+        }
+
+        etBleed    = this.addRow(gZundFields, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
+        etMarkSize = this.addRow(gZundFields, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
+        etGapInner = this.addRow(gZundFields, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
+        etMaxDist  = this.addRow(gZundFields, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
+        etOrient   = this.addRow(gZundFields, l.LBL_ORIENT,    s.orientDist, l.TIP_ORIENT,  "mm");
+        }   // end ZUND_ENABLED
+
+        // --- Files -----------------------------------------------------------
+        var pExp = colR.add("panel", undefined, l.PANEL_FILES);
+        pExp.alignChildren = ["fill", "top"];
+
+        // Raster output is hidden behind TE.Config.RASTER_ENABLED — see there.
+        var rbExpMode = null, etDPI = null;
+        if (c.RASTER_ENABLED) {
+            rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
+                [l.EXPORT_VECTOR, l.EXPORT_RASTER],
+                (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
+            etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
+        }
+
+        // The output scale is named by the drawing's own number, "1:10 jako
+        // kresba", where it used to say "same as document" — which meant real
+        // size for a Large Canvas (1.1.0). A 1:1 drawing has nothing to choose
+        // and the row says so instead; the two rows are stacked, since a
+        // hidden row keeps its space.
+        var gScaleStack = pExp.add("group");
+        gScaleStack.orientation = "stack";
+        gScaleStack.alignChildren = ["fill", "top"];
+        gScaleStack.alignment = ["fill", "top"];
+        // Created with the longest number it will show: a label keeps its
+        // first width (measured), and refresh() writes in the real one.
+        var rbExpScale = this.addRadioRow(gScaleStack, l.LBL_EXPORT_SCALE,
+            [l.format(l.SCALE_DRAWING, "9999"), l.SCALE_ACTUAL],
+            (s.exportScale === "actual") ? 1 : 0, l.TIP_EXPORT_SCALE);
+        var gScaleOne = gScaleStack.add("group");
+        gScaleOne.alignment = ["fill", "top"];
+        var stScaleOneLbl = gScaleOne.add("statictext", undefined, l.LBL_EXPORT_SCALE);
+        this.lockW(stScaleOneLbl, this.M.LABEL_COL);
+        stScaleOneLbl.helpTip = l.TIP_EXPORT_SCALE;
+        gScaleOne.add("statictext", undefined, l.SCALE_ONE).helpTip = l.TIP_EXPORT_SCALE;
 
         // PDF presets come from Illustrator itself, the same way
         // batch-relink-export does it — typing the name by hand is how you get
@@ -349,93 +479,6 @@ TE.UI = {
         cbSkip.value = !!s.skipExisting;
 
 
-        // --- Zünd -------------------------------------------------------------
-        // Hidden behind TE.Config.ZUND_ENABLED — see the comment there. The
-        // panel is not built at all rather than merely made invisible, because
-        // ScriptUI reserves space for an invisible group (measured, 0 px
-        // difference).
-        var cbZund = null, ddCutSpot = null, ddMarkColor = null;
-        var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
-        var etBleed = null;
-
-        if (c.ZUND_ENABLED) {
-        var pZund = colR.add("panel", undefined, l.PANEL_ZUND);
-        pZund.alignChildren = ["fill", "top"];
-
-        var gZundOn = pZund.add("group");
-        gZundOn.alignment = ["fill", "top"];
-        var stZundLbl = gZundOn.add("statictext", undefined, l.LBL_ZUND_MODE);
-        this.lockW(stZundLbl, this.M.LABEL_COL);
-        stZundLbl.helpTip = l.TIP_ZUND_MODE;
-        cbZund = gZundOn.add("checkbox", undefined, "");
-        cbZund.helpTip = l.TIP_ZUND_MODE;
-        cbZund.value = !!s.zundMode;
-
-        // Everything below lives in one group so it hides as a unit when the
-        // mode is off. Hiding gives no height back; see the note after the
-        // fields.
-        var gZundBody = pZund.add("group");
-        gZundBody.orientation = "column";
-        gZundBody.alignChildren = ["fill", "top"];
-        gZundBody.alignment = ["fill", "top"];
-
-        var gCutSpot = gZundBody.add("group");
-        gCutSpot.alignment = ["fill", "top"];
-        var stCutSpotLbl = gCutSpot.add("statictext", undefined, l.LBL_CUT_SPOT);
-        this.lockW(stCutSpotLbl, this.M.LABEL_COL);
-        stCutSpotLbl.helpTip = l.TIP_CUT_SPOT;
-        ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
-        ddCutSpot.alignment = ["fill", "center"];
-        ddCutSpot.helpTip = l.TIP_CUT_SPOT;
-        // The document's spots plus the shop's cut colours and the stored
-        // one: a straight cut needs no contour, so its colour need not be in
-        // the document yet — the export creates it.
-        var spotList = [], zj;
-        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
-        for (zj = 0; zj < candidates.length; zj++) {
-            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
-                spotList.push(candidates[zj]);
-            }
-        }
-        for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
-        ddCutSpot.selection = 0;
-        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
-            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
-        }
-
-        var gMarkCol = gZundBody.add("group");
-        gMarkCol.alignment = ["fill", "top"];
-        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
-        this.lockW(stMarkColLbl, this.M.LABEL_COL);
-        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
-        ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
-        ddMarkColor.alignment = ["fill", "center"];
-        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
-        var mcList = ctx.markColors || [];
-        var mj;
-        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
-        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
-        ddMarkColor.selection = 0;
-        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
-            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
-        }
-
-        etBleed    = this.addRow(gZundBody, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
-        etMarkSize = this.addRow(gZundBody, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
-        etGapInner = this.addRow(gZundBody, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
-        etMaxDist  = this.addRow(gZundBody, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
-        etOrient   = this.addRow(gZundBody, l.LBL_ORIENT,    s.orientDist, l.TIP_ORIENT,  "mm");
-
-        // Hiding these greys the settings out but does NOT shrink the dialog:
-        // ScriptUI keeps the space reserved for an invisible group, and capping
-        // maximumSize.height does not change that either — both measured, both
-        // moved the dialog by 0 px. It does not matter: with the columns
-        // balanced the dialog is 793 px in either state, inside the usable
-        // height. Hiding stays because seeing greyed-out Zünd fields while the
-        // mode is off is noise.
-        gZundBody.visible = cbZund.value;
-        }   // end ZUND_ENABLED
-
         // --- Result ----------------------------------------------------------
         // At the foot of the right column, filling what the left column leaves
         // (N18). It used to span both columns at the bottom, at 85 px, while
@@ -480,17 +523,19 @@ TE.UI = {
 
         // --- wiring ----------------------------------------------------------
         var refs = {
-            cbScale: cbScale, etScaleN: etScaleN,
+            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo,
             rbDir: rbDir, rbMode: rbMode,
-            etCount: etCount, etWidth: etWidth, etRound: etRound,
+            etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
             etOverlap: etOverlap, rbOverlapMode: rbOverlapMode,
             etAddTop: etAddTop, etAddBottom: etAddBottom,
             etAddLeft: etAddLeft, etAddRight: etAddRight,
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
+            gScaleRow: rbExpScale[0].parent, gScaleOne: gScaleOne,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
-            cbZund: cbZund, ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
+            rbOutType: rbOutType, gManual: gManual, gZundFields: gZundFields,
+            ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
             etMarkSize: etMarkSize, etBleed: etBleed,
             etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
@@ -510,7 +555,7 @@ TE.UI = {
             ctrl.onChanging = refresh;
         }
 
-        var i, all = [cbScale, etScaleN, etCount, etWidth,
+        var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
@@ -524,27 +569,16 @@ TE.UI = {
         for (i = 0; i < rbDir.length; i++) { wire(rbDir[i]); }
         for (i = 0; i < rbMode.length; i++) { wire(rbMode[i]); }
         for (i = 0; i < rbOverlapMode.length; i++) { wire(rbOverlapMode[i]); }
-        for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
+        if (rbExpMode) {
+            for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
+        }
         for (i = 0; i < rbExpScale.length; i++) { wire(rbExpScale[i]); }
 
-        // Null when the panel was not built — see TE.Config.ZUND_ENABLED.
-        if (cbZund) {
-            cbZund.onClick = function () {
-                // Hiding greys the settings out but does NOT shrink the dialog:
-                // ScriptUI reserves space for an invisible group and capping
-                // maximumSize.height changes nothing — both measured at 0 px.
-                // It does not matter; the balanced columns keep the dialog at
-                // 793 px either way. Hiding stays so the fields do not clutter
-                // the panel while the mode is off.
-                gZundBody.visible = cbZund.value;
-                refresh();
-            };
+        // Null without Zünd mode — see TE.Config.ZUND_ENABLED. refresh() shows
+        // the fields of the chosen output.
+        if (rbOutType) {
+            for (i = 0; i < rbOutType.length; i++) { wire(rbOutType[i]); }
         }
-
-        cbScale.onClick = function () {
-            etScaleN.enabled = cbScale.value;
-            refresh();
-        };
 
         btnBrowse.onClick = function () {
             var f = Folder.selectDialog(l.LBL_OUTPUT);
@@ -566,7 +600,9 @@ TE.UI = {
         // would read as modified the moment they are loaded.
         var baseline = null;
 
-        function current() { return self.collect(refs); }
+        // What a preset holds: the dialog without the drawing scale, which
+        // belongs to the document — editing it must not mark a preset changed.
+        function current() { return self.presetValues(self.collect(refs)); }
         function snapshot() { baseline = current(); }
 
         /** pData with the active preset replaced by its baseline. */
@@ -710,6 +746,11 @@ TE.UI = {
         btnExport.onClick = function () { state.outcome = "export"; w.close(1); };
         btnCancel.onClick = function () { state.outcome = null; w.close(0); };
 
+        // One layout with the widest texts still in place, before refresh()
+        // writes the real ones. A statictext keeps the width of its first
+        // layout (measured), and without this pass the first layout came
+        // after the real values: a longer number later was cut (1.1.0).
+        w.layout.layout(true);
         refresh();
 
         return {
@@ -730,13 +771,28 @@ TE.UI = {
     },
 
     /**
+     * Settings as a preset holds them: without the drawing scale, which the
+     * document keeps (1.1.0). Presets saved earlier still carry it; apply()
+     * ignores it, so loading one never rescales the drawing.
+     * @param {Object} s - Settings from collect().
+     * @returns {Object} A copy without scaleN.
+     */
+    presetValues: function (s) {
+        var out = {}, k;
+        for (k in s) {
+            if (s.hasOwnProperty(k) && k !== "scaleN") { out[k] = s[k]; }
+        }
+        return out;
+    },
+
+    /**
      * Reads the dialog into a settings object.
      * @param {Object} r - Control references.
      * @returns {Object} Settings.
      */
     collect: function (r) {
         var s = TE.Config.getDefaults();
-        s.scaleN      = r.cbScale.value ? (TE.Utils.toNumber(r.etScaleN.text) || 1) : 1;
+        s.scaleN      = TE.Utils.toNumber(r.etScaleN.text) || 1;
         s.direction   = r.rbDir[1].value ? "vertical" : "horizontal";
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
         s.tileCount   = TE.Utils.toNumber(r.etCount.text);
@@ -750,9 +806,10 @@ TE.UI = {
         s.addBottom   = TE.Utils.toNumber(r.etAddBottom.text) || 0;
         s.addLeft     = TE.Utils.toNumber(r.etAddLeft.text) || 0;
         s.addRight    = TE.Utils.toNumber(r.etAddRight.text) || 0;
-        s.exportMode  = r.rbExpMode[1].value ? "raster" : "vector";
+        // Raster rows not built: the export is vector, whatever a preset says.
+        s.exportMode  = (r.rbExpMode && r.rbExpMode[1].value) ? "raster" : "vector";
         s.exportScale = r.rbExpScale[1].value ? "actual" : "source";
-        s.rasterDPI   = TE.Utils.toNumber(r.etDPI.text) || 150;
+        if (r.etDPI) { s.rasterDPI = TE.Utils.toNumber(r.etDPI.text) || 150; }
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
         s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
@@ -762,8 +819,8 @@ TE.UI = {
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
-        if (r.cbZund) {
-            s.zundMode    = r.cbZund.value;
+        if (r.rbOutType) {
+            s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : s.cutSpot;
             s.cutBleed    = TE.Utils.toNumber(r.etBleed.text);
             if (isNaN(s.cutBleed) || String(r.etBleed.text).replace(/\s/g, "") === "") {
@@ -775,7 +832,8 @@ TE.UI = {
             s.maxDist     = TE.Utils.toNumber(r.etMaxDist.text) || 500;
             s.orientDist  = TE.Utils.toNumber(r.etOrient.text) || 100;
         } else {
-            // Panel not built: the mode cannot be on, whatever a stored preset says.
+            // No Zünd fields built: the mode cannot be on, whatever a stored
+            // preset says.
             s.zundMode = false;
         }
         return s;
@@ -787,9 +845,8 @@ TE.UI = {
      * @param {Object} s - Settings.
      */
     apply: function (r, s) {
-        r.cbScale.value = (Number(s.scaleN) > 1);
-        r.etScaleN.text = String(s.scaleN);
-        r.etScaleN.enabled = r.cbScale.value;
+        // The drawing scale is left alone: it is the document's, and a preset
+        // or the last run must not overwrite it (1.1.0).
         r.rbDir[0].value = (s.direction !== "vertical");
         r.rbDir[1].value = (s.direction === "vertical");
         r.rbMode[0].value = (s.divideMode === "count");
@@ -809,11 +866,13 @@ TE.UI = {
         r.etAddBottom.text = String(s.addBottom);
         r.etAddLeft.text = String(s.addLeft);
         r.etAddRight.text = String(s.addRight);
-        r.rbExpMode[0].value = (s.exportMode !== "raster");
-        r.rbExpMode[1].value = (s.exportMode === "raster");
+        if (r.rbExpMode) {
+            r.rbExpMode[0].value = (s.exportMode !== "raster");
+            r.rbExpMode[1].value = (s.exportMode === "raster");
+        }
         r.rbExpScale[0].value = (s.exportScale !== "actual");
         r.rbExpScale[1].value = (s.exportScale === "actual");
-        r.etDPI.text = String(s.rasterDPI);
+        if (r.etDPI) { r.etDPI.text = String(s.rasterDPI); }
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
         r.etLineW.text = String(s.lineWidth);
@@ -829,8 +888,9 @@ TE.UI = {
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
-        if (!r.cbZund) { return; }
-        r.cbZund.value = !!s.zundMode;
+        if (!r.rbOutType) { return; }
+        r.rbOutType[0].value = !s.zundMode;
+        r.rbOutType[1].value = !!s.zundMode;
         var zk;
         r.ddCutSpot.selection = 0;
         for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
@@ -850,15 +910,28 @@ TE.UI = {
 
     /**
      * Maps a thrown geometry error code onto a localized message.
+     *
+     * Stacked panels split the height, so the panel "width" is a height there
+     * and the messages say so (N40). A width that leaves one panel says how
+     * long the artwork is along the split: "At least 2 panels" alone gave no
+     * clue that 1000 mm on a 1000 mm tall graphic was the cause.
+     *
      * @param {Error} err - Error from TE.Grid.
+     * @param {Object} [s] - Settings: direction, divideMode, tileWidth.
+     * @param {string} [span] - Artwork length along the split, displayed mm.
      * @returns {string} Message for the user.
      */
-    describeError: function (err) {
-        var code = String(err && err.message);
-        if (code === "TE_MIN_TILES") { return TE.L.ERR_MIN_TILES; }
-        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_BAD_WIDTH; }
-        if (code === "TE_CEILING_OVERLAP") { return TE.L.ERR_CEILING_OVERLAP; }
-        if (code === "TE_NO_GUIDES") { return TE.L.ERR_NO_GUIDES; }
+    describeError: function (err, s, span) {
+        var l = TE.L, code = String(err && err.message);
+        var down = !!s && s.direction === "vertical";
+        if (code === "TE_MIN_TILES" && s && s.divideMode === "width" && span) {
+            return l.format(down ? l.ERR_ONE_PANEL_H : l.ERR_ONE_PANEL_W,
+                TE.Utils.formatMM(Number(s.tileWidth), l.DECIMAL), span);
+        }
+        if (code === "TE_MIN_TILES") { return l.ERR_MIN_TILES; }
+        if (code === "TE_BAD_WIDTH") { return down ? l.ERR_BAD_HEIGHT : l.ERR_BAD_WIDTH; }
+        if (code === "TE_CEILING_OVERLAP") { return down ? l.ERR_CEILING_OVERLAP_H : l.ERR_CEILING_OVERLAP; }
+        if (code === "TE_NO_GUIDES") { return l.ERR_NO_GUIDES; }
         return code;
     },
 
@@ -886,25 +959,44 @@ TE.UI = {
         r.etWidth.enabled = (s.divideMode === "width");
         r.cbEqual.enabled = (s.divideMode !== "guides");
         r.etRound.enabled = (s.divideMode === "guides");
-        r.etDPI.enabled   = (s.exportMode === "raster");
-        // Zünd mode draws no trim line — the cut path takes its place — so the
-        // whole line row greys out; the stored choice comes back with the mode
-        // off (N28).
-        r.cbLine.enabled  = !s.zundMode;
-        r.etSpot.enabled  = s.drawLine && !s.zundMode;
-        r.etLineW.enabled = s.drawLine && !s.zundMode;
+        if (r.etDPI) { r.etDPI.enabled = (s.exportMode === "raster"); }
+        // The output scale carries the drawing's number; a 1:1 drawing has
+        // nothing to choose and shows that instead.
+        var oneToOne = Math.abs(Number(s.scaleN) - 1) < 1e-9;
+        r.gScaleRow.visible = !oneToOne;
+        r.gScaleOne.visible = oneToOne;
+        r.rbExpScale[0].text = l.format(l.SCALE_DRAWING, TE.Utils.formatMM(Number(s.scaleN), l.DECIMAL));
+        // Only the chosen output's fields show (1.1.0). Zünd mode draws no
+        // trim line, the cut path takes its place; the line's stored choice
+        // waits, hidden, for the manual output (N28). Set here rather than in
+        // a click handler, so a loaded preset shows its own output too.
+        if (r.gManual) { r.gManual.visible = !s.zundMode; }
+        if (r.gZundFields) { r.gZundFields.visible = s.zundMode; }
+        r.etSpot.enabled  = s.drawLine;
+        r.etLineW.enabled = s.drawLine;
 
         // The artboard, the same rect the run divides (N27).
         var clean = ctx.cleanRect;
+        // Document points to displayed millimetres, one decimal.
+        var mm = function (pt) {
+            return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
+        };
+        var ov = ctx.validation.overhang;
+        r.stCleanInfo.text = l.format(l.INFO_CLEAN_VAL,
+            mm(clean[2] - clean[0]), mm(clean[1] - clean[3]));
+        r.stBleedInfo.text = l.format(l.INFO_BLEED_VAL,
+            mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
+
+        var ext = (s.direction === "horizontal")
+            ? { start: clean[0], end: clean[2] }
+            : { start: clean[3], end: clean[1] };
+        // Stacked panels split the height: the field is the panel's height
+        // there (N40).
+        var down = (s.direction === "vertical");
+        r.stWidthLbl.text = down ? l.LBL_HEIGHT : l.LBL_WIDTH;
+        r.stWidthLbl.helpTip = r.etWidth.helpTip = down ? l.TIP_HEIGHT : l.TIP_WIDTH;
 
         try {
-            var ext = (s.direction === "horizontal")
-                ? { start: clean[0], end: clean[2] }
-                : { start: clean[3], end: clean[1] };
-            // Document points to displayed millimetres, one decimal.
-            var mm = function (pt) {
-                return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
-            };
             // The guides of the chosen direction, as the run reads them. One
             // list for both directions previewed Vodorovně on the vertical
             // guides (N38).
@@ -913,9 +1005,6 @@ TE.UI = {
             var tiles = TE.Grid.computeTiles(cuts, clean, s);
             var v = TE.Validate.check(tiles, ctx.validation, s);
 
-            lines.push(l.format(l.INFO_CLEAN,
-                mm(clean[2] - clean[0]),
-                mm(clean[1] - clean[3])));
             lines.push(l.format(l.INFO_COUNT, tiles.length));
 
             var i, e, cl;
@@ -965,11 +1054,6 @@ TE.UI = {
                 lines.push(l.format(l.INFO_PAGES, TE.Utils.formatMM(ratio, l.DECIMAL), pages.join(" | ")));
             }
 
-            lines.push(l.format(l.INFO_OVERHANG,
-                mm(ctx.validation.overhang.left),
-                mm(ctx.validation.overhang.right),
-                mm(ctx.validation.overhang.top),
-                mm(ctx.validation.overhang.bottom)));
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
             for (i = 0; i < v.exportErrors.length; i++) { alerts.push("✗ " + v.exportErrors[i]); }
@@ -977,7 +1061,7 @@ TE.UI = {
             ok = (v.errors.length === 0);
             exportOk = (v.exportErrors.length === 0);
         } catch (err) {
-            alerts.push("✗ " + this.describeError(err));
+            alerts.push("✗ " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;
         }
 

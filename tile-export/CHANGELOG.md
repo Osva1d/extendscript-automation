@@ -4,6 +4,38 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.1.0] — nevydáno
+
+### Added
+
+- **Měřítko kresby si pamatuje dokument.** Jedno pole „Měřítko kresby 1:"
+  místo zaškrtávátka; hodnota se po potvrzeném běhu uloží do dokumentu
+  a příště se nabídne sama. Už se nepřenáší z poslední zakázky do další
+  a načtená předvolba ho nemění.
+- Panel **Dokument** ukazuje čistý formát a dostupný spad ve skutečných
+  milimetrech, i když dělení hlásí chybu.
+
+### Changed
+
+- **Typ výstupu: ruční ořez, nebo Zünd.** Jedna volba místo řádku linky
+  v panelu Export a panelu Zünd se zaškrtávátkem; pod ní jen pole zvoleného
+  typu. Panel Export se jmenuje Soubory.
+- **Měřítko výstupu se jmenuje číslem kresby,** třeba „1:10 jako kresba"
+  místo „Stejné jako dokument". U kresby 1:1 se nevolí nic. Faktor Large
+  Canvas dialog neukazuje.
+- **Rastrový export není v dialogu.** Dílna rastruje ve Photoshopu a jestli
+  jde věřit rastru Illustratoru, se teprve ověří. Uložené předvolby s rastrem
+  exportují vektor.
+- Dialog je o 81 px nižší, 712 px.
+
+### Fixed
+
+- U směru Vodorovně se pole jmenuje Výška plátu a hlášky mluví o výšce. Když
+  výška vydá jen na jeden plát, hláška řekne, kolik grafika ve směru dělení
+  měří — dřív stálo jen „Jsou potřeba aspoň 2 pláty."
+- Načtená předvolba ukáže pole svého typu výstupu; Zünd pole dřív zůstala
+  skrytá nebo vidět podle předchozího stavu.
+
 ## [1.0.1] — 2026-10-10
 
 ### Changed

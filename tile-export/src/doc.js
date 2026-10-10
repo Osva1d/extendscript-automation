@@ -116,5 +116,71 @@ TE.Doc = {
             }
         }
         return { positions: positions, hiddenCount: hiddenCount };
+    },
+
+    /**
+     * The drawing scale N of 1:N stored in an XMP packet. PURE FUNCTION.
+     * Reads the element form writeDrawingScale() writes, and the attribute
+     * form an XMP toolkit may turn it into.
+     * @param {string} xmp - A document's XMPString.
+     * @returns {number|null} N > 0, or null when none is stored.
+     */
+    readDrawingScale: function (xmp) {
+        var x = String(xmp || "");
+        var m = /<te:drawingScale>\s*([^<\s]*)\s*<\/te:drawingScale>/.exec(x)
+             || /\bte:drawingScale="([^"]*)"/.exec(x);
+        var n = m ? Number(m[1]) : NaN;
+        return (isFinite(n) && n > 0) ? n : null;
+    },
+
+    /**
+     * The XMP packet with the drawing scale set. PURE FUNCTION.
+     * An existing value is replaced where it is; otherwise a description of
+     * tile-export's own goes in before the end of the RDF.
+     * @param {string} xmp - A document's XMPString.
+     * @param {number} n - N of 1:N.
+     * @returns {string|null} The new packet, or null when it has no RDF.
+     */
+    writeDrawingScale: function (xmp, n) {
+        var x = String(xmp || ""), v = String(n);
+        var el = /<te:drawingScale>[^<]*<\/te:drawingScale>/;
+        var at = /\bte:drawingScale="[^"]*"/;
+        if (el.test(x)) { return x.replace(el, "<te:drawingScale>" + v + "</te:drawingScale>"); }
+        if (at.test(x)) { return x.replace(at, "te:drawingScale=\"" + v + "\""); }
+        if (x.indexOf("</rdf:RDF>") === -1) { return null; }
+        return x.replace("</rdf:RDF>", "<rdf:Description rdf:about=\"\" xmlns:te=\""
+            + TE.Config.xmpNamespace + "\"><te:drawingScale>" + v
+            + "</te:drawingScale></rdf:Description></rdf:RDF>");
+    },
+
+    /**
+     * The drawing scale this document remembers. Measured 2026-10-10: a
+     * value written into doc.XMPString survives saving and reopening.
+     * @param {Document} doc - Active document.
+     * @returns {number|null} N, or null when the document has none.
+     */
+    loadDrawingScale: function (doc) {
+        try { return this.readDrawingScale(doc.XMPString); }
+        catch (e) { TE.Utils.log("XMP unreadable: " + e.message); return null; }
+    },
+
+    /**
+     * Stores the drawing scale in the document, unless it is already there.
+     * A failure only costs typing the scale again next time.
+     * @param {Document} doc - Active document.
+     * @param {number} n - N of 1:N.
+     * @returns {boolean} True when the document holds n afterwards.
+     */
+    saveDrawingScale: function (doc, n) {
+        try {
+            if (this.readDrawingScale(doc.XMPString) === Number(n)) { return true; }
+            var x = this.writeDrawingScale(doc.XMPString, n);
+            if (x === null) { TE.Utils.log("XMP without RDF, scale not stored"); return false; }
+            doc.XMPString = x;
+            return true;
+        } catch (e) {
+            TE.Utils.log("XMP not writable: " + e.message);
+            return false;
+        }
     }
 };
