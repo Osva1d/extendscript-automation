@@ -12,22 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N38 — u směru Vodorovně čte náhled vodítka pro Svisle
-
-`tile-export/src/ui.js:908` počítá švy náhledu z `ctx.guides`, které
-`main.js:59` plní svislými vodítky (směr Svisle) bez ohledu na zvolený směr.
-Běh (`main.js:86`) bere vodítka zvoleného směru. Zreprodukováno v Node nad
-skutečným `refresh()` (2026-10-10), artboard 600 × 300 mm, Vodorovně + Vodítek:
-
-- jen vodorovné vodítko (100 mm) → „Nenalezena použitelná vodítka",
-  obě tlačítka šedá, přitom běh by dělil na 100 mm;
-- navíc svislé vodítko (x = 200 mm) → náhled ukáže pláty 100 + 200 mm,
-  běh vyrobí 200 + 100 mm.
-
-Dělení podle vodítek tak funguje jen u směru Svisle. **Oprava:** náhled
-z `ctx.guidesByDirection[s.direction]`, test v `test_ui_summary.js`.
-Kandidát do 1.0.1.
-
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
@@ -145,6 +129,7 @@ polích.
 | N32 | volby směru se jmenovaly obráceně, než říká dílna: „Horizontálně" dělilo na pláty vedle sebe; teď „Svisle" (svislé pláty vedle sebe, jako tapety) a „Vodorovně", uložené hodnoty beze změny (provoz 2026-10-10) | `1db21b5` |
 | N33 | kontrola spadu a přídavků porovnávala přesně na body, dialog ukazuje desetiny; PDF se spadem 3 mm (naměřeno 2,9986 mm) pak „potřebovalo 3 mm, neslo 3 mm" a export byl zablokovaný; teď tolerance 0,05 mm (provoz 2026-10-10) | `d0bae05` |
 | N34 | nápověda a README tvrdily, že vektorový plát nese vždy celou grafiku; plát nese jen objekty, které do něj zasahují, celý jen objekt přes hranu (naměřeno 2026-10-10) | `8369e3c` |
+| N38 | náhled dělení podle vodítek četl u Vodorovně svislá vodítka: se samými vodorovnými šedil obě tlačítka, s oběma ukázal jiné dělení, než běh udělal; teď čte vodítka zvoleného směru jako běh (z popisu voleb 2026-10-10) | `eff1de8` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
