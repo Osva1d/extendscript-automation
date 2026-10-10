@@ -12,6 +12,18 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
+
+`tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
+z dialogu na stránce dočasného dokumentu, a ta je v měřítku výstupu.
+Naměřeno 2026-10-10 (kód 1.0.1): kresba 1:10, rastrový režim, 150 DPI —
+výstup 1:10 nese rastr 597 × 591 px (150 ppi stránky, **15 ppi ve finální
+velikosti**, 0,57 MB), výstup 1:1 rastr 5965 × 5906 px (150 ppi, 3,26 MB).
+Dialog píše jen „Rozlišení rastru v DPI", přitom všechny ostatní hodnoty se
+zadávají ve skutečné velikosti. **Návrh:** DPI ve finální velikosti, v 1:N
+rastrovat N× jemněji — data pak vyjdou stejná jako v 1:1. Předtím změřit
+strop `RasterizeOptions.resolution` (300 DPI v 1:10 = 3000 na stránce).
+
 ### N36 — export 1:N s presetem, který převzorkovává, sníží rozlišení obrazu N×
 
 Naměřeno 2026-10-10 (kód 1.0.1, Illustrator 30.8.2): kresba 1:10, obraz
@@ -29,6 +41,11 @@ podle rozlišení na stránce, a to je v 1:N N× vyšší: v 1:10 obraz srazí n
 data 1:10 běžně. **Návrh:** v exportu 1:N převzorkování vypnout, nebo hranici
 presetu posunout N× (jestli ji jde po nastavení presetu přečíst, neověřeno).
 Rozhodne uživatel.
+
+**Provozu se netýká** (uživatel, 2026-10-10): dílna ukládá PDF presetem
+s vypnutým převzorkováním i kompresí, aby nedegradovala klientská data.
+Výchozí „žádný" preset nepřevzorkovává také (první řádek tabulky). Zbývá
+past pro preset, který převzorkovává — stačí upozornění v README.
 
 Cestou: PDF/X preset `pass4press` zvětší MediaBox o 12,5 mm na každou stranu
 (z toho 3 mm spadávka); stránka PDF je pak větší než artboard plátu.
