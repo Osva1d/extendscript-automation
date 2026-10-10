@@ -12,6 +12,27 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N36 — export 1:N s presetem, který převzorkovává, sníží rozlišení obrazu N×
+
+Naměřeno 2026-10-10 (kód 1.0.1, Illustrator 30.8.2): kresba 1:10, obraz
+72 ppi ve finální velikosti (5687 × 2852 px), vektorový export jednoho plátu.
+
+| preset | 1:10 (jako dokument) | 1:1 |
+|---|---|---|
+| žádný | 5687 × 2852 px, 2,10 MB | 5687 × 2852 px, 2,10 MB |
+| `[Kvalitní tisk]` | 2370 × 1189 px JPEG, 1,98 MB | 5687 × 2852 px, 2,66 MB |
+| `pass4press` | 2370 × 1189 px JPEG, 2,07 MB | 5687 × 2852 px, 2,75 MB |
+
+Měřítko samo data nemění, obraz je v obou stejný. Preset ale převzorkovává
+podle rozlišení na stránce, a to je v 1:N N× vyšší: v 1:10 obraz srazí na
+300 ppi stránky, po zvětšení v RIPu 30 ppi místo 72. Uživatel posílá na RIP
+data 1:10 běžně. **Návrh:** v exportu 1:N převzorkování vypnout, nebo hranici
+presetu posunout N× (jestli ji jde po nastavení presetu přečíst, neověřeno).
+Rozhodne uživatel.
+
+Cestou: PDF/X preset `pass4press` zvětší MediaBox o 12,5 mm na každou stranu
+(z toho 3 mm spadávka); stránka PDF je pak větší než artboard plátu.
+
 ### N35 — Zünd export čtyř rovnoměrných plátů skončil s nula pláty
 
 Hlášeno z provozu (2026-10-10, verze 1.0.0): navázané PDF se spadem 3 mm,
