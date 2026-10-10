@@ -896,6 +896,14 @@ TrimBox. Kopie pozice přes `duplicate()` ořez drží. Stranu tím ověřit ne�
 jednostránkového PDF umístění nerozbije: se stranou 2 i 4 prošel celý export
 plátu bez chyby.
 
+Kopie přes `duplicate()` **dědí `locked` i `hidden`** pozice. Zamčenou kopii
+`resize()` přesto změní. Kopie z dokumentu **Large Canvas** do běžného nese
+obsah ve vnitřních jednotkách a PDF ho zapíše s transformací ×100 místo ×10
+u nového umístění. Výsledný rozměr se shoduje na 1e-7 a rendery se liší jen
+vlasovými švy vyhlazování na styku ploch, raz u jednoho, raz u druhého
+(pdftoppm, 150 dpi v rohu plátu 2 m od počátku: text, hrany i linka na
+stejných pixelech).
+
 ### Drobnosti
 
 - `new Folder("")` i `new File("")` mají `fsName` `/tmp00000001` a
