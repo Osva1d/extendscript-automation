@@ -189,20 +189,12 @@ TE.UI = {
         var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
         pDoc.alignChildren = ["fill", "top"];
 
-        var gScale = pDoc.add("group");
-        gScale.alignment = ["fill", "top"];
-        var stScaleLbl = gScale.add("statictext", undefined, l.LBL_SCALE);
-        this.lockW(stScaleLbl, this.M.LABEL_COL);
-        stScaleLbl.helpTip = l.TIP_SCALE;
-        var cbScale = gScale.add("checkbox", undefined, "");
-        cbScale.helpTip = l.TIP_SCALE;
-        cbScale.value = (Number(s.scaleN) > 1);
-        var etScaleN = gScale.add("edittext", undefined, String(s.scaleN));
-        etScaleN.characters = 4;
-        etScaleN.helpTip = l.TIP_SCALE;
-        etScaleN.enabled = cbScale.value;
-        gScale.add("statictext", undefined,
-            l.format(l.LBL_LARGE_CANVAS, String(ctx.validation.scaleFactor)));
+        // The drawing scale comes from the document, which remembers it: not
+        // from the last run, which carried a 1:10 into the next job's 1:1
+        // document, nor from a preset (1.1.0). No checkbox — 1 is a scale like
+        // any other. Large Canvas is not shown: its rulers already read real
+        // size, so it is not a scale the user deals with.
+        var etScaleN = this.addRow(pDoc, l.LBL_SCALE, ctx.drawingScale || 1, l.TIP_SCALE);
         // No clean-format fields: the artboard is the clean format. Typed
         // values changed only the preview, while the run kept dividing the
         // artboard (N27); a wrong artboard is fixed in Illustrator.
@@ -480,7 +472,7 @@ TE.UI = {
 
         // --- wiring ----------------------------------------------------------
         var refs = {
-            cbScale: cbScale, etScaleN: etScaleN,
+            etScaleN: etScaleN,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, etRound: etRound,
             cbEqual: cbEqual,
@@ -510,7 +502,7 @@ TE.UI = {
             ctrl.onChanging = refresh;
         }
 
-        var i, all = [cbScale, etScaleN, etCount, etWidth,
+        var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
@@ -541,11 +533,6 @@ TE.UI = {
             };
         }
 
-        cbScale.onClick = function () {
-            etScaleN.enabled = cbScale.value;
-            refresh();
-        };
-
         btnBrowse.onClick = function () {
             var f = Folder.selectDialog(l.LBL_OUTPUT);
             if (f) { etOut.text = f.fsName; refresh(); }
@@ -566,7 +553,9 @@ TE.UI = {
         // would read as modified the moment they are loaded.
         var baseline = null;
 
-        function current() { return self.collect(refs); }
+        // What a preset holds: the dialog without the drawing scale, which
+        // belongs to the document — editing it must not mark a preset changed.
+        function current() { return self.presetValues(self.collect(refs)); }
         function snapshot() { baseline = current(); }
 
         /** pData with the active preset replaced by its baseline. */
@@ -730,13 +719,28 @@ TE.UI = {
     },
 
     /**
+     * Settings as a preset holds them: without the drawing scale, which the
+     * document keeps (1.1.0). Presets saved earlier still carry it; apply()
+     * ignores it, so loading one never rescales the drawing.
+     * @param {Object} s - Settings from collect().
+     * @returns {Object} A copy without scaleN.
+     */
+    presetValues: function (s) {
+        var out = {}, k;
+        for (k in s) {
+            if (s.hasOwnProperty(k) && k !== "scaleN") { out[k] = s[k]; }
+        }
+        return out;
+    },
+
+    /**
      * Reads the dialog into a settings object.
      * @param {Object} r - Control references.
      * @returns {Object} Settings.
      */
     collect: function (r) {
         var s = TE.Config.getDefaults();
-        s.scaleN      = r.cbScale.value ? (TE.Utils.toNumber(r.etScaleN.text) || 1) : 1;
+        s.scaleN      = TE.Utils.toNumber(r.etScaleN.text) || 1;
         s.direction   = r.rbDir[1].value ? "vertical" : "horizontal";
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
         s.tileCount   = TE.Utils.toNumber(r.etCount.text);
@@ -787,9 +791,8 @@ TE.UI = {
      * @param {Object} s - Settings.
      */
     apply: function (r, s) {
-        r.cbScale.value = (Number(s.scaleN) > 1);
-        r.etScaleN.text = String(s.scaleN);
-        r.etScaleN.enabled = r.cbScale.value;
+        // The drawing scale is left alone: it is the document's, and a preset
+        // or the last run must not overwrite it (1.1.0).
         r.rbDir[0].value = (s.direction !== "vertical");
         r.rbDir[1].value = (s.direction === "vertical");
         r.rbMode[0].value = (s.divideMode === "count");

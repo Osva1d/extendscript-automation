@@ -38,7 +38,7 @@ function refs(o) {
     function cb(v) { return { value: !!v, enabled: true }; }
     function rb(n, on) { var a = [], i; for (i = 0; i < n; i++) { a.push({ value: i === on }); } return a; }
     var r = {
-        cbScale: cb(true), etScaleN: et(10),
+        etScaleN: et(10),
         rbDir: rb(2, 0), rbMode: rb(3, 0),
         etCount: et(3), etWidth: et(1000), cbEqual: cb(false),
         etRound: et(0), etOverlap: et(20), rbOverlapMode: rb(3, 0),
@@ -224,7 +224,7 @@ var lcCtx = {
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
         graphicCount: 1, scaleFactor: 10, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
 };
-var r63 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" },
+var r63 = refs({ etScaleN: { text: "10" },
     rbExpScale: [{ value: false }, { value: true }] });
 TE.UI.refresh(null, r63, lcCtx);
 has(r63.stCalc.text,
@@ -234,12 +234,12 @@ eq(r63.btnExport.enabled, false, "and the export stays blocked");
 eq(r63.btnTiles.enabled, true, "Panels only stays available: it draws at the document's own scale (N17)");
 
 console.log("\n=== T6.2a: Large Canvas at same-as-document now just works (N1) ===");
-var r62 = refs({ cbScale: { value: false, enabled: true } });
+var r62 = refs({ etScaleN: { text: "1" } });
 TE.UI.refresh(null, r62, lcCtx);
 eq(r62.btnExport.enabled, true, "no Large Canvas error, export enabled");
 eq(r62.stCalc.text.indexOf("Large Canvas") === -1, true, "and the old message is gone");
 has(r62.stCalc.text, "Stránky PDF: skutečná velikost", "Large Canvas at same-as-document prints real size (N16)");
-var r43 = refs({ cbScale: { value: true, enabled: true }, etScaleN: { text: "10" } });
+var r43 = refs({ etScaleN: { text: "10" } });
 TE.UI.refresh(null, r43, lcCtx);
 has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 × 1000 mm",
     "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");

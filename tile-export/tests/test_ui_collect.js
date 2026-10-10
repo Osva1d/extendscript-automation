@@ -30,7 +30,7 @@ function refs(textOverrides) {
     function cb(v) { return { value: !!v }; }
     function rb(n, on) { var a = [], i; for (i = 0; i < n; i++) { a.push({ value: i === on }); } return a; }
     var r = {
-        cbScale: cb(false), etScaleN: et(1),
+        etScaleN: et(1),
         rbDir: rb(2, 0), rbMode: rb(3, 0),
         etCount: et(d.tileCount), etWidth: et(d.tileWidth), cbEqual: cb(false),
         etRound: et(d.guideRound), etOverlap: et(d.overlap), rbOverlapMode: rb(3, 0),
@@ -125,6 +125,24 @@ console.log("\n=== N27: no clean-format override — the dialog divides what the
 // The fields changed only the preview and the validation; Panels only and the
 // export kept dividing the artboard. The artboard is the one source of truth.
 eq(/etClean|resolveClean/.test(ui), false, "no override field or resolver left in the dialog");
+
+console.log("\n=== 1.1.0: the drawing scale is the document's ===");
+// One field, no checkbox: 1 is a scale like any other.
+eq(TE.UI.collect(refs({ etScaleN: "10" })).scaleN, 10, "1:10 is read");
+eq(TE.UI.collect(refs({ etScaleN: "12,5" })).scaleN, 12.5, "with the decimal comma too");
+eq(TE.UI.collect(refs({ etScaleN: "" })).scaleN, 1, "an empty field is 1:1");
+eq(/cbScale/.test(ui), false, "the old checkbox is gone");
+// A preset leaves it alone: it neither carries the scale nor changes it.
+var pv = TE.UI.presetValues(TE.UI.collect(refs({ etScaleN: "10" })));
+eq(pv.hasOwnProperty("scaleN"), false, "a preset does not store the drawing scale");
+eq(pv.overlap, TE.Config.getDefaults().overlap, "but everything else");
+eq(/function current\(\) \{ return self\.presetValues\(self\.collect\(refs\)\); \}/.test(ui), true,
+    "the preset list compares and saves without the scale");
+eq(/etScaleN = this\.addRow\(pDoc, l\.LBL_SCALE, ctx\.drawingScale \|\| 1,/.test(ui), true,
+    "the field starts at the document's scale, 1:1 when it has none");
+var mainSrc = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+eq(/drawingScale:\s*TE\.Doc\.loadDrawingScale\(doc\)/.test(mainSrc), true, "main.js reads it before the dialog");
+eq(/TE\.Doc\.saveDrawingScale\(doc, s\.scaleN\)/.test(mainSrc), true, "and stores it after a confirmed run");
 
 console.log("\n=== skipping finished outputs is asked for, not assumed ===");
 // On by default, a re-export after a fix kept the old files under the same

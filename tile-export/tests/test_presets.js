@@ -44,7 +44,7 @@ function refs() {
     function cb() { return { value: false, enabled: true }; }
     function rb(n) { var a = [], i; for (i = 0; i < n; i++) { a.push({ value: i === 0 }); } return a; }
     return {
-        cbScale: cb(), etScaleN: et(), rbDir: rb(2), rbMode: rb(3),
+        etScaleN: et(), rbDir: rb(2), rbMode: rb(3),
         etCount: et(), etWidth: et(), cbEqual: cb(), etRound: et(),
         etOverlap: et(), rbOverlapMode: rb(3),
         etAddTop: et(), etAddBottom: et(), etAddLeft: et(), etAddRight: et(),
@@ -96,6 +96,17 @@ var named = TE.Config.getDefaults();
 named.pdfPreset = "[PDF/X-4:2008]";
 TE.UI.apply(r, named);
 eq(r.ddPdf.selection.text, "[PDF/X-4:2008]", "a present PDF preset is selected");
+
+console.log("\n=== 1.1.0: loading a preset keeps the document's drawing scale ===");
+// Presets saved before 1.1.0 still carry scaleN; the scale is the document's
+// now, so apply() must not write it into the field.
+r = refs();
+r.etScaleN.text = "10";
+var oldPreset = TE.Config.getDefaults();
+oldPreset.scaleN = 1;
+TE.UI.apply(r, oldPreset);
+eq(r.etScaleN.text, "10", "a preset carrying scaleN 1 leaves the document's 1:10 alone");
+eq(TE.UI.collect(r).scaleN, 10, "and the run reads 1:10");
 
 console.log("\n=== every radio position survives apply -> collect ===");
 // N14 was the BUILD computing these; apply() sets them one by one and was

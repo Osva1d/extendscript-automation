@@ -54,9 +54,8 @@ TE.L = (function () {
             PANEL_CALC:          "Result",
 
             // --- document ---
-            LBL_SCALE:           "Manual scale 1:N",
-            TIP_SCALE:           "Tick when the document is drawn to scale, for example a 1:10 canvas of a large graphic. Values below are always entered in real-world millimetres.",
-            LBL_LARGE_CANVAS:    "Large Canvas factor: %s",
+            LBL_SCALE:           "Drawing scale 1:",
+            TIP_SCALE:           "The scale the document is drawn at: 1:10 means the artwork is ten times smaller than the real thing. The document remembers it. Every value below is entered in real-world millimetres.",
 
             // --- split ---
             LBL_DIRECTION:       "Direction",
@@ -213,9 +212,8 @@ TE.L = (function () {
             PANEL_CALC:          "Výsledek",
 
             // --- document ---
-            LBL_SCALE:           "Ruční měřítko 1:N",
-            TIP_SCALE:           "Zaškrtni, když je dokument ve zmenšeném měřítku, třeba plátno 1:10 velké grafiky. Hodnoty níž se vždy zadávají ve skutečných milimetrech.",
-            LBL_LARGE_CANVAS:    "Faktor Large Canvas: %s",
+            LBL_SCALE:           "Měřítko kresby 1:",
+            TIP_SCALE:           "V jakém měřítku je dokument nakreslený: 1:10 znamená, že grafika je desetkrát menší než ve skutečnosti. Dokument si ho zapamatuje. Hodnoty níž se zadávají ve skutečných milimetrech.",
 
             // --- split ---
             LBL_DIRECTION:       "Směr",

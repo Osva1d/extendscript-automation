@@ -55,6 +55,8 @@
 
         var ctx = {
             cleanRect: clean.rect,
+            // The scale this document was last run at, null for a new one.
+            drawingScale: TE.Doc.loadDrawingScale(doc),
             spotNames: spotNames,
             contourSpots: contourSpots,
             markColors: TE.Draw.listMarkColors(doc),
@@ -76,6 +78,8 @@
         if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS); }
         var s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
              || res.wrapper.presets[res.wrapper.activePreset];
+        // The document remembers its drawing scale for the next run (1.1.0).
+        TE.Doc.saveDrawingScale(doc, s.scaleN);
 
         // --- phase 1: rebuild the panels from the clean artboard -------------
         // Mark colour definition, read once from the source document so each

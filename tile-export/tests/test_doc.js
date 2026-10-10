@@ -80,5 +80,30 @@ var gv = TE.Doc.readGuides(d4, "vertical");
 assert(gv.positions.length === 1, "vertical split uses horizontal guides only");
 assertClose(gv.positions[0], 400, 0.001, "horizontal guide position is its Y");
 
+console.log("\n=== the drawing scale lives in the document's XMP (1.1.0) ===");
+// What Illustrator writes, trimmed to its shape: one rdf:RDF holding one or
+// more rdf:Description elements.
+var XMP = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+    + '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreatorTool>Adobe Illustrator</xmp:CreatorTool>'
+    + "</rdf:Description></rdf:RDF></x:xmpmeta>";
+assert(TE.Doc.readDrawingScale(XMP) === null, "a document never run through 1.1.0 has no scale");
+var x10 = TE.Doc.writeDrawingScale(XMP, 10);
+assert(TE.Doc.readDrawingScale(x10) === 10, "written as 10, read back as 10");
+assert(x10.indexOf(TE.Config.xmpNamespace) !== -1, "under tile-export's own namespace");
+assert(x10.indexOf("xmp:CreatorTool") !== -1, "the rest of the packet is kept");
+var x125 = TE.Doc.writeDrawingScale(x10, 12.5);
+assert(TE.Doc.readDrawingScale(x125) === 12.5, "rewriting replaces the value");
+assert(x125.split("te:drawingScale>").length === 3, "and does not add a second one");
+// An XMP toolkit may store a simple property as an attribute instead.
+var xAttr = XMP.replace('<rdf:Description rdf:about=""',
+    '<rdf:Description rdf:about="" xmlns:te="' + TE.Config.xmpNamespace + '" te:drawingScale="20"');
+assert(TE.Doc.readDrawingScale(xAttr) === 20, "the attribute form is read too");
+assert(TE.Doc.readDrawingScale(TE.Doc.writeDrawingScale(xAttr, 5)) === 5, "and rewritten in place");
+assert(TE.Doc.writeDrawingScale("<x:xmpmeta/>", 10) === null, "no RDF to write into: nothing written");
+assert(TE.Doc.readDrawingScale(XMP.replace("</rdf:RDF>",
+    "<rdf:Description><te:drawingScale>0</te:drawingScale></rdf:Description></rdf:RDF>")) === null,
+    "a zero scale counts as none");
+assert(TE.Doc.readDrawingScale(null) === null, "an unreadable packet counts as none");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

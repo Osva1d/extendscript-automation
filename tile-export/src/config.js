@@ -17,6 +17,12 @@ TE.Config = {
     // mid-run leaves nothing behind.
     layerLines: "TE_lines",
 
+    // XMP namespace of the values tile-export keeps in a document: the drawing
+    // scale, which belongs to the document rather than to a preset or the
+    // last run (1.1.0). An identifier under the project's own address, never
+    // fetched, so it cannot collide with anyone else's.
+    xmpNamespace: "https://codeberg.org/Osva1d/extendscript-automation/ns/tile-export/1.0/",
+
     // Zünd mode is in the dialog again since the print mask (2026-09-25,
     // docs/reports/2026-09-25-maskovani-platu.md): the artwork now ends a
     // bleed past the cut, which frees the space the marks need on a split
