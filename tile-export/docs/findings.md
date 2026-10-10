@@ -72,7 +72,8 @@ syntetickým PDF (2006 × 1006 mm, spad 3 mm, dokument 1:1, preset
 `[Kvalitní tisk]`) vyexportovala všechny čtyři pláty. Preset to nejspíš není:
 Zünd plát prošel s každým z dvanácti presetů vývojového stroje, včetně PDF/X
 a pass4press, i bez presetu. Čeká na text chyby z opakování v provozu,
-s nastavením dialogu a verzí Illustratoru.
+s nastavením dialogu a verzí Illustratoru. Doma ho uživatel nezopakoval
+a 1.0.1 vyšla s ním otevřeným: předpoklad je chyba mimo skript (2026-10-10).
 
 ### N24 — Zünd: kontura, která do plátu nezasahuje, nechá rám jako řez
 
