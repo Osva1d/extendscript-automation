@@ -122,7 +122,9 @@ TE.L = (function () {
             TIP_LINE_WIDTH:      "Width of the line as it prints. It is drawn twice as thick because half falls outside the page, so the Stroke panel shows double. In a 1:N document it is drawn N times thinner and prints at this width once scaled up.",
 
             // --- calc ---
-            INFO_CLEAN:          "Clean format: %s \u00d7 %s mm",
+            LBL_CLEAN:           "Clean format",
+            INFO_CLEAN_VAL:      "%s \u00d7 %s mm",
+            TIP_CLEAN:           "The clean-format artboard at real size, by the drawing scale.",
             INFO_COUNT:          "Panels: %s",
             INFO_TILE:           "  %s: clean %s \u00d7 %s mm, with adds %s \u00d7 %s mm",
             INFO_PAGES:          "PDF pages (1:%s): %s mm",
@@ -130,7 +132,9 @@ TE.L = (function () {
             INFO_PAGES_ZUND:     "PDF pages (1:%s) with marks: %s mm",
             INFO_CUT_RECT:       "Cut: panel rectangle in %s.",
             WARN_CONTOUR_IGNORED: "The document has paths in %s. Shaped cutting is not in this version yet — the panel rectangle is cut.",
-            INFO_OVERHANG:       "Available bleed: left %s, right %s, top %s, bottom %s mm",
+            LBL_BLEED:           "Available bleed",
+            INFO_BLEED_VAL:      "left %s, right %s, top %s, bottom %s mm",
+            TIP_BLEED:           "How far the placed PDF reaches past the clean format on each edge: what there is for the adds and, in Zünd mode, for the bleed past the cut.",
 
             // --- presets ---
             LBL_OUT_TYPE:    "Type",
@@ -283,7 +287,9 @@ TE.L = (function () {
             TIP_LINE_WIDTH:      "Tloušťka linky, jak se vytiskne. Kreslí se dvojnásobná, protože polovina padne za okraj stránky \u2014 panel Tah proto ukáže dvojnásobek. V dokumentu 1:N se nakreslí N\u00d7 tenčí a po zvětšení vyjde zadaná.",
 
             // --- calc ---
-            INFO_CLEAN:          "Čistý formát: %s \u00d7 %s mm",
+            LBL_CLEAN:           "Čistý formát",
+            INFO_CLEAN_VAL:      "%s \u00d7 %s mm",
+            TIP_CLEAN:           "Artboard čistého formátu ve skutečné velikosti, podle měřítka kresby.",
             INFO_COUNT:          "Počet plátů: %s",
             INFO_TILE:           "  %s: načisto %s \u00d7 %s mm, s přídavky %s \u00d7 %s mm",
             INFO_PAGES:          "Stránky PDF (1:%s): %s mm",
@@ -291,7 +297,9 @@ TE.L = (function () {
             INFO_PAGES_ZUND:     "Stránky PDF (1:%s) se značkami: %s mm",
             INFO_CUT_RECT:       "Řez: obdélník plátu v barvě %s.",
             WARN_CONTOUR_IGNORED: "Dokument má cesty v barvě %s. Tvarový ořez v této verzi ještě není — řeže se obdélník plátu.",
-            INFO_OVERHANG:       "Dostupný spad: vlevo %s, vpravo %s, nahoře %s, dole %s mm",
+            LBL_BLEED:           "Dostupný spad",
+            INFO_BLEED_VAL:      "vlevo %s, vpravo %s, nahoře %s, dole %s mm",
+            TIP_BLEED:           "O kolik umístěné PDF přesahuje čistý formát na každé hraně — kolik je na přídavky a v Zünd režimu i na spad za řezem.",
 
             // --- presets ---
             LBL_OUT_TYPE:    "Výstup",

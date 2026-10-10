@@ -57,6 +57,27 @@ TE.UI = {
     },
 
     /**
+     * Adds a labeled read-only value row. The value is created with the
+     * longest text it will show: a statictext keeps its first width even
+     * after a relayout (measured), and refresh() writes the real value.
+     * @param {Object} parent - ScriptUI container.
+     * @param {string} label - Row label.
+     * @param {string} widest - The longest value the row will show.
+     * @param {string} tip - HelpTip shared by the label and the value.
+     * @returns {Object} The value statictext.
+     */
+    addInfoRow: function (parent, label, widest, tip) {
+        var g = parent.add("group");
+        g.alignment = ["fill", "top"];
+        var st = g.add("statictext", undefined, label);
+        this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        st.helpTip = tip;
+        var val = g.add("statictext", undefined, widest);
+        val.helpTip = tip;
+        return val;
+    },
+
+    /**
      * Adds a labeled radio group in one row.
      * @param {Object} parent - ScriptUI container.
      * @param {string} label - Row label.
@@ -195,6 +216,14 @@ TE.UI = {
         // any other. Large Canvas is not shown: its rulers already read real
         // size, so it is not a scale the user deals with.
         var etScaleN = this.addRow(pDoc, l.LBL_SCALE, ctx.drawingScale || 1, l.TIP_SCALE);
+        // What TE found in the document, in real millimetres — once the
+        // Result's first and last lines (1.1.0). Shown whatever the split
+        // settings, which do not change it.
+        var wide = "9999" + l.DECIMAL + "9";
+        var stCleanInfo = this.addInfoRow(pDoc, l.LBL_CLEAN,
+            l.format(l.INFO_CLEAN_VAL, "9" + wide, "9" + wide), l.TIP_CLEAN);
+        var stBleedInfo = this.addInfoRow(pDoc, l.LBL_BLEED,
+            l.format(l.INFO_BLEED_VAL, wide, wide, wide, wide), l.TIP_BLEED);
         // No clean-format fields: the artboard is the clean format. Typed
         // values changed only the preview, while the run kept dividing the
         // artboard (N27); a wrong artboard is fixed in Illustrator.
@@ -491,7 +520,7 @@ TE.UI = {
 
         // --- wiring ----------------------------------------------------------
         var refs = {
-            etScaleN: etScaleN,
+            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, etRound: etRound,
             cbEqual: cbEqual,
@@ -927,15 +956,20 @@ TE.UI = {
 
         // The artboard, the same rect the run divides (N27).
         var clean = ctx.cleanRect;
+        // Document points to displayed millimetres, one decimal.
+        var mm = function (pt) {
+            return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
+        };
+        var ov = ctx.validation.overhang;
+        r.stCleanInfo.text = l.format(l.INFO_CLEAN_VAL,
+            mm(clean[2] - clean[0]), mm(clean[1] - clean[3]));
+        r.stBleedInfo.text = l.format(l.INFO_BLEED_VAL,
+            mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
 
         try {
             var ext = (s.direction === "horizontal")
                 ? { start: clean[0], end: clean[2] }
                 : { start: clean[3], end: clean[1] };
-            // Document points to displayed millimetres, one decimal.
-            var mm = function (pt) {
-                return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
-            };
             // The guides of the chosen direction, as the run reads them. One
             // list for both directions previewed Vodorovně on the vertical
             // guides (N38).
@@ -944,9 +978,6 @@ TE.UI = {
             var tiles = TE.Grid.computeTiles(cuts, clean, s);
             var v = TE.Validate.check(tiles, ctx.validation, s);
 
-            lines.push(l.format(l.INFO_CLEAN,
-                mm(clean[2] - clean[0]),
-                mm(clean[1] - clean[3])));
             lines.push(l.format(l.INFO_COUNT, tiles.length));
 
             var i, e, cl;
@@ -996,11 +1027,6 @@ TE.UI = {
                 lines.push(l.format(l.INFO_PAGES, TE.Utils.formatMM(ratio, l.DECIMAL), pages.join(" | ")));
             }
 
-            lines.push(l.format(l.INFO_OVERHANG,
-                mm(ctx.validation.overhang.left),
-                mm(ctx.validation.overhang.right),
-                mm(ctx.validation.overhang.top),
-                mm(ctx.validation.overhang.bottom)));
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
             for (i = 0; i < v.exportErrors.length; i++) { alerts.push("✗ " + v.exportErrors[i]); }

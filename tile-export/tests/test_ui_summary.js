@@ -49,6 +49,7 @@ function refs(o) {
         cbSkip: cb(true), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
+        stCleanInfo: { text: "" }, stBleedInfo: { text: "" },
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -88,9 +89,21 @@ has(t32, "3: načisto 976,7 × 1000 mm, s přídavky 1026,7 × 1080 mm", "panel 
 
 console.log("\n=== whole millimetres still read as whole millimetres ===");
 var t11 = summary({});
-has(t11, "Čistý formát: 3000 × 1000 mm", "clean format");
 has(t11, "1: načisto 1000 × 1000 mm, s přídavky 1010 × 1000 mm", "T1.1 panel 1 has no ,0");
-has(t11, "Dostupný spad: vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "bleed line");
+
+console.log("\n=== 1.1.0: the Document panel shows what TE found ===");
+// Clean format and available bleed moved from the Result into the Document
+// panel, in real millimetres, and show even when the split cannot be made.
+var rDoc = refs({});
+TE.UI.refresh(null, rDoc, ctx);
+eq(rDoc.stCleanInfo.text, "3000 × 1000 mm", "clean format at real size");
+eq(rDoc.stBleedInfo.text, "vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "available bleed on each edge");
+eq(rDoc.stCalc.text.indexOf("Čistý formát") === -1 && rDoc.stCalc.text.indexOf("Dostupný spad") === -1, true,
+    "and the Result no longer repeats them");
+var rDocErr = refs({ etCount: { text: "1", enabled: true } });
+TE.UI.refresh(null, rDocErr, ctx);
+eq(rDocErr.stCleanInfo.text === "3000 × 1000 mm" && rDocErr.stCalc.text.indexOf("✗") === 0, true,
+    "a split that fails still leaves the document info in place");
 
 console.log("\n=== error messages carry the same precision ===");
 // Since the decimal comma is read, a 12,5 mm overlap is a real value — and a
