@@ -144,6 +144,16 @@ var mainSrc = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf
 eq(/drawingScale:\s*TE\.Doc\.loadDrawingScale\(doc\)/.test(mainSrc), true, "main.js reads it before the dialog");
 eq(/TE\.Doc\.saveDrawingScale\(doc, s\.scaleN\)/.test(mainSrc), true, "and stores it after a confirmed run");
 
+console.log("\n=== 1.1.0: raster output is out of the dialog ===");
+// The shop rasterises in Photoshop; Illustrator's raster is still to be
+// trusted, and its DPI counts on the page (N37). The rows are not built.
+eq(TE.Config.RASTER_ENABLED, false, "raster is switched off");
+eq(/if \(c\.RASTER_ENABLED\) \{\s*rbExpMode = this\.addRadioRow/.test(ui), true, "its rows are built only when on");
+var rnr = refs({});
+rnr.rbExpMode = null; rnr.etDPI = null;
+eq(TE.UI.collect(rnr).exportMode, "vector", "without the rows the export is vector");
+eq(TE.UI.collect(rnr).rasterDPI, TE.Config.getDefaults().rasterDPI, "and the DPI keeps its default");
+
 console.log("\n=== skipping finished outputs is asked for, not assumed ===");
 // On by default, a re-export after a fix kept the old files under the same
 // names and only reported them as skipped (user, 2026-10-10).

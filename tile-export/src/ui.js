@@ -365,13 +365,35 @@ TE.UI = {
         var pExp = colR.add("panel", undefined, l.PANEL_FILES);
         pExp.alignChildren = ["fill", "top"];
 
-        var rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
-            [l.EXPORT_VECTOR, l.EXPORT_RASTER],
-            (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
-        var rbExpScale = this.addRadioRow(pExp, l.LBL_EXPORT_SCALE,
-            [l.SCALE_SOURCE, l.SCALE_ACTUAL],
+        // Raster output is hidden behind TE.Config.RASTER_ENABLED — see there.
+        var rbExpMode = null, etDPI = null;
+        if (c.RASTER_ENABLED) {
+            rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
+                [l.EXPORT_VECTOR, l.EXPORT_RASTER],
+                (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
+            etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
+        }
+
+        // The output scale is named by the drawing's own number, "1:10 jako
+        // kresba", where it used to say "same as document" — which meant real
+        // size for a Large Canvas (1.1.0). A 1:1 drawing has nothing to choose
+        // and the row says so instead; the two rows are stacked, since a
+        // hidden row keeps its space.
+        var gScaleStack = pExp.add("group");
+        gScaleStack.orientation = "stack";
+        gScaleStack.alignChildren = ["fill", "top"];
+        gScaleStack.alignment = ["fill", "top"];
+        // Created with the longest number it will show: a label keeps its
+        // first width (measured), and refresh() writes in the real one.
+        var rbExpScale = this.addRadioRow(gScaleStack, l.LBL_EXPORT_SCALE,
+            [l.format(l.SCALE_DRAWING, "9999"), l.SCALE_ACTUAL],
             (s.exportScale === "actual") ? 1 : 0, l.TIP_EXPORT_SCALE);
-        var etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
+        var gScaleOne = gScaleStack.add("group");
+        gScaleOne.alignment = ["fill", "top"];
+        var stScaleOneLbl = gScaleOne.add("statictext", undefined, l.LBL_EXPORT_SCALE);
+        this.lockW(stScaleOneLbl, this.M.LABEL_COL);
+        stScaleOneLbl.helpTip = l.TIP_EXPORT_SCALE;
+        gScaleOne.add("statictext", undefined, l.SCALE_ONE).helpTip = l.TIP_EXPORT_SCALE;
 
         // PDF presets come from Illustrator itself, the same way
         // batch-relink-export does it — typing the name by hand is how you get
@@ -477,6 +499,7 @@ TE.UI = {
             etAddTop: etAddTop, etAddBottom: etAddBottom,
             etAddLeft: etAddLeft, etAddRight: etAddRight,
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
+            gScaleRow: rbExpScale[0].parent, gScaleOne: gScaleOne,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
             rbOutType: rbOutType, gManual: gManual, gZundFields: gZundFields,
@@ -514,7 +537,9 @@ TE.UI = {
         for (i = 0; i < rbDir.length; i++) { wire(rbDir[i]); }
         for (i = 0; i < rbMode.length; i++) { wire(rbMode[i]); }
         for (i = 0; i < rbOverlapMode.length; i++) { wire(rbOverlapMode[i]); }
-        for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
+        if (rbExpMode) {
+            for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
+        }
         for (i = 0; i < rbExpScale.length; i++) { wire(rbExpScale[i]); }
 
         // Null without Zünd mode — see TE.Config.ZUND_ENABLED. refresh() shows
@@ -744,9 +769,10 @@ TE.UI = {
         s.addBottom   = TE.Utils.toNumber(r.etAddBottom.text) || 0;
         s.addLeft     = TE.Utils.toNumber(r.etAddLeft.text) || 0;
         s.addRight    = TE.Utils.toNumber(r.etAddRight.text) || 0;
-        s.exportMode  = r.rbExpMode[1].value ? "raster" : "vector";
+        // Raster rows not built: the export is vector, whatever a preset says.
+        s.exportMode  = (r.rbExpMode && r.rbExpMode[1].value) ? "raster" : "vector";
         s.exportScale = r.rbExpScale[1].value ? "actual" : "source";
-        s.rasterDPI   = TE.Utils.toNumber(r.etDPI.text) || 150;
+        if (r.etDPI) { s.rasterDPI = TE.Utils.toNumber(r.etDPI.text) || 150; }
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
         s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
@@ -803,11 +829,13 @@ TE.UI = {
         r.etAddBottom.text = String(s.addBottom);
         r.etAddLeft.text = String(s.addLeft);
         r.etAddRight.text = String(s.addRight);
-        r.rbExpMode[0].value = (s.exportMode !== "raster");
-        r.rbExpMode[1].value = (s.exportMode === "raster");
+        if (r.rbExpMode) {
+            r.rbExpMode[0].value = (s.exportMode !== "raster");
+            r.rbExpMode[1].value = (s.exportMode === "raster");
+        }
         r.rbExpScale[0].value = (s.exportScale !== "actual");
         r.rbExpScale[1].value = (s.exportScale === "actual");
-        r.etDPI.text = String(s.rasterDPI);
+        if (r.etDPI) { r.etDPI.text = String(s.rasterDPI); }
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
         r.etLineW.text = String(s.lineWidth);
@@ -881,7 +909,13 @@ TE.UI = {
         r.etWidth.enabled = (s.divideMode === "width");
         r.cbEqual.enabled = (s.divideMode !== "guides");
         r.etRound.enabled = (s.divideMode === "guides");
-        r.etDPI.enabled   = (s.exportMode === "raster");
+        if (r.etDPI) { r.etDPI.enabled = (s.exportMode === "raster"); }
+        // The output scale carries the drawing's number; a 1:1 drawing has
+        // nothing to choose and shows that instead.
+        var oneToOne = Math.abs(Number(s.scaleN) - 1) < 1e-9;
+        r.gScaleRow.visible = !oneToOne;
+        r.gScaleOne.visible = oneToOne;
+        r.rbExpScale[0].text = l.format(l.SCALE_DRAWING, TE.Utils.formatMM(Number(s.scaleN), l.DECIMAL));
         // Only the chosen output's fields show (1.1.0). Zünd mode draws no
         // trim line, the cut path takes its place; the line's stored choice
         // waits, hidden, for the manual output (N28). Set here rather than in

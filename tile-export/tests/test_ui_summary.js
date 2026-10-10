@@ -48,6 +48,7 @@ function refs(o) {
         ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
         cbSkip: cb(true), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
+        gScaleRow: { visible: true }, gScaleOne: { visible: false },
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -116,6 +117,20 @@ has(t73, "\u2717 Přídavek vlevo (60 mm) překračuje přesah grafiky (50 mm)."
 has(summary({ etAddBottom: { text: "60" } }), "Přídavek dole (60 mm)", "bottom");
 has(summary({ etAddRight: { text: "60" } }), "Přídavek vpravo (60 mm)", "right");
 has(summary({ etAddTop: { text: "60" } }), "Přídavek nahoře (60 mm)", "top");
+
+console.log("\n=== 1.1.0: the output scale carries the drawing's number ===");
+// "Same as document" meant 1:10 for a drawing at 1:10 and real size for a
+// Large Canvas. The option now names the number; a 1:1 drawing has no choice.
+var rs10 = refs({});
+TE.UI.refresh(null, rs10, ctx);
+eq(rs10.rbExpScale[0].text, "1:10 jako kresba", "1:10 drawing: the option reads 1:10 jako kresba");
+eq(rs10.gScaleRow.visible && !rs10.gScaleOne.visible, true, "and the choice is shown");
+var rs125 = refs({ etScaleN: { text: "12,5", enabled: true } });
+TE.UI.refresh(null, rs125, ctx);
+eq(rs125.rbExpScale[0].text, "1:12,5 jako kresba", "a decimal scale keeps its comma");
+var rs1 = refs({ etScaleN: { text: "1", enabled: true } });
+TE.UI.refresh(null, rs1, ctx);
+eq(!rs1.gScaleRow.visible && rs1.gScaleOne.visible, true, "1:1 drawing: no choice, the row says 1:1");
 
 console.log("\n=== N16: the summary shows what the output scale does ===");
 // The panel lines are in real millimetres and do not move with the output

@@ -30,6 +30,13 @@ TE.Config = {
     // contour in a later stage. False hides the panel and the mode with it.
     ZUND_ENABLED: true,
 
+    // Raster output is out of the dialog in 1.1.0 (user, 2026-10-10): the shop
+    // rasterises in Photoshop, and only when a RIP chokes, while whether
+    // Illustrator's rasterising can be trusted is still to be tested. Its
+    // resolution also counts on the PDF page, so a 1:10 export lost N times
+    // the detail (N37). The code stays; true brings the rows back.
+    RASTER_ENABLED: false,
+
     // The spot colour the shop's Zünd setup reads as a cut path (user,
     // 2026-09-26: "Cut" is enough). Offered in the cut colour list even when
     // the document lacks it: the export creates it in the output.
