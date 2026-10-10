@@ -12,6 +12,30 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N39 — export umisťuje PDF podle předvolby importu, ne podle pozice v dokumentu
+
+`tile-export/src/export.js`, `exportTile()` — dočasný dokument dostane grafiku
+přes `placedItems.add()` a `file =`, tedy s ořezem z globální předvolby importu
+PDF, ne s tím, jak je PDF umístěné v pracovním dokumentu. Tu předvolbu
+Illustrator přepíše při každém otevření dokumentu s navázaným PDF
+(engine-facts). Naměřeno 2026-10-10 (AI 30.8.2) na PDF s TrimBoxem
+210 × 98 mm a BleedBoxem 214 × 102 mm:
+
+| grafika | rozměr |
+|---|---|
+| pozice v pracovním dokumentu, umístěná s ořezem Bleed | 214 × 102 mm |
+| nové umístění v dočasném dokumentu, předvolba Trim | 210 × 98 mm |
+| `duplicate()` pozice do dočasného dokumentu | 214 × 102 mm |
+
+Export pak ořezaný obsah roztáhne na rozměr pozice. Plát nese obsah
+nerovnoměrně zvětšený (tady o 1,9 % a 4,1 %) a místo spadávky roztažený
+okraj, bez chyby a bez varování. Testovací PDF nástroje mají všechny boxy
+stejné, proto se to v testech neprojevilo. Strana vícestránkového PDF se
+z předvolby bere nejspíš stejně — neměřeno, stranu pozice skript zjistit
+nemůže. Na stranu, kterou jednostránkové PDF nemá, export nespadne (strany 2
+a 4 prošly, 2026-10-10). **Oprava:** grafiku do dočasného dokumentu kopírovat
+`duplicate()` z pozice; ověřit Large Canvas, Zünd i rastr. Kandidát do 1.0.1.
+
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
