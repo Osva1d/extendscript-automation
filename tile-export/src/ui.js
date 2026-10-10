@@ -249,6 +249,9 @@ TE.UI = {
 
         var etCount = this.addRow(pSplit, l.LBL_COUNT, s.tileCount, l.TIP_COUNT);
         var etWidth = this.addRow(pSplit, l.LBL_WIDTH, s.tileWidth, l.TIP_WIDTH, "mm");
+        // Its label reads Šířka or Výška with the direction (N40); both fit
+        // the locked label column.
+        var stWidthLbl = etWidth.parent.children[0];
         var etRound = this.addRow(pSplit, l.LBL_ROUND, s.guideRound, l.TIP_ROUND, "mm");
 
         // A row of its own because it belongs to BOTH numbers above it: with a
@@ -522,7 +525,7 @@ TE.UI = {
         var refs = {
             etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo,
             rbDir: rbDir, rbMode: rbMode,
-            etCount: etCount, etWidth: etWidth, etRound: etRound,
+            etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
             etOverlap: etOverlap, rbOverlapMode: rbOverlapMode,
             etAddTop: etAddTop, etAddBottom: etAddBottom,
@@ -902,15 +905,28 @@ TE.UI = {
 
     /**
      * Maps a thrown geometry error code onto a localized message.
+     *
+     * Stacked panels split the height, so the panel "width" is a height there
+     * and the messages say so (N40). A width that leaves one panel says how
+     * long the artwork is along the split: "At least 2 panels" alone gave no
+     * clue that 1000 mm on a 1000 mm tall graphic was the cause.
+     *
      * @param {Error} err - Error from TE.Grid.
+     * @param {Object} [s] - Settings: direction, divideMode, tileWidth.
+     * @param {string} [span] - Artwork length along the split, displayed mm.
      * @returns {string} Message for the user.
      */
-    describeError: function (err) {
-        var code = String(err && err.message);
-        if (code === "TE_MIN_TILES") { return TE.L.ERR_MIN_TILES; }
-        if (code === "TE_BAD_WIDTH") { return TE.L.ERR_BAD_WIDTH; }
-        if (code === "TE_CEILING_OVERLAP") { return TE.L.ERR_CEILING_OVERLAP; }
-        if (code === "TE_NO_GUIDES") { return TE.L.ERR_NO_GUIDES; }
+    describeError: function (err, s, span) {
+        var l = TE.L, code = String(err && err.message);
+        var down = !!s && s.direction === "vertical";
+        if (code === "TE_MIN_TILES" && s && s.divideMode === "width" && span) {
+            return l.format(down ? l.ERR_ONE_PANEL_H : l.ERR_ONE_PANEL_W,
+                TE.Utils.formatMM(Number(s.tileWidth), l.DECIMAL), span);
+        }
+        if (code === "TE_MIN_TILES") { return l.ERR_MIN_TILES; }
+        if (code === "TE_BAD_WIDTH") { return down ? l.ERR_BAD_HEIGHT : l.ERR_BAD_WIDTH; }
+        if (code === "TE_CEILING_OVERLAP") { return down ? l.ERR_CEILING_OVERLAP_H : l.ERR_CEILING_OVERLAP; }
+        if (code === "TE_NO_GUIDES") { return l.ERR_NO_GUIDES; }
         return code;
     },
 
@@ -966,10 +982,16 @@ TE.UI = {
         r.stBleedInfo.text = l.format(l.INFO_BLEED_VAL,
             mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
 
+        var ext = (s.direction === "horizontal")
+            ? { start: clean[0], end: clean[2] }
+            : { start: clean[3], end: clean[1] };
+        // Stacked panels split the height: the field is the panel's height
+        // there (N40).
+        var down = (s.direction === "vertical");
+        r.stWidthLbl.text = down ? l.LBL_HEIGHT : l.LBL_WIDTH;
+        r.stWidthLbl.helpTip = r.etWidth.helpTip = down ? l.TIP_HEIGHT : l.TIP_WIDTH;
+
         try {
-            var ext = (s.direction === "horizontal")
-                ? { start: clean[0], end: clean[2] }
-                : { start: clean[3], end: clean[1] };
             // The guides of the chosen direction, as the run reads them. One
             // list for both directions previewed Vodorovně on the vertical
             // guides (N38).
@@ -1034,7 +1056,7 @@ TE.UI = {
             ok = (v.errors.length === 0);
             exportOk = (v.exportErrors.length === 0);
         } catch (err) {
-            alerts.push("✗ " + this.describeError(err));
+            alerts.push("✗ " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;
         }
 

@@ -49,7 +49,7 @@ function refs(o) {
         cbSkip: cb(true), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
-        stCleanInfo: { text: "" }, stBleedInfo: { text: "" },
+        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -244,6 +244,26 @@ var r38 = refs({ rbDir: stacked, rbMode: guidesMode });
 TE.UI.refresh(null, r38, ctx);
 eq(r38.btnTiles.enabled && r38.btnExport.enabled, true, "horizontal guides alone are enough for Vodorovně");
 ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [] } };
+
+console.log("\n=== N40: stacked panels split the height, and the dialog says so ===");
+var r40s = refs({ rbMode: widthMode });
+TE.UI.refresh(null, r40s, ctx);
+eq(r40s.stWidthLbl.text, "Šířka plátu", "Svisle: the field is the panel width");
+var r40v = refs({ rbDir: stacked, rbMode: widthMode });
+TE.UI.refresh(null, r40v, ctx);
+eq(r40v.stWidthLbl.text, "Výška plátu", "Vodorovně: the field is the panel height");
+eq(r40v.etWidth.helpTip.indexOf("Výška plátu načisto") === 0, true, "and so is its tooltip");
+// The reported case: 1000 mm on a graphic 1000 mm tall is one panel.
+has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "1000", enabled: true } }),
+    "✗ Výška plátu 1000 mm dá jen 1 plát: grafika měří ve směru dělení 1000 mm.",
+    "one panel: the message names the height and how tall the artwork is");
+has(summary({ rbMode: widthMode, etWidth: { text: "3000", enabled: true } }),
+    "✗ Šířka plátu 3000 mm dá jen 1 plát: grafika měří ve směru dělení 3000 mm.",
+    "the same going across names the width");
+has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "0", enabled: true } }),
+    "✗ Výška plátu musí být kladné číslo.", "a bad height says height");
+has(summary({ etCount: { text: "1", enabled: true } }), "✗ Jsou potřeba aspoň 2 pláty.",
+    "a count of one keeps the general message");
 
 console.log("\n=== N41: a width split puts the remainder on the last panel, going down too ===");
 var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", enabled: true } });
