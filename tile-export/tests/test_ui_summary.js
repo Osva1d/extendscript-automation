@@ -58,7 +58,8 @@ var mm10 = function (real) { return TE.Utils.mm2pt(real / 10); };
 var bleed = mm10(50);
 var ctx = {
     cleanRect: [0, mm10(1000), mm10(3000), 0],
-    spotNames: ["CutContour"], guides: [],
+    spotNames: ["CutContour"],
+    guidesByDirection: { horizontal: { positions: [] }, vertical: { positions: [] } },
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
         graphicCount: 1, scaleFactor: 1, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
 };
@@ -186,6 +187,26 @@ has(rDpi.stCalc.text, "✗ Rozlišení 71 DPI je příliš nízké: Illustrator 
 eq(rDpi.btnExport.enabled, false, "and the export is blocked");
 eq(rDpi.btnTiles.enabled, true, "Panels only rasterises nothing");
 
+console.log("\n=== N38: the preview reads the guides of the chosen direction ===");
+// The run splits on the guides across the cuts: vertical ones for Svisle,
+// horizontal ones for Vodorovně. The preview read the vertical ones for both,
+// so horizontal guides alone greyed out both buttons for Vodorovně, and with
+// both kinds it previewed a split the run never made.
+var guidesMode = [{ value: false }, { value: false }, { value: true }];
+var stacked = [{ value: false }, { value: true }];
+ctx.guidesByDirection = { horizontal: { positions: [mm10(1000)] }, vertical: { positions: [mm10(400)] } };
+var t38v = summary({ rbDir: stacked, rbMode: guidesMode });
+has(t38v, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně splits on the horizontal guide: top panel");
+has(t38v, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and bottom panel");
+var t38s = summary({ rbMode: guidesMode });
+has(t38s, "1: načisto 1000 × 1000 mm, s přídavky 1010 × 1000 mm", "Svisle splits on the vertical guide: left panel");
+has(t38s, "2: načisto 2000 × 1000 mm, s přídavky 2010 × 1000 mm", "and right panel");
+ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [mm10(400)] } };
+var r38 = refs({ rbDir: stacked, rbMode: guidesMode });
+TE.UI.refresh(null, r38, ctx);
+eq(r38.btnTiles.enabled && r38.btnExport.enabled, true, "horizontal guides alone are enough for Vodorovně");
+ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [] } };
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more
@@ -193,7 +214,8 @@ console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 app.activeDocument.scaleFactor = 10;
 var lcCtx = {
     cleanRect: [0, TE.Utils.mm2pt(100), TE.Utils.mm2pt(600), 0],
-    spotNames: ["CutContour"], guides: [],
+    spotNames: ["CutContour"],
+    guidesByDirection: { horizontal: { positions: [] }, vertical: { positions: [] } },
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
         graphicCount: 1, scaleFactor: 10, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
 };

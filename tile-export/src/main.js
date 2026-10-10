@@ -58,7 +58,6 @@
             spotNames: spotNames,
             contourSpots: contourSpots,
             markColors: TE.Draw.listMarkColors(doc),
-            guides: guidesH.positions,
             guidesByDirection: { horizontal: guidesH, vertical: guidesV },
             validation: {
                 overhang: TE.Doc.computeOverhang(gBounds, clean.rect),
