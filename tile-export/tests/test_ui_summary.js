@@ -46,7 +46,8 @@ function refs(o) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
-        cbSkip: cb(true), cbZund: null,
+        cbSkip: cb(true), rbOutType: null,
+        gManual: { visible: true }, gZundFields: { visible: false },
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -129,7 +130,7 @@ console.log("\n=== Zünd: pages carry the marks, and the cut is named ===");
 // Defaults: bleed 5 past the cut, marks 5 mm, 5 mm clear of the mask, so
 // the page grows by 15 mm per side. The test sheet is 1:10.
 function zund(extra) {
-    var o = { cbZund: { value: true, enabled: true },
+    var o = { rbOutType: [{ value: false }, { value: true }],
         ddCutSpot: { selection: { text: "Cut" } }, ddMarkColor: { selection: { text: "[Registration]" } },
         etMarkSize: { text: "5" }, etGapInner: { text: "5" }, etMaxDist: { text: "500" },
         etOrient: { text: "100" }, etBleed: { text: "5" } };
@@ -168,16 +169,25 @@ has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značk
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
 
-console.log("\n=== N28: Zünd mode greys out the trim line ===");
-// The cut path takes the line's place; the line row would only steer a
-// preview in the source document that misleads.
+console.log("\n=== 1.1.0: one output type, only its fields show (N28) ===");
+// Manual trim and Zünd exclude each other. The cut path takes the line's
+// place, so in Zünd mode the line's fields are not shown at all.
 var rL = refs(zund({}));
 TE.UI.refresh(null, rL, ctx);
-eq(rL.cbLine.enabled || rL.etSpot.enabled || rL.etLineW.enabled, false, "with Zünd on the whole line row is off");
-eq(TE.UI.collect(rL).drawLine, true, "greyed out, the stored choice stays as it was");
-var rL2 = refs({});
+eq(rL.gManual.visible === false && rL.gZundFields.visible === true, true,
+    "Zünd shows the Zünd fields and hides the trim line");
+eq(TE.UI.collect(rL).drawLine, true, "hidden, the line's stored choice stays as it was");
+// The real dialog builds the Zünd fields whenever it offers the choice.
+var manual = [{ value: true }, { value: false }];
+var rL2 = refs(zund({ rbOutType: manual }));
 TE.UI.refresh(null, rL2, ctx);
-eq(rL2.cbLine.enabled && rL2.etSpot.enabled && rL2.etLineW.enabled, true, "without Zünd the row is back");
+eq(rL2.gManual.visible === true && rL2.gZundFields.visible === false, true,
+    "manual trim shows the line and hides the Zünd fields");
+eq(TE.UI.collect(rL2).zundMode, false, "and is read as manual trim");
+eq(rL2.etSpot.enabled && rL2.etLineW.enabled, true, "the line's fields follow its checkbox");
+var rL3 = refs(zund({ rbOutType: manual, cbLine: { value: false, enabled: true } }));
+TE.UI.refresh(null, rL3, ctx);
+eq(rL3.etSpot.enabled || rL3.etLineW.enabled, false, "with no line the colour and width grey out");
 
 console.log("\n=== N23: raster resolution below 72 DPI ===");
 var rDpi = refs({ rbExpMode: [{ value: false }, { value: true }], etDPI: { text: "71", enabled: true } });

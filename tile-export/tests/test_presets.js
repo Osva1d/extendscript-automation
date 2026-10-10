@@ -51,7 +51,7 @@ function refs() {
         rbExpMode: rb(2), rbExpScale: rb(2), etDPI: et(),
         cbLine: cb(), etSpot: et(), etLineW: et(),
         ddPdf: dd(["[Výchozí Illustratoru]", "[PDF/X-4:2008]"], 1),
-        etOut: et(), etPattern: et(), cbSkip: cb(), cbZund: null
+        etOut: et(), etPattern: et(), cbSkip: cb(), rbOutType: null
     };
 }
 

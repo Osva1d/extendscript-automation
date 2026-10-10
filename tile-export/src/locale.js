@@ -50,7 +50,8 @@ TE.L = (function () {
             PANEL_DOC:           "Document",
             PANEL_SPLIT:         "Split",
             PANEL_EDGES:         "Overlap and adds",
-            PANEL_EXPORT:        "Export",
+            PANEL_OUT_TYPE:      "Output",
+            PANEL_FILES:         "Files",
             PANEL_CALC:          "Result",
 
             // --- document ---
@@ -131,9 +132,10 @@ TE.L = (function () {
             INFO_OVERHANG:       "Available bleed: left %s, right %s, top %s, bottom %s mm",
 
             // --- presets ---
-            PANEL_ZUND:      "Z\u00fcnd",
-            LBL_ZUND_MODE:   "Z\u00fcnd mode",
-            TIP_ZUND_MODE:   "Adds registration marks and per-panel cut data. Each panel gets two PDFs: the print one, with the artwork masked a bleed past the cut, and _cut with the cut path and the same marks. The red trim line is not printed in this mode; the cut path takes its place.",
+            LBL_OUT_TYPE:    "Type",
+            OUT_MANUAL:      "Manual trim",
+            OUT_ZUND:        "Zünd",
+            TIP_OUT_TYPE:    "Manual trim: a print PDF with a red trim line the finisher cuts along. Zünd: two PDFs a panel — the print one with registration marks and the artwork masked a bleed past the cut, and _cut with the cut path and the same marks; no line is printed.",
             LBL_CUT_SPOT:    "Cut colour",
             LBL_CUT_BLEED:   "Bleed past the cut",
             TIP_CUT_BLEED:   "How far the printed artwork reaches past the cut, so a slight misregistration leaves no white edge. Usually 3 or 5 mm, up to 10 mm on large panels with room on the material. The PDF has to carry that much artwork past its outer edges.",
@@ -208,7 +210,8 @@ TE.L = (function () {
             PANEL_DOC:           "Dokument",
             PANEL_SPLIT:         "Dělení",
             PANEL_EDGES:         "Přelep a přídavky",
-            PANEL_EXPORT:        "Export",
+            PANEL_OUT_TYPE:      "Typ výstupu",
+            PANEL_FILES:         "Soubory",
             PANEL_CALC:          "Výsledek",
 
             // --- document ---
@@ -289,9 +292,10 @@ TE.L = (function () {
             INFO_OVERHANG:       "Dostupný spad: vlevo %s, vpravo %s, nahoře %s, dole %s mm",
 
             // --- presets ---
-            PANEL_ZUND:      "Z\u00fcnd",
-            LBL_ZUND_MODE:   "Z\u00fcnd re\u017eim",
-            TIP_ZUND_MODE:   "Přidá registrační značky a řezová data pro každý plát. Každý plát dostane dvě PDF: tiskové, s grafikou oříznutou maskou kousek za řezem, a _cut s řezovou cestou a stejnými značkami. Červená linka se v tomto režimu netiskne, jejím místem je řezová cesta.",
+            LBL_OUT_TYPE:    "Výstup",
+            OUT_MANUAL:      "Ruční ořez",
+            OUT_ZUND:        "Zünd",
+            TIP_OUT_TYPE:    "Ruční ořez: tiskové PDF s červenou linkou, podle které ořezává finišer. Zünd: na každý plát dvě PDF — tiskové s registračními značkami a grafikou v masce kousek za řezem, a _cut s řezovou cestou a stejnými značkami; linka se netiskne.",
             LBL_CUT_SPOT:    "Barva řezu",
             LBL_CUT_BLEED:   "Spad za řezem",
             TIP_CUT_BLEED:   "O kolik tištěná grafika přesahuje řez, aby drobná nepřesnost nenechala bílou hranu. Běžně 3 nebo 5 mm, u velkých plátů s místem na materiálu až 10 mm. PDF musí tolik grafiky za vnějšími hranami nést.",

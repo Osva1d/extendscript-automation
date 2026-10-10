@@ -38,7 +38,7 @@ function refs(textOverrides) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(d.rasterDPI),
         cbLine: cb(true), etSpot: et(d.lineSpot), etLineW: et(d.lineWidth),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et(d.namePattern),
-        cbSkip: cb(true), cbZund: null
+        cbSkip: cb(true), rbOutType: null
     };
     var k;
     for (k in textOverrides) { if (textOverrides.hasOwnProperty(k)) { r[k].text = textOverrides[k]; } }
@@ -65,7 +65,7 @@ eq(TE.UI.collect(refs({ etRound: "2,5" })).guideRound, 2.5, "guide rounding with
 
 console.log("\n=== Zünd: bleed past the cut is read with a comma too ===");
 var rzc = refs({});
-rzc.cbZund = { value: true }; rzc.ddCutSpot = { selection: { text: "Thru-cut" } };
+rzc.rbOutType = [{ value: false }, { value: true }]; rzc.ddCutSpot = { selection: { text: "Thru-cut" } };
 rzc.ddMarkColor = { selection: null }; rzc.etMarkSize = { text: "5" }; rzc.etGapInner = { text: "5" };
 rzc.etMaxDist = { text: "500" }; rzc.etOrient = { text: "100" }; rzc.etBleed = { text: "2,5" };
 var cz = TE.UI.collect(rzc);

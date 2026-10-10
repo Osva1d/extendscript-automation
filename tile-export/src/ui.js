@@ -261,19 +261,32 @@ TE.UI = {
         var etAddLeft   = this.addRow(pEdges, l.LBL_ADD_LEFT,   s.addLeft,   l.TIP_ADD, "mm");
         var etAddRight  = this.addRow(pEdges, l.LBL_ADD_RIGHT,  s.addRight,  l.TIP_ADD, "mm");
 
-        // --- Export ----------------------------------------------------------
-        var pExp = colR.add("panel", undefined, l.PANEL_EXPORT);
-        pExp.alignChildren = ["fill", "top"];
+        // --- Output type -----------------------------------------------------
+        // One choice between the two outputs that exclude each other (1.1.0):
+        // a red trim line the finisher cuts along, printed; or Zünd marks and
+        // a cut path for the machine, never printed. Each has its own fields,
+        // stacked in one place so only the chosen ones show: a hidden group
+        // keeps its space (measured), stacked groups share it.
+        var pType = colR.add("panel", undefined, l.PANEL_OUT_TYPE);
+        pType.alignChildren = ["fill", "top"];
 
-        var rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
-            [l.EXPORT_VECTOR, l.EXPORT_RASTER],
-            (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
-        var rbExpScale = this.addRadioRow(pExp, l.LBL_EXPORT_SCALE,
-            [l.SCALE_SOURCE, l.SCALE_ACTUAL],
-            (s.exportScale === "actual") ? 1 : 0, l.TIP_EXPORT_SCALE);
-        var etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
+        // Without Zünd mode there is nothing to choose: no row, manual only.
+        var rbOutType = null;
+        if (c.ZUND_ENABLED) {
+            rbOutType = this.addRadioRow(pType, l.LBL_OUT_TYPE,
+                [l.OUT_MANUAL, l.OUT_ZUND], s.zundMode ? 1 : 0, l.TIP_OUT_TYPE);
+        }
 
-        var gLine = pExp.add("group");
+        var gTypeStack = pType.add("group");
+        gTypeStack.orientation = "stack";
+        gTypeStack.alignChildren = ["fill", "top"];
+        gTypeStack.alignment = ["fill", "top"];
+
+        var gManual = gTypeStack.add("group");
+        gManual.orientation = "column";
+        gManual.alignChildren = ["fill", "top"];
+
+        var gLine = gManual.add("group");
         gLine.alignment = ["fill", "top"];
         var stLineLbl = gLine.add("statictext", undefined, l.LBL_LINE);
         this.lockW(stLineLbl, this.M.LABEL_COL);
@@ -288,6 +301,77 @@ TE.UI = {
         etLineW.characters = 4;
         etLineW.helpTip = l.TIP_LINE_WIDTH;
         gLine.add("statictext", undefined, "pt");
+
+        // Hidden behind TE.Config.ZUND_ENABLED — see the comment there. The
+        // fields are not built at all rather than merely made invisible.
+        var gZundFields = null, ddCutSpot = null, ddMarkColor = null;
+        var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
+        var etBleed = null;
+
+        if (c.ZUND_ENABLED) {
+        gZundFields = gTypeStack.add("group");
+        gZundFields.orientation = "column";
+        gZundFields.alignChildren = ["fill", "top"];
+
+        var gCutSpot = gZundFields.add("group");
+        gCutSpot.alignment = ["fill", "top"];
+        var stCutSpotLbl = gCutSpot.add("statictext", undefined, l.LBL_CUT_SPOT);
+        this.lockW(stCutSpotLbl, this.M.LABEL_COL);
+        stCutSpotLbl.helpTip = l.TIP_CUT_SPOT;
+        ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
+        ddCutSpot.alignment = ["fill", "center"];
+        ddCutSpot.helpTip = l.TIP_CUT_SPOT;
+        // The document's spots plus the shop's cut colours and the stored
+        // one: a straight cut needs no contour, so its colour need not be in
+        // the document yet — the export creates it.
+        var spotList = [], zj;
+        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
+        for (zj = 0; zj < candidates.length; zj++) {
+            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
+                spotList.push(candidates[zj]);
+            }
+        }
+        for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
+        ddCutSpot.selection = 0;
+        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
+            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
+        }
+
+        var gMarkCol = gZundFields.add("group");
+        gMarkCol.alignment = ["fill", "top"];
+        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
+        this.lockW(stMarkColLbl, this.M.LABEL_COL);
+        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
+        ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
+        ddMarkColor.alignment = ["fill", "center"];
+        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
+        var mcList = ctx.markColors || [];
+        var mj;
+        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
+        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
+        ddMarkColor.selection = 0;
+        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
+            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
+        }
+
+        etBleed    = this.addRow(gZundFields, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
+        etMarkSize = this.addRow(gZundFields, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
+        etGapInner = this.addRow(gZundFields, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
+        etMaxDist  = this.addRow(gZundFields, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
+        etOrient   = this.addRow(gZundFields, l.LBL_ORIENT,    s.orientDist, l.TIP_ORIENT,  "mm");
+        }   // end ZUND_ENABLED
+
+        // --- Files -----------------------------------------------------------
+        var pExp = colR.add("panel", undefined, l.PANEL_FILES);
+        pExp.alignChildren = ["fill", "top"];
+
+        var rbExpMode = this.addRadioRow(pExp, l.LBL_EXPORT_MODE,
+            [l.EXPORT_VECTOR, l.EXPORT_RASTER],
+            (s.exportMode === "raster") ? 1 : 0, l.TIP_EXPORT_MODE);
+        var rbExpScale = this.addRadioRow(pExp, l.LBL_EXPORT_SCALE,
+            [l.SCALE_SOURCE, l.SCALE_ACTUAL],
+            (s.exportScale === "actual") ? 1 : 0, l.TIP_EXPORT_SCALE);
+        var etDPI = this.addRow(pExp, l.LBL_DPI, s.rasterDPI, l.TIP_DPI, "DPI");
 
         // PDF presets come from Illustrator itself, the same way
         // batch-relink-export does it — typing the name by hand is how you get
@@ -340,93 +424,6 @@ TE.UI = {
         cbSkip.helpTip = l.TIP_SKIP;
         cbSkip.value = !!s.skipExisting;
 
-
-        // --- Zünd -------------------------------------------------------------
-        // Hidden behind TE.Config.ZUND_ENABLED — see the comment there. The
-        // panel is not built at all rather than merely made invisible, because
-        // ScriptUI reserves space for an invisible group (measured, 0 px
-        // difference).
-        var cbZund = null, ddCutSpot = null, ddMarkColor = null;
-        var etMarkSize = null, etGapInner = null, etMaxDist = null, etOrient = null;
-        var etBleed = null;
-
-        if (c.ZUND_ENABLED) {
-        var pZund = colR.add("panel", undefined, l.PANEL_ZUND);
-        pZund.alignChildren = ["fill", "top"];
-
-        var gZundOn = pZund.add("group");
-        gZundOn.alignment = ["fill", "top"];
-        var stZundLbl = gZundOn.add("statictext", undefined, l.LBL_ZUND_MODE);
-        this.lockW(stZundLbl, this.M.LABEL_COL);
-        stZundLbl.helpTip = l.TIP_ZUND_MODE;
-        cbZund = gZundOn.add("checkbox", undefined, "");
-        cbZund.helpTip = l.TIP_ZUND_MODE;
-        cbZund.value = !!s.zundMode;
-
-        // Everything below lives in one group so it hides as a unit when the
-        // mode is off. Hiding gives no height back; see the note after the
-        // fields.
-        var gZundBody = pZund.add("group");
-        gZundBody.orientation = "column";
-        gZundBody.alignChildren = ["fill", "top"];
-        gZundBody.alignment = ["fill", "top"];
-
-        var gCutSpot = gZundBody.add("group");
-        gCutSpot.alignment = ["fill", "top"];
-        var stCutSpotLbl = gCutSpot.add("statictext", undefined, l.LBL_CUT_SPOT);
-        this.lockW(stCutSpotLbl, this.M.LABEL_COL);
-        stCutSpotLbl.helpTip = l.TIP_CUT_SPOT;
-        ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
-        ddCutSpot.alignment = ["fill", "center"];
-        ddCutSpot.helpTip = l.TIP_CUT_SPOT;
-        // The document's spots plus the shop's cut colours and the stored
-        // one: a straight cut needs no contour, so its colour need not be in
-        // the document yet — the export creates it.
-        var spotList = [], zj;
-        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
-        for (zj = 0; zj < candidates.length; zj++) {
-            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
-                spotList.push(candidates[zj]);
-            }
-        }
-        for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
-        ddCutSpot.selection = 0;
-        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
-            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
-        }
-
-        var gMarkCol = gZundBody.add("group");
-        gMarkCol.alignment = ["fill", "top"];
-        var stMarkColLbl = gMarkCol.add("statictext", undefined, l.LBL_MARK_COLOR);
-        this.lockW(stMarkColLbl, this.M.LABEL_COL);
-        stMarkColLbl.helpTip = l.TIP_MARK_COLOR;
-        ddMarkColor = gMarkCol.add("dropdownlist", undefined, []);
-        ddMarkColor.alignment = ["fill", "center"];
-        ddMarkColor.helpTip = l.TIP_MARK_COLOR;
-        var mcList = ctx.markColors || [];
-        var mj;
-        for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
-        if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
-        ddMarkColor.selection = 0;
-        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
-            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
-        }
-
-        etBleed    = this.addRow(gZundBody, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
-        etMarkSize = this.addRow(gZundBody, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
-        etGapInner = this.addRow(gZundBody, l.LBL_GAP_INNER, s.gapInner, l.TIP_GAP_INNER, "mm");
-        etMaxDist  = this.addRow(gZundBody, l.LBL_MAX_DIST,  s.maxDist,  l.TIP_MAX_DIST,  "mm");
-        etOrient   = this.addRow(gZundBody, l.LBL_ORIENT,    s.orientDist, l.TIP_ORIENT,  "mm");
-
-        // Hiding these greys the settings out but does NOT shrink the dialog:
-        // ScriptUI keeps the space reserved for an invisible group, and capping
-        // maximumSize.height does not change that either — both measured, both
-        // moved the dialog by 0 px. It does not matter: with the columns
-        // balanced the dialog is 793 px in either state, inside the usable
-        // height. Hiding stays because seeing greyed-out Zünd fields while the
-        // mode is off is noise.
-        gZundBody.visible = cbZund.value;
-        }   // end ZUND_ENABLED
 
         // --- Result ----------------------------------------------------------
         // At the foot of the right column, filling what the left column leaves
@@ -482,7 +479,8 @@ TE.UI = {
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
             ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
-            cbZund: cbZund, ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
+            rbOutType: rbOutType, gManual: gManual, gZundFields: gZundFields,
+            ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
             etMarkSize: etMarkSize, etBleed: etBleed,
             etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
@@ -519,18 +517,10 @@ TE.UI = {
         for (i = 0; i < rbExpMode.length; i++) { wire(rbExpMode[i]); }
         for (i = 0; i < rbExpScale.length; i++) { wire(rbExpScale[i]); }
 
-        // Null when the panel was not built — see TE.Config.ZUND_ENABLED.
-        if (cbZund) {
-            cbZund.onClick = function () {
-                // Hiding greys the settings out but does NOT shrink the dialog:
-                // ScriptUI reserves space for an invisible group and capping
-                // maximumSize.height changes nothing — both measured at 0 px.
-                // It does not matter; the balanced columns keep the dialog at
-                // 793 px either way. Hiding stays so the fields do not clutter
-                // the panel while the mode is off.
-                gZundBody.visible = cbZund.value;
-                refresh();
-            };
+        // Null without Zünd mode — see TE.Config.ZUND_ENABLED. refresh() shows
+        // the fields of the chosen output.
+        if (rbOutType) {
+            for (i = 0; i < rbOutType.length; i++) { wire(rbOutType[i]); }
         }
 
         btnBrowse.onClick = function () {
@@ -766,8 +756,8 @@ TE.UI = {
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
-        if (r.cbZund) {
-            s.zundMode    = r.cbZund.value;
+        if (r.rbOutType) {
+            s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : s.cutSpot;
             s.cutBleed    = TE.Utils.toNumber(r.etBleed.text);
             if (isNaN(s.cutBleed) || String(r.etBleed.text).replace(/\s/g, "") === "") {
@@ -779,7 +769,8 @@ TE.UI = {
             s.maxDist     = TE.Utils.toNumber(r.etMaxDist.text) || 500;
             s.orientDist  = TE.Utils.toNumber(r.etOrient.text) || 100;
         } else {
-            // Panel not built: the mode cannot be on, whatever a stored preset says.
+            // No Zünd fields built: the mode cannot be on, whatever a stored
+            // preset says.
             s.zundMode = false;
         }
         return s;
@@ -832,8 +823,9 @@ TE.UI = {
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
-        if (!r.cbZund) { return; }
-        r.cbZund.value = !!s.zundMode;
+        if (!r.rbOutType) { return; }
+        r.rbOutType[0].value = !s.zundMode;
+        r.rbOutType[1].value = !!s.zundMode;
         var zk;
         r.ddCutSpot.selection = 0;
         for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
@@ -890,12 +882,14 @@ TE.UI = {
         r.cbEqual.enabled = (s.divideMode !== "guides");
         r.etRound.enabled = (s.divideMode === "guides");
         r.etDPI.enabled   = (s.exportMode === "raster");
-        // Zünd mode draws no trim line — the cut path takes its place — so the
-        // whole line row greys out; the stored choice comes back with the mode
-        // off (N28).
-        r.cbLine.enabled  = !s.zundMode;
-        r.etSpot.enabled  = s.drawLine && !s.zundMode;
-        r.etLineW.enabled = s.drawLine && !s.zundMode;
+        // Only the chosen output's fields show (1.1.0). Zünd mode draws no
+        // trim line, the cut path takes its place; the line's stored choice
+        // waits, hidden, for the manual output (N28). Set here rather than in
+        // a click handler, so a loaded preset shows its own output too.
+        if (r.gManual) { r.gManual.visible = !s.zundMode; }
+        if (r.gZundFields) { r.gZundFields.visible = s.zundMode; }
+        r.etSpot.enabled  = s.drawLine;
+        r.etLineW.enabled = s.drawLine;
 
         // The artboard, the same rect the run divides (N27).
         var clean = ctx.cleanRect;
