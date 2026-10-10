@@ -12,6 +12,27 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N41 — u Vodorovně jde zbytek šířky plátu na horní plát, ne na poslední
+
+`tile-export/src/grid.js`, `computeCuts()`, větev `width` — řezy se odměřují
+od začátku osy a ta u Vodorovně začíná dole (souřadnice Y rostou nahoru). Pláty
+se ale číslují shora, takže kratší zbytek vyjde na plát 1 nahoře. U Svisle je
+zbytek vpravo, na posledním plátu. README, nápověda Šířky plátu i CHANGELOG
+1.0.0 slibují „poslední plát kratší". Spočítáno 2026-10-10 nad skutečným
+`refresh()`: arch 3000 × 1000 mm, Vodorovně, šířka 600 → plát 1 načisto 400 mm,
+plát 2 600 mm. Týká se jen šířky plátu bez Rovnoměrně. **Oprava:** u Vodorovně
+odměřovat od horní hrany, aby zbytek šel na poslední, dolní plát — podle
+rozhodnutí uživatele.
+
+### N40 — u Vodorovně znamená Šířka plátu výšku a chyba neřekne proč
+
+Ruční test 1.0.1 (2026-10-10): arch (1000 mm vysoký), Vodorovně, Šířka plátu
+1000 → „Jsou potřeba aspoň 2 pláty." a obě tlačítka šedá. Nastavení je platné:
+u Vodorovně se dělí výška a plát 1000 mm na grafice vysoké 1000 mm je jeden.
+Popisek ani hláška to nenaznačí. **Návrh (1.1.0 a):** u Vodorovně popisek
+„Výška plátu" i v nápovědách a hláška s délkou ve směru dělení, např.
+„Výška plátu 1000 mm dá jen 1 plát: grafika měří ve směru dělení 1000 mm."
+
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
