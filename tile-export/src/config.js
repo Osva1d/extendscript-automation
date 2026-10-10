@@ -156,8 +156,10 @@ TE.Config = {
             feedTop:     70,
             feedBottom:  50,
             // Crash recovery: a run that died on panel 9 of 12 should not
-            // re-export the eight that are already on disk.
-            skipExisting: true
+            // re-export the eight that are already on disk. Off unless asked
+            // for (user, 2026-10-10): on, a re-export after a fix kept the
+            // old files under the same names and only said "skipped".
+            skipExisting: false
         };
     }
 };

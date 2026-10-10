@@ -126,5 +126,10 @@ console.log("\n=== N27: no clean-format override — the dialog divides what the
 // export kept dividing the artboard. The artboard is the one source of truth.
 eq(/etClean|resolveClean/.test(ui), false, "no override field or resolver left in the dialog");
 
+console.log("\n=== skipping finished outputs is asked for, not assumed ===");
+// On by default, a re-export after a fix kept the old files under the same
+// names and only reported them as skipped (user, 2026-10-10).
+eq(TE.Config.getDefaults().skipExisting, false, "a fresh dialog overwrites");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
