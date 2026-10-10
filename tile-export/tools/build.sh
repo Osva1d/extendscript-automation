@@ -59,6 +59,7 @@ MODULES=(
     "$SRC_DIR/draw.js"
     "$SRC_DIR/cut.js"
     "$SRC_DIR/export.js"
+    "$SRC_DIR/check.js"
     "$SRC_DIR/ui.js"
     "$SRC_DIR/main.js"
 )

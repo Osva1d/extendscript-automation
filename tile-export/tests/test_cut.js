@@ -10,6 +10,8 @@ var TE = {};
 global.app = { documents: { length: 1 }, activeDocument: { scaleFactor: 1 } };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
+// findContour leaves out the check panels' cut paths through TE.Doc (1.1.0).
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "doc.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "cut.js"), "utf8"));
 
 var pass = 0, fail = 0, total = 0;

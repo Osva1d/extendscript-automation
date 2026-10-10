@@ -96,6 +96,14 @@ dokument uložit, zavřít a znovu otevřít, spustit: pole ukáže 10. Nový do
 začne na 1. Předvolba uložená se starším měřítkem ho nezmění a po úpravě
 měřítka se u předvolby neobjeví hvězdička.
 
+**1.10 Kontrolní pláty (1.1.0).** Arch, Svisle, 3 pláty, Jen pláty: pod
+originálem tři zamaskované pláty v řadě, každý na svém artboardu, s červenou
+linkou a vodítkem na hranici načisto; originál beze změny. Vodorovně: pláty ve
+sloupci vpravo. Zeď, Zünd: pláty se značkami a řezem, bez linky. Jen pláty
+podruhé: pláty nahrazené, ne přidané; dialog nehlásí dvě grafiky, vodítka
+kontrolních plátů nečte jako švy, cesty v barvě Cut nehlásí jako konturu.
+Starší dokument s vrstvou `TE_lines`: po běhu zmizí.
+
 ---
 
 ## 2. Regresní přehled
