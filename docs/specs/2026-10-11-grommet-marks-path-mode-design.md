@@ -3,7 +3,7 @@
 Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.2.0
 (2026-10-04).
 
-Datum: 2026-10-11 · Stav: **návrh, čeká na schválení uživatelem**
+Datum: 2026-10-11 · Stav: **schváleno** (uživatel, 2026-10-11)
 
 Vzniklo z průzkumu režimů „Hrany artboardu" a „Vybraná cesta" (2026-10-05 až
 2026-10-10): otázky uživateli, měření v Illustratoru 30.8.2, rešerše praxe
@@ -48,8 +48,8 @@ Posunout cestu…), spustit skript na posunuté kopii a kopii pak smazat. K tomu
 | 8 | Část obvodu = zaškrtávátko, vždy vypnuté, neukládá se. | uživatel, 2026-10-09 |
 | 9 | Panel Cesta mluví jako panel Hrany; šedý řádek říká, co skript poznal; otevřená cesta zůstane jako dnes. | uživatel, 2026-10-09 |
 
-Rozhodnutí 4–7 navrhl Claude podle dat; uživatel s nimi pokračoval
-(2026-10-10). Schválení celého návrhu je otevřené.
+Rozhodnutí 4–7 navrhl Claude podle dat; uživatel je spolu s celým návrhem
+schválil 2026-10-11.
 
 ## 4. Pojmy
 
