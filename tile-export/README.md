@@ -293,8 +293,9 @@ Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
 `26_13456_a_01_2020x1020mm_1ku10_1x.pdf`, data 1:1
 `26_13456_a_01_2020x1020mm_1x.pdf`. Zünd přidá k řezovému souboru `_cut`.
 
-Proměnné vkládají tlačítka pod polem: klik vloží proměnnou na místo kurzoru,
-jinak na konec. Výsledek v dialogu ukazuje název prvního souboru. Prázdný název, lomítko nebo
+Proměnné přidávají tlačítka pod polem: klik připíše proměnnou na konec vzoru,
+vzor tedy skládej zleva doprava. Výsledek v dialogu ukazuje název prvního
+souboru. Prázdný název, lomítko nebo
 dvojtečku export odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
 stranu.

@@ -58,7 +58,7 @@ vrať (nebo ulož jako předvolbu):
 
 ## 1. Co umí jen člověk
 
-**1.1 Dialog okem.** 1178 × 807 px s ručním ořezem i se Zündem — pole obou typů
+**1.1 Dialog okem.** 1178 × 745 px s ručním ořezem i se Zündem — pole obou typů
 výstupu se střídají na jednom místě (naměřeno headless 2026-10-10). Nic
 uříznutého, sloupce zarovnané. Panel Dokument ukáže čistý formát a dostupný
 spad; měřítko kresby 100 nebo 12,5 se v nich i v „1:… jako kresba" vejde celé.
@@ -108,11 +108,11 @@ Starší dokument s vrstvou `TE_lines`: po běhu zmizí. Po Jen pláty vytáhni
 z pravítka vodítko: v panelu Vrstvy musí ležet ve tvé vrstvě, ne v `TE_panels`
 (N44).
 
-**1.11 Předvolby a proměnné (1.1.0).** [Výchozí] ukáže přelep 20, přídavky 0,
+**1.11 Předvolby a proměnné (1.1.0).** [Default] ukáže přelep 20, přídavky 0,
 mezeru značek 5 mm a vzor `{doc}_{n}_{size}_{scale}`, ať soubor nastavení
-drží cokoli. Seznam předvoleb je přes celou šířku dialogu. Ve vzoru klikni
-mezi dvě podtržítka a pak na `{n}`: proměnná se vloží na místo kurzoru
-a Výsledek ukáže nový název; bez kurzoru v poli se připíše na konec.
+drží cokoli. Seznam předvoleb vyplní levý sloupec, tlačítka jsou pod ním.
+Napiš do vzoru `26_13456_a_` a klikni na `{n}`: proměnná se připíše na konec
+a Výsledek ukáže nový název, poslední řádek Výsledku je celý vidět.
 
 ---
 
