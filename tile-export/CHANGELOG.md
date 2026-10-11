@@ -41,6 +41,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Dialog je o 81 px nižší, 712 px.
 - `{n}` má vždy aspoň dvě číslice, jak dílna čísluje pláty: `zed_01`, ne
   `zed_1`.
+- **Výchozí vzor názvu je `{doc}_{n}_{size}_{scale}`**, třeba
+  `zed_01_2040x1030mm_1ku10`. Zakázku a počet kopií dopíšeš do vzoru sám.
 
 ### Fixed
 
@@ -49,6 +51,10 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   měří — dřív stálo jen „Jsou potřeba aspoň 2 pláty."
 - Načtená předvolba ukáže pole svého typu výstupu; Zünd pole dřív zůstala
   skrytá nebo vidět podle předchozího stavu.
+- **[Výchozí] ukazuje vždy výchozí hodnoty nástroje.** Soubor nastavení
+  z doby před opravou předvoleb (září 2026) v něm mohl držet hodnoty z testu —
+  přelep 33 mm, přídavek vpravo 40 mm, mezeru značek 10 mm — a dialog je
+  nabízel jako výchozí. Vlastní předvolby a poslední běh zůstávají, jak byly.
 
 ## [1.0.1] — 2026-10-10
 

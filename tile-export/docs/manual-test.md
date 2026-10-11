@@ -52,6 +52,7 @@ vrať (nebo ulož jako předvolbu):
 | Typ výstupu | Ruční ořez; linka zaškrtnutá, CutContour, 1 pt |
 | Měřítko výstupu | 1:10 jako kresba |
 | Přeskočit hotové | nezaškrtnuto — opakovaný export do stejné složky soubory přepíše |
+| Vzor názvu | `{doc}_{n}_{size}_{scale}` |
 
 ---
 
