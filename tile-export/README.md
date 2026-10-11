@@ -200,8 +200,8 @@ stránkou**:
 
 | soubor | obsah |
 |---|---|
-| `{doc}_{n}.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky; vrstva řezu je v souboru **vypnutá** |
-| `{doc}_{n}_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
+| `zed_01_2040x1030mm.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky; vrstva řezu je v souboru **vypnutá** |
+| `zed_01_2040x1030mm_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
 
 Obě PDF se ukládají **se zachovanou editovatelností v Illustratoru**. Otevřené
 mají vrstvy jako soubor ze Zünd Summa Marks, shora `Regmarks`, vrstvu řezu
@@ -287,12 +287,14 @@ ně proměnné:
 | `{doc}` | název dokumentu bez přípony |
 | `{total}` | počet plátů |
 
+Výchozí vzor `{doc}_{n}_{size}_{scale}` dá `zed_01_2040x1030mm_1ku10.pdf`.
 Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
 `26_13456_a_{n}_{size}_{scale}_1x`. Data 1:10 pak dostanou
 `26_13456_a_01_2020x1020mm_1ku10_1x.pdf`, data 1:1
 `26_13456_a_01_2020x1020mm_1x.pdf`. Zünd přidá k řezovému souboru `_cut`.
 
-Výsledek v dialogu ukazuje název prvního souboru. Prázdný název, lomítko nebo
+Proměnné vkládají tlačítka pod polem: klik vloží proměnnou na místo kurzoru,
+jinak na konec. Výsledek v dialogu ukazuje název prvního souboru. Prázdný název, lomítko nebo
 dvojtečku export odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
 stranu.

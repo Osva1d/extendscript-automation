@@ -149,7 +149,9 @@ TE.Config = {
             rasterDPI:   150,
             pdfPreset:   "",
             outputDir:   "",
-            namePattern: "{doc}_{n}",
+            // The shop's names without job and copies, which only the user
+            // can type (user, 2026-10-11): zed_01_2040x1030mm_1ku10.
+            namePattern: "{doc}_{n}_{size}_{scale}",
 
             // --- Zünd mode ---
             zundMode:    false,         // master switch

@@ -241,6 +241,13 @@ assert(TE.Export.buildName("{doc}_{n}", "Cena$1", 1, 2) === "Cena$1_01",
     "a $ in the document name is kept, not read as a replacement");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12, { size: "1x1mm" }) === "banner_03",
     "patterns without the new placeholders are unchanged");
+// The default names a file like the shop does, without job and copies, which
+// only the user can type (user, 2026-10-11).
+var DEF = TE.Config.getDefaults().namePattern;
+assert(TE.Export.buildName(DEF, "zed", 1, 3, { size: "2040x1030mm", scale: "1ku10" }) === "zed_01_2040x1030mm_1ku10",
+    "the default pattern: document, panel, real size and ratio");
+assert(TE.Export.buildName(DEF, "zed", 1, 3, { size: "20400x10300mm", scale: "" }) === "zed_01_20400x10300mm",
+    "and at real size no ratio");
 
 console.log("\n=== 1.1.0: one name builder for export, skip check and dialog ===");
 var exAll = code(fs.readFileSync(path.join(__dirname, "..", "src", "export.js"), "utf8"));

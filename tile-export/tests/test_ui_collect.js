@@ -159,5 +159,34 @@ console.log("\n=== skipping finished outputs is asked for, not assumed ===");
 // names and only reported them as skipped (user, 2026-10-10).
 eq(TE.Config.getDefaults().skipExisting, false, "a fresh dialog overwrites");
 
+console.log("\n=== placeholder buttons: where a click puts the placeholder ===");
+// A stand-in edittext as ScriptUI documents it: setting textselection
+// replaces the selection, or inserts at the insertion point when nothing is
+// selected (JavaScript Tools Guide). caret null: the field kept none.
+function field(text, caret, selEnd) {
+    var f = { text: text, caret: caret, selEnd: (selEnd === undefined) ? caret : selEnd };
+    Object.defineProperty(f, "textselection", {
+        get: function () { return this.caret === null ? "" : this.text.slice(this.caret, this.selEnd); },
+        set: function (v) {
+            if (this.caret === null) { return; }
+            this.text = this.text.slice(0, this.caret) + v + this.text.slice(this.selEnd);
+            this.caret += v.length;
+            this.selEnd = this.caret;
+        }
+    });
+    return f;
+}
+var f1 = field("26_13456_a__1x", 11);
+TE.UI.insertToken(f1, "{n}");
+eq(f1.text, "26_13456_a_{n}_1x", "at the cursor, between the separators");
+TE.UI.insertToken(f1, "_{size}");
+eq(f1.text, "26_13456_a_{n}_{size}_1x", "and the next one right after it");
+var f2 = field("zed_", null);
+TE.UI.insertToken(f2, "{n}");
+eq(f2.text, "zed_{n}", "a field without a cursor gets it at the end");
+var f3 = field("zed_XX_1x", 4, 6);
+TE.UI.insertToken(f3, "{n}");
+eq(f3.text, "zed_{n}_1x", "selected text is replaced");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

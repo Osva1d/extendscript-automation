@@ -12,18 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N44 — po běhu zůstala aktivní vrstva uvnitř kontrolních plátů
-
-Naměřeno 2026-10-11 (kód 1.1.0c, harness): běh nechal aktivní podvrstvu
-posledního plátu, `TE_panels > TE_03 > CutContour`. Co uživatel nakreslí
-potom — třeba vodítko pro nové dělení — tak mohlo skončit v `TE_panels`;
-další běh ho nečte (vodítka kontrolních plátů jsou TE) a s vrstvou ho smaže.
-Od `40c7c41` běh vrací vrstvu, která byla aktivní před ním, a `doc.activeLayer`
-ji v dalším skriptu tak i čte. Cesta, kterou další skript vytvořil bez
-kontejneru, ale skončila v horní vrstvě `TE_panels`. Kam dopadne vodítko tažené
-rukou, ověří ruční test 1.10. **Kdyby v `TE_panels`:** vrstvu plátů po stavbě
-zamknout, nebo ji založit pod vrstvami uživatele. Rozhodne uživatel.
-
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
@@ -149,6 +137,7 @@ polích.
 | N41 | u Vodorovně šel kratší zbytek šířky plátu na horní plát (řezy se odměřovaly od spodní hrany osy), dokumentace slibuje poslední; teď se odměřuje shora a zbytek jde na spodní plát (rozhodnutí uživatele, ruční test 1.0.1 2026-10-10) | `6d1710c` |
 | N40 | u Vodorovně se pole jmenovalo Šířka plátu, ač dělilo výšku, a jediný plát hlásilo jen „Jsou potřeba aspoň 2 pláty"; teď Výška plátu i v nápovědě a hláškách a hláška s délkou grafiky ve směru dělení (1.1.0, ruční test 1.0.1) | `0909105` |
 | N42 | druhé spuštění Jen pláty hlásilo, že se pláty na plátno nevejdou, a třetí vrátilo smazané artboardy: plátno se měřilo zkušebními artboardy až po odebrání starých plátů a odmítnuté přidání odebrání vrátilo (engine-facts); teď se měří před odebráním. Harness, který pouštěl všechny běhy v jednom skriptu, chybu neviděl — od teď každý běh jako samostatný skript (1.1.0, harness 2026-10-11) | `3f1f0ec` |
+| N44 | po běhu zůstala aktivní podvrstva posledního kontrolního plátu; co uživatel nakreslil potom, třeba vodítko pro nové dělení, mohlo skončit v `TE_panels`, další běh by ho nečetl a s vrstvou smazal. Běh teď vrací vrstvu aktivní před ním; vodítko tažené rukou po běhu skončilo ve Vrstvě 1 (harness a ruční test 1.10, 2026-10-11) | `40c7c41` |
 | N43 | měřítko kresby se do dokumentu zapsalo, ale nepřečetlo: Illustrator vrátil prefix XMP `te` jako `te_1_`; teď se hodnota hledá podle jmenného prostoru (1.1.0, harness 2026-10-11) | `2dbdd63` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala

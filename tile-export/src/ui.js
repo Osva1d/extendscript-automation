@@ -14,7 +14,10 @@ TE.UI = {
         NUM_FIELD:   7,   // characters, not px — numeric fields scale with locale
         PATH_FIELD: 26,   // characters; output path needs to show a usable tail
         BROWSE_MAX:  90,  // px cap so fill slack goes to the path field, not the button
-        REVERT_BTN:  30   // px; a one-glyph button at the native 80 px dwarfs its row
+        REVERT_BTN:  30,  // px; a one-glyph button at the native 80 px dwarfs its row
+        // px around a placeholder button's text: at the native 80 px five of
+        // them were wider than the pattern field they sit under (2026-10-11)
+        TOKEN_PAD:   24
     },
 
     /**
@@ -150,6 +153,7 @@ TE.UI = {
         var c = TE.Config;
         var l = TE.L;
         var self = this;
+        this.normalizePresets(pData);
         var s = pData.presets[c.PRESET_KEY_LAST] || pData.presets[pData.activePreset]
              || c.getDefaults();
 
@@ -157,11 +161,42 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns, balanced by measured heights (2026-09-25; re-measured
-        // 2026-10-03 after N27 took a row out of the left column): left
-        // 560 px, right Export 276 + Result filling the rest; the dialog is
-        // 662 px. With the Zünd panel built (280 px) the Result drops to its
-        // 85 px floor and the dialog grows to 793 px. Stacked in one column the
+        // --- Presets ---------------------------------------------------------
+        // Across the whole dialog, above both columns: in the left column the
+        // list got what its buttons left over, 88 px with short preset names
+        // (measured 2026-10-11; the user found it short).
+        var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
+        pPreset.alignChildren = ["fill", "top"];
+        var gPreset = pPreset.add("group");
+        gPreset.alignment = ["fill", "top"];
+        var stPreset = gPreset.add("statictext", undefined, l.PRESET_LABEL);
+        this.lockW(stPreset, this.M.LABEL_COL);
+        stPreset.helpTip = l.TIP_PRESET;
+        var ddPreset = gPreset.add("dropdownlist", undefined, []);
+        ddPreset.alignment = ["fill", "center"];
+        ddPreset.helpTip = l.TIP_PRESET;
+        // Revert and Save sit next to the list they act on, like
+        // zund-summa-marks: both are live only while the preset has unsaved
+        // edits (N8). In a group of their own: ScriptUI shares a row's slack
+        // among all its controls, the buttons too, and capped buttons left
+        // theirs unused; grouped, the list takes all of it — 621 px instead
+        // of 88 (measured 2026-10-11).
+        var gPresetBtns = gPreset.add("group");
+        gPresetBtns.alignment = ["right", "center"];
+        var btnRevert = gPresetBtns.add("button", undefined, l.BTN_REVERT);
+        btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
+        btnRevert.helpTip = l.TIP_REVERT;
+        var btnSave = gPresetBtns.add("button", undefined, l.BTN_SAVE);
+        btnSave.helpTip = l.TIP_SAVE;
+        var btnSaveAs = gPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        btnSaveAs.helpTip = l.TIP_SAVE_AS;
+        var btnDel = gPresetBtns.add("button", undefined, l.BTN_DEL);
+        btnDel.helpTip = l.TIP_DEL;
+
+        // Two columns, balanced by measured heights. 2026-10-11, with the
+        // presets above them and the placeholder row: left 543 px, right 633
+        // (Output type 280, Files 218, Result 115), so the right column sets
+        // the height and the dialog is 1178 x 807 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -181,30 +216,6 @@ TE.UI = {
         colR.orientation = "column";
         colR.alignChildren = ["fill", "top"];
         colR.alignment = ["fill", "fill"];   // as tall as the left column (N18)
-
-        // --- Presets ---------------------------------------------------------
-        var pPreset = colL.add("panel", undefined, l.PANEL_PRESET);
-        pPreset.alignChildren = ["fill", "top"];
-        var gPreset = pPreset.add("group");
-        gPreset.alignment = ["fill", "top"];
-        var stPreset = gPreset.add("statictext", undefined, l.PRESET_LABEL);
-        this.lockW(stPreset, this.M.LABEL_COL);
-        stPreset.helpTip = l.TIP_PRESET;
-        var ddPreset = gPreset.add("dropdownlist", undefined, []);
-        ddPreset.alignment = ["fill", "center"];
-        ddPreset.helpTip = l.TIP_PRESET;
-        // Revert and Save sit next to the list they act on, like
-        // zund-summa-marks: both are live only while the preset has unsaved
-        // edits (N8).
-        var btnRevert = gPreset.add("button", undefined, l.BTN_REVERT);
-        btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
-        btnRevert.helpTip = l.TIP_REVERT;
-        var btnSave = gPreset.add("button", undefined, l.BTN_SAVE);
-        btnSave.helpTip = l.TIP_SAVE;
-        var btnSaveAs = gPreset.add("button", undefined, l.BTN_SAVE_AS);
-        btnSaveAs.helpTip = l.TIP_SAVE_AS;
-        var btnDel = gPreset.add("button", undefined, l.BTN_DEL);
-        btnDel.helpTip = l.TIP_DEL;
 
         // --- Document --------------------------------------------------------
         var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
@@ -468,6 +479,28 @@ TE.UI = {
 
         var etPattern = this.addRow(pExp, l.LBL_PATTERN, s.namePattern, l.TIP_PATTERN);
         etPattern.characters = 18;
+        // The whole row: the shop's pattern is 32 characters, 194 px, and the
+        // 18-character field showed about half of it (measured 2026-10-11).
+        etPattern.alignment = ["fill", "center"];
+
+        // Placeholders as buttons under the field: a click puts one where the
+        // cursor is, as renaming tools do (user, 2026-10-11). The button
+        // text is the placeholder it inserts.
+        var gTokens = pExp.add("group");
+        gTokens.alignment = ["fill", "top"];
+        var stTokens = gTokens.add("statictext", undefined, l.LBL_TOKENS);
+        this.lockW(stTokens, this.M.LABEL_COL);   // [deviation] shared label axis
+        stTokens.helpTip = l.TIP_TOKENS;
+        var tokens = [["{doc}", l.TIP_TOKEN_DOC], ["{n}", l.TIP_TOKEN_N], ["{total}", l.TIP_TOKEN_TOTAL],
+                      ["{size}", l.TIP_TOKEN_SIZE], ["{scale}", l.TIP_TOKEN_SCALE]];
+        var btnTokens = [], ti, bt;
+        for (ti = 0; ti < tokens.length; ti++) {
+            bt = gTokens.add("button", undefined, tokens[ti][0]);
+            // [deviation] see M: as wide as its text, not the native 80 px
+            bt.preferredSize.width = Math.ceil(bt.graphics.measureString(tokens[ti][0])[0]) + this.M.TOKEN_PAD;
+            bt.helpTip = tokens[ti][1];
+            btnTokens.push(bt);
+        }
 
         var gSkip = pExp.add("group");
         gSkip.alignment = ["fill", "top"];
@@ -554,6 +587,15 @@ TE.UI = {
             ctrl.onChange = refresh;
             ctrl.onChanging = refresh;
         }
+
+        /** A placeholder button: into the pattern, then the preview follows. */
+        function tokenClick(token) {
+            return function () {
+                self.insertToken(etPattern, token);
+                refresh();
+            };
+        }
+        for (ti = 0; ti < btnTokens.length; ti++) { btnTokens[ti].onClick = tokenClick(btnTokens[ti].text); }
 
         var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
@@ -655,15 +697,6 @@ TE.UI = {
 
         function persist() {
             if (!TE.Storage.save(pData)) { alert(l.ERR_WRITE_SETTINGS); }
-        }
-
-        // A file edited by hand or written by an older build may lack
-        // [Default] or name an active preset that is gone.
-        if (!pData.presets[c.PRESET_KEY_DEFAULT]) {
-            pData.presets[c.PRESET_KEY_DEFAULT] = c.getDefaults();
-        }
-        if (!pData.presets[pData.activePreset] || pData.activePreset === c.PRESET_KEY_LAST) {
-            pData.activePreset = c.PRESET_KEY_DEFAULT;
         }
 
         // The fields hold the last confirmed run, the list names the active
@@ -768,6 +801,41 @@ TE.UI = {
                 return { action: state.outcome, wrapper: pData };
             }
         };
+    },
+
+    /**
+     * Puts a placeholder into the pattern field where the cursor is, or over
+     * the selected text: a value set as textselection is inserted at the
+     * insertion point (JavaScript Tools Guide). A field without one is left
+     * as it was, and the placeholder then goes at the end.
+     * @param {Object} et - The pattern edittext.
+     * @param {string} token - Placeholder such as "{n}".
+     */
+    insertToken: function (et, token) {
+        var before = et.text;
+        try { et.textselection = token; }
+        catch (e) { TE.Utils.log("textselection refused: " + e.message); }
+        if (et.text === before) { et.text = before + token; }
+    },
+
+    /**
+     * The preset wrapper as the dialog needs it, changed in place.
+     * [Default] holds the factory values only — Save never writes it — so it
+     * is rebuilt from the code every time, as zund-summa-marks does. Kept
+     * from the file, it showed what a build before N8 (2026-09-18) had let a
+     * test write there, overlap 33 instead of 20 (manual test 2026-10-11),
+     * and no later change to the defaults reached the dialog. An active
+     * preset that is gone, or [Last Settings], falls back to [Default].
+     * @param {Object} pData - Preset wrapper.
+     * @returns {Object} The same wrapper.
+     */
+    normalizePresets: function (pData) {
+        var c = TE.Config;
+        pData.presets[c.PRESET_KEY_DEFAULT] = c.getDefaults();
+        if (!pData.presets[pData.activePreset] || pData.activePreset === c.PRESET_KEY_LAST) {
+            pData.activePreset = c.PRESET_KEY_DEFAULT;
+        }
+        return pData;
     },
 
     /**
