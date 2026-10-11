@@ -413,8 +413,9 @@ jinak. Hodnotu je tedy nutné hledat přes URI jmenného prostoru, ne přes pref
 - `doc.activeLayer = vrstva` změní, co vlastnost vrací, i v dalším skriptu.
   Cesta, kterou další skript vytvoří bez kontejneru (`doc.pathItems.add()`),
   ale skončila v horní vrstvě `TE_panels`, kterou předchozí skript založil,
-  ne v nastavené `Vrstva 1`. Kam dopadne vodítko tažené rukou, neměřeno —
-  ruční test tile-export 1.10.
+  ne v nastavené `Vrstva 1`. Vodítko tažené rukou z pravítka po takovém
+  běhu ale skončilo ve `Vrstva 1` (ruční test tile-export 1.10): pro práci
+  rukou platí `doc.activeLayer`, skript bez kontejneru kreslí jinam.
 
 ### Pathfinder z ExtendScriptu
 
@@ -472,6 +473,22 @@ na `-609 („Propojení je neplatné")` a neuložené dokumenty se ztratí. Nam�
 tvrdě, ztrátou dokumentu.
 
 Před testováním neznámého menu příkazu si ověř, že nevyvolává dialog.
+
+### ScriptUI: volné místo v řádku dostanou všechny prvky (naměřeno 2026-10-11, AI 30.8.2)
+
+Řádek přes celou šířku dialogu (1148 px): popisek 150 px, seznam s `fill`
+a čtyři tlačítka. Bez úprav dostala volné místo i tlačítka (↺ 137 px,
+Uložit jako… 210 px) a seznam jen 192 px. Se stropem na tlačítkách
+(`maximumSize`) zůstala tlačítka v přirozené šířce, ale jejich podíl nikdo
+nedostal: seznam 236 px, zhruba 340 px řádku prázdných; `maximumSize` seznamu
+2000 px nepomohl. Tlačítka ve vlastní skupině s `alignment = ["right",
+"center"]`: seznam **621 px**, tlačítka 30/80/103/80 px. Prvky, které růst
+nemají, tedy patří do skupiny, ne pod strop. Jinde v témže dialogu (cesta
+a Vybrat…) volné místo nebylo, tam se to neukáže.
+
+Rozbalovací seznam navíc roste s nejdelší položkou: název předvolby o 30
+znacích rozšířil dialog tile-export ze 1178 na 1315 px, dokud byl seznam
+v úzkém sloupci.
 
 ### ScriptUI: skrytá skupina si drží místo
 
