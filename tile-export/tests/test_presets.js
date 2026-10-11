@@ -82,7 +82,7 @@ eq(list[1].displayText, "TEST", "unchanged: no asterisk");
 cur.overlap = 25;
 list = TE.UIState.formatPresetList(pData, cur, TE.L);
 eq(list[1].displayText, "TEST *", "changed: asterisk on the active preset");
-eq(list[0].displayText, "[Default]", "and only on the active one");
+eq(list[0].displayText, "[Výchozí]", "and only on the active one; named in Czech, as in zund-summa-marks");
 
 console.log("\n=== loading a preset: a value the list lacks falls back to the first item ===");
 // [Default] stores pdfPreset "" — no dropdown item has that name. apply()

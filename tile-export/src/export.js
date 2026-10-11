@@ -49,10 +49,10 @@ TE.Export = {
      *
      * {n} has at least two digits, as the shop numbers panels (01, 02), and
      * more when the total needs them, so twelve panels sort in Finder. A
-     * placeholder with no value — {scale} at real size — goes with one
-     * separator next to it, so "_{size}_{scale}_1x" leaves "_2020x1020mm_1x"
-     * (user, 2026-10-10). Values go in through a function: a "$" in a
-     * document name would otherwise be read as a replacement pattern.
+     * placeholder with no value goes with one separator next to it, so no
+     * double separator is left behind. Values go in through a function: a
+     * "$" in a document name would otherwise be read as a replacement
+     * pattern.
      *
      * @param {string} pattern - Carries {doc}, {n}, {total}, {size}, {scale}.
      * @param {string} docName - Source document name without extension.
@@ -124,10 +124,11 @@ TE.Export = {
      * three cannot disagree.
      *
      * {size} is the page at REAL size in whole millimetres, and {scale} the
-     * ratio of data left at the drawing's scale, "1ku10" — the shop names a
-     * 1:10 file by its real size and the ratio, and writes no ratio at real
-     * size (user, 2026-10-10). The decimal comma is the shop's convention,
-     * not the dialog's language.
+     * ratio of the data to real size: "1ku10" as drawn at 1:10, "1ku1" at
+     * real size. The shop names a 1:10 file by its real size and the ratio
+     * (user, 2026-10-10); a {scale} in the pattern of a 1:1 job is a choice,
+     * and it shows (user, 2026-10-11) — a pattern without it gives no ratio.
+     * The decimal comma is the shop's convention, not the dialog's language.
      *
      * @param {Object} tile - Panel.
      * @param {Object} ctx - {docName, total, scaleFactor}.
@@ -136,11 +137,10 @@ TE.Export = {
      */
     fileName: function (tile, ctx, s) {
         var mm = this.pageSizeMm(tile, s, ctx.scaleFactor);
-        var n = TE.Utils.manualScale(s);
-        var asDrawn = (s.exportScale !== "actual") && Math.abs(n - 1) > 1e-9;
+        var ratio = (s.exportScale === "actual") ? 1 : TE.Utils.manualScale(s);
         return this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total, {
             size: Math.round(mm[0]) + "x" + Math.round(mm[1]) + "mm",
-            scale: asDrawn ? TE.Config.namingScalePrefix + TE.Utils.formatMM(n, ",") : ""
+            scale: TE.Config.namingScalePrefix + TE.Utils.formatMM(ratio, ",")
         });
     },
 

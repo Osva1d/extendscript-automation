@@ -15,8 +15,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Panel **Dokument** ukazuje čistý formát a dostupný spad ve skutečných
   milimetrech, i když dělení hlásí chybu.
 - **Pojmenování podle konvence dílny.** Vzor zná `{size}`, skutečný rozměr
-  stránky (`2020x1020mm`), a `{scale}`, poměr dat v měřítku kresby (`1ku10`),
-  který ve skutečné velikosti zmizí i s jedním oddělovačem:
+  stránky (`2020x1020mm`), a `{scale}`, poměr dat ke skutečné velikosti
+  (`1ku10`, ve skutečné velikosti `1ku1`; kde poměr nechceš, vynech ho):
   `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje název prvního souboru;
   prázdný název, lomítko nebo dvojtečku export odmítne.
 - **Proměnné jako tlačítka.** Pod vzorem pojmenování je řada `{doc}` `{n}`
@@ -41,9 +41,11 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Rastrový export není v dialogu.** Dílna rastruje ve Photoshopu a jestli
   jde věřit rastru Illustratoru, se teprve ověří. Uložené předvolby s rastrem
   exportují vektor.
-- **Předvolby mají dva řádky:** seznam přes celý levý sloupec, tlačítka pod
-  ním. Seznam má místo i pro dlouhé názvy, dřív mu tlačítka nechala 88 px.
-- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 745 px
+- **Předvolby mají dva řádky:** seznam s ↺ přes levý sloupec, Uložit,
+  Uložit jako… a Smazat pod ním. Seznam má místo i pro dlouhé názvy, dřív mu
+  tlačítka nechala 88 px. Výchozí předvolba se česky jmenuje [Výchozí], jako
+  v Zünd Summa Marks.
+- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 749 px
   (1.0.1: 793 px na výšku).
 - `{n}` má vždy aspoň dvě číslice, jak dílna čísluje pláty: `zed_01`, ne
   `zed_1`.

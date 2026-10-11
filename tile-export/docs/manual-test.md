@@ -58,7 +58,7 @@ vrať (nebo ulož jako předvolbu):
 
 ## 1. Co umí jen člověk
 
-**1.1 Dialog okem.** 1178 × 745 px s ručním ořezem i se Zündem — pole obou typů
+**1.1 Dialog okem.** 1178 × 749 px s ručním ořezem i se Zündem — pole obou typů
 výstupu se střídají na jednom místě (naměřeno headless 2026-10-10). Nic
 uříznutého, sloupce zarovnané. Panel Dokument ukáže čistý formát a dostupný
 spad; měřítko kresby 100 nebo 12,5 se v nich i v „1:… jako kresba" vejde celé.
@@ -108,9 +108,9 @@ Starší dokument s vrstvou `TE_lines`: po běhu zmizí. Po Jen pláty vytáhni
 z pravítka vodítko: v panelu Vrstvy musí ležet ve tvé vrstvě, ne v `TE_panels`
 (N44).
 
-**1.11 Předvolby a proměnné (1.1.0).** [Default] ukáže přelep 20, přídavky 0,
+**1.11 Předvolby a proměnné (1.1.0).** [Výchozí] ukáže přelep 20, přídavky 0,
 mezeru značek 5 mm a vzor `{doc}_{n}_{size}_{scale}`, ať soubor nastavení
-drží cokoli. Seznam předvoleb vyplní levý sloupec, tlačítka jsou pod ním.
+drží cokoli. Seznam předvoleb s ↺ vyplní levý sloupec, ostatní tlačítka jsou pod ním.
 Napiš do vzoru `26_13456_a_` a klikni na `{n}`: proměnná se připíše na konec
 a Výsledek ukáže nový název, poslední řádek Výsledku je celý vidět.
 
@@ -126,7 +126,8 @@ v milimetrech.
 | arch, §0 | tiskové 1010 \| 1020 \| 1010 × 1000; „Stránky PDF (1:10): 101 × 100 \| 102 × 100 \| 101 × 100" | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka; otevřené v Illustratoru mají shora vrstvy `CutContour` (linka) a `Graphics` |
 | arch, výstup 1:1 | „Stránky PDF: skutečná velikost…" | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
 | arch, vzor `26_13456_a_{n}_{size}_{scale}_1x`, 1:10 jako kresba | „Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku10_1x.pdf" | soubory s tímto jménem, stránka 101 × 100 |
-| totéž, výstup 1:1 | „Soubor plátu 1: 26_13456_a_01_1010x1000mm_1x.pdf" — bez poměru a bez `__` | stránka 1010 × 1000 |
+| totéž, výstup 1:1 | „Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku1_1x.pdf" — `{scale}` ve vzoru je volba | stránka 1010 × 1000 |
+| vzor `26_13456_a_{n}_{size}_1x`, výstup 1:1 | „Soubor plátu 1: 26_13456_a_01_1010x1000mm_1x.pdf" | stránka 1010 × 1000 |
 | arch, vzor `zakazka/{n}` | „✗ Název souboru zakazka/01 obsahuje lomítko…" | export šedý, Jen pláty aktivní |
 | arch, Vodorovně, Vodítek, vodorovné vodítko tažené ~60 mm pod horní hranou artboardu, Zaokrouhlit 100 | 2 pláty: tiskové 3000 × 610 \| 3000 × 410; „Stránky PDF (1:10): 300 × 61 \| 300 × 41" | 2 PDF 300 × 61 \| 300 × 41 (N38) |
 | arch, Vodorovně, Šířky plátu 600 | „1: načisto 3000 × 600…, 2: načisto 3000 × 400…" — zbytek na spodním plátu | 2 PDF 300 × 61 \| 300 × 41 (N41) |
