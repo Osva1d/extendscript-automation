@@ -507,6 +507,20 @@ Kurzor tedy nepřežije kliknutí na žádný jiný prvek a `active = true` mů�
 vybrat celý text. Tlačítko, které má něco vložit do pole, může spolehlivě jen
 připsat na konec (tile-export `TE.UI.insertToken`).
 
+**Klávesa kurzor nechá.** Zkratka stisknutá v poli (`keydown` na poli,
+`textselection =`, `preventDefault()`) vložila `{n}` přesně na místo kurzoru,
+v samostatném okně i několikrát po sobě; ve skutečném dialogu tile-export
+zůstal po vložení a přepočtu Výsledku fokus v poli. Control+2 přijde na české
+klávesnici jako klávesa „ě“: `keyName` undefined, `keyIdentifier` `U+011B`;
+s Shiftem jako `'2'` (`U+0032`). Option+N napsalo „‚“. tile-export zkratky
+nemá — uživateli nevyhovovaly.
+
+**Text ke kopírování klik nehlásí.** `edittext` s `readonly` a `borderless`
+vypadá jako text a jde z něj označit a zkopírovat (Cmd+C a Cmd+V do jiného
+pole vložilo na místo kurzoru), ale `mouseup` z něj skript nedostal ani
+jednou. Prvek, který jde zkopírovat i odkliknout — třeba odkaz — v ScriptUI
+tedy není: `statictext` kliknutí hlásí, ale označit nejde.
+
 ### ScriptUI: skrytá skupina si drží místo
 
 `group.visible = false` **nezmenší dialog** — layout manager pro ni prostor
