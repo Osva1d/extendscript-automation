@@ -161,42 +161,10 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // --- Presets ---------------------------------------------------------
-        // Across the whole dialog, above both columns: in the left column the
-        // list got what its buttons left over, 88 px with short preset names
-        // (measured 2026-10-11; the user found it short).
-        var pPreset = w.add("panel", undefined, l.PANEL_PRESET);
-        pPreset.alignChildren = ["fill", "top"];
-        var gPreset = pPreset.add("group");
-        gPreset.alignment = ["fill", "top"];
-        var stPreset = gPreset.add("statictext", undefined, l.PRESET_LABEL);
-        this.lockW(stPreset, this.M.LABEL_COL);
-        stPreset.helpTip = l.TIP_PRESET;
-        var ddPreset = gPreset.add("dropdownlist", undefined, []);
-        ddPreset.alignment = ["fill", "center"];
-        ddPreset.helpTip = l.TIP_PRESET;
-        // Revert and Save sit next to the list they act on, like
-        // zund-summa-marks: both are live only while the preset has unsaved
-        // edits (N8). In a group of their own: ScriptUI shares a row's slack
-        // among all its controls, the buttons too, and capped buttons left
-        // theirs unused; grouped, the list takes all of it — 621 px instead
-        // of 88 (measured 2026-10-11).
-        var gPresetBtns = gPreset.add("group");
-        gPresetBtns.alignment = ["right", "center"];
-        var btnRevert = gPresetBtns.add("button", undefined, l.BTN_REVERT);
-        btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
-        btnRevert.helpTip = l.TIP_REVERT;
-        var btnSave = gPresetBtns.add("button", undefined, l.BTN_SAVE);
-        btnSave.helpTip = l.TIP_SAVE;
-        var btnSaveAs = gPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
-        btnSaveAs.helpTip = l.TIP_SAVE_AS;
-        var btnDel = gPresetBtns.add("button", undefined, l.BTN_DEL);
-        btnDel.helpTip = l.TIP_DEL;
-
         // Two columns, balanced by measured heights. 2026-10-11, with the
-        // presets above them and the placeholder row: left 543 px, right 633
-        // (Output type 280, Files 218, Result 115), so the right column sets
-        // the height and the dialog is 1178 x 807 px. Stacked in one column the
+        // presets in two rows at the top of the left column and the
+        // placeholder row: both columns 643 px, the Result stretched from its
+        // 85 px floor to 95, the dialog 1178 x 745 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -216,6 +184,38 @@ TE.UI = {
         colR.orientation = "column";
         colR.alignChildren = ["fill", "top"];
         colR.alignment = ["fill", "fill"];   // as tall as the left column (N18)
+
+        // --- Presets ---------------------------------------------------------
+        // At the top of the left column: the list on its row, the buttons
+        // under it, as zund-summa-marks has them. In one row of the column the
+        // buttons left the list 88 px; across the whole dialog it was 621 px
+        // with the buttons far off at the right edge, too long (user,
+        // 2026-10-11). The second row costs the left column 37 px, which the
+        // right one is taller by anyway.
+        var pPreset = colL.add("panel", undefined, l.PANEL_PRESET);
+        pPreset.alignChildren = ["fill", "top"];
+        var gPreset = pPreset.add("group");
+        gPreset.alignment = ["fill", "top"];
+        var stPreset = gPreset.add("statictext", undefined, l.PRESET_LABEL);
+        this.lockW(stPreset, this.M.LABEL_COL);
+        stPreset.helpTip = l.TIP_PRESET;
+        var ddPreset = gPreset.add("dropdownlist", undefined, []);
+        ddPreset.alignment = ["fill", "center"];
+        ddPreset.helpTip = l.TIP_PRESET;
+        // Revert and Save sit right under the list they act on: both are live
+        // only while the preset has unsaved edits (N8). Grouped, so the row's
+        // slack does not stretch them (engine-facts, ScriptUI row slack).
+        var gPresetBtns = pPreset.add("group");
+        gPresetBtns.alignment = ["right", "top"];
+        var btnRevert = gPresetBtns.add("button", undefined, l.BTN_REVERT);
+        btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
+        btnRevert.helpTip = l.TIP_REVERT;
+        var btnSave = gPresetBtns.add("button", undefined, l.BTN_SAVE);
+        btnSave.helpTip = l.TIP_SAVE;
+        var btnSaveAs = gPresetBtns.add("button", undefined, l.BTN_SAVE_AS);
+        btnSaveAs.helpTip = l.TIP_SAVE_AS;
+        var btnDel = gPresetBtns.add("button", undefined, l.BTN_DEL);
+        btnDel.helpTip = l.TIP_DEL;
 
         // --- Document --------------------------------------------------------
         var pDoc = colL.add("panel", undefined, l.PANEL_DOC);
@@ -483,9 +483,9 @@ TE.UI = {
         // 18-character field showed about half of it (measured 2026-10-11).
         etPattern.alignment = ["fill", "center"];
 
-        // Placeholders as buttons under the field: a click puts one where the
-        // cursor is, as renaming tools do (user, 2026-10-11). The button
-        // text is the placeholder it inserts.
+        // Placeholders as buttons under the field (user, 2026-10-11): a click
+        // adds one at the end — the cursor is lost to the click, see
+        // insertToken(). The button text is the placeholder it adds.
         var gTokens = pExp.add("group");
         gTokens.alignment = ["fill", "top"];
         var stTokens = gTokens.add("statictext", undefined, l.LBL_TOKENS);
@@ -804,18 +804,17 @@ TE.UI = {
     },
 
     /**
-     * Puts a placeholder into the pattern field where the cursor is, or over
-     * the selected text: a value set as textselection is inserted at the
-     * insertion point (JavaScript Tools Guide). A field without one is left
-     * as it was, and the placeholder then goes at the end.
+     * Adds a placeholder at the end of the pattern. Where the cursor was is
+     * lost the moment another control is clicked, and ScriptUI cannot say:
+     * tried with the user on 2026-10-11, textselection then wrote at the
+     * start after a button or a tool button, at the end after a clickable
+     * text, and a button that gave the field its focus back replaced the
+     * whole pattern. A pattern is built left to right, so the end is right.
      * @param {Object} et - The pattern edittext.
      * @param {string} token - Placeholder such as "{n}".
      */
     insertToken: function (et, token) {
-        var before = et.text;
-        try { et.textselection = token; }
-        catch (e) { TE.Utils.log("textselection refused: " + e.message); }
-        if (et.text === before) { et.text = before + token; }
+        et.text = et.text + token;
     },
 
     /**

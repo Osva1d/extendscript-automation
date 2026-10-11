@@ -20,8 +20,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje název prvního souboru;
   prázdný název, lomítko nebo dvojtečku export odmítne.
 - **Proměnné jako tlačítka.** Pod vzorem pojmenování je řada `{doc}` `{n}`
-  `{total}` `{size}` `{scale}`; klik vloží proměnnou na místo kurzoru,
-  jinak na konec vzoru.
+  `{total}` `{size}` `{scale}`; klik ji připíše na konec vzoru, který se tak
+  skládá zleva doprava.
 
 ### Changed
 
@@ -41,9 +41,9 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Rastrový export není v dialogu.** Dílna rastruje ve Photoshopu a jestli
   jde věřit rastru Illustratoru, se teprve ověří. Uložené předvolby s rastrem
   exportují vektor.
-- **Předvolby jsou přes celou šířku dialogu.** Seznam má místo i pro dlouhé
-  názvy, dřív v levém sloupci 88 px.
-- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 807 px
+- **Předvolby mají dva řádky:** seznam přes celý levý sloupec, tlačítka pod
+  ním. Seznam má místo i pro dlouhé názvy, dřív mu tlačítka nechala 88 px.
+- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 745 px
   (1.0.1: 793 px na výšku).
 - `{n}` má vždy aspoň dvě číslice, jak dílna čísluje pláty: `zed_01`, ne
   `zed_1`.

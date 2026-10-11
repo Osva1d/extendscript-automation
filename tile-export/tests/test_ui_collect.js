@@ -159,34 +159,30 @@ console.log("\n=== skipping finished outputs is asked for, not assumed ===");
 // names and only reported them as skipped (user, 2026-10-10).
 eq(TE.Config.getDefaults().skipExisting, false, "a fresh dialog overwrites");
 
-console.log("\n=== placeholder buttons: where a click puts the placeholder ===");
-// A stand-in edittext as ScriptUI documents it: setting textselection
-// replaces the selection, or inserts at the insertion point when nothing is
-// selected (JavaScript Tools Guide). caret null: the field kept none.
-function field(text, caret, selEnd) {
-    var f = { text: text, caret: caret, selEnd: (selEnd === undefined) ? caret : selEnd };
+console.log("\n=== placeholder buttons: the placeholder goes at the end ===");
+// Where the cursor was is lost the moment another control is clicked: tried
+// with the user (2026-10-11), textselection then wrote at the start after a
+// button, at the end after a text, and a button that gave the field its focus
+// back replaced the whole pattern. A pattern is built left to right.
+// The stand-in does what ScriptUI did after a button click: a value set as
+// textselection lands at the start of the field.
+function clicked(text) {
+    var f = { text: text };
     Object.defineProperty(f, "textselection", {
-        get: function () { return this.caret === null ? "" : this.text.slice(this.caret, this.selEnd); },
-        set: function (v) {
-            if (this.caret === null) { return; }
-            this.text = this.text.slice(0, this.caret) + v + this.text.slice(this.selEnd);
-            this.caret += v.length;
-            this.selEnd = this.caret;
-        }
+        get: function () { return ""; },
+        set: function (v) { this.text = v + this.text; }
     });
     return f;
 }
-var f1 = field("26_13456_a__1x", 11);
+var f1 = clicked("26_13456_a_");
 TE.UI.insertToken(f1, "{n}");
-eq(f1.text, "26_13456_a_{n}_1x", "at the cursor, between the separators");
-TE.UI.insertToken(f1, "_{size}");
-eq(f1.text, "26_13456_a_{n}_{size}_1x", "and the next one right after it");
-var f2 = field("zed_", null);
-TE.UI.insertToken(f2, "{n}");
-eq(f2.text, "zed_{n}", "a field without a cursor gets it at the end");
-var f3 = field("zed_XX_1x", 4, 6);
-TE.UI.insertToken(f3, "{n}");
-eq(f3.text, "zed_{n}_1x", "selected text is replaced");
+eq(f1.text, "26_13456_a_{n}", "after what is typed");
+f1.text += "_";
+TE.UI.insertToken(f1, "{size}");
+eq(f1.text, "26_13456_a_{n}_{size}", "and the next one after the separator typed by hand");
+var f2 = clicked("");
+TE.UI.insertToken(f2, "{doc}");
+eq(f2.text, "{doc}", "an empty pattern starts with it");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
