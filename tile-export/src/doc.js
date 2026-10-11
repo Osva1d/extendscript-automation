@@ -155,6 +155,32 @@ TE.Doc = {
     },
 
     /**
+     * Where the drawing scale can stand in an XMP packet: one entry for each
+     * prefix the packet binds to tile-export's namespace. PURE FUNCTION.
+     * Illustrator re-serializes a packet written into it and may rename the
+     * prefix: "te" came back as "te_1_" (measured 2026-10-11, AI 30.8.2).
+     * So the value is found through its namespace, never a fixed prefix.
+     * @param {string} x - XMP packet.
+     * @returns {Array} {prefix, el, at}: the element and the attribute form,
+     *          each capturing the value.
+     */
+    scalePatterns: function (x) {
+        function esc(s) { return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
+        var decl = new RegExp("xmlns:([A-Za-z_][\\w.\\-]*)\\s*=\\s*\""
+            + esc(TE.Config.xmpNamespace) + "\"", "g");
+        var out = [], m, p;
+        while ((m = decl.exec(x)) !== null) {
+            p = esc(m[1]);
+            out.push({
+                prefix: m[1],
+                el: new RegExp("<" + p + ":drawingScale>\\s*([^<\\s]*)\\s*</" + p + ":drawingScale>"),
+                at: new RegExp("\\b" + p + ":drawingScale=\"([^\"]*)\"")
+            });
+        }
+        return out;
+    },
+
+    /**
      * The drawing scale N of 1:N stored in an XMP packet. PURE FUNCTION.
      * Reads the element form writeDrawingScale() writes, and the attribute
      * form an XMP toolkit may turn it into.
@@ -162,11 +188,15 @@ TE.Doc = {
      * @returns {number|null} N > 0, or null when none is stored.
      */
     readDrawingScale: function (xmp) {
-        var x = String(xmp || "");
-        var m = /<te:drawingScale>\s*([^<\s]*)\s*<\/te:drawingScale>/.exec(x)
-             || /\bte:drawingScale="([^"]*)"/.exec(x);
-        var n = m ? Number(m[1]) : NaN;
-        return (isFinite(n) && n > 0) ? n : null;
+        var x = String(xmp || ""), ps = this.scalePatterns(x), i, m, n;
+        for (i = 0; i < ps.length; i++) {
+            m = ps[i].el.exec(x) || ps[i].at.exec(x);
+            if (m) {
+                n = Number(m[1]);
+                return (isFinite(n) && n > 0) ? n : null;
+            }
+        }
+        return null;
     },
 
     /**
@@ -178,11 +208,14 @@ TE.Doc = {
      * @returns {string|null} The new packet, or null when it has no RDF.
      */
     writeDrawingScale: function (xmp, n) {
-        var x = String(xmp || ""), v = String(n);
-        var el = /<te:drawingScale>[^<]*<\/te:drawingScale>/;
-        var at = /\bte:drawingScale="[^"]*"/;
-        if (el.test(x)) { return x.replace(el, "<te:drawingScale>" + v + "</te:drawingScale>"); }
-        if (at.test(x)) { return x.replace(at, "te:drawingScale=\"" + v + "\""); }
+        var x = String(xmp || ""), v = String(n), ps = this.scalePatterns(x), i, p;
+        for (i = 0; i < ps.length; i++) {
+            p = ps[i].prefix;
+            if (ps[i].el.test(x)) {
+                return x.replace(ps[i].el, "<" + p + ":drawingScale>" + v + "</" + p + ":drawingScale>");
+            }
+            if (ps[i].at.test(x)) { return x.replace(ps[i].at, p + ":drawingScale=\"" + v + "\""); }
+        }
         if (x.indexOf("</rdf:RDF>") === -1) { return null; }
         return x.replace("</rdf:RDF>", "<rdf:Description rdf:about=\"\" xmlns:te=\""
             + TE.Config.xmpNamespace + "\"><te:drawingScale>" + v
