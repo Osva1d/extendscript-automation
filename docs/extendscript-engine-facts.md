@@ -490,6 +490,23 @@ Rozbalovací seznam navíc roste s nejdelší položkou: název předvolby o 30
 znacích rozšířil dialog tile-export ze 1178 na 1315 px, dokud byl seznam
 v úzkém sloupci.
 
+### ScriptUI: kliknutí jinam vezme edittextu kurzor (naměřeno 2026-10-11, AI 30.8.2)
+
+Pozici kurzoru ScriptUI nezpřístupňuje; `textselection` podle dokumentace vkládá
+„na místo vložení“. Vyzkoušeno s uživatelem: kliknout do pole mezi dvě
+podtržítka, pak na prvek, který nastaví `textselection = "{n}"`:
+
+| prvek | kam `{n}` padlo |
+|---|---|
+| `button` | na začátek pole |
+| `iconbutton` se stylem `toolbutton` | na začátek |
+| `statictext` s `mousedown`, i v rámečku `panel` | na konec |
+| `button`, který před vložením nastaví `et.active = true` | jednou přepsalo celý text, jednou na začátek |
+
+Kurzor tedy nepřežije kliknutí na žádný jiný prvek a `active = true` může
+vybrat celý text. Tlačítko, které má něco vložit do pole, může spolehlivě jen
+připsat na konec (tile-export `TE.UI.insertToken`).
+
 ### ScriptUI: skrytá skupina si drží místo
 
 `group.visible = false` **nezmenší dialog** — layout manager pro ni prostor
