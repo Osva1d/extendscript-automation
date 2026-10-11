@@ -1,0 +1,314 @@
+# Návrh — grommet-marks 1.3.0: tvary v režimu cesty
+
+Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.2.0
+(2026-10-04).
+
+Datum: 2026-10-11 · Stav: **návrh, čeká na schválení uživatelem**
+
+Vzniklo z průzkumu režimů „Hrany artboardu" a „Vybraná cesta" (2026-10-05 až
+2026-10-10): otázky uživateli, měření v Illustratoru 30.8.2, rešerše praxe
+a interaktivní prototyp dialogu.
+
+---
+
+## 1. Proč
+
+Režim Vybraná cesta dnes klade značky **středem na cestu**. Kdo chce oka
+v odsazení od řezu, musí si cestu nejdřív sám posunout (Objekt ▸ Cesta ▸
+Posunout cestu…), spustit skript na posunuté kopii a kopii pak smazat. K tomu:
+
+- **Zaoblené rohy skript nepozná.** Zaoblený obdélník je pro něj hladká cesta:
+  značky jdou rovnoměrně od první kotvy a do rohů nemusí padnout žádná.
+- **Tvar bez rohů začíná na první kotvě**, kterou operátor nevidí. U kruhu
+  z PDF leží kdekoli; při lichém počtu pak kruh visí nakřivo.
+- **Část obvodu** označit nejde.
+
+## 2. Jak se režimy používají (uživatel, 2026-10-05)
+
+- **Obdélníky a čtverce** (nejčastější) jdou přes **artboard**; artboard je
+  řezová linka. Režim artboardu se v 1.3.0 nemění.
+- **Režim cesty je pro tvary:** kruh, půlkruh, trojúhelník, štít domu (jedna
+  cesta — obdélník a trojúhelník spojené v pětiúhelník) a méně často zaoblený
+  obdélník. Všechny jsou konvexní.
+- Zaoblení vzniká **živými rohy**, nebo cesta přijde hotová v **PDF** od klienta
+  (oblouk může být rozdělený na víc úseků nebo nahrazený úsečkami).
+- Část obvodu: „téměř nikdy, ale chci mít volbu".
+
+## 3. Rozhodnutí
+
+| # | rozhodnutí | původ |
+|---|---|---|
+| 1 | Odsazení od řezu se zadá v dialogu, i v režimu cesty. | uživatel, 2026-10-05 |
+| 2 | Zaoblený obdélník je tvarová cesta, ne zvláštní případ artboardu. Varianta „vybraný obdélník jako artboard" padla. | uživatel, 2026-10-05 |
+| 3 | Zaoblený roh = roh: **jedna značka uprostřed oblouku**, zbytek výplň. Varianta „dlouhý oblouk dostane značky na koncích, hranice v dialogu" zahozena. | uživatel + rešerše, 2026-10-09 (§12) |
+| 4 | Tvar bez rohů začíná **nahoře**. | data, 2026-10-09 (§12) |
+| 5 | Linku ok počítá **Illustratorovo Posunout cestu** ze skriptu, ne vlastní výpočet. | měření, 2026-10-09 (§6) |
+| 6 | Skript **kontroluje výsledek**, nepředpovídá chyby tvaru. | měření, 2026-10-09 (§7) |
+| 7 | Vnitřní rohy se značí jako dnes, bez volby. | 2026-10-09 |
+| 8 | Část obvodu = zaškrtávátko, vždy vypnuté, neukládá se. | uživatel, 2026-10-09 |
+| 9 | Panel Cesta mluví jako panel Hrany; šedý řádek říká, co skript poznal; otevřená cesta zůstane jako dnes. | uživatel, 2026-10-09 |
+
+Rozhodnutí 4–7 navrhl Claude podle dat; uživatel s nimi pokračoval
+(2026-10-10). Schválení celého návrhu je otevřené.
+
+## 4. Pojmy
+
+- **Řezová linka** — vybraná cesta (u artboardu jeho obdélník).
+- **Linka ok** — čára, na kterou padnou středy značek: řezová linka posunutá
+  o odsazení **D** dovnitř tvaru. Při D = 0 a u otevřené cesty je to řezová
+  linka sama.
+- **Úsek** — Bézierův úsek mezi dvěma kotvami cesty.
+- **Ostrý roh** — kotva, kde se směr cesty zlomí o víc než 15°
+  (`CORNER_ANGLE_MIN`, beze změny).
+- **Zaoblený roh** — oblouk mezi dvěma rovnými úseky, u kterého se směr
+  celkem stočí o víc než 15°, s hladkými přechody na obou koncích. Oblouk mezi
+  dvěma ostrými rohy (půlkruh) je obyčejná strana.
+- **Část obvodu** — úseky vybrané nástrojem Přímý výběr.
+
+Oblouk nahrazený krátkými úsečkami (PDF z CADu) se jako zaoblený roh
+nepozná: každá úsečka je rovná a zlomy mezi nimi jsou pod 15°. Takový tvar
+se rozmístí podle ostrých rohů, které skript najde, případně jako tvar bez
+rohů. Značky jsou dál ve vzdálenosti D od řezu (§7), jen nemusí padnout doprostřed
+oblouku. Zda rozpoznávat i takové oblouky, rozhodne první skutečné PDF (§14).
+
+## 5. Pravidla rozmístění v režimu cesty
+
+### 5.1 Linka ok
+
+- Uzavřená cesta a D > 0 → linka ok = výsledek Posunout cestu o D dovnitř (§6).
+- D = 0 → linka ok je řezová linka (jako dnes).
+- Otevřená cesta → linka ok je cesta sama; pole Odsazení je zašedlé (nejde
+  určit, na kterou stranu odsadit).
+
+### 5.2 Značky v rozích
+
+Rohy se hledají **na lince ok**, ne na řezové lince:
+
+- ostrý roh → značka v rohu;
+- zaoblený roh → jedna značka uprostřed oblouku. Je-li poloměr R ≤ D, má linka
+  ok v tom místě ostrý roh a značka padne do něj — výsledek je stejný jako
+  u ostrého rohu (D od obou hran);
+- žádný roh, uzavřená linka → první značka v **nejvyšším bodě** linky ok.
+
+### 5.3 Výplň a počet
+
+- Mezi sousedními rohovými značkami se vyplní rozestupem stávající funkcí
+  `distributeOnSpan` (výběr počtu floor/ceil beze změny), **i přes oblouky**.
+  Dlouhý oblouk tak dostane značky z výplně.
+- Počet ok: tvar bez rohů → N značek rovnoměrně od nejvyššího bodu; tvar
+  s rohy → značky jen do rohů, pole ukazuje jejich počet jen pro čtení
+  (pravidlo z 1.1.0). Zaoblené rohy se do počtu rohů počítají.
+- Rohové zóny se měří od každé rohové značky, ostré i zaoblené (jako dnes).
+
+### 5.4 Část obvodu
+
+- Úsek je vybraný, když mají obě jeho koncové kotvy
+  `PathPointSelection.ANCHORPOINT` (naměřeno, §6.3).
+- Souvislé vybrané úseky tvoří **běh**. Běh se značí jako otevřená cesta:
+  oba konce dostanou značku, rohy uvnitř podle §5.2.
+- Na linku ok se běh přenese projekcí: bod linky ok patří do běhu, když jeho
+  nejbližší bod na řezové lince leží na vybraném úseku.
+- Vybrané všechny kotvy, nebo žádná → celý obvod. „Všechny strany kromě jedné"
+  proto vybrat nejde (všechny kotvy jsou vybrané) — známé omezení.
+- Vybrané kotvy, ale žádný celý úsek → zaškrtávátko zašedlé s vlastní
+  nápovědou.
+- Zaškrtávátko je při každém spuštění vypnuté a do předvolby se neukládá:
+  přímý výběr zapomenutý z dřívější úpravy tak nic nezmění.
+
+### 5.5 Vnitřní rohy
+
+Odsazení s ostrým spojem (miter, mez 4 — výchozí hodnota Illustratoru): roh
+linky ok leží D od obou hran, stejně jako u vnějšího rohu, a dostane značku.
+V tvarech uživatele se nevyskytují; výsledek na vnitřním rohu zatím neměřen.
+
+## 6. Odsazení přes Illustrator
+
+### 6.1 Postup
+
+1. Z řezové linky se postaví **čistá kopie** (`setEntirePath` + úchyty kotev)
+   bez vzhledu: efekty se v Illustratoru skládají, takže kopie přes
+   `duplicate()` by s vlastním efektem cesty dala jiný výsledek.
+2. `applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst -D I jntp 2 "/></LiveEffect>')`
+   — D v jednotkách dokumentu (u Large Canvas děleno `scaleFactor`, jako G1).
+3. Vybrat jen kopii, `app.executeMenuCommand("expandStyle")`, ověřit, že je
+   aktivní vlastní dokument běhu.
+4. Přečíst geometrii z výběru, dočasné objekty smazat, výběr vrátit.
+
+Parametry efektu Adobe nedokumentuje; jsou z fóra a ověřené měřením (§6.2).
+Selhání kteréhokoli kroku je chyba s hláškou, nikdy tichý návrat.
+
+### 6.2 Naměřeno (Illustrator 30.8.2, 2026-10-09, vlastní dokumenty)
+
+| tvar | výsledek |
+|---|---|
+| kruh r 500 pt, D 56,69 pt | r 443,31–443,46 pt (čekáno 443,31), 4 → 16 kotev |
+| trojúhelník, štít (po i proti směru hodin) | vrcholy přesně (0,00 pt) |
+| zaoblený obdélník R 150 / R 30 | přesně; R 30 < D dá ostré rohy; 8 → 12 kotev |
+| pruh 100 pt, D 56,69 pt | **vrátí původní cestu beze změny**, bez chyby |
+| činka s hrdlem 80 pt | `CompoundPathItem` se 2 smyčkami |
+
+- Záporné `ofst` posouvá dovnitř u obou směrů kreslení.
+- 33–123 ms na tvar.
+- Celý běh (kopie, efekt, expandStyle, smazání, nová vrstva, značky) =
+  **jeden krok Zpět**; hláška G4 „Zpět vrátí tento běh" platí dál.
+- Odsazená cesta je nová: její kotvy nesouvisí s kotvami řezové linky.
+
+### 6.3 Přímý výběr (2026-10-05)
+
+- Klik na rovný úsek → obě kotvy `ANCHORPOINT`; sousedé hlásí jen úchyt
+  (`LEFTDIRECTION` / `RIGHTDIRECTION`).
+- Výběr kotev u oblouků se čte stejně (hvězda, 20 bodů, 11 z 20 úseků).
+- Živé rohy jsou skutečná geometrie: 8 kotev, oblouk = jeden Bézierův úsek
+  s úchyty ≈ 0,552·R.
+
+## 7. Kontrola výsledku
+
+Před vytvořením první značky:
+
+- linka ok je **právě jedna uzavřená smyčka** (u uzavřené cesty);
+- každá značka leží **uvnitř** řezové linky a její vzdálenost od řezové linky
+  se liší od D nejvýš o **0,5 pt** (naměřená odchylka 0,15 pt). Při D = 0 se
+  test „uvnitř" vynechá.
+
+Porušení → žádná značka, hláška s důvodem. Pravidlo chytí tichý návrat
+originálu (§6.2) i chyby, které dnes nikdo nečeká, protože hlídá přímo to, na
+čem záleží. Vzdálenost od řezové linky se počítá z navzorkované řezové linky
+(stávající `buildCircuit`).
+
+## 8. Dialog
+
+Předvolby, Hrany, Rohové zóny a Značka se nemění.
+
+| panel | obsah | změna proti 1.2.0 |
+|---|---|---|
+| Umístění | Hrany artboardu / Vybraná cesta, Jednotky; **šedý řádek** | řádek nový, platí pro oba režimy |
+| Cesta | **Odsazení od kraje**, Počet ok / Rozestup, **Jen vybraná část obvodu** | řádek s informací se přesunul do Umístění; poznámka „posuňte si cestu předem" pryč |
+
+### 8.1 Šedý řádek
+
+| stav | text (CS) |
+|---|---|
+| artboard, 1 | `1 artboard · 2000 × 1000 mm` |
+| artboardy, víc | `3 artboardy · značky dostanou všechny` |
+| předvolba chce cestu, žádná není | `Předvolba chce vybranou cestu, ale žádná použitelná není vybraná — značí se artboard.` (barvou upozornění) |
+| cesta | `Uzavřená cesta · 5 rohů` · `· 4 zaoblené rohy` · `· 3 rohy, 2 zaoblené` |
+| bez rohů | `Uzavřená cesta · bez rohů · první značka nahoře` |
+| otevřená / D = 0 | `… · značky leží na cestě` |
+
+Řádek mění text za běhu: šířka nejdelšího textu se rezervuje předem
+(`extendscript-ui-standards` §4, případ 2). Čeština skloňuje: 1 roh, 2–4 rohy,
+5 rohů (a obdobně artboardy, zaoblené rohy). Zaoblené rohy se počítají na
+řezové lince, takže řádek nezávisí na D a dialog nemusí odsazovat.
+
+### 8.2 Kdy je co aktivní
+
+| prvek | aktivní, když | jinak |
+|---|---|---|
+| Vybraná cesta | výběr je jedna jednoduchá cesta | zašedlá, nápověda s důvodem (jako dnes) |
+| Odsazení (Cesta) | cesta je uzavřená | zašedlé, nápověda „U otevřené cesty nejde určit, na kterou stranu odsadit — značky leží na cestě." |
+| Počet ok | vždy | na cestě s rohy ukáže počet rohů jen pro čtení |
+| Jen vybraná část | přímý výběr obsahuje aspoň jeden celý úsek | zašedlé; vlastní nápověda pro samostatnou kotvu |
+| Zhustit u rohů | artboard; cesta s rohy (i zaoblenými) a Rozestupem | zašedlé s důvodem (jako dnes) |
+| Generovat | pole aktivního režimu jsou platná | zašedlé, vadné pole zčervená |
+
+Výchozí režim dál určuje předvolba; když chce cestu a žádná použitelná není,
+dialog otevře artboard a řekne to šedým řádkem (dnes potichu).
+
+Nápověda zaškrtávátka: „Značky jen na úsecích, které mají vybrané obě koncové
+kotvy. Výchozí je celý obvod; volba se do předvolby neukládá." Zašedlé: „Část
+obvodu vyberte nástrojem Přímý výběr (A): kotvy na začátku i konci každého
+úseku." Samostatná kotva: „Vybraná je jen samostatná kotva — označte Přímým
+výběrem i druhý konec úseku."
+
+### 8.3 Výška
+
+V režimu cesty se výška nemění (panel Cesta řádek ztratil, Umístění získalo).
+V režimu artboardu přibude jeden řádek, asi 30 px: dnes 708 px, bez zrcadlení
+754 px (audit 2026-09-29). Verze v6 se kvůli uříznutým tlačítkům na 13"
+displejích stáhla na ~795 px — tu výšku nepřekročit. Změřit headless.
+
+## 9. Generovat — průběh
+
+1. Znovu přečíst výběr (jako dnes; zmizelá cesta → stávající hláška).
+2. Linka ok (§5.1, §6).
+3. Rohy na lince ok, začátek tvaru bez rohů (§5.2).
+4. Část obvodu, je-li zaškrtnutá (§5.4).
+5. Výplň a zóny (§5.3).
+6. Kontrola (§7). Chyba → hláška, konec, žádná značka.
+7. Značky na vrstvu Grommet Marks a stávající upozornění (zdvojené značky,
+   skrytá vrstva, nevytvořené značky).
+
+### 9.1 Nové hlášky (CS)
+
+- `Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.`
+- `Linka ok se v úzkém místě rozpadá na %s části. Zmenšete odsazení.`
+- `Illustrator nedokázal cestu posunout (%s).`
+
+Každý klíč i v angličtině; parita klíčů hlídá stávající test.
+
+## 10. Předvolby a kompatibilita
+
+- Nové pole `pathOffset` (v jednotkách dialogu), pravidlo jako `offsetX`
+  (0–9999). Výchozí **0** v `getDefaults()`; forward-fill v `GM.Storage` ho
+  doplní starým předvolbám → chovají se jako dnes, **žádné dvojí odsazení** pro
+  ty, kdo si cestu posouvají ručně. Hodnota se nastaví jednou a uloží do
+  předvolby.
+- Zaškrtávátko části obvodu se neukládá.
+
+## 11. Změny chování proti 1.2.0 (do CHANGELOG)
+
+- Zaoblený roh dnes nedostane nic zvláštního (hladký prstenec od první kotvy);
+  nově značka uprostřed oblouku a výplň mezi rohy.
+- Tvar bez rohů dnes začíná na první kotvě; nově nahoře.
+- Předvolba s cestou bez výběru: dnes tichý přechod na artboard; nově řádek
+  v dialogu.
+- Při D = 0 a bez zaoblení zůstává rozmístění stejné jako v 1.2.0 (regresní
+  test).
+
+## 12. Data za rozhodnutími 3 a 4
+
+- **Praxe u rohů:** výrobci bannerů popisují oko v každém rohu a zbytek
+  rovnoměrně (4over4, banners.com, namebadge.com); RIPy Onyx a Caldera
+  rozmisťují po stranách, Caldera i po elipse — rovnoměrně. Pravidlo „oka na
+  koncích oblouku" nenašla rešerše ani uživatel v praxi.
+- **Začátek nahoře:** jediný konkrétní případ z praxe (kruhové cedule) dává
+  první díru doprostřed nahoru, aby cedule nevisela nakřivo. Začátek nahoře je
+  souměrný podle svislé osy pro každý počet; začátek na kotvě vlevo jen pro
+  sudý. Odsazená cesta má navíc vlastní kotvy (§6.2), takže „první kotva" by
+  nebyla kotvou operátora.
+
+## 13. Architektura a testy
+
+| modul | nové | test |
+|---|---|---|
+| `GM.Core` | rozpoznání zaoblených rohů, rohové body linky ok, nejvyšší bod, běhy části obvodu a jejich projekce, kontrola §7 | Node: zaoblený obdélník R > D i R ≤ D, půlkruh (oblouk = strana), štít, hvězda, kruh; kontrola s originálem místo linky ok (pruh) a se dvěma smyčkami |
+| `GM.Illustrator` | `offsetPath` (§6.1), čtení přímého výběru | falešný adaptér v Node; harness v Illustratoru: tvary z §6.2, Large Canvas, jeden krok Zpět |
+| `GM.Main.process` | průběh §9 | `test_main_process` s falešným adaptérem |
+| `GM.UI` | šedý řádek, panel Cesta, zaškrtávátko | `test_ui_dialog` (stavy §8.2), headless výška |
+| `GM.L` | klíče §8, §9.1, skloňování | parita CS/EN |
+
+Regrese: pozice v režimu artboardu a v režimu cesty při D = 0 bez zaoblení
+beze změny (stávající sady).
+
+## 14. Co změřit před implementací
+
+- Čistá kopie přes `setEntirePath` + úchyty: zachová geometrii živých rohů
+  a ignoruje vzhled originálu.
+- `ofst` v dokumentu Large Canvas: D v jednotkách dokumentu.
+- Co hlásí Přímý výběr při kliknutí přímo na zakřivený úsek.
+- Výsledek na vnitřním rohu (§5.5).
+- Výšku dialogu a šířku šedého řádku headless.
+- Oblouky z úseček v klientském PDF (§4): jak často a jak vypadají.
+
+## 15. Pořadí prací
+
+1. `GM.Core`: zaoblené rohy, nejvyšší bod, kontrola — Node testy.
+2. `GM.Illustrator.offsetPath` + měření §14 + harness.
+3. `GM.Main.process` — průběh §9.
+4. Dialog §8 — Node testy stavů, headless výška.
+5. Část obvodu §5.4.
+6. README, manual-test (nová sekce), CHANGELOG 1.3.0, engine-facts (§6.2,
+   §6.3). Vydání přes `releasing-a-tool`.
+
+Práce běží na větvi `feat/grommet-marks-path-mode` v odděleném worktree;
+pracovní kopie v `~/Dev` zůstává na `main`, kde souběžně vzniká tile-export.
