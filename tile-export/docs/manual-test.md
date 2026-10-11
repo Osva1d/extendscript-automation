@@ -1,9 +1,10 @@
 # Tile Export — ruční testy
 
 Co se musí vyzkoušet rukou před vydáním a po větší změně. Geometrii dělení,
-hlášky, předvolby a výpočty měřítek kryje 14 automatických sad
+hlášky, předvolby a výpočty měřítek kryje 15 automatických sad
 (`npm test` v `tile-export/`); export v Illustratoru se ověřoval harnessem
-přes produkční kód na kopiích testovacích dokumentů. Tady zůstává to, co
+přes produkční kód na kopiích testovacích dokumentů, každý běh jako samostatný
+skript (N42). Tady zůstává to, co
 automat nevidí: jak dialog vypadá, co ukáže prohlížeč, tisk a stroj.
 
 Nálezy: [findings.md](findings.md). Dřívější plán
@@ -102,7 +103,9 @@ linkou a vodítkem na hranici načisto; originál beze změny. Vodorovně: plát
 sloupci vpravo. Zeď, Zünd: pláty se značkami a řezem, bez linky. Jen pláty
 podruhé: pláty nahrazené, ne přidané; dialog nehlásí dvě grafiky, vodítka
 kontrolních plátů nečte jako švy, cesty v barvě Cut nehlásí jako konturu.
-Starší dokument s vrstvou `TE_lines`: po běhu zmizí.
+Starší dokument s vrstvou `TE_lines`: po běhu zmizí. Po Jen pláty vytáhni
+z pravítka vodítko: v panelu Vrstvy musí ležet ve tvé vrstvě, ne v `TE_panels`
+(N44).
 
 ---
 
@@ -141,4 +144,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N41.
+další číslo v [nálezech](findings.md), naposledy N44.

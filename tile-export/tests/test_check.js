@@ -108,5 +108,46 @@ for (i = 0; ok && i < many.length; i++) {
 }
 assert(ok, "twelve pages over several rows: on the canvas, below the content, a gap apart");
 
+console.log("\n=== the canvas is measured before a run removes anything ===");
+// The measurement probes with artboards.add, which Illustrator refuses past
+// the canvas. A refused add in a script that has already removed artboards
+// or layers brings them back inside Illustrator while the script still sees
+// them gone; every add after it failed with "there is no document", the
+// canvas measured as a point and a second Panels only found no room
+// (measured 2026-10-11, AI 30.8.2).
+var mainSrc = fs.readFileSync(path.join(__dirname, "..", "src/main.js"), "utf8");
+var checkSrc = fs.readFileSync(path.join(__dirname, "..", "src/check.js"), "utf8");
+var iCanvas = mainSrc.indexOf("TE.Check.canvasBounds(doc)");
+var iRemove = mainSrc.indexOf("TE.Check.removeAll(doc)");
+assert(iCanvas !== -1 && iRemove !== -1 && iCanvas < iRemove,
+    "main.js measures the canvas before it removes the old panels");
+var buildSrc = checkSrc.slice(checkSrc.indexOf("    build: function"), checkSrc.indexOf("    buildPanel: function"));
+assert(buildSrc.length > 0 && buildSrc.indexOf("canvasBounds(") === -1,
+    "build() measures nothing itself: its caller hands it the canvas");
+
+console.log("\n=== a run never removes the active layer ===");
+// A first run left the last panel's sublayer active, and the next one starts
+// there. A removed active layer still reads as doc.activeLayer, and build()
+// hands back the layer it finds, so it must be moved out first.
+var docNode = { typename: "Document" };
+function lay(name, parent) { return { name: name, typename: "Layer", parent: parent || docNode }; }
+var userL = lay("Layer 1"), checkL = lay(TE.Config.layerCheck), linesL = lay(TE.Config.layerLines);
+var deepL = lay("CutContour", lay("TE_03", checkL));
+var seen = null;
+TE.Doc = { findCheckLayer: function () { return null; } };
+TE.Draw = {
+    removeTileArtboards: function (d) { seen = d.activeLayer; return 0; },
+    removeLinesLayer: function () { return false; }
+};
+var dRun = { activeLayer: deepL, layers: [checkL, userL] };
+TE.Check.removeAll(dRun);
+assert(seen === userL, "the active layer leaves the check layer before anything is removed");
+dRun = { activeLayer: linesL, layers: [linesL, checkL, userL] };
+TE.Check.removeAll(dRun);
+assert(seen === userL, "and the 1.0 lines layer too, past the check layer");
+dRun = { activeLayer: userL, layers: [checkL, lay("Layer 2"), userL] };
+TE.Check.removeAll(dRun);
+assert(seen === userL, "the user's own active layer stays");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

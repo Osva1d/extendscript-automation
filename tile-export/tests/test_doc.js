@@ -124,8 +124,23 @@ assert(TE.Doc.readDrawingScale(xAttr) === 20, "the attribute form is read too");
 assert(TE.Doc.readDrawingScale(TE.Doc.writeDrawingScale(xAttr, 5)) === 5, "and rewritten in place");
 assert(TE.Doc.writeDrawingScale("<x:xmpmeta/>", 10) === null, "no RDF to write into: nothing written");
 assert(TE.Doc.readDrawingScale(XMP.replace("</rdf:RDF>",
-    "<rdf:Description><te:drawingScale>0</te:drawingScale></rdf:Description></rdf:RDF>")) === null,
+    '<rdf:Description xmlns:te="' + TE.Config.xmpNamespace + '"><te:drawingScale>0</te:drawingScale>'
+    + "</rdf:Description></rdf:RDF>")) === null,
     "a zero scale counts as none");
+// Illustrator re-serializes the packet it is given: the value moves into its
+// own description and the prefix "te" may come back renamed (measured
+// 2026-10-11, AI 30.8.2: "te_1_"). The namespace is what identifies it.
+var XMP_AI = XMP.replace('xmlns:xmp="http://ns.adobe.com/xap/1.0/"',
+    'xmlns:xmp="http://ns.adobe.com/xap/1.0/"\n            xmlns:te_1_="' + TE.Config.xmpNamespace + '"')
+    .replace("</xmp:CreatorTool>", "</xmp:CreatorTool>\n         <te_1_:drawingScale>10</te_1_:drawingScale>");
+assert(TE.Doc.readDrawingScale(XMP_AI) === 10, "a renamed prefix is read through its namespace");
+var xAi = TE.Doc.writeDrawingScale(XMP_AI, 12.5);
+assert(TE.Doc.readDrawingScale(xAi) === 12.5, "and rewritten");
+assert(xAi.split("drawingScale>").length === 3, "in place, without a second value beside it");
+var xOther = XMP.replace("</rdf:RDF>", '<rdf:Description xmlns:foo="http://example.com/other/">'
+    + "<foo:drawingScale>7</foo:drawingScale></rdf:Description></rdf:RDF>");
+assert(TE.Doc.readDrawingScale(xOther) === null, "another namespace's drawingScale is not ours");
+assert(TE.Doc.readDrawingScale(TE.Doc.writeDrawingScale(xOther, 4)) === 4, "and writing ours leaves it be");
 assert(TE.Doc.readDrawingScale(null) === null, "an unreadable packet counts as none");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");

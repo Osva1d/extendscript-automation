@@ -396,6 +396,26 @@ prostorem, vložený řetězcem před `</rdf:RDF>`, je hned čitelný a přežij
 hodnotu skriptu (tile-export: měřítko kresby), aniž by kreslil cokoli na
 plátno.
 
+**Prefix ale nemusí přežít** (naměřeno 2026-10-11, AI 30.8.2). Illustrator
+zapsaný paket přeformátuje: vlastní popis vloží do hlavního `rdf:Description`
+a prefix `te` vrátil jako `te_1_` (`xmlns:te_1_="…"`,
+`<te_1_:drawingScale>10</te_1_:drawingScale>`). Nejspíš proto, že `te` už měl
+v téže relaci jiný jmenný prostor z dřívější sondy; po restartu může vyjít
+jinak. Hodnotu je tedy nutné hledat přes URI jmenného prostoru, ne přes prefix
+(tile-export `TE.Doc.scalePatterns`, N43).
+
+### Aktivní vrstva po skriptu (naměřeno 2026-10-11, AI 30.8.2)
+
+- `doc.layers.add()` i `layer.layers.add()` udělají novou vrstvu aktivní: běh
+  tile-export nechal aktivní podvrstvu posledního plátu.
+- Odebraná aktivní vrstva se do konce skriptu dál čte jako `doc.activeLayer`.
+  `artboards.add()` i nová cesta fungují dál (cesta skončí v jiné vrstvě).
+- `doc.activeLayer = vrstva` změní, co vlastnost vrací, i v dalším skriptu.
+  Cesta, kterou další skript vytvoří bez kontejneru (`doc.pathItems.add()`),
+  ale skončila v horní vrstvě `TE_panels`, kterou předchozí skript založil,
+  ne v nastavené `Vrstva 1`. Kam dopadne vodítko tažené rukou, neměřeno —
+  ruční test tile-export 1.10.
+
 ### Pathfinder z ExtendScriptu
 
 - Panelové příkazy `Pathfinder Crop`, `Pathfinder Intersect`,
@@ -564,16 +584,55 @@ musí počítat poměr z masky sám a zvětšovat přes `resize()`.
   9042, y −7766,6 … 8616,4. Large Canvas má plátno stejně velké ve vnitřních
   jednotkách, ve skutečnosti tedy 57,8 m.
 - DOM ho neukazuje. Najde se bisekcí: `artboards.add()` mimo plátno hází,
-  zhruba sto přidání a odebrání trvá 0,1 s.
-- **Cesta přes okraj se zdeformuje.** Obdélník 300 pt přes pravý okraj
-  posunutý `translate()` o 1000 pt vyšel 1200 pt široký: levá hrana zůstala na
-  okraji, pravá se posunula. Generované cesty i artboardy proto patří dovnitř.
+  zhruba sto přidání a odebrání trvá 0,1 s. **Jen než skript cokoli odebere**
+  — odmítnuté přidání pak odebrané vrací, viz následující oddíl.
+- **Za okrajem neplatí `geometricBounds`, kotvy ano** (opraveno 2026-10-11).
+  Obdélník 10 × 10 pt posunutý `translate()` celý 40 000 pt za pravý okraj má
+  kotvy přesně v cíli (40 295 … 40 305), `geometricBounds` ale hlásí
+  8492 … 40 305, levou mez na okraji plátna; posun doleva a nahoru vrátí meze
+  posunuté o celé plátno. Dřívější „obdélník přes okraj vyšel 1200 pt široký,
+  levá hrana zůstala na okraji" četl jen `geometricBounds`. Generované cesty
+  i artboardy dál patří dovnitř: artboard tam nevznikne a mezím cest tam nejde
+  věřit.
 - **Umístěná grafika přes okraj smí.** Kopie posunutá tak, že přesahuje okraj
   o 670 pt, zachovala šířku 1729,13 pt a ořezová skupina s maskou uvnitř
   plátna funguje.
 - Deset zamaskovaných kopií téže umístěné grafiky stojí pod 2 ms a 93 ms
   překreslení. `.ai` s 11 umístěními jednoho linku má 2,1 MB při zdrojovém PDF
   1,75 MB — obraz je v souboru jednou.
+
+### Odmítnuté `artboards.add` vrací, co skript odebral (naměřeno 2026-10-11, AI 30.8.2)
+
+Každý řádek je samostatné volání `tools/ai-eval.sh`, tedy samostatný skript,
+jako běhy nástroje v provozu:
+
+| skript | co dělá | artboardy potom |
+|---|---|---|
+| 1 | tile-export postaví tři kontrolní pláty | `1, TE_01, TE_02, TE_03` |
+| 2 | odebere `TE_*` a vrstvu plátů, pak bisekce | `1`, vrstva plátů **zpátky**; každé `add` po prvním odmítnutém hází „there is no document", plátno vyjde jako bod |
+| 3 | totéž znovu | `1, TE_01, TE_02, TE_03` — **odebrané artboardy zpátky** |
+
+Všechna měření sedí na jedno pravidlo: **odmítnuté `add` vrátí dokument do
+stavu po posledním `app.redraw()`, jinak od začátku skriptu.** Kolekce
+`doc.artboards` to ukáže až po dalším redraw (viz „Kolekce na úrovni dokumentu
+se aktualizují až po `app.redraw()`"), vrstvy hned — proto ve skriptu 2 vrstva
+zpátky a artboardy zdánlivě pryč. Skript, který pak s takovým dokumentem
+pracuje, se rozbije: další `add` hází „there is no document", odebrání
+zkušebních artboardů, které už vnitřně nejsou, chybu `MRAP`.
+
+- Bisekce sama nic nezanechá: každé zkušební `add` hned odebere, takže stav po
+  posledním redraw se nemění. Dvakrát po sobě dá stejné plátno (`−7766 … 8617`,
+  16 383 pt) a po `app.redraw()` je artboard pořád jeden.
+- Artboard a vrstva odebrané **před** `app.redraw()` zůstaly pryč i po
+  odmítnutém `add`. Artboard odebraný ve skriptu, kde po odebrání přišlo
+  odmítnuté `add`, se ukázal po redraw v příštím skriptu.
+- Odebrání v jednom skriptu a odmítnuté `add` až v dalším nevadí.
+
+**Důsledek:** plátno měřit dřív, než skript cokoli odebere (druhá možnost:
+`app.redraw()` po odebrání, za cenu kroku Zpět navíc). tile-export ho od 1.1.0
+měří v `main.js` před `removeAll()` (N42). Sonda, která pouští víc běhů
+v jednom skriptu, tuhle chybu nevidí: vrátí se vše k začátku skriptu
+a výsledek náhodou sedí.
 
 ### Large Canvas jde založit skriptem
 
@@ -782,6 +841,10 @@ PDF uložené z takového dokumentu má MediaBox ve vnitřních jednotkách
 fyzickou velikost prozradí až `/UserUnit` (`grep -a /UserUnit soubor.pdf`).
 `pdftoppm -scale-to` stránku vykreslí správně, takže normální a Large Canvas
 výstup jde porovnat vedle sebe.
+
+`exportFile(…, ExportType.PNG24, …)` z dokumentu Large Canvas nezapíše nic
+a nehlásí chybu (naměřeno 2026-10-11, AI 30.8.2; měřítko 13,4 i 133 %, bez
+ořezu artboardem). Náhled Large Canvasu proto přes PDF a `pdftoppm`.
 
 ### Geometrie cest
 

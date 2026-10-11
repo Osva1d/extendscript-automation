@@ -131,6 +131,13 @@ TE.Check = {
      * 2026-10-10). An artboard past it is refused, so its edges are found by
      * bisection with probe artboards — about a hundred added and removed,
      * ~0.1 s.
+     *
+     * Call it before the run changes the document. A refused add in a
+     * script that has already removed artboards or layers brings them back
+     * inside Illustrator while the script still sees them gone: every add
+     * after it fails with "there is no document" and the canvas measures as
+     * a point (measured 2026-10-11, AI 30.8.2). Alone, the bisection gives
+     * the same canvas run after run.
      * @param {Document} doc - Working document.
      * @returns {Object} {l, t, r, b}.
      */
@@ -177,12 +184,38 @@ TE.Check = {
     },
 
     /**
+     * Moves the active layer out of TE's own layers — the check layer, the
+     * 1.0 TE_lines layer and their sublayers — to the topmost other one.
+     * A removed active layer still reads as doc.activeLayer for the rest of
+     * the script (measured 2026-10-11, AI 30.8.2), and build() hands the
+     * layer it found back at the end: it must be one that stays.
+     * @param {Document} doc - Working document.
+     */
+    leaveOwnLayers: function (doc) {
+        var own = [TE.Config.layerCheck, TE.Config.layerLines], i;
+        try {
+            var top = doc.activeLayer;
+            while (top.parent && top.parent.typename === "Layer") { top = top.parent; }
+            if (TE.Utils.indexOf(own, top.name) === -1) { return; }
+            for (i = 0; i < doc.layers.length; i++) {
+                if (TE.Utils.indexOf(own, doc.layers[i].name) === -1) {
+                    doc.activeLayer = doc.layers[i];
+                    return;
+                }
+            }
+        } catch (e) {
+            TE.Utils.log("active layer not moved: " + e.message);
+        }
+    },
+
+    /**
      * Takes away what an earlier run built: the panel artboards, the check
      * layer, and the TE_lines layer of the 1.0 overview.
      * @param {Document} doc - Working document.
      * @returns {number} How many panel artboards there were.
      */
     removeAll: function (doc) {
+        this.leaveOwnLayers(doc);
         var removed = TE.Draw.removeTileArtboards(doc);
         TE.Draw.removeLinesLayer(doc);
         var lay = TE.Doc.findCheckLayer(doc);
@@ -203,7 +236,8 @@ TE.Check = {
      * document's scale.
      * @param {Document} doc - Working document.
      * @param {Array} tiles - From TE.Grid.computeTiles().
-     * @param {Object} ctx - {graphic, scaleFactor, markDef}.
+     * @param {Object} ctx - {graphic, scaleFactor, markDef, canvas}; canvas
+     *        from canvasBounds(), measured before removeAll().
      * @param {Object} s - Settings.
      * @returns {Object} {fits, count}; nothing is built when they do not fit.
      */
@@ -211,18 +245,28 @@ TE.Check = {
         var sf = Number(ctx.scaleFactor) || 1;
         var pages = [], i;
         for (i = 0; i < tiles.length; i++) { pages.push(this.geometry(tiles[i], s, sf).page); }
-        var c = this.canvasBounds(doc);
+        var c = ctx.canvas;
         // A point inside each edge: the bisection ends on the last good value.
         var canvas = { l: c.l + 1, t: c.t - 1, r: c.r - 1, b: c.b + 1 };
         var moves = this.layout(pages, this.contentBounds(doc, ctx.graphic), canvas,
             s.direction, this.gap(pages, sf));
         if (!moves) { return { fits: false, count: 0 }; }
 
+        // Every layer added becomes the active one: a run left the last
+        // panel's sublayer active (measured 2026-10-11). Where the user draws
+        // next must not be the check layer, which the next run removes, so
+        // the layer active before comes back.
+        var active = doc.activeLayer;
         var root = doc.layers.add();
         root.name = TE.Config.layerCheck;
-        for (i = 0; i < tiles.length; i++) {
-            var t = this.shiftTile(tiles[i], moves[i][0], moves[i][1]);
-            this.buildPanel(doc, root, t, this.geometry(t, s, sf), moves[i], ctx, s);
+        try {
+            for (i = 0; i < tiles.length; i++) {
+                var t = this.shiftTile(tiles[i], moves[i][0], moves[i][1]);
+                this.buildPanel(doc, root, t, this.geometry(t, s, sf), moves[i], ctx, s);
+            }
+        } finally {
+            try { doc.activeLayer = active; }
+            catch (e) { TE.Utils.log("active layer not restored: " + e.message); }
         }
         return { fits: true, count: tiles.length };
     },
