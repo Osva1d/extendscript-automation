@@ -112,9 +112,12 @@
         // replace the 1.0 overview of artboards and red lines laid over the
         // original, which now stays as it is. Zünd mode draws no trim line
         // here either: the cut path takes its place (N28).
+        // The canvas is measured first: its probes, refused past the edge,
+        // would undo the removal below inside Illustrator (canvasBounds).
+        var canvas = TE.Check.canvasBounds(doc);
         var replaced = TE.Check.removeAll(doc);
-        var check = TE.Check.build(doc, tiles,
-            { graphic: graphics[0], scaleFactor: ctx.validation.scaleFactor, markDef: markDef }, s);
+        var check = TE.Check.build(doc, tiles, { graphic: graphics[0],
+            scaleFactor: ctx.validation.scaleFactor, markDef: markDef, canvas: canvas }, s);
 
         var msg = [];
         if (guides.hiddenCount > 0) {

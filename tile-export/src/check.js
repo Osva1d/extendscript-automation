@@ -131,6 +131,13 @@ TE.Check = {
      * 2026-10-10). An artboard past it is refused, so its edges are found by
      * bisection with probe artboards — about a hundred added and removed,
      * ~0.1 s.
+     *
+     * Call it before the run changes the document. A refused add in a
+     * script that has already removed artboards or layers brings them back
+     * inside Illustrator while the script still sees them gone: every add
+     * after it fails with "there is no document" and the canvas measures as
+     * a point (measured 2026-10-11, AI 30.8.2). Alone, the bisection gives
+     * the same canvas run after run.
      * @param {Document} doc - Working document.
      * @returns {Object} {l, t, r, b}.
      */
@@ -229,7 +236,8 @@ TE.Check = {
      * document's scale.
      * @param {Document} doc - Working document.
      * @param {Array} tiles - From TE.Grid.computeTiles().
-     * @param {Object} ctx - {graphic, scaleFactor, markDef}.
+     * @param {Object} ctx - {graphic, scaleFactor, markDef, canvas}; canvas
+     *        from canvasBounds(), measured before removeAll().
      * @param {Object} s - Settings.
      * @returns {Object} {fits, count}; nothing is built when they do not fit.
      */
@@ -237,7 +245,7 @@ TE.Check = {
         var sf = Number(ctx.scaleFactor) || 1;
         var pages = [], i;
         for (i = 0; i < tiles.length; i++) { pages.push(this.geometry(tiles[i], s, sf).page); }
-        var c = this.canvasBounds(doc);
+        var c = ctx.canvas;
         // A point inside each edge: the bisection ends on the last good value.
         var canvas = { l: c.l + 1, t: c.t - 1, r: c.r - 1, b: c.b + 1 };
         var moves = this.layout(pages, this.contentBounds(doc, ctx.graphic), canvas,
