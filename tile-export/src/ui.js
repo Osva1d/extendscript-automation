@@ -163,8 +163,8 @@ TE.UI = {
 
         // Two columns, balanced by measured heights. 2026-10-11, with the
         // presets in two rows at the top of the left column and the
-        // placeholder row: both columns 643 px, the Result stretched from its
-        // 85 px floor to 95, the dialog 1178 x 745 px. Stacked in one column the
+        // placeholder row: both columns 647 px, the Result stretched from its
+        // 85 px floor to 99, the dialog 1178 x 749 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -186,12 +186,13 @@ TE.UI = {
         colR.alignment = ["fill", "fill"];   // as tall as the left column (N18)
 
         // --- Presets ---------------------------------------------------------
-        // At the top of the left column: the list on its row, the buttons
-        // under it, as zund-summa-marks has them. In one row of the column the
-        // buttons left the list 88 px; across the whole dialog it was 621 px
-        // with the buttons far off at the right edge, too long (user,
-        // 2026-10-11). The second row costs the left column 37 px, which the
-        // right one is taller by anyway.
+        // At the top of the left column: the list and its revert button on
+        // one row, the buttons that manage presets under it, as
+        // zund-summa-marks has them. With all four in one row of the column
+        // the list got 88 px; across the whole dialog it was 621 px with the
+        // buttons far off at the right edge, too long (user, 2026-10-11). The
+        // second row costs the left column 37 px, which the right one is
+        // taller by anyway.
         var pPreset = colL.add("panel", undefined, l.PANEL_PRESET);
         pPreset.alignChildren = ["fill", "top"];
         var gPreset = pPreset.add("group");
@@ -202,14 +203,19 @@ TE.UI = {
         var ddPreset = gPreset.add("dropdownlist", undefined, []);
         ddPreset.alignment = ["fill", "center"];
         ddPreset.helpTip = l.TIP_PRESET;
-        // Revert and Save sit right under the list they act on: both are live
-        // only while the preset has unsaved edits (N8). Grouped, so the row's
-        // slack does not stretch them (engine-facts, ScriptUI row slack).
-        var gPresetBtns = pPreset.add("group");
-        gPresetBtns.alignment = ["right", "top"];
-        var btnRevert = gPresetBtns.add("button", undefined, l.BTN_REVERT);
+        // Revert reloads what the list shows, so it sits next to it (user,
+        // 2026-10-11). Live only while the preset has unsaved edits (N8). In a
+        // group of its own: ScriptUI shares a row's slack among all its
+        // controls, and the list is to get it (engine-facts, row slack).
+        var gRevert = gPreset.add("group");
+        gRevert.alignment = ["right", "center"];
+        var btnRevert = gRevert.add("button", undefined, l.BTN_REVERT);
         btnRevert.preferredSize.width = this.M.REVERT_BTN;   // [deviation] see M
         btnRevert.helpTip = l.TIP_REVERT;
+        // Save, Save As and Delete manage the presets: under the list,
+        // aligned right like the revert button above them.
+        var gPresetBtns = pPreset.add("group");
+        gPresetBtns.alignment = ["right", "top"];
         var btnSave = gPresetBtns.add("button", undefined, l.BTN_SAVE);
         btnSave.helpTip = l.TIP_SAVE;
         var btnSaveAs = gPresetBtns.add("button", undefined, l.BTN_SAVE_AS);

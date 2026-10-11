@@ -277,7 +277,8 @@ var shopPat = { text: "26_13456_a_{n}_{size}_{scale}_1x", enabled: true };
 has(summary({ etPattern: shopPat }), "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku10_1x.pdf",
     "1:10 as drawn: real size and the ratio");
 has(summary({ etPattern: shopPat, rbExpScale: [{ value: false }, { value: true }] }),
-    "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1x.pdf", "1:1: real size, no ratio, no double separator");
+    "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku1_1x.pdf",
+    "1:1: a {scale} in the pattern is meant, so the ratio is 1ku1 (user, 2026-10-11)");
 has(summary(zund({ etPattern: shopPat })),
     "Soubory plátu 1: 26_13456_a_01_1040x1030mm_1ku10_1x.pdf a 26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf",
     "Zünd: the page with its marks, and the _cut file beside it");
@@ -323,7 +324,8 @@ has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 ×
     "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");
 var rLcName = refs({ etScaleN: { text: "1" }, etPattern: { text: "{n}_{size}_{scale}", enabled: true } });
 TE.UI.refresh(null, rLcName, lcCtx);
-has(rLcName.stCalc.text, "Soubor plátu 1: 01_2010x1000mm.pdf", "Large Canvas at drawing scale 1: real size, no ratio");
+has(rLcName.stCalc.text, "Soubor plátu 1: 01_2010x1000mm_1ku1.pdf",
+    "Large Canvas at drawing scale 1: real size, 1ku1 — the canvas factor is no ratio");
 app.activeDocument.scaleFactor = 1;
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");

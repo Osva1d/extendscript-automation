@@ -174,7 +174,9 @@ vždy **skutečná velikost**, poměr říká, v jakém měřítku jsou data:
 | 1:10 | `26_13456_a_01_2020x1020mm_1ku10_1x` | 202 × 102 mm |
 | 1:1 | `26_13456_a_01_2020x1020mm_1x` | 2020 × 1020 mm |
 
-U dat 1:1 se poměr v názvu vynechává (uživatel, 2026-10-10).
+U dat 1:1 se poměr v názvu vynechává (uživatel, 2026-10-10). **Změněno 2026-10-11**
+(uživatel): kdo dá `{scale}` do vzoru i u 1:1, chce ho vidět — `{scale}` je vždy
+poměr, u skutečné velikosti `1ku1`; název 1:1 bez poměru dá vzor bez `{scale}`.
 
 Pevné části píše uživatel do vzoru, mezi ně placeholdery:
 `26_13456_a_{n}_{size}_{scale}_1x`.

@@ -283,7 +283,7 @@ ně proměnné:
 |---|---|
 | `{n}` | číslo plátu, vždy aspoň dvoumístné (`01`) |
 | `{size}` | skutečný rozměr stránky v celých mm (`2020x1020mm`), u Zündu stránka se značkami |
-| `{scale}` | poměr dat v měřítku kresby (`1ku10`); ve skutečné velikosti zmizí i s jedním oddělovačem |
+| `{scale}` | poměr dat ke skutečné velikosti: `1ku10`, ve skutečné velikosti `1ku1` |
 | `{doc}` | název dokumentu bez přípony |
 | `{total}` | počet plátů |
 
@@ -291,7 +291,9 @@ Výchozí vzor `{doc}_{n}_{size}_{scale}` dá `zed_01_2040x1030mm_1ku10.pdf`.
 Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
 `26_13456_a_{n}_{size}_{scale}_1x`. Data 1:10 pak dostanou
 `26_13456_a_01_2020x1020mm_1ku10_1x.pdf`, data 1:1
-`26_13456_a_01_2020x1020mm_1x.pdf`. Zünd přidá k řezovému souboru `_cut`.
+`26_13456_a_01_2020x1020mm_1ku1_1x.pdf`. Kde poměr u 1:1 nechceš, vynech
+`{scale}` ze vzoru: `26_13456_a_{n}_{size}_1x` dá `26_13456_a_01_2020x1020mm_1x.pdf`.
+Zünd přidá k řezovému souboru `_cut`.
 
 Proměnné přidávají tlačítka pod polem: klik připíše proměnnou na konec vzoru,
 vzor tedy skládej zleva doprava. Výsledek v dialogu ukazuje název prvního
