@@ -132,5 +132,29 @@ for (i = 0; i < place.length; i++) {
     eq(back.overlapMode + "/" + back.overlapCarrier, place[i].join("/"), "overlap " + place[i].join("/"));
 }
 
+console.log("\n=== [Default] comes from the code, whatever the file holds ===");
+// A settings file from before N8 (2026-09-18) kept [Default] with values a
+// test had put there — overlap 33, right add 40, mark gap 10 — and the dialog
+// showed them as the defaults (manual test, 2026-10-11).
+var file = { activePreset: "[Default]", presets: {} };
+file.presets["[Default]"] = TE.Config.getDefaults();
+file.presets["[Default]"].overlap = 33;
+file.presets["[Default]"].addRight = 40;
+file.presets["[Default]"].gapInner = 10;
+file.presets["TEST"] = TE.Config.getDefaults();
+file.presets["TEST"].overlap = 33;
+TE.UI.normalizePresets(file);
+var fd = file.presets["[Default]"], cd = TE.Config.getDefaults();
+eq(fd.overlap + "/" + fd.addRight + "/" + fd.gapInner, cd.overlap + "/" + cd.addRight + "/" + cd.gapInner,
+    "[Default] gets the code's overlap, adds and mark gap back");
+eq(fd.namePattern, cd.namePattern, "and the code's name pattern");
+eq(file.presets["TEST"].overlap, 33, "the user's own preset keeps its values");
+eq(file.activePreset, "[Default]", "the active preset stays");
+var gone = { activePreset: "Smazana", presets: {} };
+eq(TE.UI.normalizePresets(gone).activePreset, "[Default]", "an active preset that is gone falls back to [Default]");
+eq(gone.presets["[Default]"].overlap, cd.overlap, "and a file without [Default] gets one");
+var last = { activePreset: "[Last Settings]", presets: { "[Last Settings]": TE.Config.getDefaults() } };
+eq(TE.UI.normalizePresets(last).activePreset, "[Default]", "[Last Settings] is never the active preset");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

@@ -150,6 +150,7 @@ TE.UI = {
         var c = TE.Config;
         var l = TE.L;
         var self = this;
+        this.normalizePresets(pData);
         var s = pData.presets[c.PRESET_KEY_LAST] || pData.presets[pData.activePreset]
              || c.getDefaults();
 
@@ -657,15 +658,6 @@ TE.UI = {
             if (!TE.Storage.save(pData)) { alert(l.ERR_WRITE_SETTINGS); }
         }
 
-        // A file edited by hand or written by an older build may lack
-        // [Default] or name an active preset that is gone.
-        if (!pData.presets[c.PRESET_KEY_DEFAULT]) {
-            pData.presets[c.PRESET_KEY_DEFAULT] = c.getDefaults();
-        }
-        if (!pData.presets[pData.activePreset] || pData.activePreset === c.PRESET_KEY_LAST) {
-            pData.activePreset = c.PRESET_KEY_DEFAULT;
-        }
-
         // The fields hold the last confirmed run, the list names the active
         // preset. Measure that preset as the dialog shows it, then put the run
         // back — so the list says "*" at once when the two differ, instead of
@@ -768,6 +760,26 @@ TE.UI = {
                 return { action: state.outcome, wrapper: pData };
             }
         };
+    },
+
+    /**
+     * The preset wrapper as the dialog needs it, changed in place.
+     * [Default] holds the factory values only — Save never writes it — so it
+     * is rebuilt from the code every time, as zund-summa-marks does. Kept
+     * from the file, it showed what a build before N8 (2026-09-18) had let a
+     * test write there, overlap 33 instead of 20 (manual test 2026-10-11),
+     * and no later change to the defaults reached the dialog. An active
+     * preset that is gone, or [Last Settings], falls back to [Default].
+     * @param {Object} pData - Preset wrapper.
+     * @returns {Object} The same wrapper.
+     */
+    normalizePresets: function (pData) {
+        var c = TE.Config;
+        pData.presets[c.PRESET_KEY_DEFAULT] = c.getDefaults();
+        if (!pData.presets[pData.activePreset] || pData.activePreset === c.PRESET_KEY_LAST) {
+            pData.activePreset = c.PRESET_KEY_DEFAULT;
+        }
+        return pData;
     },
 
     /**
