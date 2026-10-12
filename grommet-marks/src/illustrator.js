@@ -179,9 +179,11 @@ GM.Illustrator = {
      * restore are still to be measured (M1–M4).
      * @param {Object} pathInfo - getSelectedPathInfo() result of a closed path.
      * @param {number} D - Inward offset, document units, > 0.
-     * @returns {Object} {ok:true, segments, loops} or {ok:false, message}
+     * @returns {Object} {ok:true, segments, loops} or {ok:false, message};
+     *                   `segments` is [] unless loops === 1.
      */
     offsetPath: function (pathInfo, D) {
+        if (!(D > 0)) return { ok: false, message: "offset must be greater than 0" };
         var doc = GM.Illustrator.doc, src = pathInfo.pathRef, tmp = null, made = [];
         try {
             tmp = src.layer.pathItems.add();
@@ -202,9 +204,10 @@ GM.Illustrator = {
             // expandStyle acts on the active document's selection (spec §6.1).
             if (app.activeDocument.name !== doc.name) throw new Error("active document changed");
             app.executeMenuCommand("expandStyle");
-            tmp = null;                              // replaced by the expanded result
-            var sel = doc.selection;
+            var sel = doc.selection || [];
             for (var s = 0; s < sel.length; s++) made.push(sel[s]);
+            if (made.length === 0) throw new Error("expandStyle left no result selected");
+            tmp = null;                              // replaced by the expanded result
             var paths = [];
             for (var m = 0; m < made.length; m++) GM.Illustrator._collectPaths(made[m], paths);
             var segs = paths.length === 1 ? GM.Illustrator._segmentsOf(paths[0]) : [];
@@ -237,8 +240,9 @@ GM.Illustrator = {
     /**
      * Hands the cut line's selection back as it was before offsetPath:
      * point by point, so a direct selection survives and a second run
-     * behaves like the first (measured: setting a point's state selects the
-     * path, M3).
+     * behaves like the first (expected: setting a point's state selects the
+     * path — measurement M3 pending; if nothing ends up selected, the whole
+     * path is selected instead).
      */
     _restoreSelection: function (pathInfo) {
         var doc = GM.Illustrator.doc;
@@ -246,6 +250,8 @@ GM.Illustrator = {
             doc.selection = null;
             var pts = pathInfo.pathRef.pathPoints, saved = pathInfo.pointSel || [];
             for (var i = 0; i < pts.length && i < saved.length; i++) pts[i].selected = saved[i];
+            var after = doc.selection;
+            if (!after || after.length === 0) pathInfo.pathRef.selected = true;
         } catch (e) {
             GM.Utils.log("restoreSelection: " + e.message);
             try { pathInfo.pathRef.selected = true; } catch (e2) {
