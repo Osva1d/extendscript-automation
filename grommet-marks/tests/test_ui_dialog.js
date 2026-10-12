@@ -56,9 +56,16 @@ function buildUI(pData, pathInfo) {
         pathInfo || { ok: false, reason: "no-selection" });
     return ui; // {window, gatherAll, modeUI, pathUI, zonesUI}
 }
-function mockPathInfo(cornerCount, closed, totalLen) {
-    return { ok: true, cornerCount: cornerCount, closed: closed,
-             totalLen: totalLen || 1000, corners: [], circuit: null, pathRef: {} };
+function mockPathInfo(cornerCount, closed, totalLen, extra) {
+    var p = { ok: true, cornerCount: cornerCount, closed: closed, sharpCount: cornerCount, roundCount: 0,
+              totalLen: totalLen || 1000, corners: [], circuit: null, pathRef: {},
+              partial: { state: "none", runs: [], selectedSegs: 0, totalSegs: 4 } };
+    for (var k in (extra || {})) if (extra.hasOwnProperty(k)) p[k] = extra[k];
+    return p;
+}
+function buildUI3(pData, pathInfo, docInfo) {
+    SUI.install();
+    return GM.UI.buildDialog(pData || freshPData(), pathInfo || { ok: false, reason: "no-selection" }, docInfo);
 }
 function done() { SUI.uninstall(); }
 
@@ -387,6 +394,89 @@ console.log("--- Locale: Czech plural forms ---");
     assert(GM.L.count("INFO_CORNERS", 11) === "11 rohů", "11 rohů");
     assert(GM.L.count("INFO_CORNERS", 12) === "12 rohů", "12 rohů");
     assert(GM.L.count("INFO_CORNERS", 0) === "0 rohů", "0 rohů");
+})();
+
+// ===== TEST: summary line under Placement (spec §8.1) =====
+console.log("--- UI 1.3: summary line (spec §8.1) ---");
+(function () {
+    var ui = buildUI3(null, null, { artboards: 1, width: 1000 * 2.834645669291339, height: 500 * 2.834645669291339, scale: 1 });
+    assert(ui.modeUI.infoLbl.text === "1 artboard · 1000 × 500 mm", "one artboard (got '" + ui.modeUI.infoLbl.text + "')");
+    done();
+    var ui2 = buildUI3(null, null, { artboards: 3, width: 1, height: 1, scale: 1 });
+    assert(ui2.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny", "three artboards");
+    done();
+
+    var p = freshPData();
+    p.presets["[Default]"].placementMode = "path";
+    var ui3 = buildUI3(p, null, { artboards: 1, width: 100, height: 100, scale: 1 });
+    assert(ui3.modeUI.infoLbl.text === GM.L.INFO_FALLBACK, "preset wants a path, none selected: said so");
+    ui3.modeUI.artboardRB.value = true; ui3.modeUI.artboardRB.onClick();
+    assert(ui3.modeUI.infoLbl.text.indexOf("1 artboard") === 0, "choosing the artboard clears the notice");
+    done();
+
+    var ui4 = buildUI3(null, mockPathInfo(5, true), null);
+    ui4.modeUI.pathRB.value = true; ui4.modeUI.pathRB.onClick();
+    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě", "house, offset 0 (got '" + ui4.modeUI.infoLbl.text + "')");
+    ui4.pathUI.offsetIn.text = "20"; ui4.pathUI.offsetIn.onChanging();
+    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "offset 20: no 'on the path'");
+    done();
+
+    var ui5 = buildUI3(null, mockPathInfo(0, true), null);
+    ui5.modeUI.pathRB.value = true; ui5.modeUI.pathRB.onClick();
+    ui5.pathUI.offsetIn.text = "20"; ui5.pathUI.offsetIn.onChanging();
+    assert(ui5.modeUI.infoLbl.text === "Uzavřená cesta · bez rohů · první značka nahoře", "circle");
+    done();
+
+    var ui6 = buildUI3(null, mockPathInfo(5, true, 1000, { sharpCount: 3, roundCount: 2 }), null);
+    ui6.modeUI.pathRB.value = true; ui6.modeUI.pathRB.onClick();
+    ui6.pathUI.offsetIn.text = "20"; ui6.pathUI.offsetIn.onChanging();
+    assert(ui6.modeUI.infoLbl.text === "Uzavřená cesta · 3 rohy, 2 zaoblené", "mixed corners");
+    done();
+})();
+
+// ===== TEST: path offset field and part of the outline (spec §8.2) =====
+console.log("--- UI 1.3: path offset and part of the outline (spec §8.2) ---");
+(function () {
+    var ui = buildUI3(null, mockPathInfo(3, false), null);
+    assert(ui.pathUI.offsetIn.enabled === false && ui.pathUI.offsetIn.helpTip === GM.L.TIP_PATH_OFFSET_OPEN, "open path: offset greyed, says why");
+    done();
+
+    var pd = freshPData();
+    pd.presets["[Default]"].pathOffset = 15;
+    var ui2 = buildUI3(pd, mockPathInfo(4, true), null);
+    assert(String(ui2.pathUI.offsetIn.text) === "15" && ui2.pathUI.offsetIn.enabled === true, "offset from the preset");
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    assert(String(ui2.gatherAll().pathOffset) === "15", "gathered");
+    assert(!("pathPartial" in ui2.gatherAll()), "part of the outline is not part of the settings");
+    ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
+    var ok = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    assert(ok.enabled === false, "invalid offset blocks Generate");
+    done();
+
+    var runs = mockPathInfo(10, true, 1000, { partial: { state: "runs", runs: [{ from: 0, len: 1, segs: 11 }], selectedSegs: 11, totalSegs: 20 } });
+    var ui3 = buildUI3(null, runs, null);
+    ui3.modeUI.pathRB.value = true; ui3.modeUI.pathRB.onClick();
+    assert(ui3.pathUI.partialCB.enabled === true && ui3.pathUI.partialCB.value === false, "partial: offered, off by default");
+    assert(ui3.pathUI.partialCB.text === "Jen vybraná část obvodu (11 z 20 úseků)", "label says how much");
+    assert(ui3.getRunOptions().pathPartial === false, "not ticked: whole outline");
+    ui3.pathUI.partialCB.value = true; ui3.pathUI.partialCB.onClick();
+    assert(ui3.getRunOptions().pathPartial === true, "ticked: part");
+    done();
+
+    var lone = mockPathInfo(4, true, 1000, { partial: { state: "lone", runs: [], selectedSegs: 0, totalSegs: 4 } });
+    var ui4 = buildUI3(null, lone, null);
+    assert(ui4.pathUI.partialCB.enabled === false && ui4.pathUI.partialCB.helpTip === GM.L.TIP_PARTIAL_LONE, "lone anchor: greyed, own tip");
+    done();
+    var ui5 = buildUI3(null, mockPathInfo(4, true), null);
+    assert(ui5.pathUI.partialCB.helpTip === GM.L.TIP_PARTIAL_NONE, "no direct selection: how to make one");
+    done();
+
+    var ui6 = buildUI3(null, mockPathInfo(4, true), null);
+    ui6.pathUI.offsetIn.text = "20";
+    var ddl = SUI.lastWindow().findOne(function (c) { return c.type === "dropdownlist" && c.items.length === 3; });
+    ddl.selection = ddl.items[1]; ddl.onChange();
+    assert(String(ui6.pathUI.offsetIn.text) === "2", "mm -> cm converts the path offset (got " + ui6.pathUI.offsetIn.text + ")");
+    done();
 })();
 
 // ===== TEST: both locales define the same keys =====

@@ -35,8 +35,9 @@ GM.Main = {
             }
 
             var pathInfo = GM.Illustrator.getSelectedPathInfo();
+            var docInfo = GM.Illustrator.getDocInfo();
 
-            var ui = GM.UI.buildDialog(pData, pathInfo);
+            var ui = GM.UI.buildDialog(pData, pathInfo, docInfo);
 
             if (ui.window.show() !== 1) return;
 
@@ -49,7 +50,7 @@ GM.Main = {
             pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
             GM.Storage.save(pData);
 
-            GM.Main.process(result.settings);
+            GM.Main.process(result.settings, ui.getRunOptions());
 
             app.redraw();
         } catch (e) {
