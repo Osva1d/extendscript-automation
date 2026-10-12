@@ -22,6 +22,38 @@ function straightSeg(ax, ay, bx, by) {
     return { p0: [ax, ay], p1: [ax, ay], p2: [bx, by], p3: [bx, by] };
 }
 
+// Bezier approximation of a circular arc from angle a0 to a1 (radians;
+// a1 < a0 runs clockwise) in `parts` equal pieces.
+function arcSegs(cx, cy, r, a0, a1, parts) {
+    var out = [], step = (a1 - a0) / parts;
+    var k = 4 / 3 * Math.tan(Math.abs(step) / 4) * r * (step < 0 ? -1 : 1);
+    for (var i = 0; i < parts; i++) {
+        var s = a0 + i * step, e = s + step;
+        var p0 = [cx + r * Math.cos(s), cy + r * Math.sin(s)];
+        var p3 = [cx + r * Math.cos(e), cy + r * Math.sin(e)];
+        out.push({ p0: p0, p1: [p0[0] - k * Math.sin(s), p0[1] + k * Math.cos(s)],
+                   p2: [p3[0] + k * Math.sin(e), p3[1] - k * Math.cos(e)], p3: p3 });
+    }
+    return out;
+}
+// Rounded rectangle (0,0)-(w,h), radius r, counter-clockwise; arcs in `parts`
+// pieces each. r = 0 gives a plain rectangle starting at (0,0).
+function roundedRect(w, h, r, parts) {
+    var P = Math.PI, s = [];
+    s.push(straightSeg(r, 0, w - r, 0));
+    if (r > 0) s = s.concat(arcSegs(w - r, r, r, -P / 2, 0, parts));
+    s.push(straightSeg(w, r, w, h - r));
+    if (r > 0) s = s.concat(arcSegs(w - r, h - r, r, 0, P / 2, parts));
+    s.push(straightSeg(w - r, h, r, h));
+    if (r > 0) s = s.concat(arcSegs(r, h - r, r, P / 2, P, parts));
+    s.push(straightSeg(0, h - r, 0, r));
+    if (r > 0) s = s.concat(arcSegs(r, r, r, P, 1.5 * P, parts));
+    return s;
+}
+function reverseSegs(segs) {
+    return segs.slice(0).reverse().map(function (s) { return { p0: s.p3, p1: s.p2, p2: s.p1, p3: s.p0 }; });
+}
+
 // ===== TEST: detectCorners =====
 console.log("--- Core.detectCorners ---");
 (function () {
@@ -331,6 +363,48 @@ console.log("--- Core.dropDegenerateSegments (G6) ---");
     // Clean input passes through unchanged.
     assert(GM.Core.dropDegenerateSegments(rect, GM.CONSTANTS.SEGMENT_EPS).length === 4,
         "clean rectangle unchanged");
+})();
+
+// ===== TEST: placeAlong (generalised distribution) =====
+console.log("--- Core.placeAlong ---");
+(function () {
+    var zone = { enabled: false, count: 1, pitch: 0 };
+    var sq = roundedRect(100, 100, 0, 1);
+    var c = GM.Core.buildCircuit(sq, true);
+    var dist = { useNumber: false, number: 1, spacing: 30 };
+    var a = GM.Core.distributeOnCircuit(c, GM.Core.detectCorners(sq, true, 15), zone, dist);
+    var b = GM.Core.placeAlong(c, [0, 100, 200, 300], true, zone, dist, 0);
+    assert(a.length === 12 && b.length === 12, "square 100, spacing 30: 12 marks both ways (got " + a.length + "/" + b.length + ")");
+    var same = true;
+    for (var i = 0; i < a.length; i++) {
+        if (Math.abs(a[i][0] - b[i][0]) > 1e-9 || Math.abs(a[i][1] - b[i][1]) > 1e-9) same = false;
+    }
+    assert(same, "placeAlong gives distributeOnCircuit's marks in the same order");
+
+    var lc = GM.Core.buildCircuit([straightSeg(0, 0, 300, 0)], false);
+    var m = GM.Core.placeAlong(lc, [0, 300], false, zone, { useNumber: false, number: 1, spacing: 100 }, 0);
+    assert(m.length === 4, "open run 300, spacing 100: 4 marks (got " + m.length + ")");
+    var m2 = GM.Core.placeAlong(lc, [0, 300], false, zone, { useNumber: true, number: 7, spacing: 0 }, 0);
+    assert(m2.length === 2, "count mode with corners: corners only (got " + m2.length + ")");
+
+    // Closed, no corners: the ring starts at startDist
+    var circ = GM.Core.buildCircuit(arcSegs(0, 0, 100, Math.PI / 4, Math.PI / 4 + 2 * Math.PI, 4), true);
+    var top = GM.Core.topmostDist(circ);
+    var tp = GM.Core.pointAtDistance(circ, top);
+    assert(Math.abs(tp[1] - 100) < 0.05 && Math.abs(tp[0]) < 0.5,
+        "topmostDist finds the top between anchors (got " + tp[0].toFixed(3) + ", " + tp[1].toFixed(3) + ")");
+    var ring = GM.Core.placeAlong(circ, [], true, zone, { useNumber: true, number: 5, spacing: 0 }, top);
+    assert(ring.length === 5, "5 marks on the ring");
+    assert(Math.abs(ring[0][0]) < 0.5 && Math.abs(ring[0][1] - 100) < 0.05, "first mark at the top");
+    var mirrored = true;
+    for (var j = 1; j < ring.length; j++) {
+        var hit = false;
+        for (var k = 1; k < ring.length; k++) {
+            if (Math.abs(ring[k][0] + ring[j][0]) < 0.5 && Math.abs(ring[k][1] - ring[j][1]) < 0.5) hit = true;
+        }
+        if (!hit) mirrored = false;
+    }
+    assert(mirrored, "odd count from the top is symmetric about the vertical axis");
 })();
 
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");

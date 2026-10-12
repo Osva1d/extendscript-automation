@@ -316,6 +316,38 @@ GM.Core = {
      * @returns {Array<Array<number>>} [[x, y], ...]
      */
     distributeOnCircuit: function (circuit, corners, zone, dist) {
+        // Anchor indices -> arc distances; the distribution itself lives in
+        // placeAlong, shared with the path pipeline (start at distance 0 keeps
+        // the 1.2.0 positions for callers of this function).
+        var anchorDist = [0];
+        for (var a = 0; a < circuit.segments.length; a++) {
+            anchorDist.push(anchorDist[a] + circuit.segments[a].len);
+        }
+        var cd = [];
+        for (var c = 0; c < corners.length; c++) cd.push(anchorDist[corners[c]]);
+        return GM.Core.placeAlong(circuit, cd, circuit.closed, zone, dist, 0);
+    },
+
+    /**
+     * Distributes marks along a circuit between given corner positions.
+     * - No corners on a loop: an even ring starting at startDist — count
+     *   mode places exactly N, spacing mode round(total/spacing).
+     * - Count mode with corners: the marks ARE the corners (1.1.0 rule).
+     * - Otherwise every corner-to-corner span is filled by distributeOnSpan
+     *   (zones + preferred spacing); a loop wraps from the last corner to the
+     *   first. An open run passes its two ends as the first and last corner.
+     * Marks are deduplicated by rounded coordinate and capped at MAX_MARKS.
+     *
+     * @param {Object} circuit - From buildCircuit.
+     * @param {Array<number>} cornerDists - Ascending arc distances; may run past
+     *   totalLen on a closed circuit (pointAtDistance wraps).
+     * @param {boolean} loop - True: spans wrap last -> first corner.
+     * @param {Object} zone - {enabled, count, pitch} (document units).
+     * @param {Object} dist - {useNumber, number, spacing} (document units).
+     * @param {number} startDist - First mark of a cornerless loop.
+     * @returns {Array<Array<number>>} [[x, y], ...]
+     */
+    placeAlong: function (circuit, cornerDists, loop, zone, dist, startDist) {
         var marks = [];
         var seen = {};
         function place(p) {
@@ -324,12 +356,11 @@ GM.Core = {
             seen[key] = true;
             marks.push(p);
         }
-
         var total = circuit.totalLen;
         if (total <= 0) return marks;
 
-        if (corners.length === 0) {
-            // Smooth ring (any cornerless path, not just circles).
+        if (cornerDists.length === 0) {
+            if (!loop) return marks;
             var count;
             if (dist.useNumber) {
                 count = Math.max(dist.number || 1, 1);
@@ -341,51 +372,67 @@ GM.Core = {
             }
             if (count > GM.CONSTANTS.MAX_MARKS) count = GM.CONSTANTS.MAX_MARKS;
             var step = total / count;
-            for (var i = 0; i < count; i++) place(GM.Core.pointAtDistance(circuit, i * step));
+            for (var i = 0; i < count; i++) place(GM.Core.pointAtDistance(circuit, startDist + i * step));
             return marks;
         }
 
-        // Corner anchor index -> arc distance from circuit start.
-        var anchorDist = [0];
-        for (var a = 0; a < circuit.segments.length; a++) {
-            anchorDist.push(anchorDist[a] + circuit.segments[a].len);
-        }
-
-        // Count mode on a cornered path: the corners dictate the count, so the
-        // marks ARE the corners — no span filling. (The UI shows the count as a
-        // computed, read-only value equal to corners.length.)
         if (dist.useNumber) {
-            for (var kc = 0; kc < corners.length; kc++) {
+            for (var kc = 0; kc < cornerDists.length; kc++) {
                 if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
-                place(GM.Core.pointAtDistance(circuit, anchorDist[corners[kc]]));
+                place(GM.Core.pointAtDistance(circuit, cornerDists[kc]));
             }
             return marks;
         }
 
         var spans = [];
-        for (var ci = 0; ci < corners.length; ci++) {
-            var from = anchorDist[corners[ci]];
-            var to;
-            if (ci + 1 < corners.length) {
-                to = anchorDist[corners[ci + 1]];
-            } else if (circuit.closed) {
-                to = total + anchorDist[corners[0]]; // wrap to first corner
+        for (var ci = 0; ci < cornerDists.length; ci++) {
+            var from = cornerDists[ci], to;
+            if (ci + 1 < cornerDists.length) {
+                to = cornerDists[ci + 1];
+            } else if (loop) {
+                to = total + cornerDists[0];
             } else {
-                break; // open: last corner is the path end, no further span
+                break;
             }
             spans.push({ from: from, len: to - from });
         }
-
         for (var si = 0; si < spans.length; si++) {
-            var span = spans[si];
-            var pos = GM.Core.distributeOnSpan(span.len, zone,
+            var pos = GM.Core.distributeOnSpan(spans[si].len, zone,
                 { useNumber: false, number: 1, spacing: dist.spacing });
             for (var pi = 0; pi < pos.length; pi++) {
                 if (marks.length >= GM.CONSTANTS.MAX_MARKS) return marks;
-                place(GM.Core.pointAtDistance(circuit, span.from + pos[pi]));
+                place(GM.Core.pointAtDistance(circuit, spans[si].from + pos[pi]));
             }
         }
         return marks;
+    },
+
+    /**
+     * Arc distance of the highest point of a circuit (largest Y — the
+     * document coordinate system is Y-up). Refined between samples so the
+     * top of a circle lands on the top even when no anchor sits there.
+     * @param {Object} circuit - From buildCircuit.
+     * @returns {number} Distance along the circuit.
+     */
+    topmostDist: function (circuit) {
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT;
+        var bestY = -Infinity, bi = 0, bj = 0, acc = 0, accAt = 0;
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var pts = circuit.segments[i].pts;
+            for (var j = 0; j < pts.length; j++) {
+                if (pts[j].p[1] > bestY + 1e-9) { bestY = pts[j].p[1]; bi = i; bj = j; accAt = acc; }
+            }
+            acc += circuit.segments[i].len;
+        }
+        if (bestY === -Infinity) return 0;
+        var sg = circuit.segments[bi];
+        var lo = Math.max(bj - 1, 0) / n, hi = Math.min(bj + 1, n) / n;
+        for (var it = 0; it < 40; it++) {
+            var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+            if (GM.Core.bezierPoint(sg.seg, m1)[1] < GM.Core.bezierPoint(sg.seg, m2)[1]) lo = m1; else hi = m2;
+        }
+        var f = (lo + hi) / 2 * n, j0 = Math.min(Math.floor(f), n - 1);
+        return accAt + sg.pts[j0].s + (sg.pts[j0 + 1].s - sg.pts[j0].s) * (f - j0);
     },
 
     /**
