@@ -519,5 +519,112 @@ GM.Core = {
         }
         if (!closed) corners.push(n); // last anchor of an open path
         return corners;
+    },
+
+    /**
+     * True when a segment is a straight line: both handles lie on the chord
+     * (retracted handles included).
+     * @param {Object} seg - {p0,p1,p2,p3}.
+     * @param {number} eps - Distance tolerance (document units).
+     * @returns {boolean}
+     */
+    isStraightSegment: function (seg, eps) {
+        var dx = seg.p3[0] - seg.p0[0], dy = seg.p3[1] - seg.p0[1];
+        var len = Math.sqrt(dx * dx + dy * dy);
+        function off(p) {
+            var ux = p[0] - seg.p0[0], uy = p[1] - seg.p0[1];
+            if (len === 0) return Math.sqrt(ux * ux + uy * uy);
+            return Math.abs(ux * dy - uy * dx) / len;
+        }
+        return off(seg.p1) <= eps && off(seg.p2) <= eps;
+    },
+
+    /** Outgoing tangent at a segment start (chord when the handle is retracted). */
+    _tangentOut: function (seg) {
+        var dx = seg.p1[0] - seg.p0[0], dy = seg.p1[1] - seg.p0[1];
+        if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+        return [dx, dy];
+    },
+
+    /** Incoming tangent at a segment end (chord when the handle is retracted). */
+    _tangentIn: function (seg) {
+        var dx = seg.p3[0] - seg.p2[0], dy = seg.p3[1] - seg.p2[1];
+        if (dx === 0 && dy === 0) { dx = seg.p3[0] - seg.p0[0]; dy = seg.p3[1] - seg.p0[1]; }
+        return [dx, dy];
+    },
+
+    /** Signed angle from vector a to vector b, in (-PI, PI]. */
+    _signedAngle: function (a, b) {
+        return Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1]);
+    },
+
+    /**
+     * Where the corner marks of a path go (spec §4, §5.2). Sharp corners are
+     * the anchors detectCorners finds (open-path ends included). A rounded
+     * corner is a run of curved segments joining straight segments smoothly
+     * at both ends and turning by more than minAngleDeg in total; its mark
+     * sits at the run's arc-length midpoint. An arc between two sharp corners
+     * is a side, not a corner. Arcs drawn as many short lines are not
+     * recognised (each bend stays under the threshold).
+     *
+     * @param {Array<Object>} segments - [{p0,p1,p2,p3}, ...] (degenerate dropped).
+     * @param {boolean} closed - Closed path flag.
+     * @param {number} minAngleDeg - GM.CONSTANTS.CORNER_ANGLE_MIN.
+     * @param {Object} circuit - buildCircuit(segments, closed).
+     * @returns {Object} {dists: ascending arc distances, sharp: n, round: n}
+     */
+    findCorners: function (segments, closed, minAngleDeg, circuit) {
+        var n = segments.length, res = { dists: [], sharp: 0, round: 0 };
+        if (n === 0) return res;
+        var minRad = minAngleDeg * Math.PI / 180, i;
+        var sharpIdx = GM.Core.detectCorners(segments, closed, minAngleDeg);
+        var isSharp = {};
+        for (i = 0; i < sharpIdx.length; i++) isSharp[sharpIdx[i]] = true;
+        var anchorDist = [0];
+        for (i = 0; i < n; i++) anchorDist.push(anchorDist[i] + circuit.segments[i].len);
+        for (i = 0; i < sharpIdx.length; i++) res.dists.push(anchorDist[sharpIdx[i]]);
+        res.sharp = sharpIdx.length;
+
+        var straight = [];
+        for (i = 0; i < n; i++) straight.push(GM.Core.isStraightSegment(segments[i], GM.CONSTANTS.SEGMENT_EPS));
+
+        // Path order; a closed path starts on a straight segment so a curved
+        // run that wraps past index 0 is seen whole.
+        var order = [];
+        if (closed) {
+            var first = -1;
+            for (i = 0; i < n; i++) { if (straight[i]) { first = i; break; } }
+            if (first >= 0) { for (i = 0; i < n; i++) order.push((first + i) % n); }
+        } else {
+            for (i = 0; i < n; i++) order.push(i);
+        }
+
+        var total = circuit.totalLen, p = 0;
+        while (p < order.length) {
+            if (straight[order[p]]) { p++; continue; }
+            var r = p, turn = 0, len = 0;
+            while (r < order.length && !straight[order[r]] && (r === p || !isSharp[order[r]])) {
+                var sg = segments[order[r]];
+                turn += GM.Core._signedAngle(GM.Core._tangentOut(sg), GM.Core._tangentIn(sg));
+                if (r > p) turn += GM.Core._signedAngle(GM.Core._tangentIn(segments[order[r - 1]]), GM.Core._tangentOut(sg));
+                len += circuit.segments[order[r]].len;
+                r++;
+            }
+            var before = p > 0 ? order[p - 1] : -1;
+            var after = -1;
+            if (r < order.length) after = order[r];
+            else if (closed) after = order[0];
+            var startAnchor = order[p];
+            var endAnchor = closed ? (order[r - 1] + 1) % n : order[r - 1] + 1;
+            if (before >= 0 && after >= 0 && straight[before] && straight[after] &&
+                    !isSharp[startAnchor] && !isSharp[endAnchor] && Math.abs(turn) > minRad) {
+                var d = anchorDist[startAnchor] + len / 2;
+                res.dists.push(closed && total > 0 ? d % total : d);
+                res.round++;
+            }
+            p = r;
+        }
+        res.dists.sort(function (a, b) { return a - b; });
+        return res;
     }
 };

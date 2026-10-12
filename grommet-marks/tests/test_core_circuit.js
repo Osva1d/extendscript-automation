@@ -422,5 +422,60 @@ console.log("--- Core.placeAlong ---");
     assert(Math.abs(pr[0] - 100) < 1e-6 && Math.abs(pr[1] - 100) < 1e-9, "flat top CW: middle (got " + pr[0] + ")");
 })();
 
+// ===== TEST: findCorners — sharp and rounded corners (spec §4, §5.2) =====
+console.log("--- Core.findCorners ---");
+(function () {
+    function corners(segs, closed) {
+        return GM.Core.findCorners(segs, closed, 15, GM.Core.buildCircuit(segs, closed));
+    }
+    var rr = roundedRect(1000, 500, 100, 1);
+    var f = corners(rr, true);
+    assert(f.sharp === 0 && f.round === 4, "rounded rectangle: 0 sharp, 4 rounded (got " + f.sharp + "/" + f.round + ")");
+    var c = GM.Core.buildCircuit(rr, true), br = [900 + 100 * Math.SQRT1_2, 100 - 100 * Math.SQRT1_2], hit = false;
+    for (var i = 0; i < f.dists.length; i++) {
+        var p = GM.Core.pointAtDistance(c, f.dists[i]);
+        if (Math.abs(p[0] - br[0]) < 0.05 && Math.abs(p[1] - br[1]) < 0.05) hit = true;
+    }
+    assert(hit, "the bottom-right mark sits mid-arc");
+    var f2 = corners(roundedRect(1000, 500, 100, 2), true);
+    assert(f2.sharp === 0 && f2.round === 4, "arcs in two pieces (Illustrator's offset output): 4 rounded");
+    var f2r = corners(reverseSegs(roundedRect(1000, 500, 100, 2)), true);
+    assert(f2r.round === 4, "clockwise rounded rectangle: 4 rounded");
+    var f3 = corners(roundedRect(1000, 500, 0, 1), true);
+    assert(f3.sharp === 4 && f3.round === 0, "plain rectangle: 4 sharp");
+    var half = [straightSeg(-100, 0, 100, 0)].concat(arcSegs(0, 0, 100, 0, Math.PI, 2));
+    var f4 = corners(half, true);
+    assert(f4.sharp === 2 && f4.round === 0, "half circle: 2 sharp, the arc is a side (got " + f4.sharp + "/" + f4.round + ")");
+    assert(corners(arcSegs(0, 0, 100, 0, 2 * Math.PI, 4), true).dists.length === 0, "circle: no corners");
+    var house = [straightSeg(0, 0, 1000, 0), straightSeg(1000, 0, 1000, 600),
+                 straightSeg(1000, 600, 500, 1000), straightSeg(500, 1000, 0, 600), straightSeg(0, 600, 0, 0)];
+    var f6 = corners(house, true);
+    assert(f6.sharp === 5 && f6.round === 0, "house: 5 sharp");
+
+    // Open: straight + 30 deg arc + straight -> 2 ends + 1 rounded; 10 deg -> not a corner
+    function bend(deg) {
+        var a1 = -Math.PI / 2 + deg * Math.PI / 180;
+        var arc = arcSegs(0, 1000, 1000, -Math.PI / 2, a1, 1);
+        var e = arc[0].p3, t = [-Math.sin(a1), Math.cos(a1)];
+        return [straightSeg(-200, 0, 0, 0)].concat(arc).concat([straightSeg(e[0], e[1], e[0] + 200 * t[0], e[1] + 200 * t[1])]);
+    }
+    var f7 = corners(bend(30), false);
+    assert(f7.sharp === 2 && f7.round === 1, "open, 30 deg arc between straights: 2 ends + 1 rounded");
+    var f8 = corners(bend(10), false);
+    assert(f8.sharp === 2 && f8.round === 0, "open, 10 deg arc: no rounded corner");
+    var tail = [straightSeg(-200, 0, 0, 0)].concat(arcSegs(0, 100, 100, -Math.PI / 2, 0, 1));
+    assert(corners(tail, false).round === 0, "open path ending in an arc: the arc is not a corner");
+
+    // Review focus 1: a quarter circle made of nine 10 deg line pieces (CAD PDF)
+    var poly = [straightSeg(-300, 0, 0, 0)];
+    for (var q = 0; q < 9; q++) {
+        var s0 = -Math.PI / 2 + q * Math.PI / 18, s1 = s0 + Math.PI / 18;
+        poly.push(straightSeg(100 * Math.cos(s0), 100 + 100 * Math.sin(s0), 100 * Math.cos(s1), 100 + 100 * Math.sin(s1)));
+    }
+    poly.push(straightSeg(100, 100, 100, 400));
+    var f9 = corners(poly, false);
+    assert(f9.round === 0 && f9.sharp === 2, "polyline arc (10 deg bends): no corner found — documented limitation");
+})();
+
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 if (fail > 0) process.exit(1);
