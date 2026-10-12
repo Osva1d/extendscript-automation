@@ -805,7 +805,8 @@ GM.Core = {
      * Carries a run of the cut line onto the eyelet line: each end goes to
      * its nearest point there. The eyelet line may run the other way round
      * (Illustrator's offset decides), so orientation is matched by the sign
-     * of the areas.
+     * of the areas. A run whose ends meet on the eyelet line becomes a single
+     * point or the whole loop, by its length on the cut line.
      * @returns {Object} {from, len} on lineCircuit.
      */
     mapRun: function (cutCircuit, run, lineCircuit) {
@@ -815,8 +816,15 @@ GM.Core = {
         var sb = GM.Core.nearestDistance(lineCircuit, b);
         var same = (GM.Core.signedArea(cutCircuit) > 0) === (GM.Core.signedArea(lineCircuit) > 0);
         var from = same ? sa : sb, to = same ? sb : sa;
-        var len = to - from;
-        if (len <= 0) len += lineCircuit.totalLen;
+        var T = lineCircuit.totalLen, len = to - from;
+        if (len < 0) len += T;
+        // Both ends can land on one eyelet point: a short run at a corner whose
+        // arc collapses into the eyelet corner (one mark there), or everything
+        // but such a corner (the whole loop). The run's length on the cut line
+        // tells which; it also absorbs float noise around from === to.
+        var expected = run.len * T / cutCircuit.totalLen;
+        if (expected < T / 2 && len > T * 3 / 4) len = 0;
+        if (expected > T / 2 && len < T / 4) len = T;
         return { from: from, len: len };
     },
 

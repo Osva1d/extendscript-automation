@@ -551,6 +551,20 @@ console.log("--- Core: selectedRuns / mapRun / runCorners ---");
     assert(rc.length === 2 && rc[0] === 0 && rc[1] === 900, "run between two corners: just its ends");
     var rw = GM.Core.runCorners([0, 900, 1800, 2700], { from: 2700, len: 1800 }, 3600);
     assert(rw.length === 3 && rw[1] === 3600 && rw[2] === 4500, "run across the start: inner corner unwrapped to 3600");
+    // Corner arc of R 5 collapses into the corner of an eyelet line inset by 50
+    var rr5 = roundedRect(1000, 1000, 5, 1), c5 = GM.Core.buildCircuit(rr5, true);
+    var line5 = GM.Core.buildCircuit(inset, true);
+    var onlyArc = GM.Core.selectedRuns(flagged(rr5, [false, true, false, false, false, false, false, false]), true, c5);
+    var mArc = GM.Core.mapRun(c5, onlyArc[0], line5);
+    var pArc = GM.Core.pointAtDistance(line5, mArc.from);
+    assert(mArc.len === 0 && Math.abs(pArc[0] - 950) < 1e-6 && Math.abs(pArc[1] - 50) < 1e-6,
+        "only the collapsed corner arc: a single point at the eyelet corner (len " + mArc.len + ")");
+    var allButArc = GM.Core.selectedRuns(flagged(rr5, [true, false, true, true, true, true, true, true]), true, c5);
+    var mAll = GM.Core.mapRun(c5, allButArc[0], line5);
+    assert(Math.abs(mAll.len - line5.totalLen) < 1e-6, "everything but that arc: the whole eyelet loop (len " + mAll.len + ")");
+    var one = GM.Core.placeAlong(line5, GM.Core.runCorners([0, 900, 1800, 2700], mArc, line5.totalLen), false,
+        { enabled: false, count: 1, pitch: 0 }, { useNumber: false, number: 1, spacing: 100 }, 0);
+    assert(one.length === 1, "a single-point run gives one mark (got " + one.length + ")");
 })();
 
 // ===== TEST: findCorners — run across the start, sharp anchor inside a run (Task 2 review) =====
