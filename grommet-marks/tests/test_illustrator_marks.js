@@ -18,10 +18,13 @@ global.$ = { writeln: function () {} };
 global.StrokeCap = { BUTTENDCAP: "BUTT", ROUNDENDCAP: "ROUND", PROJECTINGENDCAP: "PROJECTING" };
 global.ColorModel = { REGISTRATION: "REGISTRATION", SPOT: "SPOT", PROCESS: "PROCESS" };
 global.CMYKColor = function () { this.typename = "CMYKColor"; };
+global.PathPointSelection = { ANCHORPOINT: "ANCHOR", NOSELECTION: "NONE",
+                              LEFTDIRECTION: "LEFT", RIGHTDIRECTION: "RIGHT" };
 
 var GM = {};
 function src(rel) { return fs.readFileSync(path.join(__dirname, "..", "src", rel), "utf8"); }
 eval(src("constants.js"));
+eval(src("lib/utils.js"));
 eval(src("core.js"));
 eval(src("illustrator.js"));
 
@@ -80,6 +83,44 @@ console.log("--- getSelectedPathInfo: duplicated closing anchor (G6) ---");
     assert(info.ok === true, "5-point closed rectangle is a usable path");
     assert(info.cornerCount === 4, "all 4 corners found (got " + info.cornerCount + ")");
     assert(Math.abs(info.totalLen - 3000) < 1e-6, "perimeter unchanged: 3000 (got " + info.totalLen + ")");
+})();
+
+// ===== TEST: corners, part of the outline (spec §5.2, §5.4) =====
+console.log("--- getSelectedPathInfo: corners and a direct selection ---");
+(function () {
+    function pp(x, y, sel) {
+        return { anchor: [x, y], leftDirection: [x, y], rightDirection: [x, y],
+                 selected: sel ? PathPointSelection.ANCHORPOINT : PathPointSelection.NOSELECTION };
+    }
+    var house = { typename: "PathItem", closed: true, pathPoints: [
+        pp(0, 0, true), pp(1000, 0, true), pp(1000, 600, false), pp(500, 1000, false), pp(0, 600, false)] };
+    GM.Illustrator.doc.selection = [house];
+    var info = GM.Illustrator.getSelectedPathInfo();
+    assert(info.sharpCount === 5 && info.roundCount === 0 && info.cornerCount === 5, "house: 5 corners");
+    assert(info.partial.state === "runs" && info.partial.runs.length === 1 && info.partial.selectedSegs === 1,
+        "bottom side selected: one run of 1 segment (got " + info.partial.state + ")");
+    assert(info.partial.totalSegs === 5, "5 segments in total");
+    assert(info.pointSel.length === 5 && info.pointSel[0] === PathPointSelection.ANCHORPOINT, "point states kept for restoring");
+
+    var lone = { typename: "PathItem", closed: true, pathPoints: [
+        pp(0, 0, true), pp(1000, 0, false), pp(1000, 600, false), pp(0, 600, false)] };
+    GM.Illustrator.doc.selection = [lone];
+    assert(GM.Illustrator.getSelectedPathInfo().partial.state === "lone", "one lone anchor: 'lone'");
+
+    var whole = { typename: "PathItem", closed: true, pathPoints: [
+        pp(0, 0, true), pp(1000, 0, true), pp(1000, 600, true), pp(0, 600, true)] };
+    GM.Illustrator.doc.selection = [whole];
+    assert(GM.Illustrator.getSelectedPathInfo().partial.state === "none", "every anchor selected (Selection tool): whole outline");
+})();
+
+console.log("--- getDocInfo ---");
+(function () {
+    GM.Illustrator.doc.artboards = [{ artboardRect: [0, 500, 1000, 0] }, { artboardRect: [0, 0, 10, -10] }];
+    GM.Illustrator.doc.scaleFactor = 10;
+    var d = GM.Illustrator.getDocInfo();
+    assert(d.artboards === 2 && d.width === 1000 && d.height === 500 && d.scale === 10, "count, first artboard size, scale");
+    delete GM.Illustrator.doc.scaleFactor;
+    assert(GM.Illustrator.getDocInfo().scale === 1, "no scaleFactor -> 1");
 })();
 
 // ===== SUMMARY =====

@@ -3,6 +3,7 @@
 // Part of: Illustrator Grommet Marks
 // Depends on: GM.CONSTANTS, GM.L
 // ------------------------------------------------------------------------
+/* global PathPointSelection */
 var GM = GM || {};
 
 GM.Illustrator = {
@@ -56,12 +57,53 @@ GM.Illustrator = {
     },
 
     /**
+     * Segments of a path item as plain data; `sel` marks a segment whose two
+     * end anchors are both selected (Direct Selection, spec §5.4).
+     * @param {PathItem} item
+     * @returns {Array<Object>} [{p0,p1,p2,p3,sel}, ...]
+     */
+    _segmentsOf: function (item) {
+        var ANCHOR = null;
+        try { ANCHOR = PathPointSelection.ANCHORPOINT; } catch (eEnum) {
+            GM.Utils.log("_segmentsOf: no PathPointSelection — " + eEnum.message);
+        }
+        var pts = item.pathPoints, n = pts.length, closed = !!item.closed;
+        var segs = [], segCount = closed ? n : n - 1;
+        for (var i = 0; i < segCount; i++) {
+            var aP = pts[i], bP = pts[(i + 1) % n];
+            segs.push({
+                p0: [aP.anchor[0], aP.anchor[1]],
+                p1: [aP.rightDirection[0], aP.rightDirection[1]],
+                p2: [bP.leftDirection[0], bP.leftDirection[1]],
+                p3: [bP.anchor[0], bP.anchor[1]],
+                sel: ANCHOR !== null && aP.selected === ANCHOR && bP.selected === ANCHOR
+            });
+        }
+        return segs;
+    },
+
+    /**
+     * Artboard count and the first artboard's size, for the dialog's summary
+     * line. Document units (Large Canvas: divided by scale).
+     * @returns {Object} {artboards, width, height, scale}
+     */
+    getDocInfo: function () {
+        var doc = GM.Illustrator.doc, r = doc.artboards[0].artboardRect;
+        return { artboards: doc.artboards.length, width: r[2] - r[0], height: r[1] - r[3],
+                 scale: doc.scaleFactor || 1 };
+    },
+
+    /**
      * Inspects the current selection for path-mode placement.
      * Pure read — never mutates the selection. Everything computable is
      * delegated to GM.Core so this stays a thin DOM extraction layer.
      *
      * @returns {Object} {ok:true, circuit, corners, closed, cornerCount,
-     *                    totalLen, pathRef}
+     *                    sharpCount, roundCount, cornerDists, segments,
+     *                    partial:{state:"none"|"runs"|"lone", runs, selectedSegs,
+     *                    totalSegs}, pointSel, totalLen, pathRef}
+     *                   cornerCount = cornerDists.length (sharp + rounded);
+     *                   pointSel = the anchors' selection states, kept for restoring
      *                   or {ok:false, reason:"no-selection"|"not-a-path"|"too-short"}
      */
     getSelectedPathInfo: function () {
@@ -81,30 +123,45 @@ GM.Illustrator = {
         try { pts = item.pathPoints; } catch (ePts) { return { ok: false, reason: "not-a-path" }; }
         if (!pts || pts.length < 2) return { ok: false, reason: "too-short" };
 
-        // Extract anchors/handles into plain arrays — core stays DOM-free.
-        var segments = [];
-        var n = pts.length;
-        var segCount = item.closed ? n : n - 1;
-        for (var i = 0; i < segCount; i++) {
-            var aP = pts[i], bP = pts[(i + 1) % n];
-            segments.push({
-                p0: [aP.anchor[0], aP.anchor[1]],
-                p1: [aP.rightDirection[0], aP.rightDirection[1]],
-                p2: [bP.leftDirection[0], bP.leftDirection[1]],
-                p3: [bP.anchor[0], bP.anchor[1]]
-            });
-        }
-        segments = GM.Core.dropDegenerateSegments(segments, GM.CONSTANTS.SEGMENT_EPS);
+        var closed = !!item.closed;
+        // sel must be set before dropDegenerateSegments: it keeps the same
+        // objects, so the flags stay aligned with the circuit built from them.
+        var segments = GM.Core.dropDegenerateSegments(GM.Illustrator._segmentsOf(item),
+            GM.CONSTANTS.SEGMENT_EPS);
+        var circuit = GM.Core.buildCircuit(segments, closed);
+        var corners = GM.Core.detectCorners(segments, closed, GM.CONSTANTS.CORNER_ANGLE_MIN);
+        var feat = GM.Core.findCorners(segments, closed, GM.CONSTANTS.CORNER_ANGLE_MIN, circuit);
 
-        var circuit = GM.Core.buildCircuit(segments, !!item.closed);
-        var corners = GM.Core.detectCorners(segments, !!item.closed,
-            GM.CONSTANTS.CORNER_ANGLE_MIN);
+        // Point selection: read once, for the part-of-outline choice and so
+        // offsetPath can hand the selection back as it was.
+        var ANCHOR = null;
+        try { ANCHOR = PathPointSelection.ANCHORPOINT; } catch (eEnum) {
+            GM.Utils.log("getSelectedPathInfo: no PathPointSelection — " + eEnum.message);
+        }
+        var pointSel = [], anchorsSel = 0;
+        for (var k = 0; k < pts.length; k++) {
+            var st = pts[k].selected;
+            pointSel.push(st);
+            if (ANCHOR !== null && st === ANCHOR) anchorsSel++;
+        }
+        var partial = { state: "none", runs: [], selectedSegs: 0, totalSegs: segments.length };
+        if (anchorsSel > 0 && anchorsSel < pts.length) {
+            partial.runs = GM.Core.selectedRuns(segments, closed, circuit);
+            partial.state = partial.runs.length > 0 ? "runs" : "lone";
+            for (var r = 0; r < partial.runs.length; r++) partial.selectedSegs += partial.runs[r].segs;
+        }
         return {
             ok: true,
             circuit: circuit,
             corners: corners,
-            closed: !!item.closed,
-            cornerCount: corners.length,
+            closed: closed,
+            cornerCount: feat.dists.length,
+            sharpCount: feat.sharp,
+            roundCount: feat.round,
+            cornerDists: feat.dists,
+            segments: segments,
+            partial: partial,
+            pointSel: pointSel,
             totalLen: circuit.totalLen,
             pathRef: item
         };
