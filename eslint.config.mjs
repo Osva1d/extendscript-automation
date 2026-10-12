@@ -40,6 +40,7 @@ const EXTENDSCRIPT_GLOBALS = {
     RasterizeOptions: "readonly", RasterizationColorModel: "readonly",
     CMYKColor: "readonly", RGBColor: "readonly", SpotColor: "readonly",
     GrayColor: "readonly", NoColor: "readonly", ColorModel: "readonly",
+    PathPointSelection: "readonly",
 
     // Polyfilled by shared/lib/json2.js, first in every build order.
     JSON: "readonly",

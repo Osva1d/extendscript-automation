@@ -123,6 +123,45 @@ console.log("--- getDocInfo ---");
     assert(GM.Illustrator.getDocInfo().scale === 1, "no scaleFactor -> 1");
 })();
 
+// ===== TEST: what Task 5 delivers — rounded corners counted, selection aligned (review) =====
+console.log("--- getSelectedPathInfo: rounded corners, selection with a duplicated anchor ---");
+(function () {
+    var A = PathPointSelection.ANCHORPOINT, N = PathPointSelection.NOSELECTION;
+    function P(ax, ay, lx, ly, rx, ry, sel) {
+        return { anchor: [ax, ay], leftDirection: [lx, ly], rightDirection: [rx, ry], selected: sel ? A : N };
+    }
+    // Rounded rectangle 1000 x 600, R 100, 8 anchors with circle handles (live corners)
+    var W = 1000, H = 600, R = 100, k = 0.5522847498 * R;
+    var rr = { typename: "PathItem", closed: true, pathPoints: [
+        P(R, 0, R - k, 0, R, 0), P(W - R, 0, W - R, 0, W - R + k, 0),
+        P(W, R, W, R - k, W, R), P(W, H - R, W, H - R, W, H - R + k),
+        P(W - R, H, W - R + k, H, W - R, H), P(R, H, R, H, R - k, H),
+        P(0, H - R, 0, H - R + k, 0, H - R), P(0, R, 0, R, 0, R - k)] };
+    GM.Illustrator.doc.selection = [rr];
+    var i1 = GM.Illustrator.getSelectedPathInfo();
+    assert(i1.cornerCount === 4 && i1.sharpCount === 0 && i1.roundCount === 4,
+        "rounded rectangle: 4 corners, all rounded (got " + i1.cornerCount + "/" + i1.sharpCount + "/" + i1.roundCount + ")");
+    assert(i1.partial.state === "none", "nothing selected: whole outline");
+
+    // Duplicated middle anchor; the segment after it is selected
+    function pp(x, y, sel) { return P(x, y, x, y, x, y, sel); }
+    var dup = { typename: "PathItem", closed: true, pathPoints: [
+        pp(0, 0, false), pp(1000, 0, false), pp(1000, 0, true), pp(1000, 600, true), pp(0, 600, false)] };
+    GM.Illustrator.doc.selection = [dup];
+    var i2 = GM.Illustrator.getSelectedPathInfo();
+    assert(i2.partial.state === "runs" && i2.partial.runs.length === 1 &&
+        Math.abs(i2.partial.runs[0].from - 1000) < 1e-6 && Math.abs(i2.partial.runs[0].len - 600) < 1e-6,
+        "selection stays aligned after dropping the zero-length segment: run 1000+600");
+    assert(i2.partial.totalSegs === 4, "4 segments after the drop");
+
+    // Duplicated closing anchor, only the two coincident anchors selected
+    var close = { typename: "PathItem", closed: true, pathPoints: [
+        pp(0, 0, true), pp(1000, 0, false), pp(1000, 600, false), pp(0, 600, false), pp(0, 0, true)] };
+    GM.Illustrator.doc.selection = [close];
+    assert(GM.Illustrator.getSelectedPathInfo().partial.state === "lone",
+        "two coincident anchors selected: no whole segment — 'lone', not a run");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

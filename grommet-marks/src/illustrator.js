@@ -3,7 +3,6 @@
 // Part of: Illustrator Grommet Marks
 // Depends on: GM.CONSTANTS, GM.L
 // ------------------------------------------------------------------------
-/* global PathPointSelection */
 var GM = GM || {};
 
 GM.Illustrator = {
@@ -84,7 +83,8 @@ GM.Illustrator = {
 
     /**
      * Artboard count and the first artboard's size, for the dialog's summary
-     * line. Document units (Large Canvas: divided by scale).
+     * line. Raw document units plus the scale factor — on a Large Canvas the
+     * caller divides by `scale`.
      * @returns {Object} {artboards, width, height, scale}
      */
     getDocInfo: function () {
