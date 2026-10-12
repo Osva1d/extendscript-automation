@@ -294,6 +294,19 @@ console.log("--- Validation: zones validate the spacing that is used (G3) ---");
         "zones off: spacing of a Count edge is unused and not checked");
 })();
 
+console.log("--- validate: path offset ---");
+(function () {
+    var cfg = GM.Config.getDefaults();
+    cfg.placementMode = "path";
+    cfg.pathOffset = "12,5";
+    var r = GM.Validation.validate(cfg, L);
+    assert(r.valid === true && r.settings.pathOffset === 12.5, "comma decimal accepted, parsed to 12.5");
+    cfg.pathOffset = "-1";
+    assert(GM.Validation.validate(cfg, L).valid === false, "negative offset rejected");
+    cfg.placementMode = "artboard";
+    assert(GM.Validation.validate(cfg, L).valid === true, "artboard mode ignores the path offset");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

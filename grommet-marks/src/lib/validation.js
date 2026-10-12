@@ -21,7 +21,8 @@ GM.Validation = {
         cornerCount:  { min: 1,    max: 999,  integer: true  },
         cornerPitch:  { min: 0.01, max: 9999, integer: false },
         pathNumber:   { min: 1,    max: 9999, integer: true  },
-        pathSpacing:  { min: 0.01, max: 9999, integer: false }
+        pathSpacing:  { min: 0.01, max: 9999, integer: false },
+        pathOffset:   { min: 0,    max: 9999, integer: false }
     },
 
     /**
@@ -109,6 +110,9 @@ GM.Validation = {
         var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
         var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
         if (isPathMode) {
+            var pathOffset = vn(cfg.pathOffset === undefined ? 0 : cfg.pathOffset,
+                rules.pathOffset, L.OFFSET_LABEL || "Edge offset", L);
+            if (pathOffset === null) return { valid: false, settings: null };
             if (!cfg.pathDist) return { valid: false, settings: null };
             if (cfg.pathDist.useNumber) {
                 pathNumber = vn(cfg.pathDist.number, rules.pathNumber, L.COUNT || "Count", L);
@@ -162,6 +166,7 @@ GM.Validation = {
         if (isPathMode) {
             if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
             else settings.pathDist.spacing = pathSpacing;
+            settings.pathOffset = pathOffset;
         }
 
         return { valid: true, settings: settings };

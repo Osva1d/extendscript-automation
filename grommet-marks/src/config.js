@@ -49,7 +49,10 @@ GM.Config = {
             haloWeight: 3.0,
             placementMode: GM.CONSTANTS.MODE_ARTBOARD,
             cornerZone: { enabled: false, count: 5, pitch: 100 },
-            pathDist: { useNumber: false, number: 24, spacing: 105 }
+            pathDist: { useNumber: false, number: 24, spacing: 105 },
+            // 0 = marks on the path itself, as before 1.3.0; forward-fill gives
+            // old presets this value, so a path offset by hand is not offset twice.
+            pathOffset: 0
         };
     }
 };

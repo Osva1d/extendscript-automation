@@ -140,6 +140,36 @@ GM.L = (function () {
             ERR_PATH_GONE: "The selected path is no longer available — select it again and rerun.",
             WARN_MODE_FALLBACK: "The preset uses Selected path mode, but no path is selected — switched to Artboard edges.",
 
+            // Path info line, offset and partial selection
+            INFO_ARTBOARDS_1: "%s artboard",
+            INFO_ARTBOARDS_2: "%s artboards",
+            INFO_ARTBOARDS_5: "%s artboards",
+            INFO_ALL_ARTBOARDS: "marks go on every one",
+            INFO_SIZE: "%s × %s %s",
+            INFO_FALLBACK: "The preset wants a path, none is selected — marking the artboard.",
+            INFO_CORNERS_1: "%s corner",
+            INFO_CORNERS_2: "%s corners",
+            INFO_CORNERS_5: "%s corners",
+            INFO_ROUND_1: "%s rounded corner",
+            INFO_ROUND_2: "%s rounded corners",
+            INFO_ROUND_5: "%s rounded corners",
+            INFO_ROUND_SHORT_1: "%s rounded",
+            INFO_ROUND_SHORT_2: "%s rounded",
+            INFO_ROUND_SHORT_5: "%s rounded",
+            INFO_TOP_START: "first mark at the top",
+            INFO_ON_PATH: "marks sit on the path",
+            DECIMAL_SEP: ".",
+            PATH_PARTIAL: "Selected part of the outline only",
+            PATH_PARTIAL_COUNT: " (%s of %s segments)",
+            TIP_PATH_OFFSET: "Distance of the mark centres from the cut line, inside the shape. 0 = marks sit on the path.",
+            TIP_PATH_OFFSET_OPEN: "An open path has no inside to offset towards — marks sit on the path.",
+            TIP_PARTIAL: "Marks only on segments whose two end anchors are selected. The default is the whole outline; this choice is not saved in the preset.",
+            TIP_PARTIAL_NONE: "Select part of the outline with the Direct Selection tool (A): the anchors at both ends of every segment.",
+            TIP_PARTIAL_LONE: "Only a lone anchor is selected — select the other end of the segment too, with the Direct Selection tool.",
+            ERR_OFFSET_COLLAPSE: "An offset of %s is too large for this shape — the eyelet line would collapse at its narrowest point. Reduce the offset.",
+            ERR_OFFSET_SPLIT: "The eyelet line breaks into several parts (%s) at a narrow point. Reduce the offset.",
+            ERR_OFFSET_FAILED: "Illustrator could not offset the path (%s).",
+
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
             CONFIRM_OVERWRITE_PRESET: "Preset \"%s\" already exists. Replace?"
@@ -272,6 +302,36 @@ GM.L = (function () {
             ERR_PATH_GONE: "Vybraná cesta už není dostupná — vyberte ji znovu a spusťte skript.",
             WARN_MODE_FALLBACK: "Předvolba používá režim Vybraná cesta, ale žádná cesta není vybraná — přepnuto na Hrany artboardu.",
 
+            // Path info line, offset and partial selection
+            INFO_ARTBOARDS_1: "%s artboard",
+            INFO_ARTBOARDS_2: "%s artboardy",
+            INFO_ARTBOARDS_5: "%s artboardů",
+            INFO_ALL_ARTBOARDS: "značky dostanou všechny",
+            INFO_SIZE: "%s × %s %s",
+            INFO_FALLBACK: "Předvolba chce cestu, žádná není vybraná — značí se artboard.",
+            INFO_CORNERS_1: "%s roh",
+            INFO_CORNERS_2: "%s rohy",
+            INFO_CORNERS_5: "%s rohů",
+            INFO_ROUND_1: "%s zaoblený roh",
+            INFO_ROUND_2: "%s zaoblené rohy",
+            INFO_ROUND_5: "%s zaoblených rohů",
+            INFO_ROUND_SHORT_1: "%s zaoblený",
+            INFO_ROUND_SHORT_2: "%s zaoblené",
+            INFO_ROUND_SHORT_5: "%s zaoblených",
+            INFO_TOP_START: "první značka nahoře",
+            INFO_ON_PATH: "značky leží na cestě",
+            DECIMAL_SEP: ",",
+            PATH_PARTIAL: "Jen vybraná část obvodu",
+            PATH_PARTIAL_COUNT: " (%s z %s úseků)",
+            TIP_PATH_OFFSET: "Vzdálenost středu značek od řezové linky, dovnitř tvaru. 0 = značky leží přímo na cestě.",
+            TIP_PATH_OFFSET_OPEN: "U otevřené cesty nejde určit, na kterou stranu odsadit — značky leží na cestě.",
+            TIP_PARTIAL: "Značky jen na úsecích, které mají vybrané obě koncové kotvy. Výchozí je celý obvod; volba se do předvolby neukládá.",
+            TIP_PARTIAL_NONE: "Část obvodu vyberte nástrojem Přímý výběr (A): kotvy na začátku i konci každého úseku.",
+            TIP_PARTIAL_LONE: "Vybraná je jen samostatná kotva — označte Přímým výběrem i druhý konec úseku.",
+            ERR_OFFSET_COLLAPSE: "Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.",
+            ERR_OFFSET_SPLIT: "Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení.",
+            ERR_OFFSET_FAILED: "Illustrator nedokázal cestu posunout (%s).",
+
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
             CONFIRM_OVERWRITE_PRESET: "Nastavení \"%s\" již existuje. Nahradit?"
@@ -290,6 +350,18 @@ GM.L = (function () {
         return template.replace(/%s/g, function () {
             return idx < args.length ? args[idx++] : "%s";
         });
+    };
+
+    // Czech plural: GM.L.count("INFO_CORNERS", n) -> "1 roh" / "3 rohy" / "5 rohů".
+    // Every counted key exists in both tables with _1, _2 and _5 forms.
+    // The last digit decides, except 11-14 (genitive plural): 21 roh, 22 rohy, 11 rohů.
+    active.count = function (base, n) {
+        var last = n % 10;
+        var teen = (n % 100 >= 11 && n % 100 <= 14);
+        var suffix = "_5";
+        if (last === 1 && !teen) suffix = "_1";
+        else if (last >= 2 && last <= 4 && !teen) suffix = "_2";
+        return active.format(active[base + suffix], n);
     };
 
     return active;
