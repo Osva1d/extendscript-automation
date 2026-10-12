@@ -161,7 +161,7 @@ GM.L = (function () {
             DECIMAL_SEP: ".",
             PATH_PARTIAL: "Selected part of the outline only",
             PATH_PARTIAL_COUNT: " (%s of %s segments)",
-            TIP_PATH_OFFSET: "Distance of the mark centres from the cut line, inside the shape. 0 = marks sit on the path.",
+            TIP_PATH_OFFSET: "Distance of the mark centers from the cut line, inside the shape. 0 = marks sit on the path.",
             TIP_PATH_OFFSET_OPEN: "An open path has no inside to offset towards — marks sit on the path.",
             TIP_PARTIAL: "Marks only on segments whose two end anchors are selected. The default is the whole outline; this choice is not saved in the preset.",
             TIP_PARTIAL_NONE: "Select part of the outline with the Direct Selection tool (A): the anchors at both ends of every segment.",
@@ -354,13 +354,10 @@ GM.L = (function () {
 
     // Czech plural: GM.L.count("INFO_CORNERS", n) -> "1 roh" / "3 rohy" / "5 rohů".
     // Every counted key exists in both tables with _1, _2 and _5 forms.
-    // The last digit decides, except 11-14 (genitive plural): 21 roh, 22 rohy, 11 rohů.
     active.count = function (base, n) {
-        var last = n % 10;
-        var teen = (n % 100 >= 11 && n % 100 <= 14);
         var suffix = "_5";
-        if (last === 1 && !teen) suffix = "_1";
-        else if (last >= 2 && last <= 4 && !teen) suffix = "_2";
+        if (n === 1) suffix = "_1";
+        else if (n >= 2 && n <= 4) suffix = "_2";
         return active.format(active[base + suffix], n);
     };
 

@@ -384,11 +384,8 @@ console.log("--- Locale: Czech plural forms ---");
     assert(GM.L.count("INFO_CORNERS", 3) === "3 rohy", "3 rohy");
     assert(GM.L.count("INFO_CORNERS", 5) === "5 rohů", "5 rohů");
     assert(GM.L.count("INFO_ROUND", 4) === "4 zaoblené rohy", "4 zaoblené rohy");
-    // Last digit decides, except 11-14 (genitive plural); 21 and 22 follow 1 and 2-4
-    assert(GM.L.count("INFO_CORNERS", 11) === "11 rohů", "11 rohů (teens take the genitive)");
+    assert(GM.L.count("INFO_CORNERS", 11) === "11 rohů", "11 rohů");
     assert(GM.L.count("INFO_CORNERS", 12) === "12 rohů", "12 rohů");
-    assert(GM.L.count("INFO_CORNERS", 21) === "21 roh", "21 roh");
-    assert(GM.L.count("INFO_CORNERS", 22) === "22 rohy", "22 rohy");
     assert(GM.L.count("INFO_CORNERS", 0) === "0 rohů", "0 rohů");
 })();
 
