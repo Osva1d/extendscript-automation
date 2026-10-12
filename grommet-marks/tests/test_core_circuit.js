@@ -520,5 +520,69 @@ console.log("--- Core: distance / inside / area / checkMarks ---");
         "inside but 10 off the offset: distance failure");
 })();
 
+// ===== TEST: part of the outline (spec §5.4) =====
+console.log("--- Core: selectedRuns / mapRun / runCorners ---");
+(function () {
+    function flagged(segs, flags) {
+        return segs.map(function (s, i) { return { p0: s.p0, p1: s.p1, p2: s.p2, p3: s.p3, sel: flags[i] }; });
+    }
+    var sq = roundedRect(1000, 1000, 0, 1), c = GM.Core.buildCircuit(sq, true);
+    var r1 = GM.Core.selectedRuns(flagged(sq, [true, true, false, false]), true, c);
+    assert(r1.length === 1 && Math.abs(r1[0].from) < 1e-6 && Math.abs(r1[0].len - 2000) < 1e-6 && r1[0].segs === 2, "two adjacent sides: one run 0+2000");
+    assert(GM.Core.selectedRuns(flagged(sq, [true, false, true, false]), true, c).length === 2, "opposite sides: two runs");
+    var r3 = GM.Core.selectedRuns(flagged(sq, [true, false, false, true]), true, c);
+    assert(r3.length === 1 && Math.abs(r3[0].from - 3000) < 1e-6 && Math.abs(r3[0].len - 2000) < 1e-6, "run across the first anchor stays whole (from 3000)");
+    assert(GM.Core.selectedRuns(flagged(sq, [true, true, true, true]), true, c).length === 0, "all selected: whole outline");
+    assert(GM.Core.selectedRuns(flagged(sq, [false, false, false, false]), true, c).length === 0, "none selected: whole outline");
+
+    // Eyelet line = square inset by 50, counter-clockwise and clockwise
+    var inset = [straightSeg(50, 50, 950, 50), straightSeg(950, 50, 950, 950),
+                 straightSeg(950, 950, 50, 950), straightSeg(50, 950, 50, 50)];
+    var ccw = GM.Core.buildCircuit(inset, true);
+    var m1 = GM.Core.mapRun(c, { from: 0, len: 1000 }, ccw);
+    assert(Math.abs(m1.from) < 1e-6 && Math.abs(m1.len - 900) < 1e-6, "bottom side -> inset bottom 0+900");
+    var cw = GM.Core.buildCircuit(reverseSegs(inset), true);
+    var m2 = GM.Core.mapRun(c, { from: 0, len: 1000 }, cw);
+    var a = GM.Core.pointAtDistance(cw, m2.from), b = GM.Core.pointAtDistance(cw, m2.from + m2.len);
+    assert(Math.abs(m2.len - 900) < 1e-6 && Math.abs(a[1] - 50) < 1e-6 && Math.abs(b[1] - 50) < 1e-6,
+        "clockwise eyelet line: the run still covers the bottom (len " + m2.len + ")");
+
+    var rc = GM.Core.runCorners([0, 900, 1800, 2700], { from: 0, len: 900 }, 3600);
+    assert(rc.length === 2 && rc[0] === 0 && rc[1] === 900, "run between two corners: just its ends");
+    var rw = GM.Core.runCorners([0, 900, 1800, 2700], { from: 2700, len: 1800 }, 3600);
+    assert(rw.length === 3 && rw[1] === 3600 && rw[2] === 4500, "run across the start: inner corner unwrapped to 3600");
+})();
+
+// ===== TEST: findCorners — run across the start, sharp anchor inside a run (Task 2 review) =====
+console.log("--- Core.findCorners: wrap and split ---");
+(function () {
+    function corners(segs, closed) {
+        return GM.Core.findCorners(segs, closed, GM.CONSTANTS.CORNER_ANGLE_MIN, GM.Core.buildCircuit(segs, closed));
+    }
+    // Closed path that starts in the middle of the bottom-right arc
+    var rr = roundedRect(1000, 500, 100, 2);
+    var rot = rr.slice(2).concat(rr.slice(0, 2));
+    var f = corners(rot, true), c = GM.Core.buildCircuit(rot, true);
+    assert(f.sharp === 0 && f.round === 4, "arc split across the start: still 4 rounded (got " + f.sharp + "/" + f.round + ")");
+    var br = [900 + 100 * Math.SQRT1_2, 100 - 100 * Math.SQRT1_2], hit = false;
+    for (var i = 0; i < f.dists.length; i++) {
+        var p = GM.Core.pointAtDistance(c, f.dists[i]);
+        if (Math.abs(p[0] - br[0]) < 0.05 && Math.abs(p[1] - br[1]) < 0.05) hit = true;
+    }
+    assert(hit, "the arc across the start keeps its mid-arc mark");
+
+    // Open: straight, 30 deg arc, sharp 40 deg kink, 30 deg arc, straight
+    var R = 100, d2r = Math.PI / 180;
+    var arc1 = arcSegs(0, R, R, -90 * d2r, -60 * d2r, 1), e1 = arc1[0].p3;
+    var th = 70 * d2r;                                   // 30 deg end tangent + 40 deg kink
+    var c2 = [e1[0] - R * Math.sin(th), e1[1] + R * Math.cos(th)];
+    var arc2 = arcSegs(c2[0], c2[1], R, th - 90 * d2r, th - 60 * d2r, 1), e2 = arc2[0].p3;
+    var t2 = 100 * d2r;
+    var kinked = [straightSeg(-200, 0, 0, 0)].concat(arc1).concat(arc2)
+        .concat([straightSeg(e2[0], e2[1], e2[0] + 200 * Math.cos(t2), e2[1] + 200 * Math.sin(t2))]);
+    var g = corners(kinked, false);
+    assert(g.sharp === 3 && g.round === 0, "sharp kink inside a curved run: 3 sharp, no rounded (got " + g.sharp + "/" + g.round + ")");
+})();
+
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 if (fail > 0) process.exit(1);

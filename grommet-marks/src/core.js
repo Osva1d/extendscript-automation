@@ -764,5 +764,75 @@ GM.Core = {
         }
         if (worst <= tol) return { ok: true, worst: worst, reason: "" };
         return { ok: false, worst: worst, reason: "distance" };
+    },
+
+    /**
+     * Runs of selected segments (spec §5.4). Each segment carries `sel`
+     * (both end anchors selected). Nothing or everything selected means the
+     * whole outline: returns []. A closed path is scanned from just after an
+     * unselected segment so a run across the first anchor stays whole.
+     * @returns {Array<Object>} [{from, len, segs}] in circuit distances.
+     */
+    selectedRuns: function (segments, closed, circuit) {
+        var n = segments.length, runs = [], i, all = true, any = false;
+        for (i = 0; i < n; i++) {
+            if (segments[i].sel) any = true; else all = false;
+        }
+        if (!any || all) return runs;
+        var anchorDist = [0];
+        for (i = 0; i < n; i++) anchorDist.push(anchorDist[i] + circuit.segments[i].len);
+        var start = 0;
+        if (closed) {
+            for (i = 0; i < n; i++) { if (!segments[i].sel) { start = (i + 1) % n; break; } }
+        }
+        var cur = null;
+        for (var k = 0; k < n; k++) {
+            var idx = closed ? (start + k) % n : k;
+            if (segments[idx].sel) {
+                if (!cur) cur = { from: anchorDist[idx], len: 0, segs: 0 };
+                cur.len += circuit.segments[idx].len;
+                cur.segs++;
+            } else if (cur) {
+                runs.push(cur);
+                cur = null;
+            }
+        }
+        if (cur) runs.push(cur);
+        return runs;
+    },
+
+    /**
+     * Carries a run of the cut line onto the eyelet line: each end goes to
+     * its nearest point there. The eyelet line may run the other way round
+     * (Illustrator's offset decides), so orientation is matched by the sign
+     * of the areas.
+     * @returns {Object} {from, len} on lineCircuit.
+     */
+    mapRun: function (cutCircuit, run, lineCircuit) {
+        var a = GM.Core.pointAtDistance(cutCircuit, run.from);
+        var b = GM.Core.pointAtDistance(cutCircuit, run.from + run.len);
+        var sa = GM.Core.nearestDistance(lineCircuit, a);
+        var sb = GM.Core.nearestDistance(lineCircuit, b);
+        var same = (GM.Core.signedArea(cutCircuit) > 0) === (GM.Core.signedArea(lineCircuit) > 0);
+        var from = same ? sa : sb, to = same ? sb : sa;
+        var len = to - from;
+        if (len <= 0) len += lineCircuit.totalLen;
+        return { from: from, len: len };
+    },
+
+    /**
+     * Corner positions for one run: its two ends plus the corners strictly
+     * inside it, unwrapped past totalLen where the run crosses the start.
+     * @returns {Array<number>} Ascending distances.
+     */
+    runCorners: function (cornerDists, run, total) {
+        var eps = 1e-6, inner = [];
+        for (var i = 0; i < cornerDists.length; i++) {
+            var c = cornerDists[i];
+            if (c < run.from) c += total;
+            if (c > run.from + eps && c < run.from + run.len - eps) inner.push(c);
+        }
+        inner.sort(function (a, b) { return a - b; });
+        return [run.from].concat(inner).concat([run.from + run.len]);
     }
 };
