@@ -657,13 +657,24 @@ GM.Core = {
         return boxes;
     },
 
-    /** The circuit's samples as one polygon (no repeated joints), cached. */
+    /**
+     * The circuit as one polygon for the inside test and the signed area:
+     * a straight segment adds only its end point, a curved one every 4th
+     * sample and its end. Kept small on purpose — in the ExtendScript engine
+     * a point-in-polygon test over thousands of vertices costs tens of ms per
+     * mark (measured 2026-10-12: 5 761 vertices 80 ms). Cached on the
+     * circuit. The last vertex repeats the first (harmless for both uses).
+     */
     _samplePolygon: function (circuit) {
         if (circuit._poly) return circuit._poly;
-        var poly = [];
-        for (var i = 0; i < circuit.segments.length; i++) {
-            var pts = circuit.segments[i].pts;
-            for (var j = (i === 0 ? 0 : 1); j < pts.length; j++) poly.push(pts[j].p);
+        var poly = [], segs = circuit.segments, eps = GM.CONSTANTS.SEGMENT_EPS;
+        if (segs.length > 0) poly.push(segs[0].pts[0].p);
+        for (var i = 0; i < segs.length; i++) {
+            var pts = segs[i].pts, last = pts.length - 1;
+            if (!GM.Core.isStraightSegment(segs[i].seg, eps)) {
+                for (var j = 4; j < last; j += 4) poly.push(pts[j].p);
+            }
+            poly.push(pts[last].p);
         }
         circuit._poly = poly;
         return poly;
@@ -687,14 +698,17 @@ GM.Core = {
     },
 
     /**
-     * Shortest distance from q to the circuit: nearest sample chord, then a
-     * ternary search on the Bezier itself around it, so chords cutting
-     * corners of a large arc do not count as error.
+     * Shortest distance from q to the circuit's sampled line (64 chords per
+     * segment, bounding boxes skip far segments). Measured to the chords on
+     * purpose: marks are placed on chords of the sampled eyelet line
+     * (pointAtDistance interpolates linearly), so chord to chord keeps the
+     * check consistent — measuring to the curve itself would add the eyelet
+     * chords' sagitta (≈0.45 pt on a 2 m circle) as false error.
      * @returns {number}
      */
     distanceToCircuit: function (circuit, q) {
         var boxes = GM.Core._segBoxes(circuit);
-        var best = Infinity, bi = -1, bj = 1;
+        var best = Infinity;
         for (var i = 0; i < circuit.segments.length; i++) {
             var b = boxes[i];
             var bx = Math.max(b[0] - q[0], 0, q[0] - b[2]), by = Math.max(b[1] - q[1], 0, q[1] - b[3]);
@@ -702,21 +716,10 @@ GM.Core = {
             var pts = circuit.segments[i].pts;
             for (var j = 1; j < pts.length; j++) {
                 var r = GM.Core._projectOnChord(pts[j - 1].p, pts[j].p, q);
-                if (r.d2 < best) { best = r.d2; bi = i; bj = j; }
+                if (r.d2 < best) best = r.d2;
             }
         }
-        if (bi < 0) return Infinity;
-        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT, seg = circuit.segments[bi].seg;
-        var lo = Math.max(bj - 2, 0) / n, hi = Math.min(bj + 1, n) / n;
-        function d2(t) {
-            var p = GM.Core.bezierPoint(seg, t), x = p[0] - q[0], y = p[1] - q[1];
-            return x * x + y * y;
-        }
-        for (var it = 0; it < 40; it++) {
-            var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
-            if (d2(m1) < d2(m2)) hi = m2; else lo = m1;
-        }
-        return Math.sqrt(Math.min(d2((lo + hi) / 2), best));
+        return Math.sqrt(best);
     },
 
     /** Ray-casting point-in-polygon. */
@@ -743,6 +746,9 @@ GM.Core = {
      * mark lies inside the cut line, its distance from the cut line differs
      * from D by at most tol. Catches Illustrator's silent "no offset" (the
      * original handed back when the offset collapses).
+     * Call only with D > 0: at D = 0 the marks lie on the cut line, where the
+     * inside test is undefined (the caller skips the check). On reason
+     * "outside" worst is Infinity — do not show it in a message.
      * @param {Array<Array<number>>} marks - [[x, y], ...].
      * @param {Object} cutCircuit - Closed circuit of the cut line.
      * @param {number} D - Offset (document units).

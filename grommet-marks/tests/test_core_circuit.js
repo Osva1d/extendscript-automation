@@ -502,6 +502,22 @@ console.log("--- Core: distance / inside / area / checkMarks ---");
     var out = GM.Core.checkMarks([[500, -50]], c, 50, 0.5);
     assert(out.ok === false && out.reason === "outside", "a mark outside fails as outside");
     assert(GM.Core.checkMarks([], c, 50, 0.5).ok === true, "no marks, nothing to object to");
+    assert(GM.Core._samplePolygon(GM.Core.buildCircuit(roundedRect(1000, 1000, 0, 1), true)).length === 5,
+        "straight outline: one vertex per corner (+ closing repeat)");
+    var cad = [];
+    for (var v = 0; v < 360; v++) {
+        var a0 = v * Math.PI / 180, a1 = (v + 1) * Math.PI / 180;
+        cad.push(straightSeg(500 * Math.cos(a0), 500 * Math.sin(a0), 500 * Math.cos(a1), 500 * Math.sin(a1)));
+    }
+    assert(GM.Core._samplePolygon(GM.Core.buildCircuit(cad, true)).length === 361,
+        "CAD outline of 360 line pieces: 361 vertices, not 23 041");
+    assert(Math.abs(GM.Core.nearestDistance(c, [1030, 500]) - 1500) < 1e-6, "nearest point on the second side: 1500 along");
+    var onCut = GM.Core.checkMarks([[500, 0]], c, 50, 0.5);
+    assert(onCut.ok === false && onCut.reason === "distance" && Math.abs(onCut.worst - 50) < 1e-6,
+        "mark on the bottom edge: distance failure, worst 50");
+    var off10 = GM.Core.checkMarks([[500, 60]], c, 50, 0.5);
+    assert(off10.ok === false && off10.reason === "distance" && Math.abs(off10.worst - 10) < 1e-6,
+        "inside but 10 off the offset: distance failure");
 })();
 
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
