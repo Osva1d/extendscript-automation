@@ -477,5 +477,32 @@ console.log("--- Core.findCorners ---");
     assert(f9.round === 0 && f9.sharp === 2, "polyline arc (10 deg bends): no corner found — documented limitation");
 })();
 
+// ===== TEST: distance, inside, area, check (spec §7) =====
+console.log("--- Core: distance / inside / area / checkMarks ---");
+(function () {
+    var sq = roundedRect(1000, 1000, 0, 1);
+    var c = GM.Core.buildCircuit(sq, true);
+    assert(Math.abs(GM.Core.distanceToCircuit(c, [500, 50]) - 50) < 1e-6, "distance to the nearest side");
+    assert(Math.abs(GM.Core.distanceToCircuit(c, [-30, -40]) - 50) < 1e-6, "distance to a corner from outside");
+    var circ = GM.Core.buildCircuit(arcSegs(0, 0, 500, 0, 2 * Math.PI, 4), true), worst = 0;
+    for (var a = 0; a < 360; a += 7) {
+        var q = [450 * Math.cos(a * Math.PI / 180), 450 * Math.sin(a * Math.PI / 180)];
+        worst = Math.max(worst, Math.abs(GM.Core.distanceToCircuit(circ, q) - 50));
+    }
+    assert(worst < 0.2, "circle r 500: points on r 450 are 50 away (Bezier circle error ~0.14), worst " + worst.toFixed(4));
+    var poly = GM.Core._samplePolygon(c);
+    assert(GM.Core.pointInPolygon(poly, [500, 500]) === true, "centre inside");
+    assert(GM.Core.pointInPolygon(poly, [500, -1]) === false, "below the square outside");
+    assert(GM.Core.signedArea(c) > 0, "counter-clockwise: positive area");
+    assert(GM.Core.signedArea(GM.Core.buildCircuit(reverseSegs(sq), true)) < 0, "clockwise: negative area");
+    assert(Math.abs(GM.Core.nearestDistance(c, [500, -30]) - 500) < 1e-6, "nearest point 500 along the bottom side");
+
+    assert(GM.Core.checkMarks([[50, 50], [500, 50], [950, 950]], c, 50, 0.5).ok === true, "marks 50 inside pass");
+    assert(GM.Core.checkMarks([[0, 0], [500, 0]], c, 50, 0.5).ok === false, "marks on the cut line fail (offset returned the original)");
+    var out = GM.Core.checkMarks([[500, -50]], c, 50, 0.5);
+    assert(out.ok === false && out.reason === "outside", "a mark outside fails as outside");
+    assert(GM.Core.checkMarks([], c, 50, 0.5).ok === true, "no marks, nothing to object to");
+})();
+
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 if (fail > 0) process.exit(1);

@@ -626,5 +626,137 @@ GM.Core = {
         }
         res.dists.sort(function (a, b) { return a - b; });
         return res;
+    },
+
+    /** Projection of q onto chord a-b: {t (0..1), d2 (squared distance)}. */
+    _projectOnChord: function (a, b, q) {
+        var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+        var t = l2 > 0 ? ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / l2 : 0;
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
+        var x = a[0] + dx * t - q[0], y = a[1] + dy * t - q[1];
+        return { t: t, d2: x * x + y * y };
+    },
+
+    /** Bounding box of every segment's samples, cached on the circuit. */
+    _segBoxes: function (circuit) {
+        if (circuit._boxes) return circuit._boxes;
+        var boxes = [];
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var pts = circuit.segments[i].pts, b = [Infinity, Infinity, -Infinity, -Infinity];
+            for (var j = 0; j < pts.length; j++) {
+                var p = pts[j].p;
+                if (p[0] < b[0]) b[0] = p[0];
+                if (p[1] < b[1]) b[1] = p[1];
+                if (p[0] > b[2]) b[2] = p[0];
+                if (p[1] > b[3]) b[3] = p[1];
+            }
+            boxes.push(b);
+        }
+        circuit._boxes = boxes;
+        return boxes;
+    },
+
+    /** The circuit's samples as one polygon (no repeated joints), cached. */
+    _samplePolygon: function (circuit) {
+        if (circuit._poly) return circuit._poly;
+        var poly = [];
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var pts = circuit.segments[i].pts;
+            for (var j = (i === 0 ? 0 : 1); j < pts.length; j++) poly.push(pts[j].p);
+        }
+        circuit._poly = poly;
+        return poly;
+    },
+
+    /**
+     * Arc distance of the point on the circuit nearest to q (sample chords).
+     * @returns {number}
+     */
+    nearestDistance: function (circuit, q) {
+        var best = Infinity, at = 0, acc = 0;
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var pts = circuit.segments[i].pts;
+            for (var j = 1; j < pts.length; j++) {
+                var r = GM.Core._projectOnChord(pts[j - 1].p, pts[j].p, q);
+                if (r.d2 < best) { best = r.d2; at = acc + pts[j - 1].s + (pts[j].s - pts[j - 1].s) * r.t; }
+            }
+            acc += circuit.segments[i].len;
+        }
+        return at;
+    },
+
+    /**
+     * Shortest distance from q to the circuit: nearest sample chord, then a
+     * ternary search on the Bezier itself around it, so chords cutting
+     * corners of a large arc do not count as error.
+     * @returns {number}
+     */
+    distanceToCircuit: function (circuit, q) {
+        var boxes = GM.Core._segBoxes(circuit);
+        var best = Infinity, bi = -1, bj = 1;
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var b = boxes[i];
+            var bx = Math.max(b[0] - q[0], 0, q[0] - b[2]), by = Math.max(b[1] - q[1], 0, q[1] - b[3]);
+            if (bx * bx + by * by >= best) continue;
+            var pts = circuit.segments[i].pts;
+            for (var j = 1; j < pts.length; j++) {
+                var r = GM.Core._projectOnChord(pts[j - 1].p, pts[j].p, q);
+                if (r.d2 < best) { best = r.d2; bi = i; bj = j; }
+            }
+        }
+        if (bi < 0) return Infinity;
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT, seg = circuit.segments[bi].seg;
+        var lo = Math.max(bj - 2, 0) / n, hi = Math.min(bj + 1, n) / n;
+        function d2(t) {
+            var p = GM.Core.bezierPoint(seg, t), x = p[0] - q[0], y = p[1] - q[1];
+            return x * x + y * y;
+        }
+        for (var it = 0; it < 40; it++) {
+            var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+            if (d2(m1) < d2(m2)) hi = m2; else lo = m1;
+        }
+        return Math.sqrt(Math.min(d2((lo + hi) / 2), best));
+    },
+
+    /** Ray-casting point-in-polygon. */
+    pointInPolygon: function (poly, q) {
+        var inside = false;
+        for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+            if (((yi > q[1]) !== (yj > q[1])) && (q[0] < (xj - xi) * (q[1] - yi) / (yj - yi) + xi)) inside = !inside;
+        }
+        return inside;
+    },
+
+    /** Signed area of the sampled circuit: positive = counter-clockwise. */
+    signedArea: function (circuit) {
+        var poly = GM.Core._samplePolygon(circuit), a = 0;
+        for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            a += poly[j][0] * poly[i][1] - poly[i][0] * poly[j][1];
+        }
+        return a / 2;
+    },
+
+    /**
+     * The run's promise, checked before anything is drawn (spec §7): every
+     * mark lies inside the cut line, its distance from the cut line differs
+     * from D by at most tol. Catches Illustrator's silent "no offset" (the
+     * original handed back when the offset collapses).
+     * @param {Array<Array<number>>} marks - [[x, y], ...].
+     * @param {Object} cutCircuit - Closed circuit of the cut line.
+     * @param {number} D - Offset (document units).
+     * @param {number} tol - Tolerance (document units).
+     * @returns {Object} {ok, worst, reason: ""|"outside"|"distance"}
+     */
+    checkMarks: function (marks, cutCircuit, D, tol) {
+        var poly = GM.Core._samplePolygon(cutCircuit), worst = 0;
+        for (var i = 0; i < marks.length; i++) {
+            if (!GM.Core.pointInPolygon(poly, marks[i])) return { ok: false, worst: Infinity, reason: "outside" };
+            var e = Math.abs(GM.Core.distanceToCircuit(cutCircuit, marks[i]) - D);
+            if (e > worst) worst = e;
+        }
+        if (worst <= tol) return { ok: true, worst: worst, reason: "" };
+        return { ok: false, worst: worst, reason: "distance" };
     }
 };
