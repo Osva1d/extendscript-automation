@@ -58,7 +58,15 @@ GM.Main = {
         }
     },
 
-    process: function (cfg) {
+    /**
+     * Places the marks for validated settings: artboard edges, or the
+     * selected path (offset, corners, part of the outline) in path mode.
+     * @param {Object} cfg - Validated settings.
+     * @param {Object} [opts] - Per-run choices that are not stored in
+     *     presets: {pathPartial} — restrict the marks to the selected part
+     *     of the outline. Missing means no choices.
+     */
+    process: function (cfg, opts) {
         try {
             var doc = GM.Illustrator.doc;
             // Large Canvas documents (scaleFactor 10) keep geometry at
@@ -74,6 +82,33 @@ GM.Main = {
                     if (warnings[w] === msg) return;
                 }
                 warnings.push(msg);
+            }
+
+            // Zone config (pitch unit-converted once; shared by both modes).
+            var cz = cfg.cornerZone || {};
+            var zoneCfg = {
+                enabled: !!(cz.enabled),
+                count:   Math.max(cz.count  || 1, 1),
+                pitch:   (cz.pitch  || 0) * unitFactor
+            };
+
+            // Path mode: every mark is worked out before the document is
+            // touched, so a shape the offset cannot handle leaves nothing
+            // behind — no mark layer, no lock change (spec §9).
+            var pathPlan = null;
+            if (cfg.placementMode === GM.CONSTANTS.MODE_PATH) {
+                // Re-fetch selection: the user may have deselected between
+                // dialog OK and process() — treat as a non-fatal fallback.
+                var pathInfo = GM.Illustrator.getSelectedPathInfo();
+                if (!pathInfo.ok) {
+                    addWarning(GM.L.WARN_MODE_FALLBACK);
+                } else {
+                    pathPlan = GM.Main.pathMarks(cfg, opts || {}, pathInfo, unitFactor, scale, zoneCfg);
+                    if (!pathPlan.ok) {
+                        alert(pathPlan.message);
+                        return;
+                    }
+                }
             }
 
             // Fixed target layer "Grommet Marks" (created if missing, silently).
@@ -112,36 +147,10 @@ GM.Main = {
                 if (!ok) failedMarks++;
             }
 
-            // Zone config (pitch unit-converted once; shared by both modes).
-            var cz = cfg.cornerZone || {};
-            var zoneCfg = {
-                enabled: !!(cz.enabled),
-                count:   Math.max(cz.count  || 1, 1),
-                pitch:   (cz.pitch  || 0) * unitFactor
-            };
-
-            var doArtboard = true;
-
-            if (cfg.placementMode === GM.CONSTANTS.MODE_PATH) {
-                // Re-fetch selection: the user may have deselected between
-                // dialog OK and process() — treat as a non-fatal fallback.
-                var pathInfo = GM.Illustrator.getSelectedPathInfo();
-                if (!pathInfo.ok) {
-                    addWarning(GM.L.WARN_MODE_FALLBACK);
-                } else {
-                    doArtboard = false;
-                    var pd = cfg.pathDist || {};
-                    var distCfg = {
-                        useNumber: !!(pd.useNumber),
-                        number:    Math.max(pd.number  || 1, 1),
-                        spacing:   (pd.spacing || 0) * unitFactor
-                    };
-                    var pathMarks = GM.Core.distributeOnCircuit(
-                        pathInfo.circuit, pathInfo.corners, zoneCfg, distCfg
-                    );
-                    for (var pi = 0; pi < pathMarks.length; pi++) {
-                        place(pathMarks[pi][0], pathMarks[pi][1]);
-                    }
+            var doArtboard = !pathPlan;
+            if (pathPlan) {
+                for (var pm = 0; pm < pathPlan.marks.length; pm++) {
+                    place(pathPlan.marks[pm][0], pathPlan.marks[pm][1]);
                 }
             }
 
@@ -235,6 +244,60 @@ GM.Main = {
             }
             alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " + e.message);
         }
+    },
+
+    /**
+     * Marks of a path run (spec §5, §9): eyelet line (Illustrator's offset
+     * for a closed path with D > 0), corners on it, part of the outline,
+     * distribution, and the check against the cut line. Touches the document
+     * only through offsetPath, which leaves nothing behind.
+     * @param {Object} cfg - Validated settings.
+     * @param {Object} opts - {pathPartial} — per run, not stored.
+     * @param {Object} pathInfo - getSelectedPathInfo() result (ok).
+     * @param {number} unitFactor - Dialog units -> document units.
+     * @param {number} scale - Document scaleFactor.
+     * @param {Object} zoneCfg - Corner zones, document units.
+     * @returns {Object} {ok:true, marks} or {ok:false, message}
+     */
+    pathMarks: function (cfg, opts, pathInfo, unitFactor, scale, zoneCfg) {
+        var pd = cfg.pathDist || {};
+        var distCfg = {
+            useNumber: !!(pd.useNumber),
+            number:    Math.max(pd.number  || 1, 1),
+            spacing:   (pd.spacing || 0) * unitFactor
+        };
+        var D = pathInfo.closed ? (cfg.pathOffset || 0) * unitFactor : 0;
+        var line = { circuit: pathInfo.circuit, segments: pathInfo.segments, closed: pathInfo.closed };
+        if (D > 0) {
+            var off = GM.Illustrator.offsetPath(pathInfo, D);
+            if (!off.ok) return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_FAILED, off.message) };
+            if (off.loops !== 1) return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_SPLIT, off.loops) };
+            var segs = GM.Core.dropDegenerateSegments(off.segments, GM.CONSTANTS.SEGMENT_EPS);
+            line = { circuit: GM.Core.buildCircuit(segs, true), segments: segs, closed: true };
+        }
+        var feat = GM.Core.findCorners(line.segments, line.closed, GM.CONSTANTS.CORNER_ANGLE_MIN, line.circuit);
+        var part = pathInfo.partial || { state: "none", runs: [] };
+        var marks = [];
+        if (opts.pathPartial && part.state === "runs") {
+            for (var r = 0; r < part.runs.length; r++) {
+                var run = D > 0 ? GM.Core.mapRun(pathInfo.circuit, part.runs[r], line.circuit) : part.runs[r];
+                var cd = GM.Core.runCorners(feat.dists, run, line.circuit.totalLen);
+                var rm = GM.Core.placeAlong(line.circuit, cd, false, zoneCfg, distCfg, 0);
+                for (var q = 0; q < rm.length; q++) marks.push(rm[q]);
+            }
+        } else {
+            marks = GM.Core.placeAlong(line.circuit, feat.dists, line.closed, zoneCfg, distCfg,
+                GM.Core.topmostDist(line.circuit));
+        }
+        // D = 0: marks sit on the cut line by construction — nothing to check.
+        if (D > 0) {
+            var chk = GM.Core.checkMarks(marks, pathInfo.circuit, D, GM.CONSTANTS.OFFSET_TOL / scale);
+            if (!chk.ok) {
+                var shown = String(cfg.pathOffset).replace(".", GM.L.DECIMAL_SEP) + " " + cfg.units;
+                return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_COLLAPSE, shown) };
+            }
+        }
+        return { ok: true, marks: marks };
     }
 };
 

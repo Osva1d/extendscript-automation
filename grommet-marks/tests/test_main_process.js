@@ -48,21 +48,23 @@ var MM = GM.CONSTANTS.UNIT_FACTORS.mm;
 
 /**
  * Installs a fake GM.Illustrator and returns the recorder.
- * @param {Object} o - {artboards: [[l,t,r,b]...], scaleFactor, pathInfo}
+ * @param {Object} o - {artboards: [[l,t,r,b]...], scaleFactor, pathInfo, offsetPath, existing}
  */
 function fakeDoc(o) {
-    var rec = { marks: [], layer: { locked: false, visible: true } };
+    var rec = { marks: [], layer: { locked: false, visible: true }, layerCalls: 0 };
     var doc = { artboards: [] };
     for (var i = 0; i < o.artboards.length; i++) doc.artboards.push({ artboardRect: o.artboards[i] });
     if (o.scaleFactor !== undefined) doc.scaleFactor = o.scaleFactor;
     GM.Illustrator = {
         doc: doc,
-        getOrCreateLayer: function () { return rec.layer; },
+        getOrCreateLayer: function () { rec.layerCalls++; return rec.layer; },
         placeMarkGroup: function (layer, x, y, size, opts) {
             rec.marks.push({ x: x, y: y, size: size, opts: opts });
             return true;
         },
         getSelectedPathInfo: function () { return o.pathInfo || { ok: false, reason: "no-selection" }; },
+        offsetPath: o.offsetPath || function () { throw new Error("offsetPath not expected"); },
+        getDocInfo: function () { return { artboards: 1, width: 100, height: 100, scale: 1 }; },
         itemCentres: function () { return o.existing || []; }
     };
     return rec;
@@ -78,14 +80,24 @@ function cornerMark(rec, x, y) {
     }
     return null;
 }
-function squarePathInfo(side) {
-    function seg(a, b) { return { p0: a, p1: a, p2: b, p3: b }; }
-    var s = [seg([0, 0], [side, 0]), seg([side, 0], [side, side]),
-             seg([side, side], [0, side]), seg([0, side], [0, 0])];
-    var circuit = GM.Core.buildCircuit(s, true);
-    var corners = GM.Core.detectCorners(s, true, GM.CONSTANTS.CORNER_ANGLE_MIN);
-    return { ok: true, circuit: circuit, corners: corners, closed: true,
-             cornerCount: corners.length, totalLen: circuit.totalLen, pathRef: {} };
+function seg(a, b) { return { p0: a, p1: a, p2: b, p3: b }; }
+function squareSegs(a, b) {
+    return [seg([a, a], [b, a]), seg([b, a], [b, b]), seg([b, b], [a, b]), seg([a, b], [a, a])];
+}
+function pathInfoOf(segs, closed, partial) {
+    var circuit = GM.Core.buildCircuit(segs, closed);
+    var f = GM.Core.findCorners(segs, closed, GM.CONSTANTS.CORNER_ANGLE_MIN, circuit);
+    return { ok: true, circuit: circuit,
+             corners: GM.Core.detectCorners(segs, closed, GM.CONSTANTS.CORNER_ANGLE_MIN),
+             closed: closed, cornerCount: f.dists.length, sharpCount: f.sharp, roundCount: f.round,
+             cornerDists: f.dists, segments: segs, partial: partial || { state: "none", runs: [] },
+             pointSel: [], totalLen: circuit.totalLen, pathRef: {} };
+}
+function squarePathInfo(side) { return pathInfoOf(squareSegs(0, side), true); }
+function pathCfg(over) {
+    var s = settings({ placementMode: "path", pathDist: { useNumber: false, number: 24, spacing: 100 } });
+    for (var k in over) if (over.hasOwnProperty(k)) s[k] = over[k];
+    return s;
 }
 
 // ===== TEST: artboard placement, standard document =====
@@ -226,6 +238,105 @@ console.log("--- process: marks on several artboards are reported (audit A8) ---
     alerts = [];
     GM.Main.process(settings({ placementMode: "path" }));
     assert(alerts.length === 0, "path mode marks the path only: no note (got " + alerts.join(" | ") + ")");
+})();
+
+// ===== TEST: path runs (spec §5, §7, §9) =====
+console.log("--- process: path offset through Illustrator (spec §5, §6, §9) ---");
+(function () {
+    var side = 300 * MM, seen = {};
+    var rec = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
+        offsetPath: function (info, D) { seen.D = D; return { ok: true, loops: 1, segments: squareSegs(D, side - D) }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(near(seen.D, 20 * MM), "offsetPath gets D in document units");
+    assert(!!cornerMark(rec, 20 * MM, 20 * MM) && !!cornerMark(rec, 280 * MM, 280 * MM), "corner marks 20 mm in from both edges");
+    assert(rec.marks.length === 12, "inset side 260 mm at ~100 mm: 4 per side, 12 in all (got " + rec.marks.length + ")");
+    assert(alerts.length === 0, "no alert (" + alerts.join(" | ") + ")");
+
+    // Collapse: Illustrator hands the original back (measured) -> nothing drawn
+    var rec2 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
+        offsetPath: function () { return { ok: true, loops: 1, segments: squareSegs(0, side) }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec2.marks.length === 0 && rec2.layerCalls === 0, "collapsed offset: no mark, no mark layer");
+    assert(alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0 &&
+        alerts[0].indexOf("20 mm") > 0, "collapse reported with the offset (" + alerts.join(" | ") + ")");
+
+    var rec3 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
+        offsetPath: function () { return { ok: true, loops: 2, segments: [] }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec3.marks.length === 0 && alerts.length === 1 &&
+        alerts[0].indexOf(GM.L.ERR_OFFSET_SPLIT.split("%s")[0]) === 0, "split line reported, nothing drawn");
+
+    var rec4 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
+        offsetPath: function () { return { ok: false, message: "boom" }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec4.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf("boom") > 0, "offset failure reported");
+})();
+
+console.log("--- process: open path, part of the outline, top start ---");
+(function () {
+    var side = 300 * MM;
+    var open = pathInfoOf([seg([0, 0], [side, 0]), seg([side, 0], [side, side])], false);
+    var rec = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: open });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(alerts.length === 0 && rec.marks.length > 0 && !!cornerMark(rec, side, 0), "open path: on the path, offset not asked for");
+
+    var segs = squareSegs(0, side);
+    segs[0].sel = true;                                    // bottom side selected
+    var circuit = GM.Core.buildCircuit(segs, true);
+    var part = { state: "runs", runs: GM.Core.selectedRuns(segs, true, circuit), selectedSegs: 1, totalSegs: 4 };
+    var off = function (info, D) { return { ok: true, loops: 1, segments: squareSegs(D, side - D) }; };
+    var rec2 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: pathInfoOf(segs, true, part), offsetPath: off });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), { pathPartial: true });
+    var bottomOnly = rec2.marks.length === 4;
+    for (var i = 0; i < rec2.marks.length; i++) if (!near(rec2.marks[i].y, 20 * MM, 1e-6)) bottomOnly = false;
+    assert(bottomOnly, "part ticked: 4 marks on the bottom eyelet line only (got " + rec2.marks.length + ")");
+    var rec3 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: pathInfoOf(segs, true, part), offsetPath: off });
+    GM.Main.process(pathCfg({ pathOffset: 20 }), { pathPartial: false });
+    assert(rec3.marks.length === 12, "part not ticked: whole outline (got " + rec3.marks.length + ")");
+
+    var k = 4 / 3 * Math.tan(Math.PI / 8) * 100 * MM, c = 150 * MM, R = 100 * MM, circle = [];
+    for (var q = 0; q < 4; q++) {                       // anchors at 45, 135, 225, 315 deg
+        var s0 = Math.PI / 4 + q * Math.PI / 2, s1 = s0 + Math.PI / 2;
+        var p0 = [c + R * Math.cos(s0), c + R * Math.sin(s0)], p3 = [c + R * Math.cos(s1), c + R * Math.sin(s1)];
+        circle.push({ p0: p0, p1: [p0[0] - k * Math.sin(s0), p0[1] + k * Math.cos(s0)],
+                      p2: [p3[0] + k * Math.sin(s1), p3[1] - k * Math.cos(s1)], p3: p3 });
+    }
+    var rec4 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: pathInfoOf(circle, true) });
+    GM.Main.process(pathCfg({ pathDist: { useNumber: true, number: 5, spacing: 100 } }), {});
+    var top = false;
+    for (var j = 0; j < rec4.marks.length; j++) if (near(rec4.marks[j].x, c, 0.5) && near(rec4.marks[j].y, c + R, 0.1)) top = true;
+    assert(rec4.marks.length === 5 && top, "cornerless shape: 5 marks, one at the top");
+})();
+
+console.log("--- process: polyline arc passes the check (review focus 1) ---");
+(function () {
+    var side = 300 * MM, d = 20 * MM;
+    // Cut line: square whose top-right corner is a quarter circle of 12 line pieces
+    var r = 60 * MM, cx = side - r, cy = side - r, cut = [seg([0, 0], [side, 0]), seg([side, 0], [side, cy])];
+    var prev = [side, cy];
+    for (var i = 1; i <= 12; i++) {
+        var a = i * Math.PI / 24, p = [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+        cut.push(seg(prev, p)); prev = p;
+    }
+    cut.push(seg(prev, [0, side])); cut.push(seg([0, side], [0, 0]));
+    var inner = [seg([d, d], [side - d, d]), seg([side - d, d], [side - d, cy])];
+    prev = [side - d, cy];
+    for (var j = 1; j <= 12; j++) {
+        var b = j * Math.PI / 24, q = [cx + (r - d) * Math.cos(b), cy + (r - d) * Math.sin(b)];
+        inner.push(seg(prev, q)); prev = q;
+    }
+    inner.push(seg(prev, [d, side - d])); inner.push(seg([d, side - d], [d, d]));
+    var rec = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: pathInfoOf(cut, true),
+        offsetPath: function () { return { ok: true, loops: 1, segments: inner }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(alerts.length === 0 && rec.marks.length > 0, "marks drawn, check passed (" + alerts.join(" | ") + ")");
 })();
 
 // ===== SUMMARY =====
