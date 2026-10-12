@@ -303,11 +303,12 @@ GM.Core = {
      * Distributes marks over a whole circuit.
      * - With corners: every corner gets a mandatory mark; each corner-to-corner
      *   span is filled by distributeOnSpan (zones + preferred middle). Count
-     *   mode is not applicable here (the UI disables it) — spacing rules.
+     *   mode on a cornered path places the corners only (1.1.0).
      * - Without corners + closed: even ring — count mode places exactly N,
      *   spacing mode places round(totalLen/spacing), starting at distance 0.
      * Marks are deduplicated by rounded coordinate (spans share corner anchors)
      * and capped at GM.CONSTANTS.MAX_MARKS.
+     * Delegates to placeAlong with the corners' arc distances (start at distance 0).
      *
      * @param {Object} circuit - From buildCircuit.
      * @param {Array<number>} corners - Corner anchor indices (detectCorners).
@@ -409,30 +410,62 @@ GM.Core = {
 
     /**
      * Arc distance of the highest point of a circuit (largest Y — the
-     * document coordinate system is Y-up). Refined between samples so the
-     * top of a circle lands on the top even when no anchor sits there.
+     * document coordinate system is Y-up). On a flat top it is the middle of
+     * the highest run, so the result does not depend on drawing direction or
+     * the first anchor. Otherwise it is refined on the Bezier in the sample
+     * intervals on both sides of the highest sample — the apex may lie just
+     * past an anchor, in the next segment.
      * @param {Object} circuit - From buildCircuit.
      * @returns {number} Distance along the circuit.
      */
     topmostDist: function (circuit) {
-        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT;
-        var bestY = -Infinity, bi = 0, bj = 0, acc = 0, accAt = 0;
-        for (var i = 0; i < circuit.segments.length; i++) {
-            var pts = circuit.segments[i].pts;
-            for (var j = 0; j < pts.length; j++) {
-                if (pts[j].p[1] > bestY + 1e-9) { bestY = pts[j].p[1]; bi = i; bj = j; accAt = acc; }
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT, segs = circuit.segments;
+        // One entry per distinct sample in path order: {seg, t, s, y}. A
+        // segment's first sample repeats the previous segment's last one; on
+        // a closed circuit the very first sample repeats the last one too.
+        var list = [], acc = 0, i, j;
+        for (i = 0; i < segs.length; i++) {
+            var pts = segs[i].pts;
+            for (j = (i === 0 && !circuit.closed) ? 0 : 1; j < pts.length; j++) {
+                list.push({ seg: i, t: j / n, s: acc + pts[j].s, y: pts[j].p[1] });
             }
-            acc += circuit.segments[i].len;
+            acc += segs[i].len;
         }
-        if (bestY === -Infinity) return 0;
-        var sg = circuit.segments[bi];
-        var lo = Math.max(bj - 1, 0) / n, hi = Math.min(bj + 1, n) / n;
-        for (var it = 0; it < 40; it++) {
-            var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
-            if (GM.Core.bezierPoint(sg.seg, m1)[1] < GM.Core.bezierPoint(sg.seg, m2)[1]) lo = m1; else hi = m2;
+        if (list.length === 0) return 0;
+        var N = list.length, total = circuit.totalLen, EPS = 1e-7, k = 0;
+        for (i = 1; i < N; i++) {
+            if (list[i].y > list[k].y) k = i;
         }
-        var f = (lo + hi) / 2 * n, j0 = Math.min(Math.floor(f), n - 1);
-        return accAt + sg.pts[j0].s + (sg.pts[j0 + 1].s - sg.pts[j0].s) * (f - j0);
+        function at(x) { return circuit.closed ? list[(x % N + N) % N] : list[x]; }
+
+        var lo = k, hi = k, top = list[k].y;
+        while ((circuit.closed || lo > 0) && hi - lo + 1 < N && at(lo - 1).y >= top - EPS) lo--;
+        while ((circuit.closed || hi < N - 1) && hi - lo + 1 < N && at(hi + 1).y >= top - EPS) hi++;
+        if (hi > lo) {
+            var sLo = at(lo).s, sHi = at(hi).s;
+            if (sHi < sLo) sHi += total;            // the run crosses the start
+            var mid = (sLo + sHi) / 2;
+            return total > 0 ? mid % total : mid;
+        }
+
+        var best = { y: -Infinity, s: list[k].s };
+        function refine(p, q) {                     // sample interval p -> q lies in segment q.seg
+            var si = q.seg, seg = segs[si].seg, sp = segs[si].pts;
+            var l = (p.seg === q.seg) ? p.t : 0, h = q.t;
+            for (var it = 0; it < 40; it++) {
+                var m1 = l + (h - l) / 3, m2 = h - (h - l) / 3;
+                if (GM.Core.bezierPoint(seg, m1)[1] < GM.Core.bezierPoint(seg, m2)[1]) l = m1; else h = m2;
+            }
+            var t = (l + h) / 2, y = GM.Core.bezierPoint(seg, t)[1];
+            if (y > best.y) {
+                var f = t * n, j0 = Math.min(Math.floor(f), n - 1);
+                var segStart = q.s - sp[Math.round(q.t * n)].s;
+                best = { y: y, s: segStart + sp[j0].s + (sp[j0 + 1].s - sp[j0].s) * (f - j0) };
+            }
+        }
+        if (circuit.closed || k > 0) refine(at(k - 1), list[k]);
+        if (circuit.closed || k < N - 1) refine(list[k], at(k + 1));
+        return best.s;
     },
 
     /**

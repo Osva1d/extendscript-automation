@@ -405,6 +405,21 @@ console.log("--- Core.placeAlong ---");
         if (!hit) mirrored = false;
     }
     assert(mirrored, "odd count from the top is symmetric about the vertical axis");
+
+    // Apex 0.01 rad before and after an anchor (review finding 1)
+    [0.01, -0.01].forEach(function (off) {
+        var cc = GM.Core.buildCircuit(arcSegs(0, 0, 100, off, off + 2 * Math.PI, 4), true);
+        var p = GM.Core.pointAtDistance(cc, GM.Core.topmostDist(cc));
+        assert(Math.abs(p[0]) < 0.05 && Math.abs(p[1] - 100) < 0.05,
+            "apex near an anchor (offset " + off + "): got " + p[0].toFixed(3) + ", " + p[1].toFixed(3));
+    });
+    // Flat top: the middle, whichever way the path runs (review finding 2)
+    var flat = roundedRect(200, 100, 20, 1);
+    var pf = GM.Core.pointAtDistance(GM.Core.buildCircuit(flat, true), GM.Core.topmostDist(GM.Core.buildCircuit(flat, true)));
+    var rflat = reverseSegs(flat);
+    var pr = GM.Core.pointAtDistance(GM.Core.buildCircuit(rflat, true), GM.Core.topmostDist(GM.Core.buildCircuit(rflat, true)));
+    assert(Math.abs(pf[0] - 100) < 1e-6 && Math.abs(pf[1] - 100) < 1e-9, "flat top CCW: middle (got " + pf[0] + ")");
+    assert(Math.abs(pr[0] - 100) < 1e-6 && Math.abs(pr[1] - 100) < 1e-9, "flat top CW: middle (got " + pr[0] + ")");
 })();
 
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
