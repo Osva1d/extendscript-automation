@@ -300,36 +300,6 @@ GM.Core = {
     },
 
     /**
-     * Distributes marks over a whole circuit.
-     * - With corners: every corner gets a mandatory mark; each corner-to-corner
-     *   span is filled by distributeOnSpan (zones + preferred middle). Count
-     *   mode on a cornered path places the corners only (1.1.0).
-     * - Without corners + closed: even ring — count mode places exactly N,
-     *   spacing mode places round(totalLen/spacing), starting at distance 0.
-     * Marks are deduplicated by rounded coordinate (spans share corner anchors)
-     * and capped at GM.CONSTANTS.MAX_MARKS.
-     * Delegates to placeAlong with the corners' arc distances (start at distance 0).
-     *
-     * @param {Object} circuit - From buildCircuit.
-     * @param {Array<number>} corners - Corner anchor indices (detectCorners).
-     * @param {Object} zone - {enabled, count, pitch} (already unit-converted).
-     * @param {Object} dist - {useNumber, number, spacing} (unit-converted).
-     * @returns {Array<Array<number>>} [[x, y], ...]
-     */
-    distributeOnCircuit: function (circuit, corners, zone, dist) {
-        // Anchor indices -> arc distances; the distribution itself lives in
-        // placeAlong, shared with the path pipeline (start at distance 0 keeps
-        // the 1.2.0 positions for callers of this function).
-        var anchorDist = [0];
-        for (var a = 0; a < circuit.segments.length; a++) {
-            anchorDist.push(anchorDist[a] + circuit.segments[a].len);
-        }
-        var cd = [];
-        for (var c = 0; c < corners.length; c++) cd.push(anchorDist[corners[c]]);
-        return GM.Core.placeAlong(circuit, cd, circuit.closed, zone, dist, 0);
-    },
-
-    /**
      * Distributes marks along a circuit between given corner positions.
      * - No corners on a loop: an even ring starting at startDist — count
      *   mode places exactly N, spacing mode round(total/spacing).

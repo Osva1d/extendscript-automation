@@ -266,14 +266,15 @@ console.log("--- process: path offset through Illustrator (spec §5, §6, §9) -
         offsetPath: function () { return { ok: true, loops: 2, segments: [] }; } });
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20 }), {});
-    assert(rec3.marks.length === 0 && alerts.length === 1 &&
-        alerts[0].indexOf(GM.L.ERR_OFFSET_SPLIT.split("%s")[0]) === 0, "split line reported, nothing drawn");
+    assert(rec3.marks.length === 0 && rec3.layerCalls === 0 && alerts.length === 1 &&
+        alerts[0].indexOf(GM.L.ERR_OFFSET_SPLIT.split("%s")[0]) === 0, "split line reported, nothing drawn, no mark layer");
 
     var rec4 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
         offsetPath: function () { return { ok: false, message: "boom" }; } });
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20 }), {});
-    assert(rec4.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf("boom") > 0, "offset failure reported");
+    assert(rec4.marks.length === 0 && rec4.layerCalls === 0 && alerts.length === 1 && alerts[0].indexOf("boom") > 0,
+        "offset failure reported, no mark layer");
 })();
 
 console.log("--- process: open path, part of the outline, top start ---");
@@ -337,6 +338,54 @@ console.log("--- process: polyline arc passes the check (review focus 1) ---");
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20 }), {});
     assert(alerts.length === 0 && rec.marks.length > 0, "marks drawn, check passed (" + alerts.join(" | ") + ")");
+})();
+
+console.log("--- process: Large Canvas offset, empty result, decimal separator (spec §6.1, §7, G1) ---");
+(function () {
+    var side = 30 * MM, seen = {}, collapse = GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0];
+    // Large Canvas: 300 mm is 30 mm in document units. The line Illustrator hands
+    // back is `extra` doc pt further in than asked for.
+    function canvas(extra) {
+        return fakeDoc({ artboards: [[0, side, side, 0]], scaleFactor: 10, pathInfo: squarePathInfo(side),
+            offsetPath: function (info, D) {
+                seen.D = D;
+                return { ok: true, loops: 1, segments: squareSegs(D + extra, side - D - extra) };
+            } });
+    }
+    var rec = canvas(0);
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(near(seen.D, 2 * MM), "20 mm physical is 2 mm in a 1:10 document (got " + seen.D / MM + " mm)");
+    assert(rec.marks.length > 0 && alerts.length === 0, "marks drawn, no alert (" + alerts.join(" | ") + ")");
+
+    var rec2 = canvas(0.06);                              // 0.6 pt physical: over the 0.5 pt tolerance
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec2.marks.length === 0 && rec2.layerCalls === 0 && alerts.length === 1 &&
+        alerts[0].indexOf(collapse) === 0, "0.06 doc pt off (0.6 pt physical): refused (" + alerts.join(" | ") + ")");
+
+    var rec3 = canvas(0.04);                              // 0.4 pt physical: within it
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec3.marks.length > 0 && alerts.length === 0, "0.04 doc pt off (0.4 pt physical): accepted (" + alerts.join(" | ") + ")");
+
+    // An empty eyelet line is a failure, never a silent success
+    var big = 300 * MM;
+    var rec4 = fakeDoc({ artboards: [[0, big, big, 0]], pathInfo: squarePathInfo(big),
+        offsetPath: function () { return { ok: true, loops: 1, segments: [] }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(rec4.marks.length === 0 && rec4.layerCalls === 0 && alerts.length === 1 &&
+        alerts[0].indexOf(collapse) === 0 && alerts[0].indexOf("20 mm") > 0,
+        "empty offset result: collapse reported, no mark layer (" + alerts.join(" | ") + ")");
+
+    // The offset is shown with the locale's decimal separator ("." here; the Czech "," is the locale key)
+    var rec5 = fakeDoc({ artboards: [[0, big, big, 0]], pathInfo: squarePathInfo(big),
+        offsetPath: function () { return { ok: true, loops: 1, segments: squareSegs(0, big) }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 2.5 }), {});
+    assert(alerts.length === 1 && alerts[0].indexOf("2" + GM.L.DECIMAL_SEP + "5 mm") > 0 &&
+        alerts[0].indexOf("2.5 mm") > 0, "offset 2.5 shown as 2.5 mm (" + alerts.join(" | ") + ")");
 })();
 
 // ===== SUMMARY =====

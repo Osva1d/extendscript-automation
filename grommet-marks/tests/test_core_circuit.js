@@ -54,6 +54,16 @@ function reverseSegs(segs) {
     return segs.slice(0).reverse().map(function (s) { return { p0: s.p3, p1: s.p2, p2: s.p1, p3: s.p0 }; });
 }
 
+// The 1.2.0 entry point, kept for its regression tests: corner anchor
+// indices -> arc distances, then placeAlong from distance 0.
+function distributeOnCircuit(circuit, corners, zone, dist) {
+    var anchorDist = [0];
+    for (var a = 0; a < circuit.segments.length; a++) anchorDist.push(anchorDist[a] + circuit.segments[a].len);
+    var cd = [];
+    for (var c = 0; c < corners.length; c++) cd.push(anchorDist[corners[c]]);
+    return GM.Core.placeAlong(circuit, cd, circuit.closed, zone, dist, 0);
+}
+
 // ===== TEST: detectCorners =====
 console.log("--- Core.detectCorners ---");
 (function () {
@@ -203,8 +213,8 @@ console.log("--- Core.distributeOnSpan ---");
     assert(pz0.length === 1 && nearly(pz0[0], 0), "zero-length span: single mark");
 })();
 
-// ===== TEST: distributeOnCircuit =====
-console.log("--- Core.distributeOnCircuit ---");
+// ===== TEST: distributeOnCircuit (test-local wrapper over placeAlong) =====
+console.log("--- distributeOnCircuit (1.2.0 entry, test-local) ---");
 (function () {
     function nearly(a, b, eps) { return Math.abs(a - b) < (eps || 1e-3); }
     var zOff = { enabled: false, count: 5, pitch: 100 };
@@ -218,13 +228,13 @@ console.log("--- Core.distributeOnCircuit ---");
     ];
     var circuit = GM.Core.buildCircuit(sq, true);
     var corners = GM.Core.detectCorners(sq, true, 15);
-    var marks = GM.Core.distributeOnCircuit(
+    var marks = distributeOnCircuit(
         circuit, corners, zOff, { useNumber: false, number: 1, spacing: 200 });
     // Per side: corners + 1 interior at 200 -> 4 corners + 4 interiors = 8
     assert(marks.length === 8, "square spacing 200: 8 marks (got " + marks.length + ")");
 
     // Count mode on a cornered path = corners only, no span filling.
-    var cornersOnly = GM.Core.distributeOnCircuit(
+    var cornersOnly = distributeOnCircuit(
         circuit, corners, zOff, { useNumber: true, number: 99, spacing: 200 });
     assert(cornersOnly.length === 4,
         "square count mode: 4 marks = 4 corners (got " + cornersOnly.length + ")");
@@ -260,7 +270,7 @@ console.log("--- Core.distributeOnCircuit ---");
     ];
     var cc = GM.Core.buildCircuit(circle, true);
     var noCorners = GM.Core.detectCorners(circle, true, 15);
-    var ringCount = GM.Core.distributeOnCircuit(
+    var ringCount = distributeOnCircuit(
         cc, noCorners, zOff, { useNumber: true, number: 8, spacing: 0 });
     assert(ringCount.length === 8, "smooth ring count mode: exactly 8 (got " + ringCount.length + ")");
     var onR = true;
@@ -271,13 +281,13 @@ console.log("--- Core.distributeOnCircuit ---");
     assert(onR, "smooth ring: marks on the circle");
 
     // Smooth ring spacing mode: round(perimeter/B)
-    var ringSp = GM.Core.distributeOnCircuit(
+    var ringSp = distributeOnCircuit(
         cc, noCorners, zOff, { useNumber: false, number: 1, spacing: 157 });
     assert(ringSp.length === Math.round(cc.totalLen / 157),
         "smooth ring spacing mode: round(perimeter/spacing) (got " + ringSp.length + ")");
 
     // Cap: micro spacing must not freeze
-    var capped = GM.Core.distributeOnCircuit(
+    var capped = distributeOnCircuit(
         cc, noCorners, zOff, { useNumber: false, number: 1, spacing: 0.0001 });
     assert(capped.length <= GM.CONSTANTS.MAX_MARKS, "MAX_MARKS cap holds (got " + capped.length + ")");
 
@@ -291,7 +301,7 @@ console.log("--- Core.distributeOnCircuit ---");
     var triCorners = GM.Core.detectCorners(tri, true, 15);
     assert(triCorners.length === 3, "triangle 3 corners precheck");
     var zOn = { enabled: true, count: 3, pitch: 50 };
-    var triMarks = GM.Core.distributeOnCircuit(
+    var triMarks = distributeOnCircuit(
         triC, triCorners, zOn, { useNumber: false, number: 1, spacing: 200 });
     // Each of 3 corners present exactly once
     var triCornerOk = true;
@@ -312,7 +322,7 @@ console.log("--- Core.distributeOnCircuit ---");
     ];
     var openC = GM.Core.buildCircuit(openSegs, false);
     var openCorners = GM.Core.detectCorners(openSegs, false, 15);
-    var openMarks = GM.Core.distributeOnCircuit(
+    var openMarks = distributeOnCircuit(
         openC, openCorners, zOff, { useNumber: false, number: 1, spacing: 150 });
     var hasStart = false, hasEnd = false;
     for (var om = 0; om < openMarks.length; om++) {
@@ -338,7 +348,7 @@ console.log("--- Core.dropDegenerateSegments (G6) ---");
     assert(cleaned.length === 4, "zero-length closing segment dropped (got " + cleaned.length + ")");
     var corners = GM.Core.detectCorners(cleaned, true, GM.CONSTANTS.CORNER_ANGLE_MIN);
     assert(corners.length === 4, "all 4 corners detected (got " + corners.length + ")");
-    var marks = GM.Core.distributeOnCircuit(GM.Core.buildCircuit(cleaned, true), corners,
+    var marks = distributeOnCircuit(GM.Core.buildCircuit(cleaned, true), corners,
         { enabled: false, count: 1, pitch: 0 }, { useNumber: false, number: 1, spacing: 300 });
     var pts = [[0, 0], [W, 0], [W, H], [0, H]], allCorners = true;
     for (var c = 0; c < 4; c++) {
@@ -372,14 +382,9 @@ console.log("--- Core.placeAlong ---");
     var sq = roundedRect(100, 100, 0, 1);
     var c = GM.Core.buildCircuit(sq, true);
     var dist = { useNumber: false, number: 1, spacing: 30 };
-    var a = GM.Core.distributeOnCircuit(c, GM.Core.detectCorners(sq, true, 15), zone, dist);
     var b = GM.Core.placeAlong(c, [0, 100, 200, 300], true, zone, dist, 0);
-    assert(a.length === 12 && b.length === 12, "square 100, spacing 30: 12 marks both ways (got " + a.length + "/" + b.length + ")");
-    var same = true;
-    for (var i = 0; i < a.length; i++) {
-        if (Math.abs(a[i][0] - b[i][0]) > 1e-9 || Math.abs(a[i][1] - b[i][1]) > 1e-9) same = false;
-    }
-    assert(same, "placeAlong gives distributeOnCircuit's marks in the same order");
+    assert(b.length === 12, "square 100, spacing 30: 12 marks (got " + b.length + ")");
+    assert(b[0][0] === 0 && b[0][1] === 0, "the first mark is the start corner [0, 0] (got " + b[0] + ")");
 
     var lc = GM.Core.buildCircuit([straightSeg(0, 0, 300, 0)], false);
     var m = GM.Core.placeAlong(lc, [0, 300], false, zone, { useNumber: false, number: 1, spacing: 100 }, 0);

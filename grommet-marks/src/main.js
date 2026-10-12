@@ -289,11 +289,16 @@ GM.Main = {
             marks = GM.Core.placeAlong(line.circuit, feat.dists, line.closed, zoneCfg, distCfg,
                 GM.Core.topmostDist(line.circuit));
         }
+        // Nothing to draw (an empty or degenerate eyelet line) is a failure,
+        // never a silent success.
+        var shown = String(cfg.pathOffset).replace(".", GM.L.DECIMAL_SEP) + " " + cfg.units;
+        if (marks.length === 0) {
+            return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_COLLAPSE, shown) };
+        }
         // D = 0: marks sit on the cut line by construction — nothing to check.
         if (D > 0) {
             var chk = GM.Core.checkMarks(marks, pathInfo.circuit, D, GM.CONSTANTS.OFFSET_TOL / scale);
             if (!chk.ok) {
-                var shown = String(cfg.pathOffset).replace(".", GM.L.DECIMAL_SEP) + " " + cfg.units;
                 return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_COLLAPSE, shown) };
             }
         }
