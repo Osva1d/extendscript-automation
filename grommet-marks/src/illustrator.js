@@ -168,6 +168,93 @@ GM.Illustrator = {
     },
 
     /**
+     * The eyelet line of a closed path (spec §6.1): Illustrator's own Offset
+     * Path, D inward, on a clean copy of the cut line — fill only, no
+     * appearance. Live effects stack, so a duplicate would carry the cut
+     * line's own effects into the offset; a filled and stroked object would
+     * expand into a group of two paths (engine-facts). The copy lives on the
+     * cut line's layer for the length of the call and nothing of it stays.
+     * Effect parameters are undocumented; measured in Illustrator 30.8.2
+     * (offset accuracy 2026-10-09); the copy, Large Canvas units and selection
+     * restore are still to be measured (M1–M4).
+     * @param {Object} pathInfo - getSelectedPathInfo() result of a closed path.
+     * @param {number} D - Inward offset, document units, > 0.
+     * @returns {Object} {ok:true, segments, loops} or {ok:false, message}
+     */
+    offsetPath: function (pathInfo, D) {
+        var doc = GM.Illustrator.doc, src = pathInfo.pathRef, tmp = null, made = [];
+        try {
+            tmp = src.layer.pathItems.add();
+            var sp = src.pathPoints;
+            for (var i = 0; i < sp.length; i++) {
+                var p = tmp.pathPoints.add();
+                p.anchor = sp[i].anchor;
+                p.leftDirection = sp[i].leftDirection;
+                p.rightDirection = sp[i].rightDirection;
+            }
+            tmp.closed = true;
+            tmp.filled = true;
+            tmp.stroked = false;
+            tmp.applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst ' +
+                (-D) + ' I jntp 2 "/></LiveEffect>');
+            doc.selection = null;
+            tmp.selected = true;
+            // expandStyle acts on the active document's selection (spec §6.1).
+            if (app.activeDocument.name !== doc.name) throw new Error("active document changed");
+            app.executeMenuCommand("expandStyle");
+            tmp = null;                              // replaced by the expanded result
+            var sel = doc.selection;
+            for (var s = 0; s < sel.length; s++) made.push(sel[s]);
+            var paths = [];
+            for (var m = 0; m < made.length; m++) GM.Illustrator._collectPaths(made[m], paths);
+            var segs = paths.length === 1 ? GM.Illustrator._segmentsOf(paths[0]) : [];
+            return { ok: true, segments: segs, loops: paths.length };
+        } catch (e) {
+            return { ok: false, message: e.message };
+        } finally {
+            for (var r = 0; r < made.length; r++) {
+                try { made[r].remove(); } catch (eR) { GM.Utils.log("offsetPath cleanup: " + eR.message); }
+            }
+            if (tmp) {
+                try { tmp.remove(); } catch (eT) { GM.Utils.log("offsetPath copy: " + eT.message); }
+            }
+            GM.Illustrator._restoreSelection(pathInfo);
+        }
+    },
+
+    /** Every PathItem inside an item (path, compound path or group). */
+    _collectPaths: function (item, out) {
+        if (item.typename === "PathItem") { out.push(item); return; }
+        if (item.typename === "CompoundPathItem") {
+            for (var i = 0; i < item.pathItems.length; i++) out.push(item.pathItems[i]);
+            return;
+        }
+        if (item.typename === "GroupItem") {
+            for (var j = 0; j < item.pageItems.length; j++) GM.Illustrator._collectPaths(item.pageItems[j], out);
+        }
+    },
+
+    /**
+     * Hands the cut line's selection back as it was before offsetPath:
+     * point by point, so a direct selection survives and a second run
+     * behaves like the first (measured: setting a point's state selects the
+     * path, M3).
+     */
+    _restoreSelection: function (pathInfo) {
+        var doc = GM.Illustrator.doc;
+        try {
+            doc.selection = null;
+            var pts = pathInfo.pathRef.pathPoints, saved = pathInfo.pointSel || [];
+            for (var i = 0; i < pts.length && i < saved.length; i++) pts[i].selected = saved[i];
+        } catch (e) {
+            GM.Utils.log("restoreSelection: " + e.message);
+            try { pathInfo.pathRef.selected = true; } catch (e2) {
+                GM.Utils.log("restoreSelection fallback: " + e2.message);
+            }
+        }
+    },
+
+    /**
      * Returns the document's registration colour, the stroke colour of every
      * mark: swatches[1] in any AI locale ([Registration], [Registrační];
      * index 0 is [None]), or 100% K CMYK as a fallback. The index is checked,

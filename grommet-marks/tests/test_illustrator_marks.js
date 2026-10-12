@@ -162,6 +162,55 @@ console.log("--- getSelectedPathInfo: rounded corners, selection with a duplicat
         "two coincident anchors selected: no whole segment — 'lone', not a run");
 })();
 
+// ===== TEST: offsetPath (spec §6.1) =====
+console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
+(function () {
+    function pp(x, y, sel) {
+        return { anchor: [x, y], leftDirection: [x, y], rightDirection: [x, y], selected: sel };
+    }
+    function square(a, b) {
+        return { typename: "PathItem", closed: true, removed: false,
+                 pathPoints: [pp(a, a), pp(b, a), pp(b, b), pp(a, b)],
+                 remove: function () { this.removed = true; } };
+    }
+    var A = PathPointSelection.ANCHORPOINT, N = PathPointSelection.NOSELECTION;
+    var tmpPts = [], tmp = { pathPoints: { add: function () { var p = {}; tmpPts.push(p); return p; } },
+        applyEffect: function (x) { this.effect = x; }, remove: function () { this.removed = true; } };
+    var src = { typename: "PathItem", closed: true,
+        pathPoints: [pp(0, 0, A), pp(1000, 0, A), pp(1000, 1000, N), pp(0, 1000, N)],
+        layer: { pathItems: { add: function () { return tmp; } } } };
+    GM.Illustrator.doc.name = "test";
+    global.app.activeDocument = GM.Illustrator.doc;
+    var result = square(50, 950), menu = [];
+    global.app.executeMenuCommand = function (cmd) {
+        menu.push(cmd);
+        // The real selection change drops the cut line's point states; the fake
+        // does the same so "selection handed back" is a real assertion.
+        for (var i = 0; i < src.pathPoints.length; i++) src.pathPoints[i].selected = N;
+        GM.Illustrator.doc.selection = [result];
+    };
+    var info = { pathRef: src, pointSel: [A, A, N, N] };
+    var r = GM.Illustrator.offsetPath(info, 50);
+    assert(r.ok === true && r.loops === 1 && r.segments.length === 4, "one loop, 4 segments");
+    assert(Math.abs(r.segments[0].p0[0] - 50) < 1e-9, "segments read from the expanded result");
+    assert(tmpPts.length === 4 && tmp.filled === true && tmp.stroked === false, "clean copy: 4 points, fill, no stroke");
+    assert(tmp.effect.indexOf("ofst -50 ") > 0 && tmp.effect.indexOf("I jntp 2") > 0, "inward miter offset");
+    assert(menu.length === 1 && menu[0] === "expandStyle", "expanded once");
+    assert(result.removed === true, "expanded result removed");
+    assert(src.pathPoints[0].selected === A && src.pathPoints[1].selected === A &&
+           src.pathPoints[2].selected === N && src.pathPoints[3].selected === N, "point selection handed back");
+
+    var c1 = square(50, 400), c2 = square(600, 950);
+    result = { typename: "CompoundPathItem", pathItems: [c1, c2], remove: function () { this.removed = true; } };
+    var r2 = GM.Illustrator.offsetPath(info, 50);
+    assert(r2.ok === true && r2.loops === 2 && result.removed === true, "split line: 2 loops, cleaned up");
+
+    tmp.applyEffect = function () { throw new Error("no effect"); };
+    tmp.removed = false;
+    var r3 = GM.Illustrator.offsetPath(info, 50);
+    assert(r3.ok === false && r3.message === "no effect" && tmp.removed === true, "failure reported, copy removed");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);
