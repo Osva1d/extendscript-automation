@@ -5,7 +5,7 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 ## Funkce
 
 - **Automatické rozmístění** — pozice značek podle pevného počtu nebo preferovaného rozestupu, samostatně pro každou hranu (Horní, Dolní, Levá, Pravá) se zrcadlením protějších hran.
-- **Rozmístění na tvar** — volba „Vybraná cesta" umístí značky na libovolnou uzavřenou nebo otevřenou vektorovou cestu; krajní body a rohy jsou vždy kotvy.
+- **Rozmístění na tvar** — volba „Vybraná cesta" umístí značky na uzavřenou nebo otevřenou vektorovou cestu (kruh, štít, zaoblený obdélník…); krajní body a rohy jsou vždy kotvy. U uzavřené cesty zadáš **odsazení od kraje**: značky leží o tuto vzdálenost od řezové linky dovnitř tvaru, linku ok spočítá Illustrator (Posunout cestu), takže si cestu nemusíš posouvat ručně. **Zaoblený roh** (živé rohy, oblouk z PDF) dostane jednu značku uprostřed oblouku, tvar bez rohů začíná nahoře. Volitelně jen **vybraná část obvodu** (Přímý výběr). Pravidla do detailu: [návrh](../docs/specs/2026-10-11-grommet-marks-path-mode-design.md).
 - **Rohové zóny** — zhustí N značek u každého rohu s vlastní roztečí; střed hrany/cesty pak jede standardním rozestupem.
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
 - **Jednotný vzhled značky** — registrační Esko-styl terč (bílé halo + registrační tah, kruh a/nebo kříž); vždy na samostatnou vrstvu „Grommet Marks".
@@ -26,6 +26,8 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 1. Otevři dokument v Illustratoru.
 2. Spusť skript (`Soubor ▸ Skripty ▸ …`).
 3. Nastav parametry a klikni **Generovat**.
+
+**Tvarový banner** (kruh, štít, zaoblený obdélník): vyber řezovou linku, spusť skript, zvol **Vybraná cesta** a zadej **odsazení od kraje** (vzdálenost středu oka od řezu, dovnitř tvaru) a Počet ok nebo Rozestup. Šedý řádek pod Umístěním říká, co skript z cesty poznal (rohy, zaoblené rohy, tvar bez rohů). Kdo chce značky jen na části obvodu, označí ji Přímým výběrem (A) — kotvy na začátku i na konci úseků — a zaškrtne **Jen vybraná část obvodu**. Když je odsazení na tvar příliš velké, skript nic nevytvoří a řekne to. Odsazení 0 = značky leží přímo na cestě; předvolby uložené před verzí 1.3 mají odsazení 0, takže kdo si cestu posouvá ručně, nic nemění.
 
 ---
 

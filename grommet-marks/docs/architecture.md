@@ -15,7 +15,7 @@
 
 ## Co skript dělá
 
-Generuje značky pro oka (kroužky/čtverce) po obvodu artboardů v Adobe Illustratoru. Spouští se jako `.jsx` skript přes `File > Scripts`. Uživatel nastaví parametry v dialogu → skript vypočítá pozice → vykreslí značky na cílovou vrstvu.
+Generuje značky pro oka (kroužky/čtverce) po obvodu artboardů v Adobe Illustratoru, nebo po vybrané cestě (tvary: odsazení dovnitř, ostré i zaoblené rohy, část obvodu). Spouští se jako `.jsx` skript přes `File > Scripts`. Uživatel nastaví parametry v dialogu → skript vypočítá pozice → vykreslí značky na cílovou vrstvu.
 
 Podporuje libovolný počet artboardů v jednom dokumentu. Deduplication hash zabrání duplicitním značkám na rozích kde se hrany překrývají.
 
@@ -35,10 +35,10 @@ src/
 │   └── validation.js       GM.Validation — rules-based validace vstupů
 (../shared/lib/json2.js a ../shared/lib/ui_state.js — sdílené jádro, viz ../../docs/decisions.md)
 ├── config.js               GM.Config — getDefaults(), PRESET_KEY_DEFAULT, createEdgeDef()
-├── core.js                 GM.Core — calcPositions, distributeOnSpan/Circuit, buildCircuit, detectCorners — PURE MATH
-├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMarkGroup(), getOrCreateLayer(), registrationColor(), getSelectedPathInfo()
+├── core.js                 GM.Core — calcPositions, distributeOnSpan, placeAlong, buildCircuit, detectCorners/findCorners, topmostDist, selectedRuns/mapRun/runCorners, checkMarks — PURE MATH
+├── illustrator.js          GM.Illustrator — DOM adapter: init(), placeMarkGroup(), getOrCreateLayer(), registrationColor(), getDocInfo(), getSelectedPathInfo(), offsetPath()
 ├── ui.js                   GM.UI — ScriptUI dialog, deleguje preset logiku na GM.UIState
-└── main.js                 GM.Main — entry point, deleguje validaci na GM.Validation
+└── main.js                 GM.Main — entry point, process() (smyčka přes artboardy), pathMarks() (průběh režimu cesty)
 ```
 
 **Load order (dependencies first):**
@@ -90,7 +90,11 @@ npm run verify    # build + test
         useNumber: false,                   // false = spacing mode (počet z délek úseků)
         number:    24,                      // počet (smooth path + count mode)
         spacing:   105                      // rozteč v user units
-    }
+    },
+    // --- 1.3.0 ---
+    pathOffset:     0                       // user units — odsazení linky ok od řezové linky dovnitř
+                                            // (jen uzavřená cesta); 0 = značky leží na cestě.
+                                            // Staré předvolby ho dostanou forward-fillem jako 0.
 }
 ```
 
@@ -116,28 +120,72 @@ Soubor: `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json`
 
 `[Last Settings]` se automaticky uloží při každém Generate — umožňuje obnovit poslední stav UI při dalším otevření.
 
+Volby jednoho běhu, které se **neukládají**: `GM.UI` je vrací z `getRunOptions()` (dnes `{pathPartial}` — zaškrtávátko „Jen vybraná část obvodu") a `GM.Main.process(settings, opts)` je dostane jako druhý parametr.
+
 ---
 
 ## Tok dat
 
 ```
 GM.Storage.load()
-    → GM.Illustrator.getSelectedPathInfo()
-        → GM.UI.buildDialog(pData, pathInfo)
+    → GM.Illustrator.getSelectedPathInfo()   // cesta: segmenty (+ sel), rohy, přímý výběr, circuit
+    → GM.Illustrator.getDocInfo()            // artboardy pro šedý řádek v režimu Hrany
+        → GM.UI.buildDialog(pData, pathInfo, docInfo)
             [uživatel nastaví a klikne OK]
             → ui.gatherAll() → cfg objekt
                 → GM.Validation.validate(cfg, GM.L)
                     → GM.Storage.save(pData)  // [Last Settings] auto-save
-                        → GM.Main.process(settings)
+                        → GM.Main.process(settings, ui.getRunOptions())
                             ┌─ artboard mode:
                             │    GM.Core.distributeOnSpan() per hrana
                             │        → GM.Illustrator.placeMarkGroup() per pozice
                             └─ path mode:
-                                 GM.Illustrator.getSelectedPathInfo()  // fresh check
-                                     → GM.Core.distributeOnCircuit()
-                                         → GM.Illustrator.placeMarkGroup() per pozice
+                                 GM.Illustrator.getSelectedPathInfo()  // fresh check (zmizelá cesta → fallback na artboard)
+                                     → GM.Main.pathMarks(cfg, opts, pathInfo, ...)
+                                          ├ GM.Illustrator.offsetPath(pathInfo, D)   // jen uzavřená cesta a D > 0 → linka ok
+                                          │     (musí vyjít 1 smyčka)                // dropDegenerateSegments → buildCircuit
+                                          ├ GM.Core.findCorners(linka ok)            // ostré + zaoblené rohy
+                                          ├ GM.Core.placeAlong(...)                  // celý obvod: od topmostDist()
+                                          │     nebo část obvodu: mapRun → runCorners → placeAlong per běh
+                                          └ GM.Core.checkMarks(marks, řezová linka, D, OFFSET_TOL / scale)   // jen D > 0
+                                       → {ok:true, marks} | {ok:false, message}
+                                         (chyba = alert a konec, vrstva ani značka nevznikne)
+                                     → GM.Illustrator.placeMarkGroup() per značka
     → app.redraw()
 ```
+
+---
+
+## Režim cesty (1.3.0)
+
+Návrh a zdůvodnění: [`../../docs/specs/2026-10-11-grommet-marks-path-mode-design.md`](../../docs/specs/2026-10-11-grommet-marks-path-mode-design.md).
+Měřené chování Illustratoru: [`../../docs/extendscript-engine-facts.md`](../../docs/extendscript-engine-facts.md).
+
+- **Pojmy.** *Řezová linka* = vybraná cesta. *Linka ok* = čára, na kterou padnou
+  středy značek: řezová linka posunutá o D dovnitř (u otevřené cesty nebo při
+  D = 0 řezová linka sama). Rohy a rozmístění se počítají na lince ok, kontrola
+  se měří proti řezové lince.
+- **`getSelectedPathInfo()`** je čisté čtení (výběr nemění) a vrací `circuit`,
+  `segments` (každý s `sel` = obě koncové kotvy vybrané), `closed`, `sharpCount`,
+  `roundCount`, `cornerCount` (= ostré + zaoblené), `cornerDists`, `partial`
+  (`state` `none` | `runs` | `lone`, `runs`, `selectedSegs`, `totalSegs`),
+  `pointSel` (stavy kotev pro obnovu výběru) a `pathRef`.
+- **`offsetPath(pathInfo, D)`**: čistá kopie řezové linky bod po bodu (výplň, bez
+  tahu a vzhledu) → `applyEffect` Adobe Offset Path (`ofst -D`, ostrý spoj) →
+  řezová linka se výslovně odznačí a vybere se jen kopie (hlídá se, že vybraná
+  je právě ona) → `expandStyle` → geometrie z výběru → smazání dočasných objektů
+  → obnova výběru bod po bodu. Vrací `{ok, segments, loops}`; `loops !== 1` je
+  chyba „linka ok se rozpadá". Celý běh je jeden krok Zpět.
+- **`findCorners`** hledá ostré rohy (`detectCorners`, 15°) a zaoblené rohy
+  (oblouk mezi dvěma rovnými úseky, který se celkem stočí o víc než 15°; značka
+  v půli oblouku). Tvar bez rohů začíná v nejvyšším bodě (`topmostDist`).
+- **Část obvodu:** `selectedRuns` (souvislé vybrané úseky na řezové lince) →
+  `mapRun` (konce běhu na nejbližší body linky ok) → `runCorners` (konce + rohy
+  uvnitř) → `placeAlong` jako otevřená cesta.
+- **`checkMarks`** (jen D > 0): každá značka uvnitř řezové linky a ve vzdálenosti
+  D ± (`OFFSET_TOL` + největší průhyb tětiv řezové linky). Měří k navzorkované
+  řezové lince, proto přídavek `_chordSagitta`. Chytí i tichý návrat originálu,
+  který Illustrator vrací u příliš úzkého tvaru.
 
 ---
 
@@ -172,16 +220,19 @@ GM.Storage.load()
 tests/
 ├── run_all.sh                  Test runner (bash, ANSI output)
 ├── test_core_math.js           GM.Core: calcPositions, convertVal, buildCircuit, pointAtDistance
-├── test_core_circuit.js        GM.Core: detectCorners, distributeOnSpan, distributeOnCircuit
+├── test_core_circuit.js        GM.Core: detectCorners/findCorners, distributeOnSpan, placeAlong (s test-local obálkou distributeOnCircuit = regrese 1.2.0), topmostDist, selectedRuns/mapRun/runCorners, checkMarks
 ├── test_storage_migrations.js  GM.Storage: celý migrační řetěz (vč. v5 forward-fill)
 ├── test_ui_state.js            GM.UIState: validate/save/saveAs/delete/select/list
 ├── test_utils.js               GM.Utils: deepCopy, log, error (charakterizační testy)
 ├── test_validation.js          GM.Validation: validateNumber + validate (vč. v5 pravidel)
-└── test_ui_dialog.js           GM.UI: ScriptUI dialog (mock ScriptUI, gather/apply, radio excl.)
+├── test_ui_dialog.js           GM.UI: ScriptUI dialog (mock ScriptUI, gather/apply, radio excl., šedý řádek, panel Cesta, zaškrtávátko části obvodu)
+├── test_main_process.js        GM.Main: process() a pathMarks() end to end proti falešnému adaptéru (artboardy, offsety, zrcadlení; cesta: odsazení, rohy, běhy, kontrola)
+└── test_illustrator_marks.js   GM.Illustrator: placeMarkGroup, getSelectedPathInfo (zaoblené rohy, přímý výběr), offsetPath proti falešnému DOM
 ```
 
 Testy běží v Node.js, produkční kód se načítá přes `eval()` s mock objekty (File, Folder, alert, $, ScriptUI).
 `test_ui_dialog.js` pokrývá reálný UI kód přes `lib/mock_scriptui.js` — chytí radio-grouping chyby.
+Chování `offsetPath` v Illustratoru (výsledek Offset Path, výběr, jeden krok Zpět) Node nepokryje — ověřuje se na skutečném buildu a ručně ([manual-test.md](manual-test.md), sekce J).
 
 ---
 
@@ -209,8 +260,13 @@ specifické pro GM.
 |-------------------|--------|
 | Výchozí hodnoty parametrů | `src/config.js` → `getDefaults()` |
 | Výpočet pozic artboard (count/spacing/zones) | `src/core.js` → `distributeOnSpan()` |
-| Výpočet pozic na cestě | `src/core.js` → `distributeOnCircuit()` |
-| Cubic Bézier arc-length, detekce rohů | `src/core.js` → `buildCircuit()`, `detectCorners()` |
+| Výpočet pozic na cestě | `src/core.js` → `placeAlong()` (začátek tvaru bez rohů: `topmostDist()`) |
+| Průběh režimu cesty (odsazení → rohy → rozmístění → kontrola) | `src/main.js` → `GM.Main.pathMarks()` |
+| Odsazení cesty přes Illustrator | `src/illustrator.js` → `offsetPath()` |
+| Cubic Bézier arc-length, detekce rohů (ostré i zaoblené) | `src/core.js` → `buildCircuit()`, `detectCorners()`, `findCorners()` |
+| Část obvodu (Přímý výběr) | `src/illustrator.js` → `getSelectedPathInfo()`; `src/core.js` → `selectedRuns()`, `mapRun()`, `runCorners()` |
+| Kontrola výsledku před kreslením | `src/core.js` → `checkMarks()`, `GM.CONSTANTS.OFFSET_TOL` |
+| Šedý řádek pod Umístěním | `src/ui.js` → `GM.UI.placementInfoText()` |
 | Vykreslování v Illustratoru | `src/illustrator.js` → `placeMarkGroup()` |
 | Vytvoření vrstvy „Grommet Marks" | `src/illustrator.js` → `getOrCreateLayer()` |
 | Dialog a presety | `src/ui.js` → `GM.UI.buildDialog()` |
@@ -227,18 +283,20 @@ specifické pro GM.
 
 ## Layout dialogu (v6.0.0)
 
-Kanonický jednosloupcový kompaktní layout (~795 px), dle `extendscript-ui-standards`. Panel Vzhled odstraněn.
+Kanonický jednosloupcový kompaktní layout (strop ~795 px; naměřeno headless 2026-10-13: Hrany 731 px, bez zrcadlení 777 px, Cesta 651 px), dle `extendscript-ui-standards`. Panel Vzhled odstraněn.
 
 ```
 Window("dialog")
  ├─ Panel: Předvolby            ř.1: Načíst [dropdown] ↺ (revert)
  │                              ř.2: Uložit / Uložit jako… / Smazat (vpravo, ZSM layout)
- ├─ Panel: Umístění             radio: Hrany artboardu | Vybraná cesta  (path disabled bez výběru)
+ ├─ Panel: Umístění             radio: Hrany artboardu | Vybraná cesta  (path disabled bez výběru) + Jednotky
+ │                              šedý řádek: co skript z výběru poznal (artboardy / rohy, zaoblené rohy, bez rohů)
  ├─ Panel: Hrany                (visible pouze v artboard módu)
  │                              offsety X/Y + 4 kompaktní edge řádky;
  │                              mirror checkbox uvnitř dolní/pravé hrany
  ├─ Panel: Cesta                (visible pouze v path módu)
- │                              info řádek (uzavřená/otevřená · rohy) + Počet/Rozestup
+ │                              Odsazení od kraje (jen uzavřená cesta) + Počet/Rozestup +
+ │                              [ ] Jen vybraná část obvodu (aktivní jen při přímém výběru celého úseku)
  ├─ Panel: Rohové zóny          Zhustit u rohů + Počet + Rozteč  (zakázáno na hladké cestě)
  ├─ Panel: Značka               Jednotky / Velikost;
  │                              [✓] Kruh  [ ] Kříž;

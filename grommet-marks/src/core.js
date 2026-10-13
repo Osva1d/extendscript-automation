@@ -695,11 +695,15 @@ GM.Core = {
 
     /**
      * Shortest distance from q to the circuit's sampled line (64 chords per
-     * segment, bounding boxes skip far segments). Measured to the chords on
-     * purpose: marks are placed on chords of the sampled eyelet line
-     * (pointAtDistance interpolates linearly), so chord to chord keeps the
-     * check consistent — measuring to the curve itself would add the eyelet
-     * chords' sagitta (≈0.45 pt on a 2 m circle) as false error.
+     * segment, bounding boxes skip far segments). Measured to the sampled
+     * chords, not to the curve: that is cheap, and the check allows for it.
+     * A point inside the shape is closer to a chord of this line than to the
+     * curve it samples, by up to that line's chord sagitta — on the CUT line
+     * (few anchors, long chords) ≈0.46 pt on a 4-anchor circle of r 2 m. This
+     * is why checkMarks adds _chordSagitta(cutCircuit) to its tolerance. The
+     * marks sit on chords of the eyelet line (pointAtDistance interpolates
+     * linearly); Illustrator's offset usually gives that line more anchors,
+     * so its own sagitta is much smaller and pushes the other way.
      * @returns {number}
      */
     distanceToCircuit: function (circuit, q) {

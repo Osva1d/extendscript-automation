@@ -24,7 +24,7 @@ GM.CONSTANTS = {
     SAMPLES_PER_SEGMENT: 64,   // arc-length table resolution per Bézier
     MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
     SEGMENT_EPS: 0.01,         // doc pt — anchors closer than this count as one
-    OFFSET_TOL: 0.5,           // pt — a mark may sit this far off the offset distance (measured 0.15)
+    OFFSET_TOL: 0.5,           // pt — allowed deviation beyond the check's own sampling error (the cut line's chord sagitta is added)
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },

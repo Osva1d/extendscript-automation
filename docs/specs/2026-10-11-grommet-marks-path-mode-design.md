@@ -3,7 +3,9 @@
 Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.2.0
 (2026-10-04).
 
-Datum: 2026-10-11 · Stav: **schváleno** (uživatel, 2026-10-11)
+Datum: 2026-10-11 · Stav: **schváleno** (uživatel, 2026-10-11);
+implementováno na větvi `feat/grommet-marks-path-mode`, ověřeno v Illustratoru
+30.8.2 (2026-10-13), nevydáno
 
 Vzniklo z průzkumu režimů „Hrany artboardu" a „Vybraná cesta" (2026-10-05 až
 2026-10-10): otázky uživateli, měření v Illustratoru 30.8.2, rešerše praxe
@@ -119,20 +121,33 @@ Rohy se hledají **na lince ok**, ne na řezové lince:
 
 Odsazení s ostrým spojem (miter, mez 4 — výchozí hodnota Illustratoru): roh
 linky ok leží D od obou hran, stejně jako u vnějšího rohu, a dostane značku.
-V tvarech uživatele se nevyskytují; výsledek na vnitřním rohu zatím neměřen.
+V tvarech uživatele se nevyskytují; naměřeno 2026-10-13 (Illustrator 30.8.2,
+tvar L, D 56,69 pt): vnitřní (reflexní) roh linky ok je ostrý (`jntp 2`, bez
+zkosení a zaoblení) a leží D od obou hran — pro vnitřní roh řezové linky
+v (400, 400) přesně v (400 − D, 400 − D). Odchylka od očekávaných rohů nejvýš
+0,0006 pt, linka ok se nikde nekříží.
 
 ## 6. Odsazení přes Illustrator
 
 ### 6.1 Postup
 
-1. Z řezové linky se postaví **čistá kopie** (`setEntirePath` + úchyty kotev)
-   bez vzhledu: efekty se v Illustratoru skládají, takže kopie přes
-   `duplicate()` by s vlastním efektem cesty dala jiný výsledek.
+1. Z řezové linky se postaví **čistá kopie** bod po bodu: kotva a oba úchyty
+   každého bodu (ne `setEntirePath`, ten úchyty přenést neumí), **s výplní a bez
+   tahu**, bez vzhledu. Efekty se v Illustratoru skládají, takže kopie přes
+   `duplicate()` by s vlastním efektem cesty dala jiný výsledek, a objekt
+   s výplní i tahem by se po `expandStyle` rozpadl na skupinu dvou cest.
 2. `applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst -D I jntp 2 "/></LiveEffect>')`
    — D v jednotkách dokumentu (u Large Canvas děleno `scaleFactor`, jako G1).
-3. Vybrat jen kopii, `app.executeMenuCommand("expandStyle")`, ověřit, že je
-   aktivní vlastní dokument běhu.
-4. Přečíst geometrii z výběru, dočasné objekty smazat, výběr vrátit.
+3. Před `expandStyle` se řezová linka **odznačí výslovně** (`doc.selection =
+   null` přímý výběr neodznačí — naměřeno 2026-10-13: cesta s vybranými jen
+   některými kotvami zůstane vybraná, a `expandStyle` by pak rozbalil i ji)
+   a vybere se jen kopie. Hlídá se, že je vybraný právě jeden objekt, že je to
+   kopie a že řezová linka vybraná není; jinak chyba a nic se nerozbaluje.
+   Pak se ověří, že je aktivní vlastní dokument běhu, a spustí
+   `app.executeMenuCommand("expandStyle")`.
+4. Přečíst geometrii z výběru, dočasné objekty smazat, výběr vrátit bod po
+   bodu (stavy kotev), aby přežil i přímý výběr a druhý běh dopadl stejně jako
+   první.
 
 Parametry efektu Adobe nedokumentuje; jsou z fóra a ověřené měřením (§6.2).
 Selhání kteréhokoli kroku je chyba s hláškou, nikdy tichý návrat.
@@ -167,8 +182,12 @@ Před vytvořením první značky:
 
 - linka ok je **právě jedna uzavřená smyčka** (u uzavřené cesty);
 - každá značka leží **uvnitř** řezové linky a její vzdálenost od řezové linky
-  se liší od D nejvýš o **0,5 pt** (naměřená odchylka 0,15 pt). Při D = 0 se
-  test „uvnitř" vynechá.
+  se liší od D nejvýš o **0,5 pt** (naměřená odchylka 0,15 pt) plus největší
+  průhyb tětiv řezové linky. Kontrola totiž měří k navzorkované řezové lince
+  (tětivy), ne k její křivce, a bod uvnitř tvaru je k tětivě blíž než ke
+  křivce; průhyb je u běžných tvarů zanedbatelný a roste s poloměrem (kruh ze
+  4 kotev o poloměru 2,4 m: 0,556 pt, naměřeno 2026-10-13). Při D = 0 kontrola
+  neběží: značky leží na řezové lince z konstrukce.
 
 Porušení → žádná značka, hláška s důvodem. Pravidlo chytí tichý návrat
 originálu (§6.2) i chyby, které dnes nikdo nečeká, protože hlídá přímo to, na
@@ -190,7 +209,7 @@ Předvolby, Hrany, Rohové zóny a Značka se nemění.
 |---|---|
 | artboard, 1 | `1 artboard · 2000 × 1000 mm` |
 | artboardy, víc | `3 artboardy · značky dostanou všechny` |
-| předvolba chce cestu, žádná není | `Předvolba chce vybranou cestu, ale žádná použitelná není vybraná — značí se artboard.` (barvou upozornění) |
+| předvolba chce cestu, žádná není | `Předvolba chce cestu, žádná není vybraná — značí se artboard.` (šedě jako ostatní stavy; barva upozornění se nepoužila) |
 | cesta | `Uzavřená cesta · 5 rohů` · `· 4 zaoblené rohy` · `· 3 rohy, 2 zaoblené` |
 | bez rohů | `Uzavřená cesta · bez rohů · první značka nahoře` |
 | otevřená / D = 0 | `… · značky leží na cestě` |
@@ -227,6 +246,12 @@ V režimu artboardu přibude jeden řádek, asi 30 px: dnes 708 px, bez zrcadlen
 754 px (audit 2026-09-29). Verze v6 se kvůli uříznutým tlačítkům na 13"
 displejích stáhla na ~795 px — tu výšku nepřekročit. Změřit headless.
 
+Naměřeno headless 2026-10-13 (Illustrator 30.8.2, čeština): artboard se
+zrcadlením 731 px (+23), bez zrcadlení 777 px (+23), cesta 651 px (−10;
+návrh čekal beze změny). Šířka se nezměnila (CS 521 px, EN 492 px); nejvyšší
+stav 777 px je pod stropem 795 px. Šedý řádek má 445 px (CS) / 416 px (EN),
+nejdelší text 409 / 408 px.
+
 ## 9. Generovat — průběh
 
 1. Znovu přečíst výběr (jako dnes; zmizelá cesta → stávající hláška).
@@ -241,7 +266,7 @@ displejích stáhla na ~795 px — tu výšku nepřekročit. Změřit headless.
 ### 9.1 Nové hlášky (CS)
 
 - `Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.`
-- `Linka ok se v úzkém místě rozpadá na %s části. Zmenšete odsazení.`
+- `Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení.`
 - `Illustrator nedokázal cestu posunout (%s).`
 
 Každý klíč i v angličtině; parita klíčů hlídá stávající test.
@@ -262,8 +287,8 @@ Každý klíč i v angličtině; parita klíčů hlídá stávající test.
 - Tvar bez rohů dnes začíná na první kotvě; nově nahoře.
 - Předvolba s cestou bez výběru: dnes tichý přechod na artboard; nově řádek
   v dialogu.
-- Při D = 0 a bez zaoblení zůstává rozmístění stejné jako v 1.2.0 (regresní
-  test).
+- Při D = 0 na cestě s ostrými rohy zůstává rozmístění stejné jako v 1.2.0
+  (regresní test).
 
 ## 12. Data za rozhodnutími 3 a 4
 
@@ -299,6 +324,11 @@ beze změny (stávající sady).
 - Výsledek na vnitřním rohu (§5.5).
 - Výšku dialogu a šířku šedého řádku headless.
 - Oblouky z úseček v klientském PDF (§4): jak často a jak vypadají.
+
+Stav 2026-10-13: změřeno je první, druhé, čtvrté a páté (kopie bod po bodu
+a Large Canvas v §6.1, vnitřní roh v §5.5, výška a šířka řádku v §8.3).
+Otevřené zůstává kliknutí přímo na zakřivený úsek (ruční test J10) a oblouky
+z úseček v klientském PDF.
 
 ## 15. Pořadí prací
 

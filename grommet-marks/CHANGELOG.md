@@ -4,6 +4,65 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvodu
+([návrh](../docs/specs/2026-10-11-grommet-marks-path-mode-design.md)).
+
+### Přidáno
+
+- **Odsazení od kraje v režimu Vybraná cesta.** Panel Cesta má pole Odsazení
+  od kraje: značky leží o zadanou vzdálenost od řezové linky dovnitř tvaru.
+  Dřív bylo nutné cestu předem posunout ručně (Objekt ▸ Cesta ▸ Posunout
+  cestu…), spustit skript na kopii a kopii pak smazat. Linku, na které značky
+  leží, teď spočítá Illustrator (Posunout cestu) přímo ze skriptu; řezová
+  linka zůstane beze změny a výběr se vrátí tak, jak byl. 0 = značky leží
+  přímo na cestě, jako dřív. U otevřené cesty je pole zašedlé. Celý běh je
+  pořád jeden krok Zpět.
+- **Značka uprostřed zaobleného rohu.** Zaoblený roh (živé rohy, nebo oblouk
+  z PDF mezi dvěma rovnými stranami, i rozdělený na víc úseků) dostane jednu
+  značku uprostřed oblouku, mezi rohy se doplní podle Rozestupu. Není-li
+  poloměr rohu větší než odsazení, má linka ok v rohu ostrý roh a značka padne
+  do něj — odsazení od obou hran.
+- **Volba Jen vybraná část obvodu.** Zaškrtávátko v panelu Cesta rozmístí
+  značky jen na úsecích, které máš vybrané nástrojem Přímý výběr (obě koncové
+  kotvy úseku). Konce vybrané části dostanou vždy značku. Při každém spuštění
+  je vypnuté a do předvolby se neukládá. Bez použitelného přímého výběru je
+  zašedlé a nápověda řekne, co vybrat.
+- **Šedý řádek pod Umístěním.** Říká, co skript z výběru pozná: „Uzavřená
+  cesta · 5 rohů", „· 4 zaoblené rohy", „· 3 rohy, 2 zaoblené", „· bez rohů ·
+  první značka nahoře", u otevřené cesty nebo odsazení 0 „· značky leží na
+  cestě". V režimu Hrany artboardu ukáže počet artboardů a u jednoho i jeho
+  velikost.
+- **Kontrola před vytvořením značek.** Skript odmítne tvar, u kterého by se
+  linka ok zhroutila nebo rozpadla na víc částí (úzký pruh, hrdlo činky, příliš
+  velké odsazení). Nevznikne žádná značka ani vrstva a hláška říká, co
+  zmenšit. Kontrola hlídá i to, že každá značka leží uvnitř tvaru v zadané
+  vzdálenosti od řezu. Když Illustrator cestu posunout nedokáže, ohlásí to
+  hláškou.
+
+### Změněno
+
+- **Tvar bez rohů začíná nahoře.** Kruh nebo ovál dostane první značku
+  v nejvyšším bodě, ne na první kotvě, kterou operátor nevidí; rozmístění je
+  souměrné podle svislé osy bez ohledu na to, kde cesta začíná a kterým směrem
+  je nakreslená.
+- **Zaoblené rohy už nejsou hladký prstenec od první kotvy.** Dřív skript
+  zaoblený roh nepoznal a značky šly rovnoměrně od první kotvy, takže do rohů
+  nemusela padnout žádná. Teď má každý zaoblený roh značku a Počet ok na cestě
+  s rohy počítá i je.
+- **Předvolba s cestou, když žádná není vybraná, to řekne v dialogu.** Dřív se
+  skript potichu přepnul na Hrany artboardu. Teď šedý řádek hlásí „Předvolba
+  chce cestu, žádná není vybraná — značí se artboard."
+- **Staré předvolby mají odsazení cesty 0.** Chovají se jako dřív a kdo si
+  cestu posouvá ručně, nedostane dvojí odsazení. Odsazení si nastavíš jednou
+  a uložíš do předvolby.
+- **Dialog.** Informace o cestě se z panelu Cesta přesunula do Umístění,
+  poznámka „posuňte si cestu předem" zmizela. V režimu Hrany artboardu je
+  dialog o jeden řádek vyšší (do 777 px), v režimu cesty o něco nižší.
+- Při odsazení 0 na cestě s ostrými rohy zůstává rozmístění stejné jako
+  v 1.2.0.
+
 ## [1.2.0] — 2026-10-04
 
 Opravy z code review 2026-09-26
