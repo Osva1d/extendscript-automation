@@ -535,21 +535,38 @@ console.log("--- Core: distance / inside / area / checkMarks ---");
     // Marks exactly D inside the cut line itself, along its normal, as
     // Illustrator's offset puts them. (A true inset circle would not do: the
     // 4-arc Bezier circle bulges up to 1.85 pt beyond r.)
-    var exact = [];
-    for (var m = 0; m < 300; m++) {
-        var sgm = big.segments[m % 4].seg, t = (Math.floor(m / 4) + 0.5) / 75;
-        var p = GM.Core.bezierPoint(sgm, t), p2 = GM.Core.bezierPoint(sgm, t + 1e-6);
-        var tx = p2[0] - p[0], ty = p2[1] - p[1], tl = Math.sqrt(tx * tx + ty * ty);
-        exact.push([p[0] - ty / tl * D, p[1] + tx / tl * D]);   // left normal = inside (counter-clockwise)
+    function inside(dist) {
+        var out = [];
+        for (var m = 0; m < 300; m++) {
+            var sgm = big.segments[m % 4].seg, t = (Math.floor(m / 4) + 0.5) / 75;
+            var p = GM.Core.bezierPoint(sgm, t), p2 = GM.Core.bezierPoint(sgm, t + 1e-6);
+            var tx = p2[0] - p[0], ty = p2[1] - p[1], tl = Math.sqrt(tx * tx + ty * ty);
+            out.push([p[0] - ty / tl * dist, p[1] + tx / tl * dist]);   // left normal = inside (counter-clockwise)
+        }
+        return out;
     }
-    var bigChk = GM.Core.checkMarks(exact, big, D, 0.5);
+    var bigChk = GM.Core.checkMarks(inside(D), big, D, 0.5);
+    assert(bigChk.worst > 0.5, "the 2.4 m circle needs the allowance: worst measured " + bigChk.worst.toFixed(3) + " > tol 0.5");
     assert(bigChk.ok === true, "marks exactly D inside a 2.4 m circle pass (worst measured " +
         bigChk.worst.toFixed(3) + ", reason '" + bigChk.reason + "')");
+    // The allowance is bounded from above: marks deeper than D by more than
+    // tol + sagitta (0.5 + 0.556 = 1.056 here) still fail on distance.
+    [3, 1.3].forEach(function (extra) {
+        var deep = GM.Core.checkMarks(inside(D + extra), big, D, 0.5);
+        assert(deep.ok === false && deep.reason === "distance",
+            "marks " + extra + " pt deeper than D on the 2.4 m circle fail on distance (worst " +
+            deep.worst.toFixed(3) + ", reason '" + deep.reason + "')");
+    });
     var onBig = [];
     for (var k = 0; k < 40; k++) onBig.push(GM.Core.pointAtDistance(big, k * big.totalLen / 40 + 1));
     var onBigChk = GM.Core.checkMarks(onBig, big, D, 0.5);
-    assert(onBigChk.ok === false, "marks on the 2.4 m cut line itself still fail (collapse caught), reason '" +
-        onBigChk.reason + "'");
+    assert(onBigChk.ok === false && onBigChk.reason === "outside",
+        "marks on the 2.4 m cut line itself fail as outside (collapse caught), reason '" + onBigChk.reason + "'");
+    // The sagitta is worked out only when the check needs it: CAD outlines of
+    // many line pieces cost 260-310 ms for it in the engine (2026-10-13).
+    var small = GM.Core.buildCircuit(arcSegs(0, 0, 500, 0, 2 * Math.PI, 4), true);
+    assert(GM.Core.checkMarks([[450, 0], [0, 450], [-450, 0]], small, 50, 0.5).ok === true &&
+        small._sagitta === undefined, "a check within tol leaves the sagitta uncomputed");
 })();
 
 // ===== TEST: part of the outline (spec §5.4) =====

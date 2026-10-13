@@ -632,7 +632,7 @@ GM.Core = {
      * (the curve at every chord's middle parameter, measured across to the
      * chord), cached on the circuit. The check measures to the chords, so
      * this is how much closer than the curve a correct mark can appear:
-     * ~7.5e-5 r on a 4-anchor circle (0.5 pt at r 2.4 m, measured
+     * ~8.2e-5 r on a 4-anchor circle (0.556 pt at r 2.4 m, measured
      * 2026-10-13). Across, not to the chord's midpoint: a straight segment
      * with retracted handles is sampled unevenly along itself, and that
      * shift along the line is no gap (0.18 pt on a 1000 pt side otherwise).
@@ -760,7 +760,11 @@ GM.Core = {
             var e = Math.abs(GM.Core.distanceToCircuit(cutCircuit, marks[i]) - D);
             if (e > worst) worst = e;
         }
-        if (worst <= tol + GM.Core._chordSagitta(cutCircuit)) return { ok: true, worst: worst, reason: "" };
+        // The sagitta only when needed: on a CAD outline of many line pieces
+        // it costs 260-310 ms in the engine (measured 2026-10-13).
+        if (worst <= tol || worst <= tol + GM.Core._chordSagitta(cutCircuit)) {
+            return { ok: true, worst: worst, reason: "" };
+        }
         return { ok: false, worst: worst, reason: "distance" };
     },
 
