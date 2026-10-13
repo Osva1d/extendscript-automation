@@ -163,22 +163,35 @@ console.log("--- getSelectedPathInfo: rounded corners, selection with a duplicat
 })();
 
 // ===== TEST: offsetPath (spec §6.1) =====
-// The fake models the document selection faithfully: `item.selected = true` adds
-// the item to doc.selection, `doc.selection = null` empties it (and drops the
-// cut line's point states), and expandStyle replaces the selected copy by the
-// result IN PLACE and keeps every other selected item. So a run that forgets to
-// deselect first ends with [cutLine, result] selected, and cleanup would delete
-// the cut line - the test sees that.
+// The fake models the document selection as measured (Illustrator 30.8.2,
+// 2026-10-13): `item.selected = true` adds the item to doc.selection;
+// `doc.selection = null` empties it EXCEPT for a path with direct-selected
+// anchors (some selected, some not), which stays selected; `item.selected = false`
+// deselects such a path and drops its point states; expandStyle replaces the
+// selected copy by the result IN PLACE and keeps every other selected item. So a
+// run that forgets to deselect the cut line ends with [cutLine, result] selected,
+// and cleanup would delete the cut line - the test sees that.
 console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
 (function () {
     var A = PathPointSelection.ANCHORPOINT, N = PathPointSelection.NOSELECTION;
     var doc = GM.Illustrator.doc, savedSel = doc.selection, savedActive = global.app.activeDocument;
-    var selection = [], src, tmp, result, menu, removed, addCalls, tmpPts, pointsSelectPath, afterExpand, effectAtExpand;
+    var selection = [], src, tmp, result, menu, removed, addCalls, tmpPts, pointsSelectPath, afterExpand, effectAtExpand, stuck;
+    // Anchors selected on only some points: the state `doc.selection = null` does not clear.
+    function directlySelected(item) {
+        var a = 0, n = 0, len = item.pathPoints.length;
+        for (var i = 0; i < len; i++) {
+            if (item.pathPoints[i].state === A) a++;
+            if (item.pathPoints[i].state === N) n++;
+        }
+        return a < len && n < len;
+    }
 
     Object.defineProperty(doc, "selection", { configurable: true, enumerable: true,
         get: function () { return selection; },
         set: function (v) {
-            selection = v ? v.slice() : [];
+            if (v) selection = v.slice();
+            else if (src && selection && selection.indexOf(src) >= 0 && (stuck || directlySelected(src))) selection = [src];
+            else selection = [];
             if (src && selection.indexOf(src) < 0) {
                 for (var i = 0; i < src.pathPoints.length; i++) src.pathPoints[i].state = N;
             }
@@ -190,13 +203,18 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
                 if (selection === null) selection = [];
                 var at = selection.indexOf(item);
                 if (v && at < 0) selection.push(item);
-                if (!v && at >= 0) selection.splice(at, 1);
+                if (!v && at >= 0 && !(stuck && item === src)) {
+                    selection.splice(at, 1);
+                    if (item === src) {
+                        for (var i = 0; i < src.pathPoints.length; i++) src.pathPoints[i].state = N;
+                    }
+                }
             } });
         return item;
     }
     function removeFn() { this.removed = true; removed.push(this); }
     // A cut-line point: distinct handles; its selection state selects the path
-    // (expected from measurement M3, switched off for the post-condition tests).
+    // (measured 2026-10-13, M3; switched off for the post-condition tests).
     function cutPt(x, y, lx, ly, rx, ry, state) {
         var p = { anchor: [x, y], leftDirection: [lx, ly], rightDirection: [rx, ry], state: state };
         Object.defineProperty(p, "selected", { configurable: true, enumerable: true,
@@ -214,6 +232,7 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
     function build(opts) {
         menu = []; removed = []; addCalls = 0; tmpPts = []; afterExpand = null; effectAtExpand = undefined;
         pointsSelectPath = !(opts && opts.pointsDoNotSelect);
+        stuck = !!(opts && opts.stuckSelection);
         tmp = selectable({ pathPoints: { add: function () { var p = {}; tmpPts.push(p); return p; } },
             applyEffect: function (x) { this.effect = x; }, remove: removeFn });
         src = selectable({ typename: "PathItem", closed: true, removed: false, remove: removeFn,
@@ -313,6 +332,14 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
            selIs(src) && states() === [A, A, N, N].join(","),
         "D <= 0: the document is not touched");
 
+    // --- the cut line cannot be deselected: the copy is not expanded next to it ---
+    info = build({ stuckSelection: true });
+    result = square(50, 950);
+    var rs = GM.Illustrator.offsetPath(info, 50);
+    assert(rs.ok === false && rs.message === "could not isolate the offset copy", "cut line still selected: error, not an expansion");
+    assert(menu.length === 0 && src.removed === false && removed.length === 1 && removed[0] === tmp,
+        "stuck selection: no expandStyle, copy removed, cut line kept");
+
     // --- expandStyle left nothing selected: never a silent ok ---
     info = build();
     result = square(50, 950);
@@ -332,21 +359,21 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
 
     // --- _restoreSelection: the path ends selected even if point states select nothing ---
     info = build({ pointsDoNotSelect: true });
-    doc.selection = null;
+    src.selected = false;
     GM.Illustrator._restoreSelection(info);
     assert(selIs(src) && states() === [A, A, N, N].join(","),
         "restore: point states do not select the path -> the whole path is selected, states kept");
     info = build();
-    doc.selection = null;
+    src.selected = false;
     GM.Illustrator._restoreSelection({ pathRef: src, pointSel: [] });
     assert(selIs(src), "restore: no saved point states -> the path is selected");
     info = build();
-    doc.selection = null;
+    src.selected = false;
     GM.Illustrator._restoreSelection(info);
     assert(selIs(src) && states() === [A, A, N, N].join(","),
         "restore: states select the path, selected once");
     info = build();
-    doc.selection = null;
+    src.selected = false;
     Object.defineProperty(src.pathPoints[1], "selected", { configurable: true,
         set: function () { throw new Error("no point state"); }, get: function () { return N; } });
     GM.Illustrator._restoreSelection(info);

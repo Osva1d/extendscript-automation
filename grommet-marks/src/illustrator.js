@@ -175,8 +175,10 @@ GM.Illustrator = {
      * expand into a group of two paths (engine-facts). The copy lives on the
      * cut line's layer for the length of the call and nothing of it stays.
      * Effect parameters are undocumented; measured in Illustrator 30.8.2
-     * (offset accuracy 2026-10-09); the copy, Large Canvas units and selection
-     * restore are still to be measured (M1–M4).
+     * (2026-10-09 and 2026-10-13, engine-facts): the result ignores the cut
+     * line's own appearance, `ofst` takes document units as they are (also on a
+     * Large Canvas, so D is divided by the scale factor before the call), and
+     * `doc.selection = null` does not clear a direct selection.
      * @param {Object} pathInfo - getSelectedPathInfo() result of a closed path.
      * @param {number} D - Inward offset, document units, > 0.
      * @returns {Object} {ok:true, segments, loops} or {ok:false, message};
@@ -199,8 +201,15 @@ GM.Illustrator = {
             tmp.stroked = false;
             tmp.applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst ' +
                 (-D) + ' I jntp 2 "/></LiveEffect>');
+            // doc.selection = null leaves a path with direct-selected anchors
+            // selected (measured 2026-10-13), so the cut line is deselected
+            // itself; otherwise expandStyle would act on it as well and the
+            // cleanup below would delete it.
+            src.selected = false;
             doc.selection = null;
             tmp.selected = true;
+            var iso = doc.selection;
+            if (!iso || iso.length !== 1) throw new Error("could not isolate the offset copy");
             // expandStyle acts on the active document's selection (spec §6.1).
             if (app.activeDocument.name !== doc.name) throw new Error("active document changed");
             app.executeMenuCommand("expandStyle");
@@ -240,9 +249,10 @@ GM.Illustrator = {
     /**
      * Hands the cut line's selection back as it was before offsetPath:
      * point by point, so a direct selection survives and a second run
-     * behaves like the first (expected: setting a point's state selects the
-     * path — measurement M3 pending; if nothing ends up selected, the whole
-     * path is selected instead).
+     * behaves like the first (measured 2026-10-13, Illustrator 30.8.2:
+     * setting a point's state selects the path, and the neighbours' handle
+     * states read back as saved; if nothing ends up selected, the whole path
+     * is selected instead).
      */
     _restoreSelection: function (pathInfo) {
         var doc = GM.Illustrator.doc;
