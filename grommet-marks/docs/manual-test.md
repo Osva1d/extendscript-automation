@@ -424,27 +424,49 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    a mezi ně obdélník vysoký **28 mm** (hrdlo), vše spoj v Pathfinderu
    (Sjednotit) do **jedné cesty**. Vyber ji, **Vybraná cesta**, Odsazení
    **20**, Generovat.
-- [ ] Hláška: „Linka ok se v úzkém místě rozpadá na víc částí (2). Zmenšete
-  odsazení." Nic nevzniklo.
+   *Tohle je poprvé, co činku projde celý skript: ověřené je jen samotné
+   odsazení z 2026-10-09 (hrdlo 28 mm dalo dvě smyčky) a Node test hlášky.
+   Zapiš, co se stane; očekávání níže je odvozené, ne ověřené.*
+- [ ] Očekávání: hláška „Linka ok se v úzkém místě rozpadá na víc částí (2).
+  Zmenšete odsazení." a nic nevzniklo. *(Zapiš skutečný text hlášky a zda
+  vznikla vrstva nebo značky.)*
 
 ### J6 — Otevřená cesta
-1. Nakresli otevřenou lomenou čáru ze tří bodů (dva úseky po cca 400 mm),
-   vyber ji, spusť skript, **Vybraná cesta**.
+1. Nakresli otevřenou lomenou čáru ze tří bodů, dva úseky po cca **375 mm**
+   (úhel u vrcholu cca 100°), vyber ji, spusť skript, **Vybraná cesta**.
 - [ ] Šedý řádek: „Otevřená cesta · 3 rohy · značky leží na cestě".
 - [ ] Pole **Odsazení od kraje** je zašedlé; nápověda říká, že u otevřené
   cesty nejde určit, na kterou stranu odsadit.
 2. Generovat, Rozestup **300 mm** (v zašedlém poli klidně zůstává 20).
 - [ ] Bez hlášky; **3 značky** přímo na čáře (středem): oba konce a vrchol.
+  Platí pro úseky do 400 mm (u 375 mm je rezerva); od 400 mm výš se mezi
+  konec a vrchol začnou doplňovat další značky (u přesně 400 mm je to
+  rozhraní, proto 375).
 
 ### J7 — Stará předvolba s ručně odsazenou cestou
-> **Příprava:** potřebuješ předvolbu uloženou před 1.3.0 (bez položky
-> `pathOffset`). Buď ji máš z 1.2.0, nebo si ji vyrob: **zazálohuj**
-> `~/Library/Application Support/GrommetMarks/GrommetMarksSettings.json`,
-> v jedné předvolbě smaž řádek `"pathOffset"` a nastav `"placementMode": "path"`.
+> **Příprava:** potřebuješ předvolbu, která v souboru nemá `pathOffset` (jako
+> uložená ve verzi 1.2.0). Nejjistější je předvolba uložená skutečným během
+> 1.2.0; jinak si ji vyrob:
+> 1. Spusť skript s vybraným štítem, **Vybraná cesta**, Odsazení **20**,
+>    **Uložit jako…** `Stará 1.2`, Storno.
+> 2. **Zazálohuj** soubor, např. v Terminálu:
+>    `cp -p "$HOME/Library/Application Support/GrommetMarks/GrommetMarksSettings.json"{,.bak}`
+> 3. Soubor je **jeden řádek JSON** bez zalomení. V textovém editoru, který
+>    zvládne dlouhý řádek, najdi `"Stará 1.2":{` a v té předvolbě odstraň
+>    dvojici `"pathOffset":20` **spolu s čárkou před ní**, tedy `,"pathOffset":20`
+>    těsně před uzavírací `}` předvolby (je to její poslední položka; kdyby za
+>    ní ještě něco stálo, vyjmi místo toho čárku za ní). Ostatní předvolby nech
+>    být.
+> 4. Ověř, že je JSON pořád platný (bez výstupu kromě `OK`):
+>    `node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$HOME/Library/Application Support/GrommetMarks/GrommetMarksSettings.json" && echo OK`
+>    Poškozený soubor skript tiše ignoruje (předvolby zmizí z dialogu) a příští
+>    uložení ho přepíše — v tom případě vrať zálohu (`.bak`).
 1. Nakresli štít a **ručně ho odsaď** jako dřív (kopie, `Objekt ▸ Cesta ▸
-   Posunout cestu…` −20 mm). Vyber odsazenou kopii, spusť skript a načti
-   starou předvolbu.
-- [ ] **Odsazení od kraje** je **0**; šedý řádek končí „· značky leží na cestě".
+   Posunout cestu…` −20 mm). Vyber odsazenou kopii a spusť skript. Dialog se
+   otevře z `[Last Settings]`; předvolbu `Stará 1.2` načti v seznamu **Načíst**
+   (je-li už vybraná, přepni na `[Výchozí]` a zpět, nebo klikni na ↺).
+- [ ] Režim Vybraná cesta, **Odsazení od kraje** je **0** (ne 20); šedý řádek
+  končí „· značky leží na cestě".
 2. Generovat.
 - [ ] Značky leží přímo na vybrané (ručně odsazené) cestě — **žádné druhé
   odsazení**. Štít má ostré rohy, takže pro stejnou cestu a nastavení vyjdou
@@ -455,19 +477,21 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 
 ### J8 — Šedý řádek ve všech stavech a nápovědy zašedlých prvků
 - [ ] Řádek pod Umístěním ukazuje v těchto stavech přesně tyto texty (sleduj
-  taky, že se při přepnutí režimu, jednotek a změně Odsazení mění hned):
+  taky, že se při přepnutí režimu, jednotek a změně Odsazení mění hned).
+  Řádky uzavřených tvarů končí „· značky leží na cestě" jen při Odsazení 0;
+  tabulka uvádí texty při **Odsazení větším než 0** (zadej 20).
 
-| stav | text |
-|---|---|
-| Hrany artboardu, 1 artboard | `1 artboard · 800 × 600 mm` podle dokumentu (po přepnutí na cm `80 × 60 cm`) |
-| Hrany artboardu, víc artboardů | `3 artboardy · značky dostanou všechny` (5 a víc: `5 artboardů`) |
-| předvolba chce cestu, žádná není vybraná | `Předvolba chce cestu, žádná není vybraná — značí se artboard.` Dialog se otevře v režimu Hrany artboardu. |
-| štít | `Uzavřená cesta · 5 rohů` |
-| zaoblený obdélník (J2) | `Uzavřená cesta · 4 zaoblené rohy` |
-| štít s oběma dolními rohy zaoblenými (živé rohy) | `Uzavřená cesta · 3 rohy, 2 zaoblené` |
-| kruh | `Uzavřená cesta · bez rohů · první značka nahoře` |
-| libovolná uzavřená cesta, Odsazení 0 | totéž + ` · značky leží na cestě` |
-| otevřená cesta | `Otevřená cesta · 3 rohy · značky leží na cestě` |
+| stav | předpoklad | text |
+|---|---|---|
+| Hrany artboardu, 1 artboard | dokument s jedním artboardem | `1 artboard · 800 × 600 mm` podle dokumentu (po přepnutí na cm `80 × 60 cm`) |
+| Hrany artboardu, víc artboardů | dokument se 3 artboardy (4: `4 artboardy`, 5 a víc: `5 artboardů`) | `3 artboardy · značky dostanou všechny` |
+| předvolba chce cestu, žádná není vybraná | poslední běh (`[Last Settings]`) nebo načtená předvolba byl v režimu Vybraná cesta a při spuštění není nic vybráno | `Předvolba chce cestu, žádná není vybraná — značí se artboard.` Dialog se otevře v režimu Hrany artboardu. |
+| štít | uzavřená cesta, Odsazení 20 | `Uzavřená cesta · 5 rohů` |
+| zaoblený obdélník (J2) | Odsazení 20 | `Uzavřená cesta · 4 zaoblené rohy` |
+| štít s oběma dolními rohy zaoblenými (živé rohy) | Odsazení 20 | `Uzavřená cesta · 3 rohy, 2 zaoblené` |
+| kruh | Odsazení 20 | `Uzavřená cesta · bez rohů · první značka nahoře` |
+| libovolná uzavřená cesta | Odsazení 0 | totéž + ` · značky leží na cestě` |
+| otevřená cesta | libovolné Odsazení (pole je zašedlé) | `Otevřená cesta · 3 rohy · značky leží na cestě` |
 
 - [ ] Nic se v řádku neuřízne ani nepřetéká a dialog neposkakuje při
   přepínání režimů. Dialog se vejde na obrazovku 13": nejvyšší stav

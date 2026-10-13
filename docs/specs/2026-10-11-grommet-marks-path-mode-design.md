@@ -108,8 +108,10 @@ Rohy se hledají **na lince ok**, ne na řezové lince:
   `PathPointSelection.ANCHORPOINT` (naměřeno, §6.3).
 - Souvislé vybrané úseky tvoří **běh**. Běh se značí jako otevřená cesta:
   oba konce dostanou značku, rohy uvnitř podle §5.2.
-- Na linku ok se běh přenese projekcí: bod linky ok patří do běhu, když jeho
-  nejbližší bod na řezové lince leží na vybraném úseku.
+- Na linku ok se běh přenese po koncích: každý konec běhu jde na nejbližší bod
+  linky ok (směr linky ok vychází z orientace obou linek, protože Illustrator
+  ji může vrátit opačně). Běh, jehož oba konce splynou v jednom bodě, je podle
+  své délky na řezové lince buď jeden bod, nebo celý obvod.
 - Vybrané všechny kotvy, nebo žádná → celý obvod. „Všechny strany kromě jedné"
   proto vybrat nejde (všechny kotvy jsou vybrané) — známé omezení.
 - Vybrané kotvy, ale žádný celý úsek → zaškrtávátko zašedlé s vlastní
@@ -312,8 +314,8 @@ Každý klíč i v angličtině; parita klíčů hlídá stávající test.
 | `GM.UI` | šedý řádek, panel Cesta, zaškrtávátko | `test_ui_dialog` (stavy §8.2), headless výška |
 | `GM.L` | klíče §8, §9.1, skloňování | parita CS/EN |
 
-Regrese: pozice v režimu artboardu a v režimu cesty při D = 0 bez zaoblení
-beze změny (stávající sady).
+Regrese: pozice v režimu artboardu a v režimu cesty při D = 0 na cestě
+s ostrými rohy beze změny (stávající sady).
 
 ## 14. Co změřit před implementací
 
@@ -326,7 +328,8 @@ beze změny (stávající sady).
 - Oblouky z úseček v klientském PDF (§4): jak často a jak vypadají.
 
 Stav 2026-10-13: změřeno je první, druhé, čtvrté a páté (kopie bod po bodu
-a Large Canvas v §6.1, vnitřní roh v §5.5, výška a šířka řádku v §8.3).
+v §6.1, Large Canvas v `docs/extendscript-engine-facts.md` M2, vnitřní roh
+v §5.5, výška a šířka řádku v §8.3).
 Otevřené zůstává kliknutí přímo na zakřivený úsek (ruční test J10) a oblouky
 z úseček v klientském PDF.
 

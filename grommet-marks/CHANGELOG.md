@@ -23,10 +23,12 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
   z PDF mezi dvěma rovnými stranami, i rozdělený na víc úseků) dostane jednu
   značku uprostřed oblouku, mezi rohy se doplní podle Rozestupu. Není-li
   poloměr rohu větší než odsazení, má linka ok v rohu ostrý roh a značka padne
-  do něj — odsazení od obou hran.
+  do něj — odsazení od obou hran. Oblouk nakreslený jako mnoho krátkých úseček
+  (PDF z CADu) se jako zaoblený roh nepozná: značky zůstanou ve správné
+  vzdálenosti od řezu, jen nemusí padnout doprostřed oblouku.
 - **Volba Jen vybraná část obvodu.** Zaškrtávátko v panelu Cesta rozmístí
-  značky jen na úsecích, které máš vybrané nástrojem Přímý výběr (obě koncové
-  kotvy úseku). Konce vybrané části dostanou vždy značku. Při každém spuštění
+  značky jen na úsecích vybraných nástrojem Přímý výběr (obě koncové kotvy
+  úseku). Konce vybrané části dostanou vždy značku. Při každém spuštění
   je vypnuté a do předvolby se neukládá. Bez použitelného přímého výběru je
   zašedlé a nápověda řekne, co vybrat.
 - **Šedý řádek pod Umístěním.** Říká, co skript z výběru pozná: „Uzavřená
@@ -43,10 +45,10 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
 
 ### Změněno
 
-- **Tvar bez rohů začíná nahoře.** Kruh nebo ovál dostane první značku
-  v nejvyšším bodě, ne na první kotvě, kterou operátor nevidí; rozmístění je
-  souměrné podle svislé osy bez ohledu na to, kde cesta začíná a kterým směrem
-  je nakreslená.
+- **Tvar bez rohů začíná nahoře.** První značka leží v nejvyšším bodě, ne na
+  první kotvě, kterou operátor nevidí. U kruhu a vzpřímené elipsy je
+  rozmístění souměrné podle svislé osy, ať cesta začíná kdekoli a je nakreslená
+  kterýmkoli směrem.
 - **Zaoblené rohy už nejsou hladký prstenec od první kotvy.** Dřív skript
   zaoblený roh nepoznal a značky šly rovnoměrně od první kotvy, takže do rohů
   nemusela padnout žádná. Teď má každý zaoblený roh značku a Počet ok na cestě
@@ -55,8 +57,8 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
   skript potichu přepnul na Hrany artboardu. Teď šedý řádek hlásí „Předvolba
   chce cestu, žádná není vybraná — značí se artboard."
 - **Staré předvolby mají odsazení cesty 0.** Chovají se jako dřív a kdo si
-  cestu posouvá ručně, nedostane dvojí odsazení. Odsazení si nastavíš jednou
-  a uložíš do předvolby.
+  cestu posouvá ručně, nedostane dvojí odsazení. Odsazení se nastaví jednou
+  a uloží do předvolby.
 - **Dialog.** Informace o cestě se z panelu Cesta přesunula do Umístění,
   poznámka „posuňte si cestu předem" zmizela. V režimu Hrany artboardu je
   dialog o jeden řádek vyšší (do 777 px), v režimu cesty o něco nižší.
