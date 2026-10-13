@@ -512,10 +512,10 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   4 segmenty, odstup od kotev originálu vlevo / nahoře / vpravo / dole
   56,6929 / 56,6929 / 56,6929 / 56,6934. Vlastní efekt (+30), tah ani čárkování
   se nepřenesly. Po běhu v dokumentu pořád 1 objekt (po `app.redraw()`),
-  originál má tah 5 pt, 2 čárky, 4 body a je vybraný jako předtím. Zaoblený
-  obdélník 1000 × 600, R 100 (8 kotev, úchyty 0,5523·R) s D 56,6929: 8 segmentů,
-  odstup 56,6929–56,6934, `findCorners` na výsledku 4 zaoblené rohy
-  (poloměr 43,31), po běhu 2 objekty ze dvou.
+  originál má tah 5 pt, čárkování [10, 6] zachováno, 4 body a je vybraný jako
+  předtím. Zaoblený obdélník 1000 × 600, R 100 (8 kotev, úchyty 0,5523·R)
+  s D 56,6929: 8 segmentů, odstup 56,6929–56,6934, `findCorners` na výsledku 4 zaoblené rohy,
+  po běhu 2 objekty ze dvou.
 - **M2 — Large Canvas.** `documents.add(CMYK, 17007,87, 2834,65)` → `scaleFactor`
   10, artboard vnitřně 1700,79 × 283,47. Čtverec 100 × 100 (vnitřní jednotky),
   `offsetPath` s D 5,6693 → odstup 5,6694 / 5,6693 / 5,6694 / 5,6691. `ofst` se
@@ -531,22 +531,28 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   před i po `A,A,A,A,A`, `doc.selection.length` 1.
 - **M3 — `doc.selection = null` neodznačí přímý výběr.** Cesta s vybranými
   jen některými kotvami (`A,A,L,N,R`) po `doc.selection = null` zůstane vybraná:
-  `item.selected` true, `doc.selection.length` 1, stavy beze změny. Cestu
-  s všemi kotvami vybranými (nástroj Výběr) `null` zřejmě odznačí: v M1 se
-  taková řezová linka při úklidu nesmazala. Přímý výběr odznačí
+  `item.selected` true, `doc.selection.length` 1, stavy beze změny. Cesta
+  s všemi kotvami vybranými (nástroj Výběr) po něm podle M1 odznačená je:
+  první verze `offsetPath` (jen `doc.selection = null`) řezovou linku
+  s vybranými všemi kotvami při úklidu nesmazala. Přímý výběr odznačí
   `item.selected = false` (stavy `N,N,N,N,N`, `doc.selection.length` 0)
-  i `null` doplněné nastavením všech bodů na `NOSELECTION`. Vybraná kopie pak dala výběr dvou
-  objektů, `expandStyle` zasáhl oba a po něm byl výběr `[výsledek, řezová linka]`.
-  První verze `offsetPath` (jen `doc.selection = null`) proto při přímém výběru
-  smazala při úklidu **i řezovou linku**: dokument měl po běhu 0 objektů,
-  `loops` 2. Oprava: `src.selected = false` před `doc.selection = null`
-  a kontrola, že po výběru kopie je vybraný právě jeden objekt.
+  i `null` doplněné nastavením všech bodů na `NOSELECTION`. Vybraná kopie pak
+  dala výběr dvou objektů a po `expandStyle` zůstaly vybrané oba, výsledek
+  i řezová linka (ta s nezměněnou geometrií). První verze `offsetPath` proto
+  při přímém výběru smazala při úklidu **i řezovou linku**: dokument měl po
+  běhu 0 objektů, `loops` 2.
+  Oprava: `src.selected = false` před `doc.selection = null` a kontrola, že po
+  výběru kopie je vybraný právě jeden objekt, tím objektem je kopie
+  (`tmp.selected`) a řezová linka vybraná není (`src.selected`); jinak chyba
+  „could not isolate the offset copy" a nic se nerozbaluje. Počet vybraných
+  objektů sám nestačí: prošel by i s řezovou linkou jako jediným vybraným
+  objektem. Čtení `selected` u kopie po nastavení není samostatně změřeno
+  (u řezové linky ano); ověří ho příští běh sond.
 - **M4 — vnitřní roh.** Tvar L `[[0,0],[1000,0],[1000,400],[400,400],[400,1000],[0,1000]]`
   posunutý o (300, 300), D 56,69, `jntp 2`: 6 kotev (stejně jako řezová linka),
   odstup rovných hran 56,69, **vnitřní (reflexní) roh linky ok leží v
   (400 − D, 400 − D) = (343,31; 343,31)**, tedy D od obou hran, ostrý spoj bez
-  zkosení a zaoblení. Odchylka od očekávaných rohů nejvýš 0,0006 pt. Zadání
-  sondy čekalo (400 + D, 400 + D), ale to je bod mimo L (D „za" rohem). Obrázek
+  zkosení a zaoblení. Odchylka od očekávaných rohů nejvýš 0,0006 pt. Obrázek
   (PNG 20 % a 60 %, černá řezová linka a červená linka ok): červený obrys je
   uvnitř černého s rovnoměrnou mezerou, na vnitřním rohu pravý úhel, nikde
   se nekříží.

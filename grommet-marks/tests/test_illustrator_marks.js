@@ -196,6 +196,10 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
                 for (var i = 0; i < src.pathPoints.length; i++) src.pathPoints[i].state = N;
             }
         } });
+    function addToSelection(item) {
+        if (selection === null) selection = [];
+        if (selection.indexOf(item) < 0) selection.push(item);
+    }
     function selectable(item) {
         Object.defineProperty(item, "selected", { configurable: true, enumerable: true,
             get: function () { return selection !== null && selection.indexOf(item) >= 0; },
@@ -203,6 +207,10 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
                 if (selection === null) selection = [];
                 var at = selection.indexOf(item);
                 if (v && at < 0) selection.push(item);
+                // item.selected = true turns every anchor of a path into ANCHORPOINT (measured 2026-10-13, M3)
+                if (v && item === src) {
+                    for (var j = 0; j < src.pathPoints.length; j++) src.pathPoints[j].state = A;
+                }
                 if (!v && at >= 0 && !(stuck && item === src)) {
                     selection.splice(at, 1);
                     if (item === src) {
@@ -219,7 +227,7 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
         var p = { anchor: [x, y], leftDirection: [lx, ly], rightDirection: [rx, ry], state: state };
         Object.defineProperty(p, "selected", { configurable: true, enumerable: true,
             get: function () { return this.state; },
-            set: function (v) { this.state = v; if (v !== N && pointsSelectPath) src.selected = true; } });
+            set: function (v) { this.state = v; if (v !== N && pointsSelectPath) addToSelection(src); } });
         return p;
     }
     function resultPt(x, y) {
@@ -235,6 +243,11 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
         stuck = !!(opts && opts.stuckSelection);
         tmp = selectable({ pathPoints: { add: function () { var p = {}; tmpPts.push(p); return p; } },
             applyEffect: function (x) { this.effect = x; }, remove: removeFn });
+        if (opts && opts.copyIgnoresSelect) {      // selecting the copy silently does nothing
+            Object.defineProperty(tmp, "selected", { configurable: true, enumerable: true,
+                get: function () { return selection !== null && selection.indexOf(tmp) >= 0; },
+                set: function () {} });
+        }
         src = selectable({ typename: "PathItem", closed: true, removed: false, remove: removeFn,
             pathPoints: [cutPt(0, 0, -10, 1, 10, 2, A), cutPt(1000, 0, 990, 3, 1010, 4, A),
                          cutPt(1000, 1000, 995, 1005, 1005, 995, N), cutPt(0, 1000, 5, 1000, -5, 1000, N)],
@@ -340,6 +353,15 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
     assert(menu.length === 0 && src.removed === false && removed.length === 1 && removed[0] === tmp,
         "stuck selection: no expandStyle, copy removed, cut line kept");
 
+    // --- double failure: the cut line cannot be deselected AND the copy cannot be selected ---
+    // One object is selected, so counting would pass - but it is the cut line, not the copy.
+    info = build({ stuckSelection: true, copyIgnoresSelect: true });
+    result = square(50, 950);
+    var rd = GM.Illustrator.offsetPath(info, 50);
+    assert(rd.ok === false && rd.message === "could not isolate the offset copy", "only the cut line selected: error, not an expansion");
+    assert(menu.length === 0 && src.removed === false && removed.length === 1 && removed[0] === tmp,
+        "double failure: no expandStyle, cut line kept, copy removed");
+
     // --- expandStyle left nothing selected: never a silent ok ---
     info = build();
     result = square(50, 950);
@@ -361,8 +383,8 @@ console.log("--- offsetPath: clean copy, expand, clean up, selection back ---");
     info = build({ pointsDoNotSelect: true });
     src.selected = false;
     GM.Illustrator._restoreSelection(info);
-    assert(selIs(src) && states() === [A, A, N, N].join(","),
-        "restore: point states do not select the path -> the whole path is selected, states kept");
+    assert(selIs(src) && states() === [A, A, A, A].join(","),
+        "restore: point states do not select the path -> the whole path is selected (all anchors ANCHORPOINT, as measured)");
     info = build();
     src.selected = false;
     GM.Illustrator._restoreSelection({ pathRef: src, pointSel: [] });

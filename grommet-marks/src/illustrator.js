@@ -204,12 +204,16 @@ GM.Illustrator = {
             // doc.selection = null leaves a path with direct-selected anchors
             // selected (measured 2026-10-13), so the cut line is deselected
             // itself; otherwise expandStyle would act on it as well and the
-            // cleanup below would delete it.
+            // cleanup below would delete it. Then the invariant itself is
+            // checked: one selected object, the copy is selected, the cut line
+            // is not (a count alone would pass with the cut line as that object).
             src.selected = false;
             doc.selection = null;
             tmp.selected = true;
             var iso = doc.selection;
-            if (!iso || iso.length !== 1) throw new Error("could not isolate the offset copy");
+            if (!iso || iso.length !== 1 || !tmp.selected || src.selected) {
+                throw new Error("could not isolate the offset copy");
+            }
             // expandStyle acts on the active document's selection (spec §6.1).
             if (app.activeDocument.name !== doc.name) throw new Error("active document changed");
             app.executeMenuCommand("expandStyle");
