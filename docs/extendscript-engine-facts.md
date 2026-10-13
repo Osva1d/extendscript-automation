@@ -546,8 +546,16 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   (`tmp.selected`) a řezová linka vybraná není (`src.selected`); jinak chyba
   „could not isolate the offset copy" a nic se nerozbaluje. Počet vybraných
   objektů sám nestačí: prošel by i s řezovou linkou jako jediným vybraným
-  objektem. Čtení `selected` u kopie po nastavení není samostatně změřeno
-  (u řezové linky ano); ověří ho příští běh sond.
+  objektem. Getter `selected` čte to, co se nastavilo (sonda 2026-10-13,
+  celá cesta i přímý výběr jednoho úseku): nová kopie z `pathItems.add()`
+  vybraná není (`false`); po `src.selected = false` a `doc.selection = null`
+  čte řezová linka `false` (stavy `N,N,N,N,N`) a po `tmp.selected = true` kopie
+  `true`, `doc.selection.length` 1 a tím objektem je kopie. Celé běhy skriptu
+  přes tuto kontrolu prošly (Úkol 10, S1 a S5).
+- **Pozor v sondách na `NOSELECTION` u sousedů.** Po `pathPoints[0..1].selected
+  = ANCHORPOINT` (stavy `A,A,L,N,R`) nastavení ostatních bodů na `NOSELECTION`
+  změní i ty dvě kotvy: stavy `R,L,N,N,N`, úsek už vybraný není
+  (2026-10-13). Přímý výběr úseku se v sondě napodobí jen dvěma kotvami.
 - **M4 — vnitřní roh.** Tvar L `[[0,0],[1000,0],[1000,400],[400,400],[400,1000],[0,1000]]`
   posunutý o (300, 300), D 56,69, `jntp 2`: 6 kotev (stejně jako řezová linka),
   odstup rovných hran 56,69, **vnitřní (reflexní) roh linky ok leží v
