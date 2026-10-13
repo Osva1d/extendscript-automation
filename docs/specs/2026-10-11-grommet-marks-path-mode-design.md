@@ -118,6 +118,9 @@ Rohy se hledají **na lince ok**, ne na řezové lince:
   nápovědou.
 - Zaškrtávátko je při každém spuštění vypnuté a do předvolby se neukládá:
   přímý výběr zapomenutý z dřívější úpravy tak nic nezmění.
+- Počet ok se u části obvodu nenabízí: běh se značí jako otevřená cesta, počet
+  by dal jen jeho konce a rohy (§5.3), ne číslo z pole. Dokud je zaškrtávátko
+  zaškrtnuté, je řádek na Rozestupu (§8.2).
 
 ### 5.5 Vnitřní rohy
 
@@ -227,7 +230,7 @@ Předvolby, Hrany, Rohové zóny a Značka se nemění.
 |---|---|---|
 | Vybraná cesta | výběr je jedna jednoduchá cesta | zašedlá, nápověda s důvodem (jako dnes) |
 | Odsazení (Cesta) | cesta je uzavřená | zašedlé, nápověda „U otevřené cesty nejde určit, na kterou stranu odsadit — značky leží na cestě." |
-| Počet ok | vždy | na cestě s rohy ukáže počet rohů jen pro čtení |
+| Počet ok | není zaškrtnuté Jen vybraná část | zašedlé, řádek je na Rozestupu, nápověda řekne proč; po odškrtnutí se vrátí zvolený Počet ok. Jinak na cestě s rohy ukáže počet rohů jen pro čtení |
 | Jen vybraná část | přímý výběr obsahuje aspoň jeden celý úsek | zašedlé; vlastní nápověda pro samostatnou kotvu |
 | Zhustit u rohů | artboard; cesta s rohy (i zaoblenými) a Rozestupem | zašedlé s důvodem (jako dnes) |
 | Generovat | pole aktivního režimu jsou platná | zašedlé, vadné pole zčervená |
@@ -308,7 +311,7 @@ Každý klíč i v angličtině; parita klíčů hlídá stávající test.
 
 | modul | nové | test |
 |---|---|---|
-| `GM.Core` | rozpoznání zaoblených rohů, rohové body linky ok, nejvyšší bod, běhy části obvodu a jejich projekce, kontrola §7 | Node: zaoblený obdélník R > D i R ≤ D, půlkruh (oblouk = strana), štít, hvězda, kruh; kontrola s originálem místo linky ok (pruh) a se dvěma smyčkami |
+| `GM.Core` | rozpoznání zaoblených rohů, rohové body linky ok, nejvyšší bod, běhy části obvodu a přenos konců běhu na linku ok, kontrola §7 | Node: zaoblený obdélník R > D i R ≤ D, půlkruh (oblouk = strana), štít, hvězda, kruh; kontrola s originálem místo linky ok (pruh) a se dvěma smyčkami |
 | `GM.Illustrator` | `offsetPath` (§6.1), čtení přímého výběru | falešný adaptér v Node; harness v Illustratoru: tvary z §6.2, Large Canvas, jeden krok Zpět |
 | `GM.Main.process` | průběh §9 | `test_main_process` s falešným adaptérem |
 | `GM.UI` | šedý řádek, panel Cesta, zaškrtávátko | `test_ui_dialog` (stavy §8.2), headless výška |

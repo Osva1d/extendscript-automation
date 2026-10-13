@@ -30,7 +30,9 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
   značky jen na úsecích vybraných nástrojem Přímý výběr (obě koncové kotvy
   úseku). Konce vybrané části dostanou vždy značku. Při každém spuštění
   je vypnuté a do předvolby se neukládá. Bez použitelného přímého výběru je
-  zašedlé a nápověda řekne, co vybrat.
+  zašedlé a nápověda řekne, co vybrat. Dokud je zaškrtnuté, řádek přepne na
+  Rozestup a Počet ok zašedne (počet by dal jen konce části a rohy); po
+  odškrtnutí se zvolený Počet ok vrátí.
 - **Šedý řádek pod Umístěním.** Říká, co skript z výběru pozná: „Uzavřená
   cesta · 5 rohů", „· 4 zaoblené rohy", „· 3 rohy, 2 zaoblené", „· bez rohů ·
   první značka nahoře", u otevřené cesty nebo odsazení 0 „· značky leží na

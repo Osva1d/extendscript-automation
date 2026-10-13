@@ -557,6 +557,9 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   čte řezová linka `false` (stavy `N,N,N,N,N`) a po `tmp.selected = true` kopie
   `true`, `doc.selection.length` 1 a tím objektem je kopie. Celé běhy skriptu
   přes tuto kontrolu prošly (Úkol 10, S1 a S5).
+- **Otevřený bod (neměřeno).** Kdyby `expandStyle` kopii nahradil, ale nic
+  nevybral, `offsetPath` ohlásí chybu a rozbalený výsledek by v dokumentu
+  zůstal (nikdy se to nestalo, nepravděpodobné).
 - **Pozor v sondách na `NOSELECTION` u sousedů.** Po `pathPoints[0..1].selected
   = ANCHORPOINT` (stavy `A,A,L,N,R`) nastavení ostatních bodů na `NOSELECTION`
   změní i ty dvě kotvy: stavy `R,L,N,N,N`, úsek už vybraný není

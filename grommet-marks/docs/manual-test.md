@@ -407,6 +407,14 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Zaškrtávátko je zase **vypnuté** (do předvolby se neukládá).
 - [ ] Zaškrtni, Generovat: stejné tři polohy a upozornění na kryjící se značky
   (počet: 3).
+6. Spusť skript znovu se stejným výběrem, **Vybraná cesta**, vyber **Počet ok**
+   (na štítu ukáže 5, jen pro čtení).
+- [ ] Zaškrtni **Jen vybraná část obvodu**: řádek se přepne na **Rozestup**
+  (Počet ok zašedne, pole Rozestup jde upravit) a nápověda zašedlého Počtu ok
+  říká, že u vybrané části se značky řídí rozestupem. Zhustit u rohů jde na
+  štítu zase zapnout.
+- [ ] Zruš zaškrtnutí: **Počet ok** je zase vybraný (na štítu 5, jen pro čtení)
+  a pole Rozestup je zašedlé.
 
 ### J5 — Kontrola před vytvořením značek: pruh a činka
 1. Nakresli úzký pruh **35 × 350 mm**, vyber ho, spusť skript, **Vybraná
@@ -473,7 +481,9 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   stejné polohy jako v 1.2.0.
 3. Zadej Odsazení **20**.
 - [ ] Rozsvítí se **Uložit** a u předvolby hvězdička `*` (změna samotného
-  odsazení se počítá). Po Uložit a novém spuštění je v předvolbě 20.
+  odsazení se počítá). Po Uložit zkontroluj, že je v předvolbě 20: načti ji
+  (↺, nebo přepni na jinou předvolbu a zpět) — dialog se otevírá z
+  `[Last Settings]`, ne z předvolby.
 
 ### J8 — Šedý řádek ve všech stavech a nápovědy zašedlých prvků
 - [ ] Řádek pod Umístěním ukazuje v těchto stavech přesně tyto texty (sleduj
@@ -499,9 +509,10 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   jsou vidět celá.
 - [ ] Zašedlé prvky mají nápovědu s důvodem: **Vybraná cesta** (jako I3),
   **Odsazení od kraje** u otevřené cesty (J6), **Jen vybraná část obvodu**
-  (J4), **Zhustit u rohů** na kruhu a s Počtem ok na tvaru s rohy (jako F3,
-  I1). *(Ukáže se nápověda i na zašedlém prvku? Pokud ne, jde o chování
-  Illustratoru, ne o text.)*
+  (J4), **Počet ok** při zaškrtnuté části obvodu (J4 krok 6), **Zhustit u
+  rohů** na kruhu a s Počtem ok na tvaru s rohy (jako F3, I1). *(Ukáže se
+  nápověda i na zašedlém prvku? Pokud ne, jde o chování Illustratoru, ne
+  o text.)*
 
 ### J9 — Jeden krok Zpět
 1. Štít z J1, Odsazení 20, Generovat. Jednou **Cmd+Z**.
@@ -520,6 +531,30 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 2. Je-li aktivní, zaškrtni a Generovat.
 - [ ] Zapiš, kam značky padly (nezměřené očekávání: konce oblouku a jeho střed,
   odsazené dovnitř), a zda je výběr po běhu stejný jako před ním.
+
+### J11 — Vypnuté „Nový objekt má základní vzhled"
+> Také měření, ne test: `offsetPath` zakládá kopii řezové linky novým objektem
+> a nastavuje jen výplň a tah. Co udělá vypnutá volba **Nový objekt má základní
+> vzhled** (menu panelu Vzhled), není změřeno — nová kopie by mohla převzít
+> vzhled posledního objektu. Výsledek patří do `docs/extendscript-engine-facts.md`.
+1. V panelu Vzhled (Appearance) vypni v jeho menu **Nový objekt má základní
+   vzhled**. Zopakuj J1 krok 2 (štít, Odsazení 20, Rozestup 300 mm, Generovat).
+- [ ] Zapiš: stejných 6 značek na stejných místech jako s volbou zapnutou?
+  Hlásí skript chybu nebo kontrolu před vytvořením značek? Zůstalo v dokumentu
+  něco navíc (panel Vrstvy)?
+2. Volbu zase zapni.
+
+### J12 — Řezová linka uvnitř skupiny
+> Také měření, ne test: kopii pro odsazení zakládá `offsetPath` na vrstvě řezové
+> linky, ne uvnitř její skupiny. Výsledek patří do
+> `docs/extendscript-engine-facts.md`.
+1. Štít z J1 dej do skupiny (Cmd+G). Přímým výběrem (A) klikni na jeho úsek
+   uvnitř skupiny, spusť skript, **Vybraná cesta**.
+- [ ] Zapiš: je **Vybraná cesta** dostupná a ukazuje šedý řádek „Uzavřená cesta ·
+  5 rohů"?
+2. Odsazení **20**, Rozestup **300 mm**, Generovat.
+- [ ] Zapiš: polohy značek (jako J1?), co zůstalo vybrané po běhu, a zda
+  v dokumentu (skupina, vrstva) nezůstal odsazený zbytek.
 
 ---
 

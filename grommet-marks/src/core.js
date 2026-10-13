@@ -660,6 +660,10 @@ GM.Core = {
      * a point-in-polygon test over thousands of vertices costs tens of ms per
      * mark (measured 2026-10-12: 5 761 vertices 80 ms). Cached on the
      * circuit. The last vertex repeats the first (harmless for both uses).
+     * Limit of such a coarse polygon: its chords cut inside the curve, so a
+     * mark whose offset is below about 1.2e-3 r on a quarter arc (about
+     * 4.8e-3 r on a half circle drawn as one Bezier) can fall outside it and
+     * be refused by checkMarks as "outside".
      */
     _samplePolygon: function (circuit) {
         if (circuit._poly) return circuit._poly;
