@@ -479,6 +479,33 @@ console.log("--- UI 1.3: path offset and part of the outline (spec §8.2) ---");
     done();
 })();
 
+// ===== TEST: the path offset is a preset change; an invalid one is not "on the path" =====
+console.log("--- UI 1.3: path offset enables Save, invalid offset in the summary ---");
+(function () {
+    var pd = freshPData();
+    pd.presets["[Default]"].placementMode = "path";   // opens in path mode, nothing else differs
+    var ui = buildUI3(pd, mockPathInfo(4, true), null);
+    var save = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.SAVE; });
+    assert(ui.modeUI.pathRB.value === true, "precheck: dialog opened in path mode");
+    assert(save.enabled === false, "unchanged dialog: Save disabled");
+    ui.pathUI.offsetIn.text = "20"; ui.pathUI.offsetIn.onChanging();
+    assert(save.enabled === true, "changing only the path offset enables Save");
+    ui.pathUI.offsetIn.text = "0"; ui.pathUI.offsetIn.onChanging();
+    assert(save.enabled === false, "back to the preset value: Save disabled again");
+    done();
+
+    var ui2 = buildUI3(null, mockPathInfo(4, true), null);
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy",
+        "invalid offset: no 'on the path' clause (got '" + ui2.modeUI.infoLbl.text + "')");
+    ui2.pathUI.offsetIn.text = ""; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy", "empty offset: no clause either");
+    ui2.pathUI.offsetIn.text = "0"; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    done();
+})();
+
 // ===== TEST: both locales define the same keys =====
 console.log("--- Locale: CS and EN key sets are identical ---");
 (function () {

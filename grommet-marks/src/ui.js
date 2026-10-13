@@ -247,7 +247,7 @@ GM.UI = {
         else if (round) parts.push(L.count("INFO_ROUND", round));
         else parts.push(L.count("INFO_CORNERS", sharp));
         if (pi.closed && !sharp && !round) parts.push(L.INFO_TOP_START);
-        if (!pi.closed || !(st.offset > 0)) parts.push(L.INFO_ON_PATH);
+        if (!pi.closed || st.offset === 0) parts.push(L.INFO_ON_PATH);
         return parts.join(" · ");
     },
 

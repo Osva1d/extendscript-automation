@@ -91,6 +91,10 @@ GM.Utils = {
                 if (String(a[v6Keys[vi]]) !== String(b[v6Keys[vi]])) return false;
             }
         }
+        // Compare the 1.3.0 path offset only when both sides carry it.
+        if (a.pathOffset !== undefined && b.pathOffset !== undefined) {
+            if (String(a.pathOffset) !== String(b.pathOffset)) return false;
+        }
         return true;
     }
 };
