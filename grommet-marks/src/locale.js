@@ -75,6 +75,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "no corners",
             PATH_INFO_LENGTH: "perimeter ≈ %s %s",
             TIP_PATH_COUNT_DISABLED: "On a path with corners the count is dictated by the corners — marks land on the corners only.",
+            TIP_PATH_COUNT_PARTIAL: "With only part of the outline, marks follow the spacing — a count would give just the ends and the corners.",
 
             // Corner zones panel
             ZONES_PANEL: "Corner zones",
@@ -235,6 +236,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "bez rohů",
             PATH_INFO_LENGTH: "obvod ≈ %s %s",
             TIP_PATH_COUNT_DISABLED: "Na cestě s rohy je počet dán rohy — značky padnou jen na rohy.",
+            TIP_PATH_COUNT_PARTIAL: "U vybrané části obvodu se značky řídí rozestupem — počet by dal jen konce a rohy.",
 
             // Corner zones panel
             ZONES_PANEL: "Rohové zóny",

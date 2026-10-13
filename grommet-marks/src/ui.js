@@ -536,6 +536,7 @@ GM.UI = {
 
         var hasCorners = pathOk && pathInfo.cornerCount > 0;
         if (hasCorners) pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+        var pathCountTip = pathNumRB.helpTip;   // what Count says when it is selectable
 
         // "Count" means the number of marks. On a SMOOTH path the user picks it.
         // On a CORNERED path the corners dictate it, so the field shows the
@@ -578,7 +579,42 @@ GM.UI = {
         if (part.state === "runs") partialCB.helpTip = GM.L.TIP_PARTIAL;
         else if (part.state === "lone") partialCB.helpTip = GM.L.TIP_PARTIAL_LONE;
         else partialCB.helpTip = GM.L.TIP_PARTIAL_NONE;
-        partialCB.onClick = function () { onUserChange(); };
+
+        // A run is marked like an open path, so Count would give only its ends
+        // and inner corners (spec §5.3) — not the number the field promises.
+        // While the box applies (ticked, path mode) the row is Spacing and
+        // Count is greyed out, like Count on the edges under corner zones; a
+        // Count choice switched away that way comes back when the box stops
+        // applying (unticked, or artboard mode).
+        var pathCountAllowed = true, pathForcedSpacing = false;
+        function partialApplies() {
+            return pathRB.value && partialCB.enabled && partialCB.value;
+        }
+        function forcePathSpacing() {
+            if (!pathNumRB.value) return;
+            pathForcedSpacing = true;
+            pathNumRB.value = false; pathSpcRB.value = true;
+        }
+        function syncPathCountAllowed() {
+            var allowed = !partialApplies();
+            if (allowed === pathCountAllowed) return;
+            pathCountAllowed = allowed;
+            if (!allowed) {
+                forcePathSpacing();
+            } else if (pathForcedSpacing) {
+                pathForcedSpacing = false;
+                pathNumRB.value = true; pathSpcRB.value = false;
+            }
+            pathNumRB.enabled = allowed;
+            pathNumRB.helpTip = allowed ? pathCountTip : GM.L.TIP_PATH_COUNT_PARTIAL;
+            pathNumIn.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_PATH_COUNT_PARTIAL;
+            refreshPathDistUI();
+        }
+        partialCB.onClick = function () {
+            syncPathCountAllowed();
+            refreshZonesEnabled();   // Spacing on a cornered path allows zones again
+            onUserChange();
+        };
 
         var fallback = false;   // the preset asked for a path that is not there
         function refreshInfo() {
@@ -660,6 +696,7 @@ GM.UI = {
             var pathMode = pathRB.value;
             showPanel(edgesPanel, !pathMode);
             showPanel(pathPanel, pathMode);
+            syncPathCountAllowed();
             refreshZonesEnabled();
             relayoutDialog();
             onUserChange();
@@ -804,7 +841,12 @@ GM.UI = {
             var pdUseNum = !!pd.useNumber;
             pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
             pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
-            pathOffsetIn.text = (s.pathOffset !== undefined) ? s.pathOffset : defCfg.pathOffset;
+            pathForcedSpacing = false;
+            if (!pathCountAllowed) forcePathSpacing();
+            // Only a finite number goes into the field: NaN reaches a stored
+            // preset as null, and an empty greyed field cannot be fixed.
+            pathOffsetIn.text = (typeof s.pathOffset === "number" && isFinite(s.pathOffset))
+                ? s.pathOffset : defCfg.pathOffset;
             refreshPathDistUI();
 
             refreshModeUI();
@@ -1065,7 +1107,7 @@ GM.UI = {
             window: dlg,
             gatherAll: gatherAll,
             getRunOptions: function () {
-                return { pathPartial: pathRB.value && partialCB.enabled && partialCB.value };
+                return { pathPartial: partialApplies() };
             },
             modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo },
             edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },

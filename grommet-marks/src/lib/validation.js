@@ -167,6 +167,12 @@ GM.Validation = {
             if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
             else settings.pathDist.spacing = pathSpacing;
             settings.pathOffset = pathOffset;
+        } else {
+            // Not checked outside path mode, but it is stored with the preset:
+            // a typo or NaN (null after JSON) there must not come back as a
+            // field that cannot be fixed. Anything unusable is stored as 0.
+            var storedOffset = GM.Validation.parseNumber(cfg.pathOffset);
+            settings.pathOffset = (isFinite(storedOffset) && storedOffset >= 0) ? storedOffset : 0;
         }
 
         return { valid: true, settings: settings };
