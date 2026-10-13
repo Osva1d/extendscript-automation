@@ -523,6 +523,33 @@ console.log("--- Core: distance / inside / area / checkMarks ---");
     var off10 = GM.Core.checkMarks([[500, 60]], c, 50, 0.5);
     assert(off10.ok === false && off10.reason === "distance" && Math.abs(off10.worst - 10) < 1e-6,
         "inside but 10 off the offset: distance failure");
+
+    // N1 (Task 10, S11b): the check measures to the cut line's sample chords,
+    // which sit inside the curve by their sagitta — on a 4-anchor circle of
+    // r 2.4 m about 0.5 pt, enough to refuse a correct offset.
+    assert(GM.Core._chordSagitta(c) < 1e-9, "straight square: chords are the outline, sagitta ~0, got " + GM.Core._chordSagitta(c));
+    var R = 6803, D = 56.69;                         // r 2400 mm, D 20 mm
+    var big = GM.Core.buildCircuit(arcSegs(0, 0, R, 0, 2 * Math.PI, 4), true);
+    var sag = GM.Core._chordSagitta(big);
+    assert(sag > 0.45 && sag < 0.6, "4-arc circle r 6803: largest chord sagitta ~0.5, got " + sag.toFixed(4));
+    // Marks exactly D inside the cut line itself, along its normal, as
+    // Illustrator's offset puts them. (A true inset circle would not do: the
+    // 4-arc Bezier circle bulges up to 1.85 pt beyond r.)
+    var exact = [];
+    for (var m = 0; m < 300; m++) {
+        var sgm = big.segments[m % 4].seg, t = (Math.floor(m / 4) + 0.5) / 75;
+        var p = GM.Core.bezierPoint(sgm, t), p2 = GM.Core.bezierPoint(sgm, t + 1e-6);
+        var tx = p2[0] - p[0], ty = p2[1] - p[1], tl = Math.sqrt(tx * tx + ty * ty);
+        exact.push([p[0] - ty / tl * D, p[1] + tx / tl * D]);   // left normal = inside (counter-clockwise)
+    }
+    var bigChk = GM.Core.checkMarks(exact, big, D, 0.5);
+    assert(bigChk.ok === true, "marks exactly D inside a 2.4 m circle pass (worst measured " +
+        bigChk.worst.toFixed(3) + ", reason '" + bigChk.reason + "')");
+    var onBig = [];
+    for (var k = 0; k < 40; k++) onBig.push(GM.Core.pointAtDistance(big, k * big.totalLen / 40 + 1));
+    var onBigChk = GM.Core.checkMarks(onBig, big, D, 0.5);
+    assert(onBigChk.ok === false, "marks on the 2.4 m cut line itself still fail (collapse caught), reason '" +
+        onBigChk.reason + "'");
 })();
 
 // ===== TEST: part of the outline (spec §5.4) =====

@@ -493,6 +493,11 @@ D = 56,69 pt = 20 mm):
   **jeden krok Zpět** (2026-10-09).
 - Odsazená cesta je nová: její kotvy nesouvisí s kotvami řezové linky
   (2026-10-09).
+- Kontrola značek k toleranci 0,5 pt přičítá největší průhyb tětiv řezové
+  linky, protože vzdálenost měří k jejím navzorkovaným tětivám (2026-10-13):
+  kruh r 2400 mm ze 4 kotev, D 20 mm, dal k tětivám 0,525 pt a dřív byl
+  odmítnut; průhyb 0,556 pt, mez teď 1,056 pt. Kruh r 2000 mm: 0,458 pt,
+  průhyb 0,463 pt.
 
 **Přímý výběr** (naměřeno 2026-10-05):
 

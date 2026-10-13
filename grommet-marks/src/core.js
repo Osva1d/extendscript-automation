@@ -628,6 +628,32 @@ GM.Core = {
     },
 
     /**
+     * Largest gap between a circuit's sample chords and the curve itself
+     * (the curve at every chord's middle parameter, measured across to the
+     * chord), cached on the circuit. The check measures to the chords, so
+     * this is how much closer than the curve a correct mark can appear:
+     * ~7.5e-5 r on a 4-anchor circle (0.5 pt at r 2.4 m, measured
+     * 2026-10-13). Across, not to the chord's midpoint: a straight segment
+     * with retracted handles is sampled unevenly along itself, and that
+     * shift along the line is no gap (0.18 pt on a 1000 pt side otherwise).
+     * @returns {number}
+     */
+    _chordSagitta: function (circuit) {
+        if (circuit._sagitta !== undefined) return circuit._sagitta;
+        var n = GM.CONSTANTS.SAMPLES_PER_SEGMENT, worst = 0;
+        for (var i = 0; i < circuit.segments.length; i++) {
+            var sg = circuit.segments[i], pts = sg.pts;
+            for (var j = 1; j < pts.length; j++) {
+                var c = GM.Core.bezierPoint(sg.seg, (j - 0.5) / n);
+                var d = Math.sqrt(GM.Core._projectOnChord(pts[j - 1].p, pts[j].p, c).d2);
+                if (d > worst) worst = d;
+            }
+        }
+        circuit._sagitta = worst;
+        return worst;
+    },
+
+    /**
      * The circuit as one polygon for the inside test and the signed area:
      * a straight segment adds only its end point, a curved one every 4th
      * sample and its end. Kept small on purpose — in the ExtendScript engine
@@ -722,8 +748,10 @@ GM.Core = {
      * @param {Array<Array<number>>} marks - [[x, y], ...].
      * @param {Object} cutCircuit - Closed circuit of the cut line.
      * @param {number} D - Offset (document units).
-     * @param {number} tol - Tolerance (document units).
-     * @returns {Object} {ok, worst, reason: ""|"outside"|"distance"}
+     * @param {number} tol - Allowed deviation beyond the check's own sampling
+     *     error (the cut line's largest chord sagitta is added), document units.
+     * @returns {Object} {ok, worst, reason: ""|"outside"|"distance"}; worst is
+     *     the raw measured deviation.
      */
     checkMarks: function (marks, cutCircuit, D, tol) {
         var poly = GM.Core._samplePolygon(cutCircuit), worst = 0;
@@ -732,7 +760,7 @@ GM.Core = {
             var e = Math.abs(GM.Core.distanceToCircuit(cutCircuit, marks[i]) - D);
             if (e > worst) worst = e;
         }
-        if (worst <= tol) return { ok: true, worst: worst, reason: "" };
+        if (worst <= tol + GM.Core._chordSagitta(cutCircuit)) return { ok: true, worst: worst, reason: "" };
         return { ok: false, worst: worst, reason: "distance" };
     },
 
