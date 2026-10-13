@@ -315,6 +315,69 @@ console.log("--- process: open path, part of the outline, top start ---");
     assert(rec4.marks.length === 5 && top, "cornerless shape: 5 marks, one at the top");
 })();
 
+console.log("--- process: Count on a cut line without corners stays an even ring (final review M1) ---");
+(function () {
+    // Cut line: a circle of 4 arcs (no corners). The eyelet line is the inner
+    // circle plus a hair-thin spike at the right: three sharp corners, as an
+    // ellipse offset by more than its smallest curvature radius gains cusps.
+    // Count mode must not turn them into marks: the cut line has no corners, so
+    // the dialog promised N marks in an even ring from the top.
+    var KK = 4 / 3 * Math.tan(Math.PI / 8), c = 150 * MM;
+    // Circle of r in 4 arcs from angle 0, counter-clockwise; spikeAfter = index
+    // of the arc whose end anchor grows a 0.1 mm radial spike (-1: none).
+    function circleOf(r, spikeAfter) {
+        var segs = [], k = KK * r;
+        for (var q = 0; q < 4; q++) {
+            var a0 = q * Math.PI / 2, a1 = a0 + Math.PI / 2;
+            var p0 = [c + r * Math.cos(a0), c + r * Math.sin(a0)], p3 = [c + r * Math.cos(a1), c + r * Math.sin(a1)];
+            segs.push({ p0: p0, p1: [p0[0] - k * Math.sin(a0), p0[1] + k * Math.cos(a0)],
+                        p2: [p3[0] + k * Math.sin(a1), p3[1] - k * Math.cos(a1)], p3: p3 });
+            if (q === spikeAfter) {
+                var T = [p3[0] + 0.1 * MM * Math.cos(a1), p3[1] + 0.1 * MM * Math.sin(a1)];
+                segs.push(seg(p3, T), seg(T, p3));
+            }
+        }
+        return segs;
+    }
+    function cornersOf(segs) {
+        return GM.Core.findCorners(segs, true, GM.CONSTANTS.CORNER_ANGLE_MIN, GM.Core.buildCircuit(segs, true)).dists.length;
+    }
+    var side = 300 * MM, R = 100 * MM, D = 20 * MM;
+    var cut = pathInfoOf(circleOf(R, -1), true);
+    var eyelet = circleOf(R - D, 3);                      // the spike at the right (angle 0)
+    assert(cut.cornerCount === 0 && cornersOf(eyelet) > 0, "precheck: no corners on the cut line, some on the eyelet line");
+    var rec = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: cut,
+        offsetPath: function () { return { ok: true, loops: 1, segments: eyelet }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: true, number: 5, spacing: 100 } }), {});
+    var top = false;
+    for (var j = 0; j < rec.marks.length; j++) if (near(rec.marks[j].x, c, 0.5) && near(rec.marks[j].y, c + R - D, 0.1)) top = true;
+    assert(alerts.length === 0, "no alert (" + alerts.join(" | ") + ")");
+    assert(rec.marks.length === 5, "Count 5: five marks, not the eyelet line's corners (got " + rec.marks.length + ")");
+    assert(top, "the ring starts at the top of the eyelet line");
+
+    // Spacing mode still uses the corners it finds on the eyelet line
+    var rec2 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: cut,
+        offsetPath: function () { return { ok: true, loops: 1, segments: eyelet }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: false, number: 5, spacing: 100 } }), {});
+    assert(alerts.length === 0 && rec2.marks.length > 0, "Spacing mode unchanged: marks drawn (" + alerts.join(" | ") + ")");
+
+    // A run keeps to the same rule: the upper half selected, the spike at its
+    // middle (the top). Count gives the two ends of the run, not the spike.
+    var cutSegs = circleOf(R, -1);
+    cutSegs[0].sel = true; cutSegs[1].sel = true;
+    var cutCircuit = GM.Core.buildCircuit(cutSegs, true);
+    var part = { state: "runs", runs: GM.Core.selectedRuns(cutSegs, true, cutCircuit), selectedSegs: 2, totalSegs: 4 };
+    var eyeRun = circleOf(R - D, 0);
+    var rec3 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: pathInfoOf(cutSegs, true, part),
+        offsetPath: function () { return { ok: true, loops: 1, segments: eyeRun }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: true, number: 5, spacing: 100 } }), { pathPartial: true });
+    assert(alerts.length === 0 && rec3.marks.length === 2 && !!cornerMark(rec3, c + R - D, c) && !!cornerMark(rec3, c - (R - D), c),
+        "partial run, Count: the run's two ends only (got " + rec3.marks.length + "; " + alerts.join(" | ") + ")");
+})();
+
 console.log("--- process: polyline arc passes the check (review focus 1) ---");
 (function () {
     var side = 300 * MM, d = 20 * MM;

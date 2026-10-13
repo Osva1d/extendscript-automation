@@ -277,17 +277,22 @@ GM.Main = {
             line = { circuit: GM.Core.buildCircuit(segs, true), segments: segs, closed: true };
         }
         var feat = GM.Core.findCorners(line.segments, line.closed, GM.CONSTANTS.CORNER_ANGLE_MIN, line.circuit);
+        // Count on a cut line WITHOUT corners is N marks in an even ring (the
+        // dialog says so). An eyelet line that gained cusps from the offset
+        // (an ellipse offset by more than its smallest curvature radius) must
+        // not turn them into the marks.
+        var eyeCorners = (distCfg.useNumber && !(pathInfo.cornerCount > 0)) ? [] : feat.dists;
         var part = pathInfo.partial || { state: "none", runs: [] };
         var marks = [];
         if (opts.pathPartial && part.state === "runs") {
             for (var r = 0; r < part.runs.length; r++) {
                 var run = D > 0 ? GM.Core.mapRun(pathInfo.circuit, part.runs[r], line.circuit) : part.runs[r];
-                var cd = GM.Core.runCorners(feat.dists, run, line.circuit.totalLen);
+                var cd = GM.Core.runCorners(eyeCorners, run, line.circuit.totalLen);
                 var rm = GM.Core.placeAlong(line.circuit, cd, false, zoneCfg, distCfg, 0);
                 for (var q = 0; q < rm.length; q++) marks.push(rm[q]);
             }
         } else {
-            marks = GM.Core.placeAlong(line.circuit, feat.dists, line.closed, zoneCfg, distCfg,
+            marks = GM.Core.placeAlong(line.circuit, eyeCorners, line.closed, zoneCfg, distCfg,
                 GM.Core.topmostDist(line.circuit));
         }
         // Nothing to draw (an empty or degenerate eyelet line) is a failure,
