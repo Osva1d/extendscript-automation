@@ -304,7 +304,9 @@ GM to dělá (`grommet-marks/src/illustrator.js:174–177`). ZSM kreslí tahem O
 pruh (`zund-summa-marks/src/draw.js:362–367`) a ořezové linky (`:615–629`)
 do aktivního dokumentu bez toho; TE stejně kontrolní pláty
 (`tile-export/src/check.js:317–322`, `src/draw.js:92–102`) v pracovním
-dokumentu. Export TE se netýká — kreslí do nového dokumentu s výchozím stylem.
+dokumentu. Export TE kreslí cut cestu a značky do nového dokumentu; ten při
+měření začal bez čárek, ale jestli do něj nepřejde styl ze zdrojového
+dokumentu, změřené není.
 
 ZSM na začátku kreslení ruší výběr (`draw.js:116`), ale jestli tím vrátí
 výchozí styl, engine-facts neměří („stav po zrušení výběru neměřen"). Dopad,
