@@ -32,6 +32,13 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   vyjelo z plátna, se zalomí. Hranice načisto je vodítko. Originál zůstane, jak
   je, a další běh vrstvu `TE_panels` nahradí. Když se pláty na plátno nevejdou,
   Jen pláty to ohlásí a export proběhne bez nich.
+- **Výsledek začíná stavovou řádkou.** Tučně, zeleně, oranžově nebo červeně
+  řekne, jestli export poběží: „✓ Připraveno k exportu: 3 pláty, ruční ořez,
+  výstup 1:10.", „⚠ Připraveno k exportu, 1 upozornění níže.", „✗ Export
+  nejde, Jen pláty ano: …" nebo „✗ Nejde spustit: …". Pod ní tabulka plátů se
+  sloupci Načisto, S přídavky a Stránka PDF (u Zündu se značkami); stejné
+  sousední pláty sdílí řádek, třeba „1–2". Nejníž hlášky, chyby první,
+  a názvy souborů prvního plátu.
 - **Typ výstupu: ruční ořez, nebo Zünd.** Jedna volba místo řádku linky
   v panelu Export a panelu Zünd se zaškrtávátkem; pod ní jen pole zvoleného
   typu. Panel Export se jmenuje Soubory.
@@ -45,7 +52,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   Uložit jako… a Smazat pod ním. Seznam má místo i pro dlouhé názvy, dřív mu
   tlačítka nechala 88 px. Výchozí předvolba se česky jmenuje [Výchozí], jako
   v Zünd Summa Marks.
-- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 749 px
+- Pole vzoru pojmenování je přes celý řádek. Dialog měří 1178 × 836 px
   (1.0.1: 793 px na výšku).
 - `{n}` má vždy aspoň dvě číslice, jak dílna čísluje pláty: `zed_01`, ne
   `zed_1`.
@@ -54,6 +61,14 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Překlep v číselném poli už nevydá jiné číslo.** Přelep „2O" dřív tiše
+  znamenal nulový přelep, „1 000" nebo „20 mm" výchozí hodnotu pole a prázdné
+  měřítko kresby 1:1; dialog nic neřekl a export proběhl (i v 1.0.1). Teď
+  pole zčervená, Výsledek ho pojmenuje — „✗ Pole „Přelep“: zadejte číslo,
+  třeba 20 nebo 2,5." — a Jen pláty, export, Uložit i Uložit jako… zešednou.
+  Číslo smí mít desetinnou čárku nebo tečku a mezery okolo; cokoli jiného,
+  i prázdné pole, je chyba. Pole, které zvolené nastavení nepoužívá, se
+  nehodnotí.
 - U směru Vodorovně se pole jmenuje Výška plátu a hlášky mluví o výšce. Když
   výška vydá jen na jeden plát, hláška řekne, kolik grafika ve směru dělení
   měří — dřív stálo jen „Jsou potřeba aspoň 2 pláty."
