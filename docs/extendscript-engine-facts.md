@@ -568,6 +568,28 @@ Text rozdělený `\n` na krátké řádky se bez šířky přizpůsobí obsahu (
 59 × 45 px). Že se text ve 120 × 60 skutečně ořízne, je odvozené z rozměrů,
 vizuálně neověřeno.
 
+### ScriptUI: tabulka v `listbox`, tučný a barevný text (naměřeno 2026-10-15, AI 30.8.2)
+
+`listbox` s `numberOfColumns`, `showHeaders`, `columnTitles` a `columnWidths`
+je tabulka: první sloupec nese `item.text`, další `item.subItems[i].text`.
+Přirozená výška s hlavičkou je **33 px + 20 px na řádek** (bez hlavičky
+14 + 20; `itemSize` hlásí řádek 19 px), prázdná tabulka 54 px. Tři řádky bez
+posouvání tedy chtějí 93 px. Odhad bez okrajů (hlavička 19 + 3 × 20 = 79 px)
+o 14 px chybí; že 80 px třetí řádek uřízne, je odvozené z rozměrů, vizuálně
+neověřeno. tile-export dává tabulce 93 px.
+
+Víceřádkový `edittext` (`readonly`, `scrolling`) se šířkou 455 px chce
+přirozeně 8 + 30 px na řádek (1 řádek 38 px, 5 řádků 158 px), i když se
+krátké řádky do šířky vejdou — jako `statictext` výš výšku z nastavené šířky
+nepočítá. Výšku nastav sám a ověř okem.
+
+`graphics.font = ScriptUI.newFont(font.name, "BOLD", font.size)`
+a `graphics.foregroundColor = graphics.newPen(PenType.SOLID_COLOR, [r, g, b], 1)`
+na `statictext` se vykreslí tučně a barevně (náhled s uživatelem 2026-10-15).
+`measureString` po změně písma vrací stejné šířky jako předtím — tučně 176 px
+jako obyčejně, Menlo 31/42 px pro „1111"/„WWWW" jako výchozí písmo — na
+rozměr tučného textu se tedy nehodí.
+
 ### Spot barva a artboardy
 
 - `doc.spots.add()` + `colorType = ColorModel.SPOT` + `SpotColor.spot`

@@ -23,8 +23,9 @@ TE.UI = {
         // scroll bar stay inside the 478 px of the right column (2026-10-15)
         RESULT_COLS: [50, 130, 135, 140],
         // px; the table shows its header and three rows — equal panels share
-        // a row, so three cover most splits — and scrolls past that
-        RESULT_TABLE_H: 80,
+        // a row, so three cover most splits — and scrolls past that. A listbox
+        // with headers needs 33 px plus 20 per row (measured 2026-10-15)
+        RESULT_TABLE_H: 93,
         // px; three lines of details: a Zünd job's marks line and its two
         // file names, measured in the preview of 2026-10-15
         RESULT_TEXT_H: 58
