@@ -196,8 +196,8 @@ u vodorovných (Vodorovně) vodorovná.
 
 ## Zünd režim
 
-Pro strojní přesný ořez na Zündu, **zatím rovný**: řeže se obdélník plátu.
-Tvarový ořez podle kontury přijde v další verzi.
+Pro strojní přesný ořez na Zündu, **zatím jen rovný ořez**. Tvarový ořez
+podle kontury přijde v další verzi.
 
 Zvolený jako **Typ výstupu** udělá z každého plátu **dvě PDF se stejnou
 stránkou**:
@@ -205,7 +205,7 @@ stránkou**:
 | soubor | obsah |
 |---|---|
 | `zed_01_2040x1030mm.pdf` | grafika oříznutá maskou **o spad za řezem** (výchozí 5 mm), kolem ní volný pás a registrační značky; vrstva řezu je v souboru **vypnutá** |
-| `zed_01_2040x1030mm_cut.pdf` | stejné značky a řezová cesta — obdélník plátu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
+| `zed_01_2040x1030mm_cut.pdf` | stejné značky a řezová cesta rovného ořezu v přímé barvě řezu, hairline 0,125 pt; **bez vrstvy grafiky** |
 
 Obě PDF se ukládají **se zachovanou editovatelností v Illustratoru**. Otevřené
 mají vrstvy jako soubor ze Zünd Summa Marks, shora `Regmarks`, vrstvu řezu
@@ -251,7 +251,7 @@ v dialogu ji ukazuje ve sloupci Stránka PDF.
   pod průměrem značky splynou sousední. Dialog jmenuje plát a export zablokuje;
   pomůže jiná vzdálenost orientačního bodu, případně rozteč.
 - **Cesty v barvě řezu v dokumentu se zatím nepoužijí.** Dialog na ně upozorní
-  a řeže se obdélník plátu.
+  a použije se rovný ořez.
 - **Starší předvolby** mají barvu `cut` s malým písmenem a odstup 10 mm, který
   se dřív měřil od okraje plátu. Po načtení zkontroluj.
 - **PDF preset platí pro oba soubory.** Preset s tiskovými značkami nebo

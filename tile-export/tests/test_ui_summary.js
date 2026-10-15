@@ -195,11 +195,12 @@ ctx.contourSpots = [];
 var tz = summary(zund({}));
 has(tz, "1 | 1000 × 1000 | 1010 × 1000 | 104 × 103", "pages with marks");
 has(tz, "2 | 1000 × 1000 | 1020 × 1000 | 105 × 103", "panel 2");
-has(tz, "Značky v barvě „[Registration]“, řez: obdélník plátu v barvě „Cut“.", "no contour: the panel rectangle is cut");
+has(tz, "Značky v barvě „[Registration]“, rovný ořez v barvě „Cut“.", "no contour: a straight cut");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
 has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
-has(tzc, "řez: obdélník plátu v barvě „Cut“.", "and the rectangle is still what gets cut");
+has(tzc, "— použije se rovný ořez.", "a contour is not cut: the straight cut is used");
+has(tzc, "rovný ořez v barvě „Cut“.", "and the details still name the straight cut");
 ctx.contourSpots = [];
 has(summary(zund({ etBleed: { text: "10" } })), "1 | 1000 × 1000 | 1010 × 1000 | 105 × 104",
     "bleed 10 grows the page by 1 mm a side at 1:10");
