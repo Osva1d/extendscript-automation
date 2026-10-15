@@ -53,17 +53,23 @@ assert(TE.Utils.indexOf(["a", "b", "c"], "b") === 1, "finds element");
 assert(TE.Utils.indexOf(["a"], "z") === -1, "missing element -> -1");
 assert(TE.Utils.indexOf([], "z") === -1, "empty array -> -1");
 
-console.log("\n=== toNumber ===");
-// Number() with the Czech decimal comma, and nothing else changed: callers
-// rely on "" being 0 and garbage being NaN to pick their own fallback.
-assert(TE.Utils.toNumber("0,3") === 0.3, "Czech decimal comma");
-assert(TE.Utils.toNumber("0.3") === 0.3, "decimal point unchanged");
-assert(TE.Utils.toNumber(" 12,5 ") === 12.5, "whitespace trimmed around a comma");
-assert(TE.Utils.toNumber(20) === 20, "a number passes through");
-assert(TE.Utils.toNumber("") === 0, "empty is 0, exactly like Number()");
-assert(TE.Utils.toNumber("0") === 0, "zero is zero");
-assert(isNaN(TE.Utils.toNumber("abc")), "garbage is NaN");
-assert(isNaN(TE.Utils.toNumber("1,5,3")), "two separators are NaN, not 1.5");
+console.log("\n=== parseNumber: a typo is never a different number (audit P1) ===");
+// The family rule: a decimal comma or dot, spaces around ignored, nothing
+// else. Number() with a fallback behind it read overlap "2O" as no overlap.
+assert(TE.Utils.parseNumber("0,3") === 0.3, "Czech decimal comma");
+assert(TE.Utils.parseNumber("0.3") === 0.3, "decimal point");
+assert(TE.Utils.parseNumber(" 12,5 ") === 12.5, "spaces around are ignored");
+assert(TE.Utils.parseNumber(20) === 20, "a number passes through");
+assert(TE.Utils.parseNumber("0") === 0, "zero is zero");
+assert(TE.Utils.parseNumber("-5") === -5, "a sign is read, the range check judges it");
+assert(isNaN(TE.Utils.parseNumber("")), "an empty field is no number");
+assert(isNaN(TE.Utils.parseNumber("2O")), "a letter O is no zero");
+assert(isNaN(TE.Utils.parseNumber("1 000")), "a space inside is no thousands separator");
+assert(isNaN(TE.Utils.parseNumber("20 mm")), "nor is a unit");
+assert(isNaN(TE.Utils.parseNumber("1,5,3")), "two separators");
+assert(isNaN(TE.Utils.parseNumber("1e3")), "an exponent, which Number() reads as 1000");
+assert(isNaN(TE.Utils.parseNumber("0x10")), "hex, which Number() reads as 16");
+assert(isNaN(TE.Utils.parseNumber(null)), "nothing at all");
 
 console.log("\n=== validateNumber ===");
 assert(TE.Utils.validateNumber("12,5", 0, 100, "x") === 12.5, "Czech decimal comma");

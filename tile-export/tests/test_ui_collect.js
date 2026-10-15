@@ -72,21 +72,20 @@ var cz = TE.UI.collect(rzc);
 eq(cz.cutBleed, 2.5, "bleed 2,5");
 eq(cz.cutSpot, "Thru-cut", "cut colour from the list");
 rzc.etBleed.text = "";
-eq(TE.UI.collect(rzc).cutBleed, TE.Config.getDefaults().cutBleed, "empty bleed falls back to the default");
+eq(isNaN(TE.UI.collect(rzc).cutBleed), true, "an empty bleed is no number, not the default (audit P1)");
 
-console.log("\n=== fallbacks are unchanged — only the parsing moved ===");
-// Empty, zero and garbage still take the same fallback each field always had.
-// The one fallback that changed is the line width's: it disagreed with the
-// default and with draw.js's own guard. Compared to the default itself, which
-// N13 moved from 0.3 to 1 pt.
-var LW = TE.Config.getDefaults().lineWidth;
-eq(TE.UI.collect(refs({ etLineW: "" })).lineWidth, LW, "empty line width falls back to the default");
-eq(TE.UI.collect(refs({ etLineW: "0" })).lineWidth, LW, "zero line width falls back to the default");
-eq(TE.UI.collect(refs({ etLineW: "abc" })).lineWidth, LW, "garbage line width falls back to the default");
-eq(TE.UI.collect(refs({ etOverlap: "" })).overlap, 0, "empty overlap is still 0");
-eq(TE.UI.collect(refs({ etDPI: "" })).rasterDPI, 150, "empty DPI still falls back to 150");
-eq(isNaN(TE.UI.collect(refs({ etWidth: "abc" })).tileWidth), true,
-    "garbage width stays NaN so the grid rejects it, as before");
+console.log("\n=== a typo stays a typo (audit P1) ===");
+// collect() used to put a default in place of whatever Number() could not
+// read: overlap "2O" became no overlap, line width "abc" became 1 pt, and the
+// dialog said nothing. It now hands back NaN and refresh() names the field.
+eq(isNaN(TE.UI.collect(refs({ etOverlap: "2O" })).overlap), true, "overlap 2O is no number");
+eq(isNaN(TE.UI.collect(refs({ etOverlap: "" })).overlap), true, "an empty overlap is none either");
+eq(isNaN(TE.UI.collect(refs({ etLineW: "abc" })).lineWidth), true, "garbage line width");
+eq(TE.UI.collect(refs({ etLineW: "0" })).lineWidth, 0, "a zero line width is kept, the check names it");
+eq(isNaN(TE.UI.collect(refs({ etDPI: "" })).rasterDPI), true, "an empty DPI field");
+eq(isNaN(TE.UI.collect(refs({ etScaleN: "1O" })).scaleN), true, "drawing scale 1O");
+eq(isNaN(TE.UI.collect(refs({ etAddLeft: "1 000" })).addLeft), true, "a space inside a number");
+eq(isNaN(TE.UI.collect(refs({ etWidth: "abc" })).tileWidth), true, "garbage width");
 
 console.log("\n=== guard: no text field reaches Number() unparsed ===");
 // The bug was a bypass, not a missing helper — TE.Utils already parsed commas
@@ -94,7 +93,10 @@ console.log("\n=== guard: no text field reaches Number() unparsed ===");
 var ui = fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8");
 // Lookbehind so "toNumber(r.etX.text)" does not count as a bare Number().
 var bare = ui.match(/(?<![\w.])Number\(\s*r\.et\w+\.text\s*\)/g) || [];
-eq(bare.length, 0, "collect() uses TE.Utils.toNumber for every field (found: " + bare.join(", ") + ")");
+eq(bare.length, 0, "collect() parses every field (found: " + bare.join(", ") + ")");
+var collectSrc = ui.slice(ui.indexOf("    collect: function"), ui.indexOf("    apply: function"));
+eq(/parseNumber\([^)]*\)\s*\|\|/.test(collectSrc) || /toNumber/.test(collectSrc), false,
+    "and no field hides a typo behind a default (audit P1)");
 
 console.log("\n=== N20: the PDF preset list never names a preset Illustrator lacks ===");
 // The old fallback, "[High Quality Print]", does not exist on a Czech install
@@ -130,7 +132,8 @@ console.log("\n=== 1.1.0: the drawing scale is the document's ===");
 // One field, no checkbox: 1 is a scale like any other.
 eq(TE.UI.collect(refs({ etScaleN: "10" })).scaleN, 10, "1:10 is read");
 eq(TE.UI.collect(refs({ etScaleN: "12,5" })).scaleN, 12.5, "with the decimal comma too");
-eq(TE.UI.collect(refs({ etScaleN: "" })).scaleN, 1, "an empty field is 1:1");
+eq(isNaN(TE.UI.collect(refs({ etScaleN: "" })).scaleN), true,
+    "an empty field is no number: its tip promises no default (audit P1, family rule)");
 eq(/cbScale/.test(ui), false, "the old checkbox is gone");
 // A preset leaves it alone: it neither carries the scale nor changes it.
 var pv = TE.UI.presetValues(TE.UI.collect(refs({ etScaleN: "10" })));

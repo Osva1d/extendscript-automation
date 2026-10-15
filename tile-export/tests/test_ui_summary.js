@@ -270,6 +270,25 @@ var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", e
 has(t41, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně: the top panel is a full 600");
 has(t41, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and the bottom one takes the remainder");
 
+console.log("\n=== audit P1: a typo names its field and stops the run ===");
+function run(o) { var r = refs(o); var st = TE.UI.refresh(null, r, ctx); r.st = st; return r; }
+var rTypo = run({ etOverlap: { text: "2O", enabled: true } });
+has(rTypo.stCalc.text, "✗ Pole „Přelep“: zadejte číslo, třeba 20 nebo 2,5.", "overlap 2O is named");
+eq(rTypo.btnTiles.enabled || rTypo.btnExport.enabled, false, "and neither run can start");
+eq(rTypo.st.numbersOk, false, "refresh() says so, for the preset buttons");
+has(run({ etAddLeft: { text: "-5", enabled: true } }).stCalc.text, "✗ Pole „Přídavek vlevo“ nesmí být záporné.",
+    "a negative add");
+var rScale = run({ etScaleN: { text: "0", enabled: true } });
+has(rScale.stCalc.text, "✗ Pole „Měřítko kresby“ musí být větší než 0.", "a zero drawing scale");
+eq(rScale.stCleanInfo.text, "—", "the Document panel shows no millimetres without a scale");
+has(run({ etScaleN: { text: "", enabled: true } }).stCalc.text, "✗ Pole „Měřítko kresby“: zadejte číslo",
+    "an empty drawing scale is no 1:1 any more");
+var rDown = run({ rbDir: [{ value: false }, { value: true }], rbMode: [{ value: false }, { value: true }, { value: false }],
+    etWidth: { text: "6OO", enabled: true } });
+has(rDown.stCalc.text, "✗ Pole „Výška plátu“: zadejte číslo", "stacked panels name the height");
+var rUnused = run({ etCount: { text: "abc", enabled: true }, rbMode: [{ value: false }, { value: true }, { value: false }] });
+eq(rUnused.btnExport.enabled && rUnused.st.numbersOk, true, "a field the split does not use does not stop it");
+
 console.log("\n=== 1.1.0: the Result shows the first file's name ===");
 // The arch sheet is 3000 x 1000 mm at 1:10; panel 1 prints 1010 x 1000 mm.
 has(summary({}), "Soubor plátu 1: arch_01.pdf", "the default pattern, {n} with two digits");

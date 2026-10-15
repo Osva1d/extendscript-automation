@@ -163,19 +163,20 @@ TE.Utils = {
     },
 
     /**
-     * Text from a dialog field to a Number, accepting the Czech decimal comma.
-     *
-     * Otherwise exactly Number() — "" is 0, garbage is NaN — so every caller
-     * keeps deciding for itself what an empty or invalid field falls back to.
-     * Bare Number() rejects "0,3" as NaN, and the dialog's "|| fallback" then
-     * swapped in a different value without a word: 1 pt for a line width,
-     * zero for an overlap or an add.
+     * A number as the operator typed it: spaces around are ignored, the
+     * decimal separator is a comma or a dot. Anything else — "2O", "1 000",
+     * "20 mm", "1e3", an empty field — is NaN, never a different number.
+     * Number() with a "|| default" behind it read overlap "2O" as no overlap
+     * and said nothing (audit P1, 2026-10-14). The family rule, after
+     * grommet-marks parseNumber, without its Number() leniency for "1e3".
      *
      * @param {string|number} val - Raw field text.
-     * @returns {number} Parsed value, NaN when not numeric.
+     * @returns {number} The number, or NaN.
      */
-    toNumber: function (val) {
-        return Number(String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, ""));
+    parseNumber: function (val) {
+        var str = (val === null || val === undefined) ? "" : String(val).replace(/^\s+|\s+$/g, "");
+        if (!/^[+-]?\d+([.,]\d+)?$/.test(str)) { return NaN; }
+        return Number(str.replace(",", "."));
     },
 
     /**

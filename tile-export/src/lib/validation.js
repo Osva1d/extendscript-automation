@@ -7,6 +7,52 @@ var TE = TE || {};
 
 TE.Validate = {
     /**
+     * The number fields and when the run uses them. min is the lowest value
+     * allowed; above means it must be greater than min. Count, width and
+     * resolution are only checked for being numbers here — the grid and
+     * check() judge their range with their own messages.
+     */
+    NUMBER_FIELDS: [
+        { key: "scaleN",     min: 0, above: true },
+        { key: "tileCount",  when: function (s) { return s.divideMode === "count"; } },
+        { key: "tileWidth",  when: function (s) { return s.divideMode === "width"; } },
+        { key: "guideRound", min: 0, when: function (s) { return s.divideMode === "guides"; } },
+        { key: "overlap",    min: 0 },
+        { key: "addTop",     min: 0 },
+        { key: "addBottom",  min: 0 },
+        { key: "addLeft",    min: 0 },
+        { key: "addRight",   min: 0 },
+        { key: "rasterDPI",  when: function (s) { return s.exportMode === "raster"; } },
+        { key: "lineWidth",  min: 0, above: true, when: function (s) { return !s.zundMode && s.drawLine; } },
+        { key: "cutBleed",   min: 0, when: function (s) { return s.zundMode; } },
+        { key: "markSizeZ",  min: 0, above: true, when: function (s) { return s.zundMode; } },
+        { key: "gapInner",   min: 0, when: function (s) { return s.zundMode; } },
+        { key: "maxDist",    min: 0, above: true, when: function (s) { return s.zundMode; } },
+        { key: "orientDist", min: 0, when: function (s) { return s.zundMode; } }
+    ],
+
+    /**
+     * Number fields the run would use that do not hold a usable number.
+     * PURE FUNCTION. A field the settings leave unused — the count while
+     * dividing by width, the Zünd fields with a manual trim — is not judged:
+     * its value waits, unused, and must not stop the run (audit P1).
+     * @param {Object} s - Settings from TE.UI.collect().
+     * @returns {Array} {key, kind}: "nan", "negative" or "zero".
+     */
+    numberErrors: function (s) {
+        var out = [], i, f, v;
+        for (i = 0; i < this.NUMBER_FIELDS.length; i++) {
+            f = this.NUMBER_FIELDS[i];
+            if (f.when && !f.when(s)) { continue; }
+            v = s[f.key];
+            if (typeof v !== "number" || !isFinite(v)) { out.push({ key: f.key, kind: "nan" }); }
+            else if (f.min !== undefined && f.above && v <= f.min) { out.push({ key: f.key, kind: "zero" }); }
+            else if (f.min !== undefined && !f.above && v < f.min) { out.push({ key: f.key, kind: "negative" }); }
+        }
+        return out;
+    },
+
+    /**
      * Checks a computed job against the document it will run on.
      *
      * @param {Array} tiles - Output of TE.Grid.computeTiles().

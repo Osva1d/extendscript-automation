@@ -104,7 +104,8 @@ TE.Storage = {
         var out = {}, k;
         for (k in def) {
             if (def.hasOwnProperty(k)) {
-                out[k] = (preset && preset.hasOwnProperty(k)) ? preset[k] : def[k];
+                // null is how JSON stores a field left as NaN (audit P1).
+                out[k] = (preset && preset.hasOwnProperty(k) && preset[k] !== null) ? preset[k] : def[k];
             }
         }
         return out;
