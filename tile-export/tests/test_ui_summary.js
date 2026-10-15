@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * TE.UI.refresh — the text of the Result field, and TE.Utils.formatMM behind it.
+ * TE.UI.refresh — the Result: its status line, its table of panels and the
+ * details under them — and TE.Utils.formatMM behind it.
  * Runs the real refresh() against stand-in controls, on the test sheet from
  * tools/make-test-document.jsx: 3000 x 1000 mm at 1:10, 50 mm bleed.
  */
@@ -32,6 +33,18 @@ function has(text, needle, msg) {
     else { fail++; console.log("  FAIL: " + msg + " | missing \"" + needle + "\" in:\n" + text); }
 }
 
+/** A listbox stand-in: removeAll() and add() with three sub-items. */
+function listbox() {
+    var lb = { items: [] };
+    lb.removeAll = function () { lb.items = []; };
+    lb.add = function (type, text) {
+        var it = { text: text, subItems: [{ text: "" }, { text: "" }, { text: "" }] };
+        lb.items.push(it);
+        return it;
+    };
+    return lb;
+}
+
 /** Stand-in controls, set to the test plan's baseline plus overrides. */
 function refs(o) {
     function et(v) { return { text: String(v), enabled: true }; }
@@ -50,6 +63,7 @@ function refs(o) {
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
         stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
+        stStatus: { text: "" }, lbTiles: listbox(),
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
     var k;
@@ -66,7 +80,16 @@ var ctx = {
     validation: { overhang: { left: bleed, right: bleed, top: bleed, bottom: bleed },
         graphicCount: 1, scaleFactor: 1, mediaWidth: null, maxArtboard: 16200, hasCutSpot: true }
 };
-function summary(o) { var r = refs(o); TE.UI.refresh(null, r, ctx); return r.stCalc.text; }
+/** The whole Result as text: status, one "a | b | c | d" line per row, details. */
+function text(r) {
+    var rows = [], i, it;
+    for (i = 0; i < r.lbTiles.items.length; i++) {
+        it = r.lbTiles.items[i];
+        rows.push(it.text + " | " + it.subItems[0].text + " | " + it.subItems[1].text + " | " + it.subItems[2].text);
+    }
+    return r.stStatus.text + "\n" + rows.join("\n") + "\n" + r.stCalc.text;
+}
+function summary(o) { var r = refs(o); TE.UI.refresh(null, r, ctx); return text(r); }
 
 console.log("\n=== formatMM ===");
 eq(TE.Utils.formatMM(1026.6667, ","), "1026,7", "one decimal, Czech comma");
@@ -83,13 +106,13 @@ console.log("\n=== the report: T3.2 showed whole millimetres ===");
 // panels later, adds up to 3081 mm of material instead of 3080.
 var t32 = summary({ cbEqual: { value: true, enabled: true },
     etAddTop: { text: "40" }, etAddBottom: { text: "40" }, etAddRight: { text: "40" } });
-has(t32, "1: načisto 1016,7 × 1000 mm, s přídavky 1026,7 × 1080 mm", "panel 1");
-has(t32, "2: načisto 1006,7 × 1000 mm, s přídavky 1026,7 × 1080 mm", "panel 2");
-has(t32, "3: načisto 976,7 × 1000 mm, s přídavky 1026,7 × 1080 mm", "panel 3");
+has(t32, "1 | 1016,7 × 1000 | 1026,7 × 1080 |", "panel 1");
+has(t32, "2 | 1006,7 × 1000 | 1026,7 × 1080 |", "panel 2");
+has(t32, "3 | 976,7 × 1000 | 1026,7 × 1080 |", "panel 3");
 
 console.log("\n=== whole millimetres still read as whole millimetres ===");
 var t11 = summary({});
-has(t11, "1: načisto 1000 × 1000 mm, s přídavky 1010 × 1000 mm", "T1.1 panel 1 has no ,0");
+has(t11, "1 | 1000 × 1000 | 1010 × 1000 |", "T1.1 panel 1 has no ,0");
 
 console.log("\n=== 1.1.0: the Document panel shows what TE found ===");
 // Clean format and available bleed moved from the Result into the Document
@@ -149,10 +172,13 @@ console.log("\n=== N16: the summary shows what the output scale does ===");
 // The panel lines are in real millimetres and do not move with the output
 // scale; only the PDF page does. Without this line the choice was invisible
 // until the export (R3.1 looked exactly like R3.2).
-has(summary({}), "Stránky PDF (1:10): 101 × 100 | 102 × 100 | 101 × 100 mm", "1:10 sheet, same as document");
+var t16 = summary({});
+has(t16, "1 | 1000 × 1000 | 1010 × 1000 | 101 × 100", "1:10 sheet: a panel and its page on one line");
+has(t16, "2 | 1000 × 1000 | 1020 × 1000 | 102 × 100", "panel 2");
+has(t16, "3 | 1000 × 1000 | 1010 × 1000 | 101 × 100", "panel 3, not merged with panel 1 two rows up");
 has(summary({ rbExpScale: [{ value: false }, { value: true }] }),
-    "Stránky PDF: skutečná velikost, stejná jako s přídavky.", "1:1 output repeats no sizes");
-has(summary({ etScaleN: { text: "12,5", enabled: true } }), "Stránky PDF (1:12,5):", "a decimal scale keeps its comma");
+    "1 | 1000 × 1000 | 1010 × 1000 | 1010 × 1000", "1:1 output: the page is the panel with its adds");
+has(summary({ etScaleN: { text: "12,5", enabled: true } }), "výstup 1:12,5.", "a decimal scale keeps its comma");
 
 console.log("\n=== Zünd: pages carry the marks, and the cut is named ===");
 // Defaults: bleed 5 past the cut, marks 5 mm, 5 mm clear of the mask, so
@@ -167,20 +193,22 @@ function zund(extra) {
 }
 ctx.contourSpots = [];
 var tz = summary(zund({}));
-has(tz, "Stránky PDF (1:10) se značkami: 104 × 103 | 105 × 103 | 104 × 103 mm", "pages with marks");
-has(tz, "Řez: obdélník plátu v barvě Cut.", "no contour: the panel rectangle is cut");
+has(tz, "1 | 1000 × 1000 | 1010 × 1000 | 104 × 103", "pages with marks");
+has(tz, "2 | 1000 × 1000 | 1020 × 1000 | 105 × 103", "panel 2");
+has(tz, "Značky v barvě „[Registration]“, řez: obdélník plátu v barvě „Cut“.", "no contour: the panel rectangle is cut");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
-has(tzc, "! Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
-has(tzc, "Řez: obdélník plátu v barvě Cut.", "and the rectangle is still what gets cut");
+has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
+has(tzc, "řez: obdélník plátu v barvě „Cut“.", "and the rectangle is still what gets cut");
 ctx.contourSpots = [];
-has(summary(zund({ etBleed: { text: "10" } })), "se značkami: 105 × 104 |", "bleed 10 grows the page by 1 mm a side at 1:10");
+has(summary(zund({ etBleed: { text: "10" } })), "1 | 1000 × 1000 | 1010 × 1000 | 105 × 104",
+    "bleed 10 grows the page by 1 mm a side at 1:10");
 // Adds are part of the panel, so they are part of the cut: the cut is the
 // printed panel (clean + adds + overlap), where the red line lies in the
 // ordinary mode, and the bleed past the cut comes on top. Add right 40 and
 // top 40 at 1:10: panel 3 cuts 1050 x 1040, its page is 1080 x 1070 = 108 x 107.
 has(summary(zund({ etAddRight: { text: "40" }, etAddTop: { text: "40" } })),
-    "Stránky PDF (1:10) se značkami: 104 × 107 | 105 × 107 | 108 × 107 mm", "adds widen the cut and the page");
+    "3 | 1000 × 1000 | 1050 × 1040 | 108 × 107", "adds widen the cut and the page");
 
 console.log("\n=== N26: marks that would merge are named before the export ===");
 // Panel width 1460 on the 3000 mm sheet, no overlap: panels of 1460, 1460
@@ -234,11 +262,11 @@ var guidesMode = [{ value: false }, { value: false }, { value: true }];
 var stacked = [{ value: false }, { value: true }];
 ctx.guidesByDirection = { horizontal: { positions: [mm10(1000)] }, vertical: { positions: [mm10(400)] } };
 var t38v = summary({ rbDir: stacked, rbMode: guidesMode });
-has(t38v, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně splits on the horizontal guide: top panel");
-has(t38v, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and bottom panel");
+has(t38v, "1 | 3000 × 600 | 3000 × 610 |", "Vodorovně splits on the horizontal guide: top panel");
+has(t38v, "2 | 3000 × 400 | 3000 × 410 |", "and bottom panel");
 var t38s = summary({ rbMode: guidesMode });
-has(t38s, "1: načisto 1000 × 1000 mm, s přídavky 1010 × 1000 mm", "Svisle splits on the vertical guide: left panel");
-has(t38s, "2: načisto 2000 × 1000 mm, s přídavky 2010 × 1000 mm", "and right panel");
+has(t38s, "1 | 1000 × 1000 | 1010 × 1000 |", "Svisle splits on the vertical guide: left panel");
+has(t38s, "2 | 2000 × 1000 | 2010 × 1000 |", "and right panel");
 ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: [mm10(400)] } };
 var r38 = refs({ rbDir: stacked, rbMode: guidesMode });
 TE.UI.refresh(null, r38, ctx);
@@ -267,20 +295,39 @@ has(summary({ etCount: { text: "1", enabled: true } }), "✗ Jsou potřeba aspo�
 
 console.log("\n=== N41: a width split puts the remainder on the last panel, going down too ===");
 var t41 = summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "600", enabled: true } });
-has(t41, "1: načisto 3000 × 600 mm, s přídavky 3000 × 610 mm", "Vodorovně: the top panel is a full 600");
-has(t41, "2: načisto 3000 × 400 mm, s přídavky 3000 × 410 mm", "and the bottom one takes the remainder");
+has(t41, "1 | 3000 × 600 | 3000 × 610 |", "Vodorovně: the top panel is a full 600");
+has(t41, "2 | 3000 × 400 | 3000 × 410 |", "and the bottom one takes the remainder");
+
+console.log("\n=== audit P1: a typo names its field and stops the run ===");
+function run(o) { var r = refs(o); var st = TE.UI.refresh(null, r, ctx); r.st = st; return r; }
+var rTypo = run({ etOverlap: { text: "2O", enabled: true } });
+has(rTypo.stCalc.text, "✗ Pole „Přelep“: zadejte číslo, třeba 20 nebo 2,5.", "overlap 2O is named");
+eq(rTypo.btnTiles.enabled || rTypo.btnExport.enabled, false, "and neither run can start");
+eq(rTypo.st.numbersOk, false, "refresh() says so, for the preset buttons");
+has(run({ etAddLeft: { text: "-5", enabled: true } }).stCalc.text, "✗ Pole „Přídavek vlevo“ nesmí být záporné.",
+    "a negative add");
+var rScale = run({ etScaleN: { text: "0", enabled: true } });
+has(rScale.stCalc.text, "✗ Pole „Měřítko kresby“ musí být větší než 0.", "a zero drawing scale");
+eq(rScale.stCleanInfo.text, "—", "the Document panel shows no millimetres without a scale");
+has(run({ etScaleN: { text: "", enabled: true } }).stCalc.text, "✗ Pole „Měřítko kresby“: zadejte číslo",
+    "an empty drawing scale is no 1:1 any more");
+var rDown = run({ rbDir: [{ value: false }, { value: true }], rbMode: [{ value: false }, { value: true }, { value: false }],
+    etWidth: { text: "6OO", enabled: true } });
+has(rDown.stCalc.text, "✗ Pole „Výška plátu“: zadejte číslo", "stacked panels name the height");
+var rUnused = run({ etCount: { text: "abc", enabled: true }, rbMode: [{ value: false }, { value: true }, { value: false }] });
+eq(rUnused.btnExport.enabled && rUnused.st.numbersOk, true, "a field the split does not use does not stop it");
 
 console.log("\n=== 1.1.0: the Result shows the first file's name ===");
 // The arch sheet is 3000 x 1000 mm at 1:10; panel 1 prints 1010 x 1000 mm.
-has(summary({}), "Soubor plátu 1: arch_01.pdf", "the default pattern, {n} with two digits");
+has(summary({}), "\narch_01.pdf", "the pattern of these stand-ins, {n} with two digits");
 var shopPat = { text: "26_13456_a_{n}_{size}_{scale}_1x", enabled: true };
-has(summary({ etPattern: shopPat }), "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku10_1x.pdf",
+has(summary({ etPattern: shopPat }), "\n26_13456_a_01_1010x1000mm_1ku10_1x.pdf",
     "1:10 as drawn: real size and the ratio");
 has(summary({ etPattern: shopPat, rbExpScale: [{ value: false }, { value: true }] }),
-    "Soubor plátu 1: 26_13456_a_01_1010x1000mm_1ku1_1x.pdf",
+    "\n26_13456_a_01_1010x1000mm_1ku1_1x.pdf",
     "1:1: a {scale} in the pattern is meant, so the ratio is 1ku1 (user, 2026-10-11)");
 has(summary(zund({ etPattern: shopPat })),
-    "Soubory plátu 1: 26_13456_a_01_1040x1030mm_1ku10_1x.pdf a 26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf",
+    "\n26_13456_a_01_1040x1030mm_1ku10_1x.pdf\n26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf",
     "Zünd: the page with its marks, and the _cut file beside it");
 var rSlash = refs({ etPattern: { text: "zakazka/{n}", enabled: true } });
 TE.UI.refresh(null, rSlash, ctx);
@@ -317,16 +364,54 @@ var r62 = refs({ etScaleN: { text: "1" } });
 TE.UI.refresh(null, r62, lcCtx);
 eq(r62.btnExport.enabled, true, "no Large Canvas error, export enabled");
 eq(r62.stCalc.text.indexOf("Large Canvas") === -1, true, "and the old message is gone");
-has(r62.stCalc.text, "Stránky PDF: skutečná velikost", "Large Canvas at same-as-document prints real size (N16)");
+has(text(r62), "1 | 2000 × 1000 | 2010 × 1000 | 2010 × 1000", "Large Canvas at same-as-document prints real size (N16)");
 var r43 = refs({ etScaleN: { text: "10" } });
 TE.UI.refresh(null, r43, lcCtx);
-has(r43.stCalc.text, "Stránky PDF (1:10): 2001 × 1000 | 2002 × 1000 | 2001 × 1000 mm",
+has(text(r43), "1 | 20000 × 10000 | 20010 × 10000 | 2001 × 1000",
     "R4.3: Large Canvas with manual 1:10 is a 1:10 preview");
 var rLcName = refs({ etScaleN: { text: "1" }, etPattern: { text: "{n}_{size}_{scale}", enabled: true } });
 TE.UI.refresh(null, rLcName, lcCtx);
-has(rLcName.stCalc.text, "Soubor plátu 1: 01_2010x1000mm_1ku1.pdf",
+has(rLcName.stCalc.text, "01_2010x1000mm_1ku1.pdf",
     "Large Canvas at drawing scale 1: real size, 1ku1 — the canvas factor is no ratio");
 app.activeDocument.scaleFactor = 1;
+
+console.log("\n=== 1.1.0: the status line says whether the export can run ===");
+// The variant the user chose on 2026-10-15: one line in the family colour,
+// the table under it, the details last.
+eq(run({}).stStatus.text, "✓ Připraveno k exportu: 3 pláty, ruční ořez, výstup 1:10.", "ready, in words");
+eq(run(zund({})).stStatus.text, "✓ Připraveno k exportu: 3 pláty, Zünd, výstup 1:10.", "Zünd");
+ctx.contourSpots = ["Cut"];
+eq(run(zund({})).stStatus.text, "⚠ Připraveno k exportu, 1 upozornění níže.", "a warning: still ready, and said so");
+ctx.contourSpots = [];
+eq(run(zund({ rbMode: widthMode, etWidth: { text: "1460", enabled: true }, etOverlap: { text: "0" } })).stStatus.text,
+    "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže.", "an export error leaves Panels only");
+eq(run({ etOverlap: { text: "2O", enabled: true } }).stStatus.text, "✗ Nejde spustit: 1 chyba, viz níže.",
+    "a typo stops both");
+eq(run({ etAddLeft: { text: "60" }, etAddRight: { text: "60" } }).stStatus.text,
+    "✗ Nejde spustit: 2 chyby, viz níže.", "two errors, counted in Czech");
+eq(TE.L.count("TILES", 1) + "/" + TE.L.count("TILES", 4) + "/" + TE.L.count("TILES", 12),
+    "1 plát/4 pláty/12 plátů", "the count forms");
+eq(run({ etOverlap: { text: "2O", enabled: true } }).lbTiles.items.length, 0, "no split, an empty table");
+
+console.log("\n=== the status line in its colour ===");
+function painted(o) {
+    var r = refs(o);
+    r.stStatus.graphics = { PenType: { SOLID_COLOR: 1 },
+        newPen: function (t, c) { return { rgb: c.slice(0, 3).join(",") }; } };
+    TE.UI.refresh(null, r, ctx);
+    return r.stStatus.graphics.foregroundColor.rgb;
+}
+eq(painted({}), TE.UI.COLORS.OK.join(","), "green when ready");
+eq(painted({ etOverlap: { text: "2O", enabled: true } }), TE.UI.COLORS.ERR.join(","), "red on an error");
+
+console.log("\n=== equal panels share a row ===");
+var t5 = summary({ etCount: { text: "5", enabled: true } });
+has(t5, "1 | 600 × 1000 | 610 × 1000 | 61 × 100", "panel 1 carries half an overlap");
+has(t5, "2–4 | 600 × 1000 | 620 × 1000 | 62 × 100", "the inner three are one row");
+has(t5, "5 | 600 × 1000 | 610 × 1000 | 61 × 100", "and the last its own");
+has(summary({ etCount: { text: "5", enabled: true }, etOverlap: { text: "0" } }),
+    "1–5 | 600 × 1000 | 600 × 1000 | 60 × 100", "without overlap all five are one row");
+eq(TE.UI.groupRows([[1, "a", "b", "c"], [2, "a", "b", "x"], [3, "a", "b", "c"]]).length, 3, "only neighbours merge");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

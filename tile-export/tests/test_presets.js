@@ -18,6 +18,7 @@ load("src/lib/utils.js");
 load("../shared/lib/ui_state.js");
 global.buildUIState(TE);
 load("src/config.js");
+load("src/lib/storage.js");
 load("src/ui.js");
 
 var pass = 0, fail = 0, total = 0;
@@ -155,6 +156,21 @@ eq(TE.UI.normalizePresets(gone).activePreset, "[Default]", "an active preset tha
 eq(gone.presets["[Default]"].overlap, cd.overlap, "and a file without [Default] gets one");
 var last = { activePreset: "[Last Settings]", presets: { "[Last Settings]": TE.Config.getDefaults() } };
 eq(TE.UI.normalizePresets(last).activePreset, "[Default]", "[Last Settings] is never the active preset");
+
+console.log("\n=== a preset holding NaN leaves its field empty ===");
+// A field with a typo the run did not use is kept as NaN in memory; loaded
+// again in the same dialog, it must not read "NaN".
+var rNaN = refs(), sNaN = TE.Config.getDefaults();
+sNaN.overlap = NaN;
+TE.UI.apply(rNaN, sNaN);
+eq(rNaN.etOverlap.text, "", "the overlap field is empty, and the check will name it");
+
+console.log("\n=== a stored null takes the default ===");
+// A field left with a typo where the run does not use it is saved as NaN,
+// which JSON writes as null. Loaded back, it must not show as "null".
+var filled = TE.Storage.fillDefaults({ overlap: null, addTop: 7 });
+eq(filled.overlap, TE.Config.getDefaults().overlap, "null overlap: the default");
+eq(filled.addTop, 7, "a stored number stays");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

@@ -247,5 +247,31 @@ var short40 = { left: mm(50), right: mm(39.9), top: mm(40), bottom: mm(40) };
 assert(has(TE.Validate.check(jA40.tiles, ctx({ overhang: short40 }), jA40.s).errors, "add-exceeds-overhang"),
     "39,9 mm na 40 mm nestačí");
 
+console.log("\n=== numberErrors: the fields the run uses hold numbers (audit P1) ===");
+var D = TE.Config.getDefaults();
+function nb(over) {
+    var out = TE.Validate.numberErrors(merge(D, over)), i, t = [];
+    for (i = 0; i < out.length; i++) { t.push(out[i].key + ":" + out[i].kind); }
+    return t.join(",");
+}
+assert(nb({}) === "", "the defaults are all numbers");
+assert(nb({ overlap: NaN }) === "overlap:nan", "overlap 2O");
+assert(nb({ addLeft: -5 }) === "addLeft:negative", "a negative add");
+assert(nb({ overlap: 0, addTop: 0 }) === "", "zero overlap and adds are fine");
+assert(nb({ scaleN: 0 }) === "scaleN:zero", "a drawing scale must be above 0");
+assert(nb({ lineWidth: 0 }) === "lineWidth:zero", "and so must a drawn line");
+assert(nb({ drawLine: false, lineWidth: NaN }) === "", "a line that is not drawn does not count");
+assert(nb({ zundMode: true, lineWidth: NaN }) === "", "nor in Zünd mode, which draws no line");
+assert(nb({ divideMode: "width", tileCount: NaN }) === "", "the count while dividing by width");
+assert(nb({ divideMode: "count", tileCount: NaN }) === "tileCount:nan", "but while dividing by count");
+assert(nb({ divideMode: "width", tileWidth: NaN }) === "tileWidth:nan", "the width while dividing by width");
+assert(nb({ guideRound: NaN }) === "", "rounding while not dividing by guides");
+assert(nb({ divideMode: "guides", guideRound: -1 }) === "guideRound:negative", "and while dividing by guides");
+assert(nb({ markSizeZ: NaN }) === "", "Zünd fields with a manual trim");
+assert(nb({ zundMode: true, markSizeZ: NaN, maxDist: 0 }) === "markSizeZ:nan,maxDist:zero", "Zünd fields in Zünd mode");
+assert(nb({ zundMode: true, cutBleed: -1, gapInner: NaN }) === "cutBleed:negative,gapInner:nan", "bleed and gap");
+assert(nb({ rasterDPI: NaN }) === "", "the resolution of a vector export");
+assert(nb({ exportMode: "raster", rasterDPI: NaN }) === "rasterDPI:nan", "and of a raster one");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

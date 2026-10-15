@@ -139,6 +139,7 @@ polích.
 | N42 | druhé spuštění Jen pláty hlásilo, že se pláty na plátno nevejdou, a třetí vrátilo smazané artboardy: plátno se měřilo zkušebními artboardy až po odebrání starých plátů a odmítnuté přidání odebrání vrátilo (engine-facts); teď se měří před odebráním. Harness, který pouštěl všechny běhy v jednom skriptu, chybu neviděl — od teď každý běh jako samostatný skript (1.1.0, harness 2026-10-11) | `3f1f0ec` |
 | N44 | po běhu zůstala aktivní podvrstva posledního kontrolního plátu; co uživatel nakreslil potom, třeba vodítko pro nové dělení, mohlo skončit v `TE_panels`, další běh by ho nečetl a s vrstvou smazal. Běh teď vrací vrstvu aktivní před ním; vodítko tažené rukou po běhu skončilo ve Vrstvě 1 (harness a ruční test 1.10, 2026-10-11) | `40c7c41` |
 | N43 | měřítko kresby se do dokumentu zapsalo, ale nepřečetlo: Illustrator vrátil prefix XMP `te` jako `te_1_`; teď se hodnota hledá podle jmenného prostoru (1.1.0, harness 2026-10-11) | `2dbdd63` |
+| N45 | překlep v číselném poli se tiše měnil v jiné číslo: přelep „2O" dal nulový přelep, „1 000" nebo „20 mm" výchozí hodnotu pole, prázdné měřítko kresby 1:1, a dialog mlčel (i v 1.0.1). Teď pole zčervená, Výsledek ho pojmenuje, obě akce i Uložit zešednou; číslo smí mít jen desetinnou čárku nebo tečku (audit společného jazyka P1, 2026-10-14) | `005e6c1` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

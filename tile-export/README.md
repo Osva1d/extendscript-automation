@@ -51,9 +51,13 @@ v dočasném dokumentu, kam se přenáší jen ona; cokoli dalšího by se ztrat
 Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než se exportuje.
 
 1. Spusť skript, vyplň dialog. Panel **Dokument** ukáže čistý formát a dostupný
-   spad na každé hraně, **Výsledek** průběžně přepočítává rozměr každého plátu
-   načisto i s přídavky. Chybné zadání zašedne obě akční tlačítka. **Typ výstupu**
-   volí mezi ručním ořezem (červená linka) a Zündem (značky a řezová cesta).
+   spad na každé hraně. **Výsledek** průběžně přepočítává: stavová řádka řekne,
+   jestli export poběží, tabulka ukáže každý plát načisto, s přídavky a jako
+   stránku PDF, pod ní jsou hlášky a název prvního souboru. Chybné zadání
+   zašedne obě akční tlačítka. Čísla piš s desetinnou čárkou nebo tečkou,
+   bez jednotek; pole s jiným zápisem, i prázdné, zčervená a Výsledek ho
+   pojmenuje. **Typ výstupu** volí mezi ručním ořezem (červená linka)
+   a Zündem (značky a řezová cesta).
 2. **Jen pláty** — vedle originálu vzniknou **kontrolní pláty**: každý plát
    zamaskovaný na vlastním artboardu `TE_01`…`TE_0n`, s červenou linkou, nebo se
    Zünd značkami a řezem — tak, jak ho zapíše export, jen v měřítku kresby.
@@ -235,7 +239,7 @@ značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. S
 
 Stránka je maska plus odstup a značka na každé straně: plát 2020 × 1000 mm
 se spadem 5, odstupem 5 a značkou 5 mm dá stránku 2050 × 1030 mm. Výsledek
-v dialogu ji ukazuje v řádku „Stránky PDF … se značkami".
+v dialogu ji ukazuje ve sloupci Stránka PDF.
 
 ### Na co si dát pozor
 

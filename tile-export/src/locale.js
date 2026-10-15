@@ -80,6 +80,10 @@ TE.L = (function () {
             TIP_COUNT:           "How many panels to split into. At least 2. It divides the GRAPHIC, so the seams land on exact fractions and every panel carries the same clean width. The printed widths differ with the number of seams — tick Equalise for equal printed panels.",
             LBL_WIDTH:           "Panel width",
             LBL_HEIGHT:          "Panel height",
+            FIELD_SCALE:         "Drawing scale",
+            ERR_FIELD_NUMBER:    "Field \"%s\": enter a number, such as 20 or 2.5.",
+            ERR_FIELD_NEGATIVE:  "Field \"%s\" cannot be negative.",
+            ERR_FIELD_ZERO:      "Field \"%s\" must be greater than 0.",
             TIP_HEIGHT:          "Clean height of a panel: stacked panels split the height. The PRINTED panel comes out up to one overlap taller, so leave room on the roll. The last, bottom panel is shorter by whatever is left over — unless Equalise is ticked, which rereads this number as a ceiling on the printed panel.",
             TIP_WIDTH:           "Clean width of a panel. The PRINTED panel comes out up to one overlap wider, so leave room on the roll. The last panel is shorter by whatever is left over — unless Equalise is ticked, which rereads this number as a ceiling on the printed panel.",
             LBL_EQUAL:           "Equalise",
@@ -142,14 +146,27 @@ TE.L = (function () {
             LBL_CLEAN:           "Clean format",
             INFO_CLEAN_VAL:      "%s \u00d7 %s mm",
             TIP_CLEAN:           "The clean-format artboard at real size, by the drawing scale.",
-            INFO_COUNT:          "Panels: %s",
-            INFO_TILE:           "  %s: clean %s \u00d7 %s mm, with adds %s \u00d7 %s mm",
-            INFO_PAGES:          "PDF pages (1:%s): %s mm",
-            INFO_PAGES_ACTUAL:   "PDF pages: real size, same as with adds.",
-            INFO_PAGES_ZUND:     "PDF pages (1:%s) with marks: %s mm",
-            INFO_CUT_RECT:       "Cut: panel rectangle in %s.",
-            INFO_FILE:           "File of panel 1: %s.pdf",
-            INFO_FILE_ZUND:      "Files of panel 1: %s.pdf and %s.pdf",
+            // The Result: a status line, a table of panels, the details.
+            STATUS_READY:        "\u2713 Ready to export: %s, %s, output 1:%s.",
+            STATUS_WARN:         "\u26a0 Ready to export, %s below.",
+            STATUS_NO_EXPORT:    "\u2717 No export, Panels only works: %s, see below.",
+            STATUS_STOP:         "\u2717 Cannot run: %s, see below.",
+            OUT_SHORT_MANUAL:    "manual trim",
+            OUT_SHORT_ZUND:      "Z\u00fcnd",
+            TILES_1:             "%s panel",
+            TILES_2:             "%s panels",
+            TILES_5:             "%s panels",
+            ERRORS_1:            "%s error",
+            ERRORS_2:            "%s errors",
+            ERRORS_5:            "%s errors",
+            WARNINGS_1:          "%s warning",
+            WARNINGS_2:          "%s warnings",
+            WARNINGS_5:          "%s warnings",
+            COL_TILE:            "Panel",
+            COL_CLEAN:           "Clean (mm)",
+            COL_EXPANDED:        "With adds (mm)",
+            COL_PAGE:            "PDF page (mm)",
+            INFO_MARKS_CUT:      "Marks in \"%s\", cut: the panel rectangle in \"%s\".",
             WARN_CONTOUR_IGNORED: "The document has paths in %s. Shaped cutting is not in this version yet — the panel rectangle is cut.",
             LBL_BLEED:           "Available bleed",
             INFO_BLEED_VAL:      "left %s, right %s, top %s, bottom %s mm",
@@ -265,6 +282,10 @@ TE.L = (function () {
             TIP_COUNT:           "Na kolik plátů rozdělit. Nejméně 2. Dělí se GRAFIKA, takže švy padnou na přesné zlomky a každý plát nese stejnou čistou šířku. Tiskové šířky se liší podle počtu švů — stejné tiskové pláty dá zaškrtnuté Rovnoměrně.",
             LBL_WIDTH:           "Šířka plátu",
             LBL_HEIGHT:          "Výška plátu",
+            FIELD_SCALE:         "Měřítko kresby",
+            ERR_FIELD_NUMBER:    "Pole „%s“: zadejte číslo, třeba 20 nebo 2,5.",
+            ERR_FIELD_NEGATIVE:  "Pole „%s“ nesmí být záporné.",
+            ERR_FIELD_ZERO:      "Pole „%s“ musí být větší než 0.",
             TIP_HEIGHT:          "Výška plátu načisto: vodorovné pláty dělí výšku. TIŠTĚNÝ plát vyjde až o přelep vyšší, počítej s tím na roli. Poslední, spodní plát vyjde kratší o zbytek — pokud nezaškrtneš Rovnoměrně, které tohle číslo čte jako strop tiskové výšky.",
             TIP_WIDTH:           "Šířka plátu načisto. TIŠTĚNÝ plát vyjde až o přelep širší, počítej s tím na roli. Poslední plát vyjde kratší o zbytek — pokud nezaškrtneš Rovnoměrně, které tohle číslo čte jako strop tiskové šířky.",
             LBL_EQUAL:           "Rovnoměrně",
@@ -327,14 +348,27 @@ TE.L = (function () {
             LBL_CLEAN:           "Čistý formát",
             INFO_CLEAN_VAL:      "%s \u00d7 %s mm",
             TIP_CLEAN:           "Artboard čistého formátu ve skutečné velikosti, podle měřítka kresby.",
-            INFO_COUNT:          "Počet plátů: %s",
-            INFO_TILE:           "  %s: načisto %s \u00d7 %s mm, s přídavky %s \u00d7 %s mm",
-            INFO_PAGES:          "Stránky PDF (1:%s): %s mm",
-            INFO_PAGES_ACTUAL:   "Stránky PDF: skutečná velikost, stejná jako s přídavky.",
-            INFO_PAGES_ZUND:     "Stránky PDF (1:%s) se značkami: %s mm",
-            INFO_CUT_RECT:       "Řez: obdélník plátu v barvě %s.",
-            INFO_FILE:           "Soubor plátu 1: %s.pdf",
-            INFO_FILE_ZUND:      "Soubory plátu 1: %s.pdf a %s.pdf",
+            // Výsledek: stavový řádek, tabulka plátů, podrobnosti.
+            STATUS_READY:        "✓ Připraveno k exportu: %s, %s, výstup 1:%s.",
+            STATUS_WARN:         "⚠ Připraveno k exportu, %s níže.",
+            STATUS_NO_EXPORT:    "✗ Export nejde, Jen pláty ano: %s, viz níže.",
+            STATUS_STOP:         "✗ Nejde spustit: %s, viz níže.",
+            OUT_SHORT_MANUAL:    "ruční ořez",
+            OUT_SHORT_ZUND:      "Zünd",
+            TILES_1:             "%s plát",
+            TILES_2:             "%s pláty",
+            TILES_5:             "%s plátů",
+            ERRORS_1:            "%s chyba",
+            ERRORS_2:            "%s chyby",
+            ERRORS_5:            "%s chyb",
+            WARNINGS_1:          "%s upozornění",
+            WARNINGS_2:          "%s upozornění",
+            WARNINGS_5:          "%s upozornění",
+            COL_TILE:            "Plát",
+            COL_CLEAN:           "Načisto (mm)",
+            COL_EXPANDED:        "S přídavky (mm)",
+            COL_PAGE:            "Stránka PDF (mm)",
+            INFO_MARKS_CUT:      "Značky v barvě „%s“, řez: obdélník plátu v barvě „%s“.",
             WARN_CONTOUR_IGNORED: "Dokument má cesty v barvě %s. Tvarový ořez v této verzi ještě není — řeže se obdélník plátu.",
             LBL_BLEED:           "Dostupný spad",
             INFO_BLEED_VAL:      "vlevo %s, vpravo %s, nahoře %s, dole %s mm",
@@ -399,6 +433,20 @@ TE.L = (function () {
         return String(tpl).replace(/%s/g, function () {
             return i < args.length ? String(args[i++]) : "%s";
         });
+    };
+
+    /**
+     * A count before its noun in the right form: count("TILES", 3) ->
+     * "3 pláty". Every counted key has _1, _2 and _5 forms in both tables
+     * (extendscript-ui-standards §5).
+     * @param {string} base - Key without its suffix.
+     * @param {number} n - The count.
+     * @returns {string} Filled string.
+     */
+    t.count = function (base, n) {
+        var suffix = "_5";
+        if (n === 1) { suffix = "_1"; } else if (n >= 2 && n <= 4) { suffix = "_2"; }
+        return t.format(t[base + suffix], n);
     };
     return t;
 })();

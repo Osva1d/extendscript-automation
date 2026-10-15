@@ -17,7 +17,38 @@ TE.UI = {
         REVERT_BTN:  30,  // px; a one-glyph button at the native 80 px dwarfs its row
         // px around a placeholder button's text: at the native 80 px five of
         // them were wider than the pattern field they sit under (2026-10-11)
-        TOKEN_PAD:   24
+        TOKEN_PAD:   24,
+        // px; the Result's table columns: Panel, Clean, With adds, PDF page.
+        // "20010 × 10000" fits 130, the headers fit, and the four with the
+        // scroll bar stay inside the 478 px of the right column (2026-10-15)
+        RESULT_COLS: [50, 130, 135, 140],
+        // px; the table shows its header and three rows — equal panels share
+        // a row, so three cover most splits — and scrolls past that. A listbox
+        // with headers needs 33 px plus 20 per row (measured 2026-10-15)
+        RESULT_TABLE_H: 93,
+        // px; three lines of details: a Zünd job's marks line and its two
+        // file names, measured in the preview of 2026-10-15
+        RESULT_TEXT_H: 58
+    },
+
+    // Status colours of the family (extendscript-ui-standards §12.6), RGB 0-1.
+    COLORS: {
+        ERR:  [0.90, 0.20, 0.20],
+        WARN: [0.96, 0.60, 0.38],
+        OK:   [0.36, 0.60, 0.34]
+    },
+
+    // The number fields of TE.Validate.NUMBER_FIELDS: their control and the
+    // name a message gives them.
+    NUMBER_CONTROLS: {
+        scaleN: ["etScaleN", "FIELD_SCALE"], tileCount: ["etCount", "LBL_COUNT"],
+        tileWidth: ["etWidth", "LBL_WIDTH"], guideRound: ["etRound", "LBL_ROUND"],
+        overlap: ["etOverlap", "LBL_OVERLAP"], addTop: ["etAddTop", "LBL_ADD_TOP"],
+        addBottom: ["etAddBottom", "LBL_ADD_BOTTOM"], addLeft: ["etAddLeft", "LBL_ADD_LEFT"],
+        addRight: ["etAddRight", "LBL_ADD_RIGHT"], rasterDPI: ["etDPI", "LBL_DPI"],
+        lineWidth: ["etLineW", "LBL_LINE_WIDTH"], cutBleed: ["etBleed", "LBL_CUT_BLEED"],
+        markSizeZ: ["etMarkSize", "LBL_MARK_SIZE"], gapInner: ["etGapInner", "LBL_GAP_INNER"],
+        maxDist: ["etMaxDist", "LBL_MAX_DIST"], orientDist: ["etOrient", "LBL_ORIENT"]
     },
 
     /**
@@ -178,7 +209,7 @@ TE.UI = {
         var colL = gCols.add("group");
         colL.orientation = "column";
         colL.alignChildren = ["fill", "top"];
-        colL.alignment = ["fill", "top"];
+        colL.alignment = ["fill", "fill"];   // as tall as the right column, see pEdges
 
         var colR = gCols.add("group");
         colR.orientation = "column";
@@ -289,6 +320,10 @@ TE.UI = {
         // --- Overlap and adds ------------------------------------------------
         var pEdges = colL.add("panel", undefined, l.PANEL_EDGES);
         pEdges.alignChildren = ["fill", "top"];
+        // Down to the foot of the column: since the Result has its status line
+        // and table, the right column is the taller one, and the two columns
+        // end on one line instead of the left one stopping 74 px short.
+        pEdges.alignment = ["fill", "fill"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
         // Three options for two settings: the mode (symmetric or one-sided) and,
@@ -524,26 +559,35 @@ TE.UI = {
         // the right column stood half empty: five lines showed and the sixth
         // was cut. Panel lines measure ~370 px and fit the column; longer
         // messages wrap.
+        // Three parts since 1.1.0 (user, 2026-10-15): one status line that
+        // says whether the export can run, coloured as the family colours its
+        // states; a table, one row per panel or run of equal panels, so a
+        // panel's sizes and its PDF page stand on one line instead of the old
+        // "a | b | c" row of pages; and the details under it.
         var pCalc = colR.add("panel", undefined, l.PANEL_CALC);
         pCalc.alignment = ["fill", "fill"];
-        pCalc.alignChildren = ["fill", "fill"];
-        // [deviation] readonly edittext, not statictext. The summary is as long
-        // as the job needs — a line per panel plus the bleed line plus any
-        // warnings — and a fixed-height statictext CLIPS the rest with no sign
-        // that anything is missing: at 85 px a five-panel job showed panels 1-3
-        // and swallowed 4, 5, the bleed line and every error. An edittext with
-        // scrolling keeps the content reachable, and readonly keeps it from
-        // being edited. 85 px is the floor, what is left under the Zünd panel
-        // when that panel is built. Selectable text is a bonus: the panel
-        // sizes can be copied straight into a job sheet.
+        pCalc.alignChildren = ["fill", "top"];
+        var stStatus = pCalc.add("statictext", undefined, l.STATUS_NO_EXPORT);
+        stStatus.alignment = ["fill", "top"];
+        try {
+            var sf0 = stStatus.graphics.font;
+            stStatus.graphics.font = ScriptUI.newFont(sf0.name, "BOLD", sf0.size);
+        } catch (fontErr) { TE.Utils.log("status font: " + fontErr.message); }
+        var lbTiles = pCalc.add("listbox", undefined, undefined, { numberOfColumns: 4, showHeaders: true,
+            columnTitles: [l.COL_TILE, l.COL_CLEAN, l.COL_EXPANDED, l.COL_PAGE],
+            columnWidths: this.M.RESULT_COLS });
+        lbTiles.preferredSize.height = this.M.RESULT_TABLE_H;   // [deviation] see M
+        lbTiles.alignment = ["fill", "fill"];   // takes what the left column leaves (N18)
+        // [deviation] readonly edittext, not statictext: errors, the marks
+        // line and the file names can run longer than three lines, and a
+        // fixed-height statictext CLIPS the rest with no sign that anything
+        // is missing. Scrolling keeps it reachable, readonly keeps it from
+        // being edited; a fixed height keeps a long text from growing the
+        // dialog (a twelve-panel job once grew it to 932 px, measured).
         var stCalc = pCalc.add("edittext", undefined, "",
             { multiline: true, scrolling: true, readonly: true });
-        // preferredSize, not just a minimum: an edittext otherwise sizes
-        // itself to its text, and a twelve-panel job grew the dialog to
-        // 932 px (measured). The fill alignment then stretches it into the
-        // space the left column leaves.
-        stCalc.preferredSize.height = 85;
-        stCalc.alignment = ["fill", "fill"];
+        stCalc.preferredSize.height = this.M.RESULT_TEXT_H;   // [deviation] see M
+        stCalc.alignment = ["fill", "bottom"];
 
         // --- Footer ----------------------------------------------------------
         var gFooter = w.add("group");
@@ -577,13 +621,17 @@ TE.UI = {
             ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
             etMarkSize: etMarkSize, etBleed: etBleed,
             etGapInner: etGapInner, etMaxDist: etMaxDist, etOrient: etOrient,
+            stStatus: stStatus, lbTiles: lbTiles,
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
 
         function relayout() { w.layout.layout(true); }
 
+        // A preset is not saved over a typo in a field the run uses (P1).
+        var numbersOk = true;
+
         function refresh() {
-            self.refresh(w, refs, ctx);
+            numbersOk = self.refresh(w, refs, ctx).numbersOk;
             refreshModifiedIndicator();
             relayout();
         }
@@ -692,7 +740,8 @@ TE.UI = {
             var modified = TE.UIState.isModified(shownData(), current());
             var j, key, text;
             btnRevert.enabled = modified;
-            btnSave.enabled = modified && (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            btnSave.enabled = modified && numbersOk && (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            btnSaveAs.enabled = numbersOk;
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
             for (j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
                 key = sortedKeys[j];
@@ -865,27 +914,27 @@ TE.UI = {
      */
     collect: function (r) {
         var s = TE.Config.getDefaults();
-        s.scaleN      = TE.Utils.toNumber(r.etScaleN.text) || 1;
+        s.scaleN      = TE.Utils.parseNumber(r.etScaleN.text);
         s.direction   = r.rbDir[1].value ? "vertical" : "horizontal";
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
-        s.tileCount   = TE.Utils.toNumber(r.etCount.text);
-        s.tileWidth   = TE.Utils.toNumber(r.etWidth.text);
+        s.tileCount   = TE.Utils.parseNumber(r.etCount.text);
+        s.tileWidth   = TE.Utils.parseNumber(r.etWidth.text);
         s.equalPanels = r.cbEqual.value;
-        s.guideRound  = TE.Utils.toNumber(r.etRound.text) || 0;
-        s.overlap     = TE.Utils.toNumber(r.etOverlap.text) || 0;
+        s.guideRound  = TE.Utils.parseNumber(r.etRound.text);
+        s.overlap     = TE.Utils.parseNumber(r.etOverlap.text);
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
         s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
-        s.addTop      = TE.Utils.toNumber(r.etAddTop.text) || 0;
-        s.addBottom   = TE.Utils.toNumber(r.etAddBottom.text) || 0;
-        s.addLeft     = TE.Utils.toNumber(r.etAddLeft.text) || 0;
-        s.addRight    = TE.Utils.toNumber(r.etAddRight.text) || 0;
+        s.addTop      = TE.Utils.parseNumber(r.etAddTop.text);
+        s.addBottom   = TE.Utils.parseNumber(r.etAddBottom.text);
+        s.addLeft     = TE.Utils.parseNumber(r.etAddLeft.text);
+        s.addRight    = TE.Utils.parseNumber(r.etAddRight.text);
         // Raster rows not built: the export is vector, whatever a preset says.
         s.exportMode  = (r.rbExpMode && r.rbExpMode[1].value) ? "raster" : "vector";
         s.exportScale = r.rbExpScale[1].value ? "actual" : "source";
-        if (r.etDPI) { s.rasterDPI = TE.Utils.toNumber(r.etDPI.text) || 150; }
+        if (r.etDPI) { s.rasterDPI = TE.Utils.parseNumber(r.etDPI.text); }
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
-        s.lineWidth   = TE.Utils.toNumber(r.etLineW.text) || 1;     // = default
+        s.lineWidth   = TE.Utils.parseNumber(r.etLineW.text);
         // The "no preset" item (N20) stands for "", like [Default]'s value.
         s.pdfPreset   = (r.ddPdf.selection && r.ddPdf.selection.text !== TE.L.PDF_PRESET_NONE)
             ? r.ddPdf.selection.text : "";
@@ -895,21 +944,30 @@ TE.UI = {
         if (r.rbOutType) {
             s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : s.cutSpot;
-            s.cutBleed    = TE.Utils.toNumber(r.etBleed.text);
-            if (isNaN(s.cutBleed) || String(r.etBleed.text).replace(/\s/g, "") === "") {
-                s.cutBleed = TE.Config.getDefaults().cutBleed;
-            }
+            s.cutBleed    = TE.Utils.parseNumber(r.etBleed.text);
             s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
-            s.markSizeZ   = TE.Utils.toNumber(r.etMarkSize.text) || 5;
-            s.gapInner    = TE.Utils.toNumber(r.etGapInner.text) || 5;
-            s.maxDist     = TE.Utils.toNumber(r.etMaxDist.text) || 500;
-            s.orientDist  = TE.Utils.toNumber(r.etOrient.text) || 100;
+            s.markSizeZ   = TE.Utils.parseNumber(r.etMarkSize.text);
+            s.gapInner    = TE.Utils.parseNumber(r.etGapInner.text);
+            s.maxDist     = TE.Utils.parseNumber(r.etMaxDist.text);
+            s.orientDist  = TE.Utils.parseNumber(r.etOrient.text);
         } else {
             // No Zünd fields built: the mode cannot be on, whatever a stored
             // preset says.
             s.zundMode = false;
         }
         return s;
+    },
+
+    /**
+     * A stored number as field text. NaN — a typo in a field the run did not
+     * use, kept as it was — and null show as an empty field, which the check
+     * then names; never as "NaN" (audit P1).
+     * @param {*} v - Stored value.
+     * @returns {string} Field text.
+     */
+    numText: function (v) {
+        if (v === null || v === undefined || (typeof v === "number" && !isFinite(v))) { return ""; }
+        return String(v);
     },
 
     /**
@@ -925,30 +983,30 @@ TE.UI = {
         r.rbMode[0].value = (s.divideMode === "count");
         r.rbMode[1].value = (s.divideMode === "width");
         r.rbMode[2].value = (s.divideMode === "guides");
-        r.etCount.text = String(s.tileCount);
-        r.etWidth.text = String(s.tileWidth);
+        r.etCount.text = this.numText(s.tileCount);
+        r.etWidth.text = this.numText(s.tileWidth);
         r.cbEqual.value = !!s.equalPanels;
-        r.etRound.text = String(s.guideRound);
-        r.etOverlap.text = String(s.overlap);
+        r.etRound.text = this.numText(s.guideRound);
+        r.etOverlap.text = this.numText(s.overlap);
         var oneSided  = (s.overlapMode === "onesided");
         var carrier2nd = oneSided && (s.overlapCarrier === "second");
         r.rbOverlapMode[0].value = !oneSided;
         r.rbOverlapMode[1].value = oneSided && !carrier2nd;
         r.rbOverlapMode[2].value = carrier2nd;
-        r.etAddTop.text = String(s.addTop);
-        r.etAddBottom.text = String(s.addBottom);
-        r.etAddLeft.text = String(s.addLeft);
-        r.etAddRight.text = String(s.addRight);
+        r.etAddTop.text = this.numText(s.addTop);
+        r.etAddBottom.text = this.numText(s.addBottom);
+        r.etAddLeft.text = this.numText(s.addLeft);
+        r.etAddRight.text = this.numText(s.addRight);
         if (r.rbExpMode) {
             r.rbExpMode[0].value = (s.exportMode !== "raster");
             r.rbExpMode[1].value = (s.exportMode === "raster");
         }
         r.rbExpScale[0].value = (s.exportScale !== "actual");
         r.rbExpScale[1].value = (s.exportScale === "actual");
-        if (r.etDPI) { r.etDPI.text = String(s.rasterDPI); }
+        if (r.etDPI) { r.etDPI.text = this.numText(s.rasterDPI); }
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
-        r.etLineW.text = String(s.lineWidth);
+        r.etLineW.text = this.numText(s.lineWidth);
         // A stored name the list lacks — [Default]'s "", a preset deleted
         // from Illustrator — falls back to the first item, as when the dialog
         // is built. Keeping the previous selection made one preset look
@@ -974,11 +1032,11 @@ TE.UI = {
         for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
             if (r.ddMarkColor.items[mk].text === s.markColor) { r.ddMarkColor.selection = mk; break; }
         }
-        r.etMarkSize.text = String(s.markSizeZ);
-        r.etGapInner.text = String(s.gapInner);
-        r.etMaxDist.text = String(s.maxDist);
-        r.etOrient.text = String(s.orientDist);
-        r.etBleed.text = String(s.cutBleed);
+        r.etMarkSize.text = this.numText(s.markSizeZ);
+        r.etGapInner.text = this.numText(s.gapInner);
+        r.etMaxDist.text = this.numText(s.maxDist);
+        r.etOrient.text = this.numText(s.orientDist);
+        r.etBleed.text = this.numText(s.cutBleed);
     },
 
     /**
@@ -1020,12 +1078,117 @@ TE.UI = {
      * @param {Object} r - Control references.
      * @param {Object} ctx - Document context.
      */
+    /**
+     * Paints a number field red while it holds no usable number, and gives
+     * it back the pen it had before. Forcing black would hide the text on the
+     * dark UI (grommet-marks paintField, extendscript-ui-standards §12.3).
+     * @param {Object} et - The edittext.
+     * @param {boolean} valid - False paints it red.
+     */
+    paintField: function (et, valid) {
+        var g = et && et.graphics;
+        if (!g || !g.newPen) { return; }
+        try {
+            if (et.teDefaultPen === undefined) { et.teDefaultPen = g.foregroundColor || null; }
+            g.foregroundColor = valid
+                ? (et.teDefaultPen || g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1], 1))
+                : g.newPen(g.PenType.SOLID_COLOR, this.COLORS.ERR.concat([1]), 1);
+        } catch (e) {
+            TE.Utils.log("paintField: " + e.message);
+        }
+    },
+
+    /**
+     * The message for a TE.Validate.numberErrors() entry, naming the field
+     * as its label does, without the colon a label may carry.
+     * @param {Object} e - {key, kind}.
+     * @param {Object} s - Settings (direction names the width field).
+     * @returns {string} Localized message.
+     */
+    numberMessage: function (e, s) {
+        var l = TE.L;
+        var labelKey = (e.key === "tileWidth" && s.direction === "vertical") ? "LBL_HEIGHT" : this.NUMBER_CONTROLS[e.key][1];
+        var name = String(l[labelKey]).replace(/\s*:\s*$/, "");
+        var tpl = { nan: l.ERR_FIELD_NUMBER, negative: l.ERR_FIELD_NEGATIVE, zero: l.ERR_FIELD_ZERO }[e.kind];
+        return l.format(tpl, name);
+    },
+
+    /**
+     * Rows of the Result table: consecutive panels with the same sizes and
+     * page share one row, "2–4". Inner panels of a split are mostly equal, so
+     * twelve panels fit three rows. PURE FUNCTION.
+     * @param {Array} cells - [index, clean, withAdds, page] per panel.
+     * @returns {Array} [label, clean, withAdds, page] per row.
+     */
+    groupRows: function (cells) {
+        var rows = [], i, head, tail;
+        for (i = 0; i < cells.length; i++) {
+            head = cells[i];
+            tail = head;
+            while (i + 1 < cells.length && cells[i + 1][1] === head[1]
+                    && cells[i + 1][2] === head[2] && cells[i + 1][3] === head[3]) {
+                i++;
+                tail = cells[i];
+            }
+            rows.push([(head === tail) ? String(head[0]) : head[0] + "\u2013" + tail[0], head[1], head[2], head[3]]);
+        }
+        return rows;
+    },
+
+    /**
+     * Fills the Result table; empty when no split could be made.
+     * @param {Object} lb - The listbox.
+     * @param {Array} rows - From groupRows().
+     */
+    renderRows: function (lb, rows) {
+        if (!lb) { return; }
+        lb.removeAll();
+        var i, it;
+        for (i = 0; i < rows.length; i++) {
+            it = lb.add("item", rows[i][0]);
+            it.subItems[0].text = rows[i][1];
+            it.subItems[1].text = rows[i][2];
+            it.subItems[2].text = rows[i][3];
+        }
+    },
+
+    /**
+     * The status line, in the family colour of its state (§12.6).
+     * @param {Object} st - The statictext.
+     * @param {Object} status - {kind: "OK"|"WARN"|"ERR", text}.
+     */
+    renderStatus: function (st, status) {
+        if (!st) { return; }
+        st.text = status.text;
+        var g = st.graphics;
+        if (!g || !g.newPen) { return; }
+        try {
+            g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, this.COLORS[status.kind].concat([1]), 1);
+        } catch (e) {
+            TE.Utils.log("status colour: " + e.message);
+        }
+    },
+
     refresh: function (w, r, ctx) {
         var l = TE.L;
         var s = this.collect(r);
-        var lines = [];
-        var alerts = [];   // errors and warnings, rendered ABOVE the geometry
+        var alerts = [];   // errors, rendered first
+        var warns = [], info = [], names = [], rows = [];
+        var count = 0, ratio = 1;
         var ok = true, exportOk = true;
+
+        // A typo names its field and stops the run, instead of turning into a
+        // default nobody sees (audit P1). Nothing is computed from it.
+        var bad = TE.Validate.numberErrors(s), badKeys = {}, key, j;
+        for (j = 0; j < bad.length; j++) {
+            badKeys[bad[j].key] = true;
+            alerts.push("✗ " + this.numberMessage(bad[j], s));
+        }
+        for (key in this.NUMBER_CONTROLS) {
+            if (this.NUMBER_CONTROLS.hasOwnProperty(key) && r[this.NUMBER_CONTROLS[key][0]]) {
+                this.paintField(r[this.NUMBER_CONTROLS[key][0]], !badKeys[key]);
+            }
+        }
 
         // Mode-dependent fields: show the one that applies, grey the rest.
         r.etCount.enabled = (s.divideMode === "count");
@@ -1054,10 +1217,15 @@ TE.UI = {
         var mm = function (pt) {
             return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
         };
+        // Page millimetres, already converted, as "w × h".
+        var size = function (w, h) {
+            return TE.Utils.formatMM(w, l.DECIMAL) + " \u00d7 " + TE.Utils.formatMM(h, l.DECIMAL);
+        };
         var ov = ctx.validation.overhang;
-        r.stCleanInfo.text = l.format(l.INFO_CLEAN_VAL,
+        // Real millimetres need the drawing scale; without one, no numbers.
+        r.stCleanInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_CLEAN_VAL,
             mm(clean[2] - clean[0]), mm(clean[1] - clean[3]));
-        r.stBleedInfo.text = l.format(l.INFO_BLEED_VAL,
+        r.stBleedInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_BLEED_VAL,
             mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
 
         var ext = (s.direction === "horizontal")
@@ -1069,7 +1237,9 @@ TE.UI = {
         r.stWidthLbl.text = down ? l.LBL_HEIGHT : l.LBL_WIDTH;
         r.stWidthLbl.helpTip = r.etWidth.helpTip = down ? l.TIP_HEIGHT : l.TIP_WIDTH;
 
-        try {
+        if (bad.length > 0) {
+            ok = false;
+        } else try {
             // The guides of the chosen direction, as the run reads them. One
             // list for both directions previewed Vodorovně on the vertical
             // guides (N38).
@@ -1078,81 +1248,80 @@ TE.UI = {
             var tiles = TE.Grid.computeTiles(cuts, clean, s);
             var v = TE.Validate.check(tiles, ctx.validation, s);
 
-            lines.push(l.format(l.INFO_COUNT, tiles.length));
-
-            var i, e, cl;
+            // One row per panel: its sizes and its PDF page on one line. The
+            // sizes are real millimetres and do not move with the output
+            // scale; only the page does, so it is shown, or the choice stays
+            // invisible until the export (N16). Same k as the export and the
+            // artboard check, TE.Utils.outputScale.
+            var sf = ctx.validation.scaleFactor;
+            var k = TE.Utils.outputScale(s, sf);
+            ratio = TE.Utils.pageRatio(s, sf);
+            var cells = [], i, e, cl, page, ztf, zab;
             for (i = 0; i < tiles.length; i++) {
                 cl = tiles[i].clean;
                 e = tiles[i].expanded;
-                lines.push(l.format(l.INFO_TILE, tiles[i].index,
-                    mm(cl[2] - cl[0]),
-                    mm(cl[1] - cl[3]),
-                    mm(e[2] - e[0]),
-                    mm(e[1] - e[3])));
-            }
-
-            // The panel lines above are real millimetres and do not move with
-            // the output scale; only the PDF page does. Say what it will be,
-            // or the choice is invisible until the export (N16). Same k as
-            // the export and the artboard check, TE.Utils.outputScale.
-            var sf = ctx.validation.scaleFactor;
-            var k = TE.Utils.outputScale(s, sf);
-            var ratio = TE.Utils.pageRatio(s, sf);
-            if (s.zundMode) {
-                // Zünd pages are the mask plus gap and mark on every side —
-                // computed exactly as the export does it (buildZundPanel).
-                var zPages = [];
-                for (i = 0; i < tiles.length; i++) {
-                    var ztf = TE.Export.tileTransform(tiles[i], [0, 0, 0, 0], k);
-                    var zab = TE.Core.calculateAll(s, TE.Export.zundLayout(ztf, s, ratio).mask, ratio).ab;
-                    zPages.push(TE.Utils.formatMM(TE.Utils.pt2mm(zab[2] - zab[0]), l.DECIMAL) + " \u00d7 "
-                        + TE.Utils.formatMM(TE.Utils.pt2mm(zab[1] - zab[3]), l.DECIMAL));
+                if (s.zundMode) {
+                    // Zünd pages are the mask plus gap and mark on every side —
+                    // computed exactly as the export does it (buildZundPanel).
+                    ztf = TE.Export.tileTransform(tiles[i], [0, 0, 0, 0], k);
+                    zab = TE.Core.calculateAll(s, TE.Export.zundLayout(ztf, s, ratio).mask, ratio).ab;
+                    page = size(TE.Utils.pt2mm(zab[2] - zab[0]), TE.Utils.pt2mm(zab[1] - zab[3]));
+                } else {
+                    page = size(TE.Utils.pt2mm((e[2] - e[0]) * k), TE.Utils.pt2mm((e[1] - e[3]) * k));
                 }
-                lines.push(l.format(l.INFO_PAGES_ZUND, TE.Utils.formatMM(ratio, l.DECIMAL), zPages.join(" | ")));
-                lines.push(l.format(l.INFO_CUT_RECT, s.cutSpot));
+                cells.push([tiles[i].index, mm(cl[2] - cl[0]) + " \u00d7 " + mm(cl[1] - cl[3]),
+                    mm(e[2] - e[0]) + " \u00d7 " + mm(e[1] - e[3]), page]);
+            }
+            rows = this.groupRows(cells);
+            count = tiles.length;
+
+            if (s.zundMode) {
+                info.push(l.format(l.INFO_MARKS_CUT, s.markColor, s.cutSpot));
                 // Paths in the cut colour look like a shaped contour the user
                 // expects to be cut. Say plainly that it is not, yet.
                 if (TE.Utils.indexOf(ctx.contourSpots || [], s.cutSpot) !== -1) {
-                    alerts.push("! " + l.format(l.WARN_CONTOUR_IGNORED, s.cutSpot));
+                    warns.push("\u26a0 " + l.format(l.WARN_CONTOUR_IGNORED, s.cutSpot));
                 }
-            } else if (Math.abs(ratio - 1) < 1e-9) {
-                lines.push(l.INFO_PAGES_ACTUAL);
-            } else {
-                var pages = [];
-                for (i = 0; i < tiles.length; i++) {
-                    e = tiles[i].expanded;
-                    pages.push(TE.Utils.formatMM(TE.Utils.pt2mm((e[2] - e[0]) * k), l.DECIMAL) + " \u00d7 "
-                        + TE.Utils.formatMM(TE.Utils.pt2mm((e[1] - e[3]) * k), l.DECIMAL));
-                }
-                lines.push(l.format(l.INFO_PAGES, TE.Utils.formatMM(ratio, l.DECIMAL), pages.join(" | ")));
             }
 
-            // The first panel's file name as the export will write it, so the
-            // pattern can be checked before anything is written (1.1.0).
+            // The first panel's file names as the export will write them, so
+            // the pattern can be checked before anything is written (1.1.0).
             var first = TE.Export.fileName(tiles[0],
                 { docName: ctx.docName || "", total: tiles.length, scaleFactor: sf }, s);
-            lines.push(s.zundMode
-                ? l.format(l.INFO_FILE_ZUND, first, TE.Export.cutName(first))
-                : l.format(l.INFO_FILE, first));
+            names.push(first + ".pdf");
+            if (s.zundMode) { names.push(TE.Export.cutName(first) + ".pdf"); }
             // Only the export writes files, so only the export is stopped.
             var nameErr = TE.Validate.nameError(first);
 
-            for (i = 0; i < v.errors.length; i++) { alerts.push("✗ " + v.errors[i]); }
-            for (i = 0; i < v.exportErrors.length; i++) { alerts.push("✗ " + v.exportErrors[i]); }
-            if (nameErr) { alerts.push("✗ " + nameErr); }
-            for (i = 0; i < v.warnings.length; i++) { alerts.push("! " + v.warnings[i]); }
+            for (i = 0; i < v.errors.length; i++) { alerts.push("\u2717 " + v.errors[i]); }
+            for (i = 0; i < v.exportErrors.length; i++) { alerts.push("\u2717 " + v.exportErrors[i]); }
+            if (nameErr) { alerts.push("\u2717 " + nameErr); }
+            for (i = 0; i < v.warnings.length; i++) { warns.push("\u26a0 " + v.warnings[i]); }
             ok = (v.errors.length === 0);
             exportOk = (v.exportErrors.length === 0) && !nameErr;
         } catch (err) {
-            alerts.push("✗ " + this.describeError(err, s, mm(ext.end - ext.start)));
+            alerts.push("\u2717 " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;
         }
 
-        // Errors first, then warnings, then the geometry. Whatever else scrolls
-        // out of sight, the reason the Export button is dead must not: it used
-        // to sit at the BOTTOM, below one line per panel.
-        r.stCalc.text = alerts.concat(lines).join("\n");
+        // The status line says first whether the export can run; the details
+        // put errors first, then warnings, then what the run will make, so
+        // the reason a button is grey never scrolls out of sight.
+        var status;
+        if (alerts.length > 0) {
+            status = { kind: "ERR", text: l.format(ok ? l.STATUS_NO_EXPORT : l.STATUS_STOP,
+                l.count("ERRORS", alerts.length)) };
+        } else if (warns.length > 0) {
+            status = { kind: "WARN", text: l.format(l.STATUS_WARN, l.count("WARNINGS", warns.length)) };
+        } else {
+            status = { kind: "OK", text: l.format(l.STATUS_READY, l.count("TILES", count),
+                s.zundMode ? l.OUT_SHORT_ZUND : l.OUT_SHORT_MANUAL, TE.Utils.formatMM(ratio, l.DECIMAL)) };
+        }
+        this.renderStatus(r.stStatus, status);
+        this.renderRows(r.lbTiles, rows);
+        r.stCalc.text = alerts.concat(warns, info, names).join("\n");
         r.btnTiles.enabled = ok;
         r.btnExport.enabled = ok && exportOk;
+        return { ok: ok, exportOk: exportOk, numbersOk: bad.length === 0 };
     }
 };
