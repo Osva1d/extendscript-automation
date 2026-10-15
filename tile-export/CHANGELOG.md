@@ -58,6 +58,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   `zed_1`.
 - **Výchozí vzor názvu je `{doc}_{n}_{size}_{scale}`**, třeba
   `zed_01_2040x1030mm_1ku10`. Zakázku a počet kopií dopíšeš do vzoru sám.
+- Zünd mluví slovy dílny: **rovný ořez** a **tvarový ořez** místo „obdélníku
+  plátu" — ve Výsledku, ve varování o cestách v barvě řezu i v nápovědě.
 
 ### Fixed
 

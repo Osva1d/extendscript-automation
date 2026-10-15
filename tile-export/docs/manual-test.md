@@ -89,7 +89,7 @@ v Illustratoru: tiskové má shora vrstvy `Regmarks`, `Cut` (vypnutá) a `Graphi
 s grafikou v masce; řezové `Regmarks` a `Cut`, žádnou grafiku.
 
 **1.7 Zünd u stroje — rozhoduje.** Vytisknout tiskové PDF, do Cut Center načíst
-`_cut`. Stroj najde značky, ořízne po obdélníku, na hraně nezůstane bílá.
+`_cut`. Stroj najde značky, udělá rovný ořez, na hraně nezůstane bílá.
 PDF preset bez tiskových značek — preset platí pro oba soubory.
 
 **1.8 Ostrá zakázka.** Jedna skutečná zakázka od začátku do konce. Podmínka pro
@@ -150,7 +150,7 @@ v milimetrech.
 | Large Canvas + měřítko kresby 10, „1:10 jako kresba" | Stránka PDF 2001 × 1000 \| 2002 × 1000 \| 2001 × 1000 | náhled 2001 \| 2002 \| 2001 × 1000 |
 | Large Canvas + měřítko kresby 10, výstup 1:1 | „✗ Export nejde, Jen pláty ano…"; „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
 | zeď 1:10, výstup 1:1 | S přídavky 2010 \| 2020 \| 2010 × 1000 | 2010 \| 2020 \| 2010 × 1000; plát 2 začíná polem 1990 (přelep), končí 4010 |
-| zeď, Zünd, 1:1 | „✓ … 3 pláty, Zünd, výstup 1:1."; Stránka PDF 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030; pod tabulkou „Značky v barvě „[Registration]“, řez: obdélník plátu v barvě „Cut“." a dva soubory, `…_1ku1.pdf` a `…_1ku1_cut.pdf` | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
+| zeď, Zünd, 1:1 | „✓ … 3 pláty, Zünd, výstup 1:1."; Stránka PDF 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030; pod tabulkou „Značky v barvě „[Registrační]“, rovný ořez v barvě „Cut“." a dva soubory, `…_1ku1.pdf` a `…_1ku1_cut.pdf` | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
 | zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
 | arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; řádky „1–2" se stránkou 149 × 103 a „3" s 11 × 103; „✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)…" | export šedý, Jen pláty aktivní |
 | zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
