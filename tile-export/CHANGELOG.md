@@ -65,9 +65,17 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   `zed_01_2040x1030mm_1ku10`. Zakázku a počet kopií dopíšeš do vzoru sám.
 - Zünd mluví slovy dílny: **rovný ořez** a **tvarový ořez** místo „obdélníku
   plátu" — ve Výsledku, ve varování o cestách v barvě řezu i v nápovědě.
+- Patička je stejná jako v ostatních nástrojích:
+  „© 2025–2026 Ladislav Osvald · v1.1.0", bez názvu nástroje, který nese
+  titulek okna.
 
 ### Fixed
 
+- **Vzor bez `{n}` už nezapíše jeden soubor za víc plátů.** Pláty se stejným
+  rozměrem dostaly stejný název a export si soubor přepsal, se zapnutým
+  přeskakováním další vynechal — bez hlášky (i v 1.0.x). Teď Výsledek řekne,
+  které dva pláty se jmenují stejně, poradí přidat `{n}` a export zablokuje;
+  Jen pláty soubory nezapisuje, zůstává aktivní.
 - **Překlep v číselném poli už nevydá jiné číslo.** Přelep „2O" dřív tiše
   znamenal nulový přelep, „1 000" nebo „20 mm" výchozí hodnotu pole a prázdné
   měřítko kresby 1:1; dialog nic neřekl a export proběhl (i v 1.0.1). Teď

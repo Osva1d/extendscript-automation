@@ -65,7 +65,8 @@ Dokument ukáže čistý formát a dostupný spad; měřítko kresby 100 nebo 12
 v nich i v „1:… jako kresba" vejde celé. Výsledek je v pravém sloupci: tučná
 stavová řádka, tabulka plátů, pod ní podrobnosti. Dlouhá chybová hláška (Large
 Canvas, měřítko kresby 10, výstup 1:1) se v podrobnostech **zalomí**,
-neuřízne.
+neuřízne. Patička „© 2025–2026 Ladislav Osvald · v1.1.0", šedá, jako v ostatních
+nástrojích.
 
 **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Vytvořit
 a exportovat.
@@ -148,6 +149,7 @@ v milimetrech.
 | totéž, výstup 1:1 | `26_13456_a_01_1010x1000mm_1ku1_1x.pdf` — `{scale}` ve vzoru je volba | stránka 1010 × 1000 |
 | vzor `26_13456_a_{n}_{size}_1x`, výstup 1:1 | `26_13456_a_01_1010x1000mm_1x.pdf` | stránka 1010 × 1000 |
 | arch, vzor `zakazka/{n}` | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; „✗ Název souboru zakazka/01 obsahuje lomítko…" | export šedý, Jen pláty aktivní |
+| arch, vzor `{doc}_{size}` | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; „✗ Pláty 1 a 3 by dostaly stejný název souboru „arch-3000x1000-1ku10_1010x1000mm“, export by zapsal jen jeden z nich. Přidejte do vzoru {n}." | export šedý, Jen pláty aktivní |
 | arch, Vodorovně, Vodítek, vodorovné vodítko tažené ~60 mm pod horní hranou artboardu, Zaokrouhlit 100 | 2 pláty: S přídavky 3000 × 610 \| 3000 × 410, Stránka PDF 300 × 61 \| 300 × 41 | 2 PDF 300 × 61 \| 300 × 41 (N38) |
 | arch, Vodorovně, Šířky plátu 600 | Načisto 3000 × 600 \| 3000 × 400 — zbytek na spodním plátu | 2 PDF 300 × 61 \| 300 × 41 (N41) |
 | arch, 1:1, Rastr 150 DPI (jen s `RASTER_ENABLED`, od 1.1.0 skrytý) | totéž | totéž, obraz 150 DPI jen plátu, linka navrchu; obyčejné PDF, otevřené má jednu vrstvu |
@@ -173,4 +175,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N45.
+další číslo v [nálezech](findings.md), naposledy N46.

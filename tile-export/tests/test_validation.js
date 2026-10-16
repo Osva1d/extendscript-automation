@@ -273,5 +273,18 @@ assert(nb({ zundMode: true, cutBleed: -1, gapInner: NaN }) === "cutBleed:negativ
 assert(nb({ rasterDPI: NaN }) === "", "the resolution of a vector export");
 assert(nb({ exportMode: "raster", rasterDPI: NaN }) === "rasterDPI:nan", "and of a raster one");
 
+console.log("\n=== duplicateName: two panels, one file name ===");
+// A pattern without {n} names equal panels alike; the export would write one
+// file for both (2026-10-16).
+var dn = TE.Validate.duplicateName;
+assert(dn(["a_01", "a_02", "a_03"]) === null, "names with {n} are all different");
+var d13 = dn(["a_1010", "a_1020", "a_1010"]);
+assert(d13 !== null && d13.a === 0 && d13.b === 2, "the first two that match, panels 1 and 3");
+var d23 = dn(["x", "y", "y", "y"]);
+assert(d23 !== null && d23.a === 1 && d23.b === 2, "and the first pair, not the last");
+assert(dn([]) === null && dn(["a"]) === null, "nothing to compare");
+var dp = dn(["hasOwnProperty", "constructor", "hasOwnProperty"]);
+assert(dp !== null && dp.a === 0 && dp.b === 2, "names that are Object members are names too");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

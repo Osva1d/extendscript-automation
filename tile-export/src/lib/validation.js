@@ -276,5 +276,24 @@ TE.Validate = {
         if (!/\S/.test(n)) { return TE.L.ERR_NAME_EMPTY; }
         if (/[\/:]/.test(n)) { return TE.L.format(TE.L.ERR_NAME_CHARS, n); }
         return null;
+    },
+
+    /**
+     * The first two panels whose files would get the same name. PURE FUNCTION.
+     * A pattern without {n} names equal panels alike, and the export would
+     * write one file for both: the second overwrites the first, or with
+     * skipping on is skipped (2026-10-16).
+     * @param {Array} names - File names in panel order.
+     * @returns {Object|null} {a, b} positions in names, 0-based, or null.
+     */
+    duplicateName: function (names) {
+        var seen = {}, i, key;
+        for (i = 0; i < names.length; i++) {
+            // The prefix keeps any name off Object.prototype's members.
+            key = "n:" + names[i];
+            if (seen.hasOwnProperty(key)) { return { a: seen[key], b: i }; }
+            seen[key] = i;
+        }
+        return null;
     }
 };

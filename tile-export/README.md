@@ -305,7 +305,8 @@ Proměnné přidávají tlačítka pod polem: klik připíše proměnnou na kone
 vzor tedy skládej zleva doprava. `{total}`, `{clean}` a `{adds}` tlačítko
 nemají, napiš je ručně. Výsledek v dialogu ukazuje pod tabulkou názvy všech
 souborů, které export zapíše. Prázdný název, lomítko nebo dvojtečku export
-odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
+odmítne, stejně jako vzor, který by dvěma plátům dal stejný název — ten
+potřebuje `{n}`. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
 stranu.
 
