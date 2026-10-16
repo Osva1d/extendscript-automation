@@ -594,8 +594,10 @@ TE.UI = {
         // --- Footer ----------------------------------------------------------
         var gFooter = w.add("group");
         gFooter.alignment = ["fill", "top"];
+        // The family's footer (extendscript-ui-standards §9): the author as
+        // in the dist header, the version, no tool name — the title has it.
         var stCopy = gFooter.add("statictext", undefined,
-            "© 2026 Osva1d — " + c.scriptName + " v" + c.version);
+            "© 2025–2026 Ladislav Osvald · v" + c.version);
         stCopy.enabled = false;   // greyed — intentional, not a bug
 
         // --- Buttons ---------------------------------------------------------
@@ -1288,23 +1290,30 @@ TE.UI = {
             // all of them, not only the first panel's (user, 2026-10-16). The
             // field scrolls, so a long job only makes the list longer.
             var nctx = { docName: ctx.docName || "", total: tiles.length, scaleFactor: sf };
-            var nm, first = null;
+            var nm, panelNames = [];
             for (i = 0; i < tiles.length; i++) {
                 nm = TE.Export.fileName(tiles[i], nctx, s, pages[i]);
-                if (first === null) { first = nm; }
+                panelNames.push(nm);
                 names.push(nm + ".pdf");
                 if (s.zundMode) { names.push(TE.Export.cutName(nm) + ".pdf"); }
             }
             // Only the export writes files, so only the export is stopped.
             // Every name comes from the one pattern; the first stands for all.
-            var nameErr = TE.Validate.nameError(first);
+            // A name two panels share would leave one file for both; an empty
+            // one is already said, and every panel shares it.
+            var nameErr = TE.Validate.nameError(panelNames[0]);
+            var dup = nameErr ? null : TE.Validate.duplicateName(panelNames);
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("\u2717 " + v.errors[i]); }
             for (i = 0; i < v.exportErrors.length; i++) { alerts.push("\u2717 " + v.exportErrors[i]); }
             if (nameErr) { alerts.push("\u2717 " + nameErr); }
+            if (dup) {
+                alerts.push("\u2717 " + l.format(l.ERR_NAME_DUPLICATE,
+                    tiles[dup.a].index, tiles[dup.b].index, panelNames[dup.a]));
+            }
             for (i = 0; i < v.warnings.length; i++) { warns.push("\u26a0 " + v.warnings[i]); }
             ok = (v.errors.length === 0);
-            exportOk = (v.exportErrors.length === 0) && !nameErr;
+            exportOk = (v.exportErrors.length === 0) && !nameErr && !dup;
         } catch (err) {
             alerts.push("\u2717 " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;

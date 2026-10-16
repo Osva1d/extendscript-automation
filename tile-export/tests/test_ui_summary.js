@@ -360,6 +360,24 @@ eq(rSlash.btnExport.enabled === false && rSlash.btnTiles.enabled === true, true,
     "it stops the export only: Panels only writes no file");
 has(summary({ etPattern: { text: "   ", enabled: true } }), "✗ Vzor pojmenování dává prázdný název souboru.",
     "an empty pattern is caught before the export");
+eq(summary({ etPattern: { text: "   ", enabled: true } }).indexOf("stejný název") === -1, true,
+    "and not once more as a name every panel shares");
+// Panels 1 and 3 of the arch print 1010 x 1000 mm: without {n} they share
+// a name, and the export would leave one file for both (2026-10-16).
+var rDup = refs({ etPattern: { text: "{doc}_{size}", enabled: true } });
+TE.UI.refresh(null, rDup, ctx);
+has(text(rDup), "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže.", "the status line says the export cannot run");
+has(rDup.stCalc.text,
+    "✗ Pláty 1 a 3 by dostaly stejný název souboru „arch_1010x1000mm“, export by zapsal jen jeden z nich. Přidejte do vzoru {n}.",
+    "the message names both panels, the name and the fix");
+eq(rDup.btnExport.enabled === false && rDup.btnTiles.enabled === true, true,
+    "it stops the export only: Panels only writes no file");
+var rDupZ = refs(zund({ etPattern: { text: "{doc}", enabled: true } }));
+TE.UI.refresh(null, rDupZ, ctx);
+has(rDupZ.stCalc.text, "✗ Pláty 1 a 2 by dostaly stejný název souboru „arch“", "Zünd: the same check");
+var rNoDup = refs({ etPattern: { text: "{doc}_{n}_{size}", enabled: true } });
+TE.UI.refresh(null, rNoDup, ctx);
+eq(rNoDup.btnExport.enabled && rNoDup.stCalc.text.indexOf("stejný název") === -1, true, "with {n} every name differs");
 
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
