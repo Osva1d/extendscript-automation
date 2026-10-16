@@ -405,21 +405,22 @@ TE.UI = {
         ddCutSpot = gCutSpot.add("dropdownlist", undefined, []);
         ddCutSpot.alignment = ["fill", "center"];
         ddCutSpot.helpTip = l.TIP_CUT_SPOT;
-        // The document's spots plus the shop's cut colours and the stored
-        // one: a straight cut needs no contour, so its colour need not be in
-        // the document yet — the export creates it.
+        // The document's spots plus the shop's cut colours: a straight cut
+        // needs no contour, so its colour need not be in the document yet —
+        // the export creates it. Swatches in brackets ([Registrační]) are no
+        // cut colour; a cut in registration could not be told from the marks.
+        // A stored colour the list lacks shows as "(chybí)", never as the
+        // first item (2026-10-16).
         var spotList = [], zj;
-        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS, [s.cutSpot]);
+        var candidates = (ctx.spotNames || []).concat(c.CUT_SPOTS);
         for (zj = 0; zj < candidates.length; zj++) {
-            if (candidates[zj] && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
+            if (candidates[zj] && candidates[zj].charAt(0) !== "["
+                    && TE.Utils.indexOf(spotList, candidates[zj]) === -1) {
                 spotList.push(candidates[zj]);
             }
         }
         for (zj = 0; zj < spotList.length; zj++) { ddCutSpot.add("item", spotList[zj]); }
-        ddCutSpot.selection = 0;
-        for (zj = 0; zj < ddCutSpot.items.length; zj++) {
-            if (ddCutSpot.items[zj].text === s.cutSpot) { ddCutSpot.selection = zj; break; }
-        }
+        this.selectItem(ddCutSpot, s.cutSpot);
 
         var gMarkCol = gZundFields.add("group");
         gMarkCol.alignment = ["fill", "top"];
@@ -947,7 +948,7 @@ TE.UI = {
         s.skipExisting = r.cbSkip.value;
         if (r.rbOutType) {
             s.zundMode    = r.rbOutType[1].value;
-            s.cutSpot     = r.ddCutSpot.selection ? r.ddCutSpot.selection.text : s.cutSpot;
+            s.cutSpot     = this.itemValue(r.ddCutSpot) || s.cutSpot;
             s.cutBleed    = TE.Utils.parseNumber(r.etBleed.text);
             s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
             s.markSizeZ   = TE.Utils.parseNumber(r.etMarkSize.text);
@@ -972,6 +973,41 @@ TE.UI = {
     numText: function (v) {
         if (v === null || v === undefined || (typeof v === "number" && !isFinite(v))) { return ""; }
         return String(v);
+    },
+
+    /**
+     * Selects a list item by its text. A stored value the list lacks is
+     * never swapped for the first item: it is added as "<value>  (chybí)"
+     * and selected, and itemValue() reads it back without the marker
+     * (extendscript-ui-standards §12.3, after zund-summa-marks
+     * ZSM.UI.selectDDL). The marker item of an earlier call goes first.
+     * @param {Object} dd - The dropdownlist.
+     * @param {string} text - The value to select.
+     */
+    selectItem: function (dd, text) {
+        var i;
+        for (i = dd.items.length - 1; i >= 0; i--) {
+            if (dd.items[i].teMissing) { dd.remove(i); }
+        }
+        for (i = 0; i < dd.items.length; i++) {
+            if (dd.items[i].text === text) { dd.selection = i; return; }
+        }
+        var missing = dd.add("item", text + "  " + TE.L.DDL_MISSING_SUFFIX);
+        missing.teRawValue = text;
+        missing.teMissing = true;
+        dd.selection = missing;
+    },
+
+    /**
+     * The value of a list's selection: the stored value behind a "(chybí)"
+     * item, else the item's text; "" with nothing selected.
+     * @param {Object} dd - The dropdownlist.
+     * @returns {string} The value.
+     */
+    itemValue: function (dd) {
+        var sel = dd.selection;
+        if (!sel) { return ""; }
+        return sel.teMissing ? sel.teRawValue : sel.text;
     },
 
     /**
@@ -1026,11 +1062,7 @@ TE.UI = {
         if (!r.rbOutType) { return; }
         r.rbOutType[0].value = !s.zundMode;
         r.rbOutType[1].value = !!s.zundMode;
-        var zk;
-        r.ddCutSpot.selection = 0;
-        for (zk = 0; zk < r.ddCutSpot.items.length; zk++) {
-            if (r.ddCutSpot.items[zk].text === s.cutSpot) { r.ddCutSpot.selection = zk; break; }
-        }
+        this.selectItem(r.ddCutSpot, s.cutSpot);
         var mk;
         r.ddMarkColor.selection = 0;
         for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
@@ -1282,6 +1314,12 @@ TE.UI = {
                 // expects to be cut. Say plainly that it is not, yet.
                 if (TE.Utils.indexOf(ctx.contourSpots || [], s.cutSpot) !== -1) {
                     warns.push("\u26a0 " + l.format(l.WARN_CONTOUR_IGNORED, s.cutSpot));
+                }
+                // A stored cut colour the list lacks (§12.3): the export
+                // creates it under that name. Said, so a "cut" for "Cut"
+                // does not reach the machine unseen.
+                if (r.ddCutSpot && r.ddCutSpot.selection && r.ddCutSpot.selection.teMissing) {
+                    warns.push("\u26a0 " + l.format(l.WARN_CUT_SPOT_MISSING, s.cutSpot));
                 }
             }
 

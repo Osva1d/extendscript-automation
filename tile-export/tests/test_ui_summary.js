@@ -196,6 +196,15 @@ var tz = summary(zund({}));
 has(tz, "1 | 1000 × 1000 | 1010 × 1000 | 104 × 103", "pages with marks");
 has(tz, "2 | 1000 × 1000 | 1020 × 1000 | 105 × 103", "panel 2");
 has(tz, "Značky v barvě „[Registration]“, rovný ořez v barvě „Cut“.", "no contour: a straight cut");
+// A stored cut colour the document lacks shows as "(chybí)" and is said in
+// the Result: the export creates it, a "cut" for "Cut" must not go unseen.
+var missingCut = { text: "cut  (chybí)", teMissing: true, teRawValue: "cut" };
+var tmc = summary(zund({ ddCutSpot: { selection: missingCut } }));
+has(tmc, "⚠ Připraveno k exportu, 1 upozornění níže.", "the status line warns");
+has(tmc, "⚠ Barva řezu „cut“ v dokumentu není, export ji založí. Zkontrolujte, že ji Cut Center zná.",
+    "the details name the colour");
+has(tmc, "rovný ořez v barvě „cut“.", "and the run uses the stored name");
+eq(summary(zund({})).indexOf("v dokumentu není") === -1, true, "a colour from the list is not warned about");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
 has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");

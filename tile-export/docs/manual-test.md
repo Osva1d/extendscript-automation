@@ -130,7 +130,10 @@ přečíst. Do Přelepu napiš `2O` (písmeno O): pole zčervená, stavová řá
 „Přelep“: zadejte číslo, třeba 20 nebo 2,5."; Jen pláty, Vytvořit
 a exportovat, Uložit i Uložit jako… šedé. **Enter nesmí nic spustit** —
 dialog zůstane otevřený. Přepiš na `20`: červená zmizí a všechno se vrátí.
-Prázdné Měřítko kresby: panel Dokument ukáže „—". Zeď, Zünd, Šířky plátu
+Prázdné Měřítko kresby: panel Dokument ukáže „—". Předvolba s barvou řezu
+`cut` (třeba TEST) na zdi v Zündu: v seznamu Barva řezu „cut  (chybí)“, žádná
+[Registrační], stavová řádka oranžově a pod tabulkou „⚠ Barva řezu „cut“
+v dokumentu není, export ji založí…“; po výběru `Cut` upozornění zmizí. Zeď, Zünd, Šířky plátu
 133: pod tabulkou 92 názvů (46 plátů po dvou souborech), pole jde rolovat
 a psaní v polích se nezpomalí víc než dřív.
 
@@ -149,6 +152,7 @@ v milimetrech.
 | totéž, výstup 1:1 | `26_13456_a_01_1010x1000mm_1ku1_1x.pdf` — `{scale}` ve vzoru je volba | stránka 1010 × 1000 |
 | vzor `26_13456_a_{n}_{size}_1x`, výstup 1:1 | `26_13456_a_01_1010x1000mm_1x.pdf` | stránka 1010 × 1000 |
 | arch, vzor `zakazka/{n}` | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; „✗ Název souboru zakazka/01 obsahuje lomítko…" | export šedý, Jen pláty aktivní |
+| zeď, Zünd, předvolba s barvou řezu `cut` | v seznamu „Cut \| cut  (chybí)“; „⚠ Připraveno k exportu, 1 upozornění níže."; „⚠ Barva řezu „cut“ v dokumentu není, export ji založí. Zkontrolujte, že ji Cut Center zná."; „…rovný ořez v barvě „cut“." | `_cut` PDF s vrstvou a řezem v nové přímé barvě `cut` |
 | arch, vzor `{doc}_{size}` | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; „✗ Pláty 1 a 3 by dostaly stejný název souboru „arch-3000x1000-1ku10_1010x1000mm“, export by zapsal jen jeden z nich. Přidejte do vzoru {n}." | export šedý, Jen pláty aktivní |
 | arch, Vodorovně, Vodítek, vodorovné vodítko tažené ~60 mm pod horní hranou artboardu, Zaokrouhlit 100 | 2 pláty: S přídavky 3000 × 610 \| 3000 × 410, Stránka PDF 300 × 61 \| 300 × 41 | 2 PDF 300 × 61 \| 300 × 41 (N38) |
 | arch, Vodorovně, Šířky plátu 600 | Načisto 3000 × 600 \| 3000 × 400 — zbytek na spodním plátu | 2 PDF 300 × 61 \| 300 × 41 (N41) |
@@ -175,4 +179,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N46.
+další číslo v [nálezech](findings.md), naposledy N47.

@@ -225,8 +225,10 @@ značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. S
 ### Nastavení
 
 - **Barva řezu** — přímá barva řezové cesty, výchozí `Cut`. Seznam nabízí
-  `Cut` a přímé barvy dokumentu. V dokumentu být nemusí, export ji v PDF
-  vytvoří. Stroj rozlišuje velká a malá písmena.
+  `Cut` a přímé barvy dokumentu, registrační a jiné barvy v hranatých
+  závorkách ne. V dokumentu být nemusí, export ji v PDF vytvoří. Barva
+  z předvolby, kterou seznam nemá, se ukáže jako „cut  (chybí)“ a Výsledek
+  na ni upozorní. Stroj rozlišuje velká a malá písmena.
 - **Spad za řezem** — o kolik grafika přesahuje řez. Běžně 3 nebo 5 mm,
   u velkých plátů s místem na materiálu až 10 mm.
 - **Odstup od motivu** — volné místo mezi koncem grafiky a značkou (výchozí
@@ -252,8 +254,9 @@ v dialogu ji ukazuje ve sloupci Stránka PDF.
   pomůže jiná vzdálenost orientačního bodu, případně rozteč.
 - **Cesty v barvě řezu v dokumentu se zatím nepoužijí.** Dialog na ně upozorní
   a použije se rovný ořez.
-- **Starší předvolby** mají barvu `cut` s malým písmenem a odstup 10 mm, který
-  se dřív měřil od okraje plátu. Po načtení zkontroluj.
+- **Starší předvolby** mají barvu `cut` s malým písmenem (dialog ji ukáže
+  jako „cut  (chybí)“) a odstup 10 mm, který se dřív měřil od okraje plátu.
+  Po načtení zkontroluj.
 - **PDF preset platí pro oba soubory.** Preset s tiskovými značkami nebo
   spadávkou (třeba `pass4press`) je přidá i do `_cut`. Posun to nezpůsobí,
   stránky se zvětší stejně; pro Zünd ale vyber preset bez tiskových značek.
