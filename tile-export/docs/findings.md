@@ -142,6 +142,7 @@ polích.
 | N45 | překlep v číselném poli se tiše měnil v jiné číslo: přelep „2O" dal nulový přelep, „1 000" nebo „20 mm" výchozí hodnotu pole, prázdné měřítko kresby 1:1, a dialog mlčel (i v 1.0.1). Teď pole zčervená, Výsledek ho pojmenuje, obě akce i Uložit zešednou; číslo smí mít jen desetinnou čárku nebo tečku (audit společného jazyka P1, 2026-10-14) | `005e6c1` |
 | N46 | vzor bez `{n}` dal plátům se stejným rozměrem stejný název: export si soubor přepsal, se zapnutým přeskakováním další vynechal, bez hlášky (i v 1.0.x); teď Výsledek oba pláty jmenuje, poradí `{n}` a export zablokuje (z přehledu všech názvů, 2026-10-16) | `de84cff` |
 | N47 | barva řezu z předvolby, kterou seznam neměl, se při načtení tiše nahradila první položkou — u zdi registrační, takže by se řezalo v barvě značek (předvolba TEST s `cut`, 2026-10-15; i v 1.0.x); teď „cut  (chybí)“ podle `extendscript-ui-standards` §12.3, upozornění ve Výsledku, barvy v hranatých závorkách seznam řezu nenabízí | `8bd88f1` |
+| N48 | barva značek a PDF preset z předvolby, které dokument nebo Illustrator neměl, se při načtení tiše nahradily první položkou: značky v registrační bez upozornění, PDF s prvním presetem Illustratoru a jiným nastavením (i v 1.0.x); teď „(chybí)“, u značek upozornění, u presetu zablokovaný export (z N47, 2026-10-16) | `afbc923` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
