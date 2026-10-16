@@ -12,6 +12,21 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
+### N49 — návrh: volby přelepu pod sebou, dialog o 186 px užší (další verze)
+
+Návrh uživatele z ručního testu 1.1.0 (2026-10-16): volby Umístění přelepu
+pod sebou místo v řadě, levý sloupec by byl užší a vyplnil by prázdné místo
+dole. Naměřeno headless na skutečném dialogu (AI 30.8.2): samotné
+přeskládání zúží dialog jen z 1178 na 1108 px — nejširší je pak řádek
+„Dostupný spad“ s rezervou na čtyři hodnoty 9999,9. Se spadem na dvou
+řádcích (vlevo, vpravo / nahoře, dole) 992 × 836 px, levý sloupec 444 px
+místo 630, výška beze změny; prázdné místo dole v levém sloupci klesne
+z ~107 na ~40 px. Seznam předvoleb pak dostane ~220 px na název a potřebuje
+pevnou šířku, jinak ho dlouhý název roztáhne i s dialogem (engine-facts,
+„volné místo v řádku“). **Odloženo do další verze** spolu s vykáním
+a dvojtečkami za popisky (audit společného jazyka, §8 body 1 a 2):
+dvojtečky mění šířku sloupce popisků, levý sloupec se tak přeměří jednou.
+
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
