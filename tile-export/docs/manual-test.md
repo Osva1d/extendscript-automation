@@ -114,7 +114,10 @@ z pravítka vodítko: v panelu Vrstvy musí ležet ve tvé vrstvě, ne v `TE_pan
 mezeru značek 5 mm a vzor `{doc}_{n}_{size}_{scale}`, ať soubor nastavení
 drží cokoli. Seznam předvoleb s ↺ vyplní levý sloupec, ostatní tlačítka jsou pod ním.
 Napiš do vzoru `26_13456_a_` a klikni na `{n}`: proměnná se připíše na konec
-a Výsledek ukáže pod tabulkou nový název.
+a Výsledek ukáže pod tabulkou nové názvy. Vzor `{n}_{clean}_{adds}_{size}`
+napsaný ručně: na archu `01_1000x1000mm_1010x1000mm_1010x1000mm.pdf`, `02_…`
+s `1020x1000mm` a `03_…`; na zdi se Zündem v 1:1
+`01_2000x1000mm_2010x1000mm_2040x1030mm.pdf` a jeho `_cut`.
 
 **1.12 Výsledek a překlep v čísle (1.1.0).** Arch, §0: stavová řádka zeleně
 „✓ Připraveno k exportu: 3 pláty, ruční ořez, výstup 1:10.", tabulka podle
@@ -126,7 +129,9 @@ přečíst. Do Přelepu napiš `2O` (písmeno O): pole zčervená, stavová řá
 „Přelep“: zadejte číslo, třeba 20 nebo 2,5."; Jen pláty, Vytvořit
 a exportovat, Uložit i Uložit jako… šedé. **Enter nesmí nic spustit** —
 dialog zůstane otevřený. Přepiš na `20`: červená zmizí a všechno se vrátí.
-Prázdné Měřítko kresby: panel Dokument ukáže „—".
+Prázdné Měřítko kresby: panel Dokument ukáže „—". Zeď, Zünd, Šířky plátu
+133: pod tabulkou 92 názvů (46 plátů po dvou souborech), pole jde rolovat
+a psaní v polích se nezpomalí víc než dřív.
 
 ---
 
@@ -137,7 +142,7 @@ v milimetrech.
 
 | dokument, nastavení | Výsledek v dialogu | export |
 |---|---|---|
-| arch, §0 | „✓ Připraveno k exportu: 3 pláty, ruční ořez, výstup 1:10."; S přídavky 1010 \| 1020 \| 1010 × 1000, Stránka PDF 101 × 100 \| 102 × 100 \| 101 × 100; pod tabulkou `arch-3000x1000-1ku10_01_1010x1000mm_1ku10.pdf` | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka; otevřené v Illustratoru mají shora vrstvy `CutContour` (linka) a `Graphics` |
+| arch, §0 | „✓ Připraveno k exportu: 3 pláty, ruční ořez, výstup 1:10."; S přídavky 1010 \| 1020 \| 1010 × 1000, Stránka PDF 101 × 100 \| 102 × 100 \| 101 × 100; pod tabulkou tři názvy, `arch-3000x1000-1ku10_01_1010x1000mm_1ku10.pdf` až `…_03_1010x1000mm_1ku10.pdf` | 3 PDF 101 \| 102 \| 101 × 100, v každém jedna linka; otevřené v Illustratoru mají shora vrstvy `CutContour` (linka) a `Graphics` |
 | arch, výstup 1:1 | „… výstup 1:1."; Stránka PDF stejná jako S přídavky | 1010 \| 1020 \| 1010 × 1000, linka vidět 1 pt |
 | arch, vzor `26_13456_a_{n}_{size}_{scale}_1x`, 1:10 jako kresba | pod tabulkou `26_13456_a_01_1010x1000mm_1ku10_1x.pdf` | soubory s tímto jménem, stránka 101 × 100 |
 | totéž, výstup 1:1 | `26_13456_a_01_1010x1000mm_1ku1_1x.pdf` — `{scale}` ve vzoru je volba | stránka 1010 × 1000 |
@@ -150,7 +155,7 @@ v milimetrech.
 | Large Canvas + měřítko kresby 10, „1:10 jako kresba" | Stránka PDF 2001 × 1000 \| 2002 × 1000 \| 2001 × 1000 | náhled 2001 \| 2002 \| 2001 × 1000 |
 | Large Canvas + měřítko kresby 10, výstup 1:1 | „✗ Export nejde, Jen pláty ano…"; „Plát 1 by … měřil 20010 × 10000 mm; artboard … nejvýš 5715 mm" | export šedý, Jen pláty aktivní |
 | zeď 1:10, výstup 1:1 | S přídavky 2010 \| 2020 \| 2010 × 1000 | 2010 \| 2020 \| 2010 × 1000; plát 2 začíná polem 1990 (přelep), končí 4010 |
-| zeď, Zünd, 1:1 | „✓ … 3 pláty, Zünd, výstup 1:1."; Stránka PDF 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030; pod tabulkou „Značky v barvě „[Registrační]“, rovný ořez v barvě „Cut“." a dva soubory, `…_1ku1.pdf` a `…_1ku1_cut.pdf` | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
+| zeď, Zünd, 1:1 | „✓ … 3 pláty, Zünd, výstup 1:1."; Stránka PDF 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030; pod tabulkou „Značky v barvě „[Registrační]“, rovný ořez v barvě „Cut“." a šest názvů, na plát `…_1ku1.pdf` a `…_1ku1_cut.pdf` | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
 | zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
 | arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; řádky „1–2" se stránkou 149 × 103 a „3" s 11 × 103; „✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)…" | export šedý, Jen pláty aktivní |
 | zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |

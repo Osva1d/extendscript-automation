@@ -241,6 +241,10 @@ assert(TE.Export.buildName("{doc}_{n}", "Cena$1", 1, 2) === "Cena$1_01",
     "a $ in the document name is kept, not read as a replacement");
 assert(TE.Export.buildName("{doc}_{n}", "banner", 3, 12, { size: "1x1mm" }) === "banner_03",
     "patterns without the new placeholders are unchanged");
+assert(TE.Export.buildName("{n}_{clean}_{adds}", "x", 1, 3, { clean: "2000x1000mm", adds: "2010x1000mm" })
+    === "01_2000x1000mm_2010x1000mm", "{clean} and {adds}: the panel clean and with its adds (user, 2026-10-16)");
+assert(TE.Export.buildName("{n}_{clean}_{adds}", "x", 1, 3, {}) === "01",
+    "without values they go with their separators, like {scale}");
 // The default names a file like the shop does, without job and copies, which
 // only the user can type (user, 2026-10-11).
 var DEF = TE.Config.getDefaults().namePattern;
