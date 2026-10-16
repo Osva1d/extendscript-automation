@@ -20,8 +20,9 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje název prvního souboru;
   prázdný název, lomítko nebo dvojtečku export odmítne.
 - **Proměnné jako tlačítka.** Pod vzorem pojmenování je řada `{doc}` `{n}`
-  `{total}` `{size}` `{scale}`; klik ji připíše na konec vzoru, který se tak
-  skládá zleva doprava.
+  `{size}` `{scale}`; klik ji připíše na konec vzoru, který se tak skládá
+  zleva doprava. `{total}` tlačítko nemá, dílna ho nepoužívá; napsaný ručně
+  funguje dál.
 
 ### Changed
 
