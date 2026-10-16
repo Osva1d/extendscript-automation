@@ -187,5 +187,43 @@ var f2 = clicked("");
 TE.UI.insertToken(f2, "{doc}");
 eq(f2.text, "{doc}", "an empty pattern starts with it");
 
+console.log("\n=== a stored value the list lacks shows as (chybí) (§12.3) ===");
+// The TEST preset kept "cut"; the wall's list had [Registrační] and "Cut",
+// and the dialog silently took the first: a cut in registration, the colour
+// of the marks (2026-10-15). Never item 0 instead of the stored value.
+/** A dropdownlist stand-in: items, add(), remove(index), selection by index or item. */
+function dd(names) {
+    var d = { items: [], sel: null };
+    d.add = function (type, text) { var it = { text: text }; d.items.push(it); return it; };
+    d.remove = function (i) { if (d.sel === d.items[i]) { d.sel = null; } d.items.splice(i, 1); };
+    Object.defineProperty(d, "selection", {
+        get: function () { return d.sel; },
+        set: function (v) { d.sel = (typeof v === "number") ? d.items[v] : v; }
+    });
+    var i;
+    for (i = 0; i < names.length; i++) { d.add("item", names[i]); }
+    return d;
+}
+var cut = dd(["Cut", "Spot 1"]);
+TE.UI.selectItem(cut, "Spot 1");
+eq(cut.selection.text, "Spot 1", "a value the list has is selected");
+eq(cut.items.length, 2, "and nothing is added");
+TE.UI.selectItem(cut, "cut");
+eq(cut.selection.text, "cut  (chybí)", "a value it lacks shows with the marker");
+eq(cut.items.length, 3, "as one added item");
+eq(TE.UI.itemValue(cut), "cut", "and reads back without it");
+TE.UI.selectItem(cut, "Thru-cut");
+eq(cut.items.length === 3 && cut.selection.text === "Thru-cut  (chybí)", true,
+    "the next missing value replaces the earlier marker item");
+TE.UI.selectItem(cut, "Cut");
+eq(cut.items.length === 2 && TE.UI.itemValue(cut) === "Cut", true, "a value the list has removes it");
+eq(TE.UI.itemValue(dd([])), "", "nothing selected reads as empty");
+var rzm = refs({});
+rzm.rbOutType = [{ value: false }, { value: true }]; rzm.ddCutSpot = dd(["Cut"]);
+TE.UI.selectItem(rzm.ddCutSpot, "cut");
+rzm.ddMarkColor = { selection: null }; rzm.etMarkSize = { text: "5" }; rzm.etGapInner = { text: "5" };
+rzm.etMaxDist = { text: "500" }; rzm.etOrient = { text: "100" }; rzm.etBleed = { text: "5" };
+eq(TE.UI.collect(rzm).cutSpot, "cut", "collect() reads the stored colour, not its label");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

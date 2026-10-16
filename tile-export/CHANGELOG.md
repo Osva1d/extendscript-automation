@@ -71,6 +71,12 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ### Fixed
 
+- **Barva řezu z předvolby se už tiše nemění.** Barvu, kterou dokument nemá
+  — třeba starší `cut` s malým písmenem —, dialog dřív nahradil první
+  položkou seznamu; u dokumentu bez přímých barev to byla registrační, takže
+  by se řezalo v barvě značek (i v 1.0.x). Teď seznam ukáže „cut  (chybí)“,
+  Výsledek upozorní, že ji export založí, a registrační ani jiné barvy
+  v hranatých závorkách seznam řezu nenabízí.
 - **Vzor bez `{n}` už nezapíše jeden soubor za víc plátů.** Pláty se stejným
   rozměrem dostaly stejný název a export si soubor přepsal, se zapnutým
   přeskakováním další vynechal — bez hlášky (i v 1.0.x). Teď Výsledek řekne,
