@@ -26,8 +26,8 @@ TE.UI = {
         // a row, so three cover most splits — and scrolls past that. A listbox
         // with headers needs 33 px plus 20 per row (measured 2026-10-15)
         RESULT_TABLE_H: 93,
-        // px; three lines of details: a Zünd job's marks line and its two
-        // file names, measured in the preview of 2026-10-15
+        // px; three lines of details show, a Zünd job's marks line and its
+        // first two files (preview of 2026-10-15); the other names scroll
         RESULT_TEXT_H: 58
     },
 
@@ -1253,26 +1253,23 @@ TE.UI = {
             // One row per panel: its sizes and its PDF page on one line. The
             // sizes are real millimetres and do not move with the output
             // scale; only the page does, so it is shown, or the choice stays
-            // invisible until the export (N16). Same k as the export and the
-            // artboard check, TE.Utils.outputScale.
+            // invisible until the export (N16). The page is the export's own,
+            // TE.Export.pageSizeMm — in Zünd mode the mask plus gap and mark
+            // on every side — at real size, shown at the output scale. It is
+            // computed once per panel and handed to the file names below: a
+            // Zünd layout per panel is what the live preview spends its time
+            // on, and the names computing it again doubled the refresh
+            // (46 Zünd panels, measured 2026-10-16).
             var sf = ctx.validation.scaleFactor;
-            var k = TE.Utils.outputScale(s, sf);
             ratio = TE.Utils.pageRatio(s, sf);
-            var cells = [], i, e, cl, page, ztf, zab;
+            var cells = [], pages = [], i, e, cl, pm;
             for (i = 0; i < tiles.length; i++) {
                 cl = tiles[i].clean;
                 e = tiles[i].expanded;
-                if (s.zundMode) {
-                    // Zünd pages are the mask plus gap and mark on every side —
-                    // computed exactly as the export does it (buildZundPanel).
-                    ztf = TE.Export.tileTransform(tiles[i], [0, 0, 0, 0], k);
-                    zab = TE.Core.calculateAll(s, TE.Export.zundLayout(ztf, s, ratio).mask, ratio).ab;
-                    page = size(TE.Utils.pt2mm(zab[2] - zab[0]), TE.Utils.pt2mm(zab[1] - zab[3]));
-                } else {
-                    page = size(TE.Utils.pt2mm((e[2] - e[0]) * k), TE.Utils.pt2mm((e[1] - e[3]) * k));
-                }
+                pm = TE.Export.pageSizeMm(tiles[i], s, sf);
+                pages.push(pm);
                 cells.push([tiles[i].index, mm(cl[2] - cl[0]) + " \u00d7 " + mm(cl[1] - cl[3]),
-                    mm(e[2] - e[0]) + " \u00d7 " + mm(e[1] - e[3]), page]);
+                    mm(e[2] - e[0]) + " \u00d7 " + mm(e[1] - e[3]), size(pm[0] / ratio, pm[1] / ratio)]);
             }
             rows = this.groupRows(cells);
             count = tiles.length;
@@ -1286,13 +1283,20 @@ TE.UI = {
                 }
             }
 
-            // The first panel's file names as the export will write them, so
-            // the pattern can be checked before anything is written (1.1.0).
-            var first = TE.Export.fileName(tiles[0],
-                { docName: ctx.docName || "", total: tiles.length, scaleFactor: sf }, s);
-            names.push(first + ".pdf");
-            if (s.zundMode) { names.push(TE.Export.cutName(first) + ".pdf"); }
+            // Every file the export will write, under the name it will get, so
+            // the pattern can be checked before anything is written (1.1.0):
+            // all of them, not only the first panel's (user, 2026-10-16). The
+            // field scrolls, so a long job only makes the list longer.
+            var nctx = { docName: ctx.docName || "", total: tiles.length, scaleFactor: sf };
+            var nm, first = null;
+            for (i = 0; i < tiles.length; i++) {
+                nm = TE.Export.fileName(tiles[i], nctx, s, pages[i]);
+                if (first === null) { first = nm; }
+                names.push(nm + ".pdf");
+                if (s.zundMode) { names.push(TE.Export.cutName(nm) + ".pdf"); }
+            }
             // Only the export writes files, so only the export is stopped.
+            // Every name comes from the one pattern; the first stands for all.
             var nameErr = TE.Validate.nameError(first);
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("\u2717 " + v.errors[i]); }

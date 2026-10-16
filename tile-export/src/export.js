@@ -54,11 +54,13 @@ TE.Export = {
      * "$" in a document name would otherwise be read as a replacement
      * pattern.
      *
-     * @param {string} pattern - Carries {doc}, {n}, {total}, {size}, {scale}.
+     * @param {string} pattern - Carries {doc}, {n}, {total}, {size}, {scale},
+     *        {clean}, {adds}.
      * @param {string} docName - Source document name without extension.
      * @param {number} index - 1-based panel number.
      * @param {number} total - How many panels there are.
-     * @param {Object} [extra] - {size, scale}; missing ones count as empty.
+     * @param {Object} [extra] - {size, scale, clean, adds}; missing ones count
+     *        as empty.
      * @returns {string} File name without extension.
      */
     buildName: function (pattern, docName, index, total, extra) {
@@ -67,7 +69,8 @@ TE.Export = {
         while (n.length < width) { n = "0" + n; }
         var x = extra || {};
         var vals = [["doc", String(docName)], ["n", n], ["total", String(total)],
-                    ["size", x.size ? String(x.size) : ""], ["scale", x.scale ? String(x.scale) : ""]];
+                    ["size", x.size ? String(x.size) : ""], ["scale", x.scale ? String(x.scale) : ""],
+                    ["clean", x.clean ? String(x.clean) : ""], ["adds", x.adds ? String(x.adds) : ""]];
         var out = String(pattern), i;
         for (i = 0; i < vals.length; i++) {
             out = this.fillToken(out, vals[i][0], vals[i][1]);
@@ -104,18 +107,29 @@ TE.Export = {
     pageSizeMm: function (tile, s, sf) {
         var k = TE.Utils.outputScale(s, sf);
         var ratio = TE.Utils.pageRatio(s, sf);
-        var w, h, e, ab;
+        var ab;
         if (s.zundMode) {
             ab = TE.Core.calculateAll(s,
                 this.zundLayout(this.tileTransform(tile, [0, 0, 0, 0], k), s, ratio).mask, ratio).ab;
-            w = ab[2] - ab[0];
-            h = ab[1] - ab[3];
-        } else {
-            e = tile.expanded;
-            w = (e[2] - e[0]) * k;
-            h = (e[1] - e[3]) * k;
+            return [TE.Utils.pt2mm(ab[2] - ab[0]) * ratio, TE.Utils.pt2mm(ab[1] - ab[3]) * ratio];
         }
-        return [TE.Utils.pt2mm(w) * ratio, TE.Utils.pt2mm(h) * ratio];
+        return this.rectMm(tile.expanded, s, sf);
+    },
+
+    /**
+     * Real size of a rectangle of the document in mm, [w, h], at the same
+     * scale as pageSizeMm, so the panel with its adds measures what a
+     * manual-trim page does. PURE FUNCTION.
+     * @param {Array} rect - [left, top, right, bottom] in document points.
+     * @param {Object} s - Settings.
+     * @param {number} sf - The SOURCE document's Large Canvas factor.
+     * @returns {Array} [width, height] in real millimetres.
+     */
+    rectMm: function (rect, s, sf) {
+        var k = TE.Utils.outputScale(s, sf);
+        var ratio = TE.Utils.pageRatio(s, sf);
+        return [TE.Utils.pt2mm((rect[2] - rect[0]) * k) * ratio,
+                TE.Utils.pt2mm((rect[1] - rect[3]) * k) * ratio];
     },
 
     /**
@@ -129,18 +143,26 @@ TE.Export = {
      * (user, 2026-10-10); a {scale} in the pattern of a 1:1 job is a choice,
      * and it shows (user, 2026-10-11) — a pattern without it gives no ratio.
      * The decimal comma is the shop's convention, not the dialog's language.
+     * {clean} and {adds} are the panel at real size, clean and with its adds,
+     * in whole millimetres (user, 2026-10-16). With a manual trim {adds} is
+     * {size}; in Zünd mode {size} is the page with its marks.
      *
      * @param {Object} tile - Panel.
      * @param {Object} ctx - {docName, total, scaleFactor}.
      * @param {Object} s - Settings.
+     * @param {Array} [pageMm] - pageSizeMm of this panel when the caller has
+     *        it already (the dialog computes it for its table); else computed.
      * @returns {string} File name without extension.
      */
-    fileName: function (tile, ctx, s) {
-        var mm = this.pageSizeMm(tile, s, ctx.scaleFactor);
+    fileName: function (tile, ctx, s, pageMm) {
         var ratio = (s.exportScale === "actual") ? 1 : TE.Utils.manualScale(s);
+        // [w, h] real millimetres as the name writes them: "2020x1020mm".
+        var size = function (mm) { return Math.round(mm[0]) + "x" + Math.round(mm[1]) + "mm"; };
         return this.buildName(s.namePattern, ctx.docName, tile.index, ctx.total, {
-            size: Math.round(mm[0]) + "x" + Math.round(mm[1]) + "mm",
-            scale: TE.Config.namingScalePrefix + TE.Utils.formatMM(ratio, ",")
+            size: size(pageMm || this.pageSizeMm(tile, s, ctx.scaleFactor)),
+            scale: TE.Config.namingScalePrefix + TE.Utils.formatMM(ratio, ","),
+            clean: size(this.rectMm(tile.clean, s, ctx.scaleFactor)),
+            adds: size(this.rectMm(tile.expanded, s, ctx.scaleFactor))
         });
     },
 

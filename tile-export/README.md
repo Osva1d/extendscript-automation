@@ -53,7 +53,7 @@ Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než
 1. Spusť skript, vyplň dialog. Panel **Dokument** ukáže čistý formát a dostupný
    spad na každé hraně. **Výsledek** průběžně přepočítává: stavová řádka řekne,
    jestli export poběží, tabulka ukáže každý plát načisto, s přídavky a jako
-   stránku PDF, pod ní jsou hlášky a název prvního souboru. Chybné zadání
+   stránku PDF, pod ní jsou hlášky a názvy všech souborů. Chybné zadání
    zašedne obě akční tlačítka. Čísla piš s desetinnou čárkou nebo tečkou,
    bez jednotek; pole s jiným zápisem, i prázdné, zčervená a Výsledek ho
    pojmenuje. **Typ výstupu** volí mezi ručním ořezem (červená linka)
@@ -290,6 +290,8 @@ ně proměnné:
 | `{scale}` | poměr dat ke skutečné velikosti: `1ku10`, ve skutečné velikosti `1ku1` |
 | `{doc}` | název dokumentu bez přípony |
 | `{total}` | počet plátů |
+| `{clean}` | čistý formát plátu ve skutečné velikosti, celé mm (`2000x1000mm`) |
+| `{adds}` | formát plátu s přídavky (`2010x1000mm`); u ručního ořezu totéž co `{size}`, u Zündu bez značek |
 
 Výchozí vzor `{doc}_{n}_{size}_{scale}` dá `zed_01_2040x1030mm_1ku10.pdf`.
 Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
@@ -300,9 +302,10 @@ Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
 Zünd přidá k řezovému souboru `_cut`.
 
 Proměnné přidávají tlačítka pod polem: klik připíše proměnnou na konec vzoru,
-vzor tedy skládej zleva doprava. `{total}` tlačítko nemá, napiš ho ručně. Výsledek v dialogu ukazuje název prvního
-souboru. Prázdný název, lomítko nebo
-dvojtečku export odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
+vzor tedy skládej zleva doprava. `{total}`, `{clean}` a `{adds}` tlačítko
+nemají, napiš je ručně. Výsledek v dialogu ukazuje pod tabulkou názvy všech
+souborů, které export zapíše. Prázdný název, lomítko nebo dvojtečku export
+odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
 stranu.
 

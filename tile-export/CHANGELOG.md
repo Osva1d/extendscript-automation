@@ -17,12 +17,16 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Pojmenování podle konvence dílny.** Vzor zná `{size}`, skutečný rozměr
   stránky (`2020x1020mm`), a `{scale}`, poměr dat ke skutečné velikosti
   (`1ku10`, ve skutečné velikosti `1ku1`; kde poměr nechceš, vynech ho):
-  `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje název prvního souboru;
-  prázdný název, lomítko nebo dvojtečku export odmítne.
+  `26_13456_a_{n}_{size}_{scale}_1x`. Výsledek ukazuje názvy všech souborů,
+  které export zapíše; prázdný název, lomítko nebo dvojtečku export odmítne.
 - **Proměnné jako tlačítka.** Pod vzorem pojmenování je řada `{doc}` `{n}`
   `{size}` `{scale}`; klik ji připíše na konec vzoru, který se tak skládá
   zleva doprava. `{total}` tlačítko nemá, dílna ho nepoužívá; napsaný ručně
   funguje dál.
+- **Skryté proměnné `{clean}` a `{adds}`:** čistý formát plátu a formát
+  s přídavky ve skutečné velikosti, v celých mm (`2000x1000mm`, `2010x1000mm`).
+  Tlačítko nemají, do vzoru se píšou ručně. U ručního ořezu je `{adds}` totéž
+  co `{size}`, u Zündu je `{size}` stránka i se značkami.
 
 ### Changed
 
@@ -39,7 +43,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   nejde, Jen pláty ano: …" nebo „✗ Nejde spustit: …". Pod ní tabulka plátů se
   sloupci Načisto, S přídavky a Stránka PDF (u Zündu se značkami); stejné
   sousední pláty sdílí řádek, třeba „1–2". Nejníž hlášky, chyby první,
-  a názvy souborů prvního plátu.
+  a názvy všech souborů, které export zapíše; pole se dá rolovat.
 - **Typ výstupu: ruční ořez, nebo Zünd.** Jedna volba místo řádku linky
   v panelu Export a panelu Zünd se zaškrtávátkem; pod ní jen pole zvoleného
   typu. Panel Export se jmenuje Soubory.

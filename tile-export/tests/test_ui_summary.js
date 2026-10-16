@@ -318,18 +318,40 @@ has(rDown.stCalc.text, "✗ Pole „Výška plátu“: zadejte číslo", "stacke
 var rUnused = run({ etCount: { text: "abc", enabled: true }, rbMode: [{ value: false }, { value: true }, { value: false }] });
 eq(rUnused.btnExport.enabled && rUnused.st.numbersOk, true, "a field the split does not use does not stop it");
 
-console.log("\n=== 1.1.0: the Result shows the first file's name ===");
+console.log("\n=== 1.1.0: the Result names every file ===");
 // The arch sheet is 3000 x 1000 mm at 1:10; panel 1 prints 1010 x 1000 mm.
-has(summary({}), "\narch_01.pdf", "the pattern of these stand-ins, {n} with two digits");
+// All the files the export writes, not only the first panel's (user,
+// 2026-10-16): the details field scrolls.
+has(summary({}), "\narch_01.pdf\narch_02.pdf\narch_03.pdf", "the pattern of these stand-ins, {n} with two digits");
 var shopPat = { text: "26_13456_a_{n}_{size}_{scale}_1x", enabled: true };
-has(summary({ etPattern: shopPat }), "\n26_13456_a_01_1010x1000mm_1ku10_1x.pdf",
-    "1:10 as drawn: real size and the ratio");
+has(summary({ etPattern: shopPat }),
+    "\n26_13456_a_01_1010x1000mm_1ku10_1x.pdf\n26_13456_a_02_1020x1000mm_1ku10_1x.pdf\n26_13456_a_03_1010x1000mm_1ku10_1x.pdf",
+    "1:10 as drawn: real size and the ratio, panel by panel");
 has(summary({ etPattern: shopPat, rbExpScale: [{ value: false }, { value: true }] }),
     "\n26_13456_a_01_1010x1000mm_1ku1_1x.pdf",
     "1:1: a {scale} in the pattern is meant, so the ratio is 1ku1 (user, 2026-10-11)");
 has(summary(zund({ etPattern: shopPat })),
-    "\n26_13456_a_01_1040x1030mm_1ku10_1x.pdf\n26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf",
-    "Zünd: the page with its marks, and the _cut file beside it");
+    "\n26_13456_a_01_1040x1030mm_1ku10_1x.pdf\n26_13456_a_01_1040x1030mm_1ku10_1x_cut.pdf"
+    + "\n26_13456_a_02_1050x1030mm_1ku10_1x.pdf\n26_13456_a_02_1050x1030mm_1ku10_1x_cut.pdf"
+    + "\n26_13456_a_03_1040x1030mm_1ku10_1x.pdf\n26_13456_a_03_1040x1030mm_1ku10_1x_cut.pdf",
+    "Zünd: each panel's page with its marks, its _cut file beside it");
+var rNames = refs(zund({}));
+TE.UI.refresh(null, rNames, ctx);
+eq(rNames.stCalc.text.split("\n").length, 7, "Zünd, three panels: the marks line and six files");
+
+console.log("\n=== 1.1.0: {clean} and {adds}, typed by hand ===");
+// The panel clean and with its adds at real size, whole millimetres, like
+// {size}; no buttons (user, 2026-10-16).
+var sizesPat = { text: "{n}_{clean}_{adds}_{size}", enabled: true };
+has(summary({ etPattern: sizesPat }), "\n01_1000x1000mm_1010x1000mm_1010x1000mm.pdf\n02_1000x1000mm_1020x1000mm_1020x1000mm.pdf",
+    "manual trim at 1:10: clean, with adds, and {size} the same as {adds}");
+has(summary({ etPattern: sizesPat, rbExpScale: [{ value: false }, { value: true }] }),
+    "\n01_1000x1000mm_1010x1000mm_1010x1000mm.pdf", "at 1:1 the same real sizes");
+has(summary(zund({ etPattern: sizesPat })), "\n01_1000x1000mm_1010x1000mm_1040x1030mm.pdf",
+    "Zünd: {adds} is the panel, {size} the page with its marks");
+has(summary({ etPattern: { text: "{clean}_{adds}", enabled: true }, cbEqual: { value: true, enabled: true },
+    etAddTop: { text: "40" }, etAddBottom: { text: "40" }, etAddRight: { text: "40" } }),
+    "\n1017x1000mm_1027x1080mm.pdf", "equal panels of 1016,7 mm round to whole millimetres");
 var rSlash = refs({ etPattern: { text: "zakazka/{n}", enabled: true } });
 TE.UI.refresh(null, rSlash, ctx);
 has(rSlash.stCalc.text, "✗ Název souboru zakazka/01 obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
@@ -374,6 +396,10 @@ var rLcName = refs({ etScaleN: { text: "1" }, etPattern: { text: "{n}_{size}_{sc
 TE.UI.refresh(null, rLcName, lcCtx);
 has(rLcName.stCalc.text, "01_2010x1000mm_1ku1.pdf",
     "Large Canvas at drawing scale 1: real size, 1ku1 — the canvas factor is no ratio");
+var rLcSizes = refs({ etScaleN: { text: "10" }, etPattern: { text: "{n}_{clean}_{adds}_{size}", enabled: true } });
+TE.UI.refresh(null, rLcSizes, lcCtx);
+has(rLcSizes.stCalc.text, "01_20000x10000mm_20010x10000mm_20010x10000mm.pdf",
+    "Large Canvas with drawing scale 10: {clean} and {adds} at real size too");
 app.activeDocument.scaleFactor = 1;
 
 console.log("\n=== 1.1.0: the status line says whether the export can run ===");
