@@ -526,13 +526,15 @@ TE.UI = {
 
         // Placeholders as buttons under the field (user, 2026-10-11): a click
         // adds one at the end — the cursor is lost to the click, see
-        // insertToken(). The button text is the placeholder it adds.
+        // insertToken(). The button text is the placeholder it adds. {total}
+        // has no button, the shop does not use it; typed, it still works
+        // (user, 2026-10-16).
         var gTokens = pExp.add("group");
         gTokens.alignment = ["fill", "top"];
         var stTokens = gTokens.add("statictext", undefined, l.LBL_TOKENS);
         this.lockW(stTokens, this.M.LABEL_COL);   // [deviation] shared label axis
         stTokens.helpTip = l.TIP_TOKENS;
-        var tokens = [["{doc}", l.TIP_TOKEN_DOC], ["{n}", l.TIP_TOKEN_N], ["{total}", l.TIP_TOKEN_TOTAL],
+        var tokens = [["{doc}", l.TIP_TOKEN_DOC], ["{n}", l.TIP_TOKEN_N],
                       ["{size}", l.TIP_TOKEN_SIZE], ["{scale}", l.TIP_TOKEN_SCALE]];
         var btnTokens = [], ti, bt;
         for (ti = 0; ti < tokens.length; ti++) {

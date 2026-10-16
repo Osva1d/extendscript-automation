@@ -300,7 +300,7 @@ Konvenci dílny rok_zakázka_motiv_plát_rozměr_poměr_kopie zapíšeš jako
 Zünd přidá k řezovému souboru `_cut`.
 
 Proměnné přidávají tlačítka pod polem: klik připíše proměnnou na konec vzoru,
-vzor tedy skládej zleva doprava. Výsledek v dialogu ukazuje název prvního
+vzor tedy skládej zleva doprava. `{total}` tlačítko nemá, napiš ho ručně. Výsledek v dialogu ukazuje název prvního
 souboru. Prázdný název, lomítko nebo
 dvojtečku export odmítne. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
