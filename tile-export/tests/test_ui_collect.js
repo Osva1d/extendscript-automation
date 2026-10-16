@@ -225,5 +225,30 @@ rzm.ddMarkColor = { selection: null }; rzm.etMarkSize = { text: "5" }; rzm.etGap
 rzm.etMaxDist = { text: "500" }; rzm.etOrient = { text: "100" }; rzm.etBleed = { text: "5" };
 eq(TE.UI.collect(rzm).cutSpot, "cut", "collect() reads the stored colour, not its label");
 
+// No stored value has nothing to keep: [Default]'s PDF preset "" takes the
+// first item, as it always did.
+var pdfs = dd(["[Výchozí Illustratoru]", "[Kvalitní tisk]"]);
+TE.UI.selectItem(pdfs, "");
+eq(pdfs.selection.text === "[Výchozí Illustratoru]" && pdfs.items.length === 2, true, "an empty value: the first item");
+TE.UI.selectItem(pdfs, "Dílna bez komprese");
+eq(pdfs.selection.text, "Dílna bez komprese  (chybí)", "a preset this Illustrator lacks");
+var rpdf = refs({}); rpdf.ddPdf = pdfs;
+eq(TE.UI.collect(rpdf).pdfPreset, "Dílna bez komprese", "collect() keeps its name");
+var none = dd([TE.L.PDF_PRESET_NONE]); TE.UI.selectItem(none, "");
+rpdf.ddPdf = none;
+eq(TE.UI.collect(rpdf).pdfPreset, "", "the no-preset item still reads as \"\" (N20)");
+
+// Registration is the one bracketed mark colour, named in the language of
+// the install; a stored [Registration] is the list's [Registrační].
+var marks = dd(["[Registrační]", "Spot 1"]);
+TE.UI.selectItem(marks, "[Registration]", TE.UI.sameMarkColor);
+eq(marks.selection.text === "[Registrační]" && marks.items.length === 2, true, "[Registration] selects [Registrační]");
+TE.UI.selectItem(marks, "Spot 1", TE.UI.sameMarkColor);
+eq(marks.selection.text, "Spot 1", "a spot colour by its name");
+TE.UI.selectItem(marks, "Bílá", TE.UI.sameMarkColor);
+eq(marks.selection.text === "Bílá  (chybí)" && TE.UI.itemValue(marks) === "Bílá", true, "a missing one shows as (chybí)");
+eq(TE.UI.sameMarkColor("[Registrační]", "Spot 1") || TE.UI.sameMarkColor("Spot 1", "[Registration]"), false,
+    "registration and a spot colour are not the same");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

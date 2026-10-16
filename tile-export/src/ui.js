@@ -434,10 +434,9 @@ TE.UI = {
         var mj;
         for (mj = 0; mj < mcList.length; mj++) { ddMarkColor.add("item", mcList[mj]); }
         if (ddMarkColor.items.length === 0) { ddMarkColor.add("item", s.markColor); }
-        ddMarkColor.selection = 0;
-        for (mj = 0; mj < ddMarkColor.items.length; mj++) {
-            if (ddMarkColor.items[mj].text === s.markColor) { ddMarkColor.selection = mj; break; }
-        }
+        // A stored colour the document lacks shows as "(chybí)"; the marks
+        // then go in registration and the Result says so (§12.3, 2026-10-16).
+        this.selectItem(ddMarkColor, s.markColor, this.sameMarkColor);
 
         etBleed    = this.addRow(gZundFields, l.LBL_CUT_BLEED, s.cutBleed, l.TIP_CUT_BLEED, "mm");
         etMarkSize = this.addRow(gZundFields, l.LBL_MARK_SIZE, s.markSizeZ, l.TIP_MARK_SIZE, "mm");
@@ -500,10 +499,9 @@ TE.UI = {
         }
         var pdfItems = this.pdfPresetItems(pdfList), pj;
         for (pj = 0; pj < pdfItems.length; pj++) { ddPdf.add("item", pdfItems[pj]); }
-        ddPdf.selection = 0;
-        for (pj = 0; pj < ddPdf.items.length; pj++) {
-            if (ddPdf.items[pj].text === s.pdfPreset) { ddPdf.selection = pj; break; }
-        }
+        // A stored preset this Illustrator lacks shows as "(chybí)" and stops
+        // the export, which could not save with it (§12.3, 2026-10-16).
+        this.selectItem(ddPdf, s.pdfPreset);
 
         var gOut = pExp.add("group");
         gOut.alignment = ["fill", "top"];
@@ -941,8 +939,8 @@ TE.UI = {
         s.lineSpot    = r.etSpot.text;
         s.lineWidth   = TE.Utils.parseNumber(r.etLineW.text);
         // The "no preset" item (N20) stands for "", like [Default]'s value.
-        s.pdfPreset   = (r.ddPdf.selection && r.ddPdf.selection.text !== TE.L.PDF_PRESET_NONE)
-            ? r.ddPdf.selection.text : "";
+        var pdf = this.itemValue(r.ddPdf);
+        s.pdfPreset   = (pdf !== TE.L.PDF_PRESET_NONE) ? pdf : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
@@ -950,7 +948,7 @@ TE.UI = {
             s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = this.itemValue(r.ddCutSpot) || s.cutSpot;
             s.cutBleed    = TE.Utils.parseNumber(r.etBleed.text);
-            s.markColor   = r.ddMarkColor.selection ? r.ddMarkColor.selection.text : "[Registration]";
+            s.markColor   = this.itemValue(r.ddMarkColor) || "[Registration]";
             s.markSizeZ   = TE.Utils.parseNumber(r.etMarkSize.text);
             s.gapInner    = TE.Utils.parseNumber(r.etGapInner.text);
             s.maxDist     = TE.Utils.parseNumber(r.etMaxDist.text);
@@ -980,17 +978,28 @@ TE.UI = {
      * never swapped for the first item: it is added as "<value>  (chybí)"
      * and selected, and itemValue() reads it back without the marker
      * (extendscript-ui-standards §12.3, after zund-summa-marks
-     * ZSM.UI.selectDDL). The marker item of an earlier call goes first.
+     * ZSM.UI.selectDDL). The marker item of an earlier call goes first, so
+     * a preset looks the same whatever was loaded before it (N8). No stored
+     * value — [Default]'s PDF preset "" — has nothing to keep: the first item.
      * @param {Object} dd - The dropdownlist.
      * @param {string} text - The value to select.
+     * @param {Function} [same] - (itemText, value) -> whether they name the
+     *        same thing; equal text when left out.
      */
-    selectItem: function (dd, text) {
+    selectItem: function (dd, text, same) {
         var i;
         for (i = dd.items.length - 1; i >= 0; i--) {
             if (dd.items[i].teMissing) { dd.remove(i); }
         }
+        if (!text) {
+            if (dd.items.length > 0) { dd.selection = 0; }
+            return;
+        }
         for (i = 0; i < dd.items.length; i++) {
-            if (dd.items[i].text === text) { dd.selection = i; return; }
+            if (same ? same(dd.items[i].text, text) : dd.items[i].text === text) {
+                dd.selection = i;
+                return;
+            }
         }
         var missing = dd.add("item", text + "  " + TE.L.DDL_MISSING_SUFFIX);
         missing.teRawValue = text;
@@ -1008,6 +1017,19 @@ TE.UI = {
         var sel = dd.selection;
         if (!sel) { return ""; }
         return sel.teMissing ? sel.teRawValue : sel.text;
+    },
+
+    /**
+     * Whether a mark colour list item and a stored mark colour are the same
+     * colour. Registration is the one swatch in brackets the list holds, and
+     * its name is the language's — [Registration], [Registrační] — so any
+     * bracketed name is registration, as TE.Draw.readSpotDef takes it.
+     * @param {string} itemText - The list item's text.
+     * @param {string} value - The stored colour.
+     * @returns {boolean} True for the same colour.
+     */
+    sameMarkColor: function (itemText, value) {
+        return itemText === value || (itemText.charAt(0) === "[" && value.charAt(0) === "[");
     },
 
     /**
@@ -1047,15 +1069,11 @@ TE.UI = {
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
         r.etLineW.text = this.numText(s.lineWidth);
-        // A stored name the list lacks — [Default]'s "", a preset deleted
-        // from Illustrator — falls back to the first item, as when the dialog
-        // is built. Keeping the previous selection made one preset look
-        // different depending on what was loaded before it (N8).
-        var pk;
-        r.ddPdf.selection = 0;
-        for (pk = 0; pk < r.ddPdf.items.length; pk++) {
-            if (r.ddPdf.items[pk].text === s.pdfPreset) { r.ddPdf.selection = pk; break; }
-        }
+        // As when the dialog is built: [Default]'s "" takes the first item,
+        // a preset deleted from Illustrator shows as "(chybí)". Keeping the
+        // previous selection made one preset look different depending on
+        // what was loaded before it (N8).
+        this.selectItem(r.ddPdf, s.pdfPreset);
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
@@ -1063,11 +1081,7 @@ TE.UI = {
         r.rbOutType[0].value = !s.zundMode;
         r.rbOutType[1].value = !!s.zundMode;
         this.selectItem(r.ddCutSpot, s.cutSpot);
-        var mk;
-        r.ddMarkColor.selection = 0;
-        for (mk = 0; mk < r.ddMarkColor.items.length; mk++) {
-            if (r.ddMarkColor.items[mk].text === s.markColor) { r.ddMarkColor.selection = mk; break; }
-        }
+        this.selectItem(r.ddMarkColor, s.markColor, this.sameMarkColor);
         r.etMarkSize.text = this.numText(s.markSizeZ);
         r.etGapInner.text = this.numText(s.gapInner);
         r.etMaxDist.text = this.numText(s.maxDist);
@@ -1321,6 +1335,11 @@ TE.UI = {
                 if (r.ddCutSpot && r.ddCutSpot.selection && r.ddCutSpot.selection.teMissing) {
                     warns.push("\u26a0 " + l.format(l.WARN_CUT_SPOT_MISSING, s.cutSpot));
                 }
+                // A mark colour the document lacks: the marks go in
+                // registration, as TE.Draw.resolveMarkColor falls back.
+                if (r.ddMarkColor && r.ddMarkColor.selection && r.ddMarkColor.selection.teMissing) {
+                    warns.push("\u26a0 " + l.format(l.WARN_MARK_COLOR_MISSING, s.markColor));
+                }
             }
 
             // Every file the export will write, under the name it will get, so
@@ -1341,6 +1360,9 @@ TE.UI = {
             // one is already said, and every panel shares it.
             var nameErr = TE.Validate.nameError(panelNames[0]);
             var dup = nameErr ? null : TE.Validate.duplicateName(panelNames);
+            // A PDF preset this Illustrator lacks: saving with it would fail
+            // on every panel (N20), so the export waits for another one.
+            var pdfMissing = !!(r.ddPdf && r.ddPdf.selection && r.ddPdf.selection.teMissing);
 
             for (i = 0; i < v.errors.length; i++) { alerts.push("\u2717 " + v.errors[i]); }
             for (i = 0; i < v.exportErrors.length; i++) { alerts.push("\u2717 " + v.exportErrors[i]); }
@@ -1349,9 +1371,10 @@ TE.UI = {
                 alerts.push("\u2717 " + l.format(l.ERR_NAME_DUPLICATE,
                     tiles[dup.a].index, tiles[dup.b].index, panelNames[dup.a]));
             }
+            if (pdfMissing) { alerts.push("\u2717 " + l.format(l.ERR_PDF_PRESET_MISSING, s.pdfPreset)); }
             for (i = 0; i < v.warnings.length; i++) { warns.push("\u26a0 " + v.warnings[i]); }
             ok = (v.errors.length === 0);
-            exportOk = (v.exportErrors.length === 0) && !nameErr && !dup;
+            exportOk = (v.exportErrors.length === 0) && !nameErr && !dup && !pdfMissing;
         } catch (err) {
             alerts.push("\u2717 " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;

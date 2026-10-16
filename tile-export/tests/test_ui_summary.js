@@ -205,6 +205,20 @@ has(tmc, "⚠ Barva řezu „cut“ v dokumentu není, export ji založí. Zkont
     "the details name the colour");
 has(tmc, "rovný ořez v barvě „cut“.", "and the run uses the stored name");
 eq(summary(zund({})).indexOf("v dokumentu není") === -1, true, "a colour from the list is not warned about");
+// A mark colour the document lacks: the marks go in registration, said so.
+var missingMark = { text: "Bílá  (chybí)", teMissing: true, teRawValue: "Bílá" };
+var tmm = summary(zund({ ddMarkColor: { selection: missingMark } }));
+has(tmm, "⚠ Barva značek „Bílá“ v dokumentu není, značky budou v registrační.", "the marks' colour is warned about");
+has(tmm, "⚠ Připraveno k exportu, 1 upozornění níže.", "and the export can still run");
+// A PDF preset this Illustrator lacks would fail to save every panel (N20):
+// the export waits for another preset, Panels only writes no PDF.
+var missingPdf = { text: "Dílna bez komprese  (chybí)", teMissing: true, teRawValue: "Dílna bez komprese" };
+var rPdf = refs({ ddPdf: { selection: missingPdf } });
+TE.UI.refresh(null, rPdf, ctx);
+has(rPdf.stCalc.text, "✗ PDF preset „Dílna bez komprese“ v tomto Illustratoru není a export by s ním PDF neuložil. Vyberte jiný preset.",
+    "the missing preset is named");
+has(rPdf.stStatus.text, "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže.", "the status line says the export cannot run");
+eq(rPdf.btnExport.enabled === false && rPdf.btnTiles.enabled === true, true, "it stops the export only");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
 has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");

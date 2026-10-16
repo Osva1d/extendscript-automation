@@ -235,7 +235,8 @@ značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. S
   5 mm), aby stroj značku přečetl.
 - **Barva značek** — oddělená od barvy řezu, značka v barvě řezu by na stroji
   od řezu nešla rozeznat. Výchozí registrační; na černý a čirý materiál bílá
-  `Spot 1`. Neznámá barva spadne na registrační, nástroj ji sám nevytvoří.
+  `Spot 1`. Neznámá barva spadne na registrační, nástroj ji sám nevytvoří;
+  dialog ji ukáže jako „Spot 1  (chybí)“ a Výsledek na registrační upozorní.
 - **Průměr značky, max. rozteč, orientační bod** — jako v Zünd Summa Marks,
   se kterými tile-export sdílí výpočet polohy značek.
 
@@ -280,6 +281,10 @@ Pro data v měřítku kresby použij PDF preset **bez převzorkování**. Preset
 převzorkovává podle rozlišení na stránce, a to je v 1:10 desetkrát vyšší: obraz,
 který má ve skutečné velikosti 72 ppi, by po zvětšení v RIPu měl 30 ppi
 (naměřeno, nález N36).
+
+PDF preset z předvolby, který tento Illustrator nemá — třeba předvolba
+přenesená z jiného Macu —, se v seznamu ukáže jako „název  (chybí)“ a export
+počká, než vybereš jiný. Jiným presetem ho dialog sám nenahradí.
 
 ## Pojmenování souborů
 
