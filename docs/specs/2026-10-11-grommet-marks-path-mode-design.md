@@ -346,6 +346,9 @@ v §6.1, Large Canvas v `docs/extendscript-engine-facts.md` M2, vnitřní roh
 v §5.5, výška a šířka řádku v §8.3).
 Otevřené zůstává kliknutí přímo na zakřivený úsek (ruční test J10) a oblouky
 z úseček v klientském PDF.
+Stav 2026-10-17: kliknutí přímo na zakřivený úsek změřil ruční test J10 —
+chová se jako výběr obou koncových kotev úseku (engine-facts). Otevřené
+zůstávají oblouky z úseček v klientském PDF.
 
 ## 15. Pořadí prací
 

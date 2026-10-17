@@ -604,6 +604,17 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   „Obrátit směr cesty" existuje (místo v menu neověřeno); Pathfinder
   „Sjednotit". Ruční test měl „Posunout cestu" a „Nový objekt má základní
   vzhled" zpaměti — obojí špatně.
+- **J10 — klik Přímým výběrem přímo na zakřivený úsek (ruční test, 2026-10-17).**
+  Zaoblený obdélník z živých rohů (R 50 mm), nevybraný, klik doprostřed
+  oblouku v rohu: Vybraná cesta dostupná, šedý řádek „Uzavřená cesta ·
+  4 zaoblené rohy", Jen vybraná část obvodu použitelná; běh s ní dal značky
+  na oba konce oblouku a doprostřed, odsazené dovnitř. Klik na zakřivený úsek
+  se tedy chová jako výběr jeho dvou koncových kotev. Text s počtem úseků
+  a výběr po běhu nezapsány.
+- **J11 — vypnutá „Nová kresba má základní vzhled" (ruční test, 2026-10-17).**
+  Štít, D 20 mm, Rozestup 300 mm: výsledek stejný jako se zapnutou volbou,
+  bez hlášky, v dokumentu nic navíc. Kopie z `offsetPath` vzhled posledního
+  objektu nepřevezme (výplň a tah jí skript nastaví sám).
 
 ### Pozor na menu příkazy s dialogem
 
