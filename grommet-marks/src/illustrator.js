@@ -94,7 +94,9 @@ GM.Illustrator = {
     },
 
     /**
-     * Inspects the current selection for path-mode placement.
+     * Inspects the current selection for path-mode placement. A selected
+     * group holding nothing but one path (groups nested that way included)
+     * counts as that path.
      * Pure read — never mutates the selection. Everything computable is
      * delegated to GM.Core so this stays a thin DOM extraction layer.
      *
@@ -115,6 +117,13 @@ GM.Illustrator = {
             if (!sel || sel.length === 0) return { ok: false, reason: "no-selection" };
             if (sel.length !== 1) return { ok: false, reason: "not-a-path" };
             item = sel[0];
+            // A path alone in its group is often reported as the group itself:
+            // it depends on how it was selected, and handing a direct
+            // selection back can flip it (measured 2026-10-17). It is the
+            // path the user means.
+            while (item.typename === "GroupItem" && !item.clipped && item.pageItems.length === 1) {
+                item = item.pageItems[0];
+            }
             if (item.typename !== "PathItem") return { ok: false, reason: "not-a-path" };
         } catch (eSel) {
             return { ok: false, reason: "not-a-path" };
@@ -199,8 +208,8 @@ GM.Illustrator = {
             tmp.closed = true;
             tmp.filled = true;
             tmp.stroked = false;
-            tmp.applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst ' +
-                (-D) + ' I jntp 2 "/></LiveEffect>');
+            tmp.applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim ' +
+                GM.CONSTANTS.OFFSET_MITER_LIMIT + ' R ofst ' + (-D) + ' I jntp 2 "/></LiveEffect>');
             // doc.selection = null leaves a path with direct-selected anchors
             // selected (measured 2026-10-13), so the cut line is deselected
             // itself; otherwise expandStyle would act on it as well and the

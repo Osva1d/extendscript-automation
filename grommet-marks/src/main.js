@@ -303,7 +303,9 @@ GM.Main = {
         }
         // D = 0: marks sit on the cut line by construction — nothing to check.
         if (D > 0) {
-            var chk = GM.Core.checkMarks(marks, pathInfo.circuit, D, GM.CONSTANTS.OFFSET_TOL / scale);
+            var anchors = [];
+            for (var ai = 0; ai < pathInfo.segments.length; ai++) anchors.push(pathInfo.segments[ai].p0);
+            var chk = GM.Core.checkMarks(marks, pathInfo.circuit, D, GM.CONSTANTS.OFFSET_TOL / scale, anchors);
             if (!chk.ok) {
                 return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_COLLAPSE, shown) };
             }

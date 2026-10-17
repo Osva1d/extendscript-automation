@@ -569,6 +569,33 @@ console.log("--- Core: distance / inside / area / checkMarks ---");
         small._sagitta === undefined, "a check within tol leaves the sagitta uncomputed");
 })();
 
+// ===== TEST: inner corners (acceptance test 2026-10-17) =====
+console.log("--- Core: checkMarks at an inner corner ---");
+(function () {
+    // L shape, counter-clockwise; its inner (reflex) corner is (300, 300).
+    var Lsh = [straightSeg(0, 0, 600, 0), straightSeg(600, 0, 600, 300), straightSeg(600, 300, 300, 300),
+               straightSeg(300, 300, 300, 600), straightSeg(300, 600, 0, 600), straightSeg(0, 600, 0, 0)];
+    var c = GM.Core.buildCircuit(Lsh, true), D = 20;
+    var anchors = Lsh.map(function (sg) { return sg.p0; });
+    // Illustrator's mitred offset: the eyelet line's inner corner is D from
+    // both edges, D * sqrt(2) from the corner point itself.
+    var marks = [[20, 20], [580, 20], [580, 280], [280, 280], [280, 580], [20, 580]];
+    var chk = GM.Core.checkMarks(marks, c, D, 0.5, anchors);
+    assert(chk.ok === true, "L shape: the inner-corner mark (D * sqrt 2 from the corner point) passes (reason '" +
+        chk.reason + "', worst " + chk.worst + ")");
+    assert(GM.Core.checkMarks(marks, c, D, 0.5).ok === false, "without the anchors the inner corner is a wrong distance");
+    assert(GM.Core.checkMarks([[300, 300], [450, 300]], c, D, 0.5, anchors).ok === false, "marks on the cut line still fail (collapse)");
+    var tooFar = GM.Core.checkMarks([[240, 240]], c, D, 0.5, anchors);
+    assert(tooFar.ok === false && tooFar.reason === "distance", "farther than the miter limit (4 D) from the corner point: fails");
+    var tooClose = GM.Core.checkMarks([[290, 290]], c, D, 0.5, anchors);
+    assert(tooClose.ok === false && tooClose.reason === "distance", "closer than D to the corner point: fails");
+    // A convex outline keeps the strict rule: a units mistake (3 D in) is caught.
+    var sq = roundedRect(1000, 1000, 0, 1), sc = GM.Core.buildCircuit(sq, true);
+    var wrong = GM.Core.checkMarks([[150, 150], [850, 150], [850, 850], [150, 850]], sc, 50, 0.5,
+        sq.map(function (sg) { return sg.p0; }));
+    assert(wrong.ok === false && wrong.reason === "distance", "square: corner marks 3 D in still fail with the anchors given");
+})();
+
 // ===== TEST: part of the outline (spec §5.4) =====
 console.log("--- Core: selectedRuns / mapRun / runCorners ---");
 (function () {

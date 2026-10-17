@@ -758,14 +758,27 @@ GM.Core = {
      * @param {number} D - Offset (document units).
      * @param {number} tol - Allowed deviation beyond the check's own sampling
      *     error (the cut line's largest chord sagitta is added), document units.
+     * @param {Array<Array<number>>} [anchors] - The cut line's anchor points.
+     *     In an inner (reflex) corner of the cut line the eyelet line's mitred
+     *     corner is D from both edges but farther from the corner point
+     *     itself (D * sqrt 2 at a right angle, at most OFFSET_MITER_LIMIT * D:
+     *     Illustrator bevels beyond). A mark whose nearest point on the cut
+     *     line is an anchor and that lies farther than D, within that limit,
+     *     passes. Without anchors every mark must be D away.
      * @returns {Object} {ok, worst, reason: ""|"outside"|"distance"}; worst is
-     *     the raw measured deviation.
+     *     the largest deviation measured (an accepted inner-corner mark counts 0).
      */
-    checkMarks: function (marks, cutCircuit, D, tol) {
+    checkMarks: function (marks, cutCircuit, D, tol, anchors) {
         var poly = GM.Core._samplePolygon(cutCircuit), worst = 0;
+        var far = D * GM.CONSTANTS.OFFSET_MITER_LIMIT + tol;
         for (var i = 0; i < marks.length; i++) {
             if (!GM.Core.pointInPolygon(poly, marks[i])) return { ok: false, worst: Infinity, reason: "outside" };
-            var e = Math.abs(GM.Core.distanceToCircuit(cutCircuit, marks[i]) - D);
+            var dist = GM.Core.distanceToCircuit(cutCircuit, marks[i]);
+            var e = Math.abs(dist - D);
+            if (e > tol && dist > D && dist <= far && anchors &&
+                    GM.Core._nearestIsAnchor(anchors, marks[i], dist, tol)) {
+                e = 0;
+            }
             if (e > worst) worst = e;
         }
         // The sagitta only when needed: on a CAD outline of many line pieces
@@ -774,6 +787,15 @@ GM.Core = {
             return { ok: true, worst: worst, reason: "" };
         }
         return { ok: false, worst: worst, reason: "distance" };
+    },
+
+    /** True when q's nearest point on the line (at `dist`) is one of the anchors, within tol. */
+    _nearestIsAnchor: function (anchors, q, dist, tol) {
+        for (var i = 0; i < anchors.length; i++) {
+            var dx = anchors[i][0] - q[0], dy = anchors[i][1] - q[1];
+            if (Math.sqrt(dx * dx + dy * dy) - dist <= tol) return true;
+        }
+        return false;
     },
 
     /**

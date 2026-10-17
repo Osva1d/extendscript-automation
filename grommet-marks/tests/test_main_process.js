@@ -403,6 +403,22 @@ console.log("--- process: polyline arc passes the check (review focus 1) ---");
     assert(alerts.length === 0 && rec.marks.length > 0, "marks drawn, check passed (" + alerts.join(" | ") + ")");
 })();
 
+console.log("--- process: inner corner passes the check (acceptance test 2026-10-17) ---");
+(function () {
+    var d = 20 * MM;
+    function Lshape(a, b, c) {      // L from (a, a), arms out to b, inner corner at (c, c)
+        return [seg([a, a], [b, a]), seg([b, a], [b, c]), seg([b, c], [c, c]),
+                seg([c, c], [c, b]), seg([c, b], [a, b]), seg([a, b], [a, a])];
+    }
+    var cut = Lshape(0, 600 * MM, 300 * MM), inner = Lshape(d, 600 * MM - d, 300 * MM - d);
+    var rec = fakeDoc({ artboards: [[0, 600 * MM, 600 * MM, 0]], pathInfo: pathInfoOf(cut, true),
+        offsetPath: function () { return { ok: true, loops: 1, segments: inner }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+    assert(alerts.length === 0 && rec.marks.length > 0, "L shape, offset 20 mm: marks drawn, no refusal (" + alerts.join(" | ") + ")");
+    assert(!!cornerMark(rec, 280 * MM, 280 * MM), "a mark in the inner corner of the eyelet line, 20 mm from both edges");
+})();
+
 console.log("--- process: Large Canvas offset, empty result, decimal separator (spec §6.1, §7, G1) ---");
 (function () {
     var side = 30 * MM, seen = {}, collapse = GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0];

@@ -113,6 +113,33 @@ console.log("--- getSelectedPathInfo: corners and a direct selection ---");
     assert(GM.Illustrator.getSelectedPathInfo().partial.state === "none", "every anchor selected (Selection tool): whole outline");
 })();
 
+console.log("--- getSelectedPathInfo: a group holding only the path (acceptance test 2026-10-17) ---");
+(function () {
+    function pp(x, y) {
+        return { anchor: [x, y], leftDirection: [x, y], rightDirection: [x, y], selected: PathPointSelection.ANCHORPOINT };
+    }
+    function sq() {
+        return { typename: "PathItem", closed: true, pathPoints: [pp(0, 0), pp(1000, 0), pp(1000, 600), pp(0, 600)] };
+    }
+    function group(items) { return { typename: "GroupItem", clipped: false, pageItems: items }; }
+    // Illustrator reports such a path as the group itself, depending on how it
+    // was selected (measured 2026-10-17); the path is what the user picked.
+    var path = sq(), g = group([path]);
+    GM.Illustrator.doc.selection = [g];
+    var info = GM.Illustrator.getSelectedPathInfo();
+    assert(info.ok === true && info.pathRef === path && info.sharpCount === 4, "group of one path: that path (" + info.reason + ")");
+    var inner = sq();
+    GM.Illustrator.doc.selection = [group([group([inner])])];
+    assert(GM.Illustrator.getSelectedPathInfo().pathRef === inner, "group in a group, one path deep inside: that path");
+    GM.Illustrator.doc.selection = [group([sq(), sq()])];
+    assert(GM.Illustrator.getSelectedPathInfo().reason === "not-a-path", "group of two paths: not a path");
+    var clip = group([sq()]); clip.clipped = true;
+    GM.Illustrator.doc.selection = [clip];
+    assert(GM.Illustrator.getSelectedPathInfo().reason === "not-a-path", "clipping group: not a path");
+    GM.Illustrator.doc.selection = [group([{ typename: "CompoundPathItem" }])];
+    assert(GM.Illustrator.getSelectedPathInfo().reason === "not-a-path", "group of one compound path: not a path");
+})();
+
 console.log("--- getDocInfo ---");
 (function () {
     GM.Illustrator.doc.artboards = [{ artboardRect: [0, 500, 1000, 0] }, { artboardRect: [0, 0, 10, -10] }];

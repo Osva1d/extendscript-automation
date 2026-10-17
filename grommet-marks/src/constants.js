@@ -25,6 +25,7 @@ GM.CONSTANTS = {
     MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
     SEGMENT_EPS: 0.01,         // doc pt — anchors closer than this count as one
     OFFSET_TOL: 0.5,           // pt — allowed deviation beyond the check's own sampling error (the cut line's chord sagitta is added)
+    OFFSET_MITER_LIMIT: 4,     // offsetPath's mlim — an eyelet corner at an inner corner lies at most this × D from the corner point
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
