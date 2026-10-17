@@ -6,7 +6,8 @@
  * if these go red after dedup, the dedup changed utils behavior.
  *
  * Scope: deepCopy (priority — GM-only, highest divergence, unasserted until now),
- *        log, error. presetEquals is characterized in test_validation.js.
+ *        log, error, and presetEquals' handling of pathOffset (1.3.0). The rest
+ *        of presetEquals is characterized in test_validation.js.
  *
  * CHARACTERIZATION NOTES (observed current behavior, NOT bugs to fix here):
  *   - deepCopy uses JSON.parse(JSON.stringify(obj)) per its docstring
@@ -125,6 +126,30 @@ console.log("--- Utils.error ---");
     assert(alertCalls.length === 1, "error calls alert exactly once");
     assert(alertCalls[0] === "Illustrator Grommet Marks: something broke",
         "error prefixes message with SCRIPT_NAME + ': '");
+})();
+
+// =====================================================
+// TEST 5: presetEquals — the path offset is part of a preset (1.3.0)
+// =====================================================
+console.log("--- Utils.presetEquals: pathOffset ---");
+(function () {
+    function preset(extra) {
+        var p = { offsetX: 7, offsetY: 7, bottomMirror: true, rightMirror: true,
+                  units: "mm", markSize: 3,
+                  top: { enabled: true, useNumber: true, number: 10, spacing: 105 } };
+        for (var k in extra) if (extra.hasOwnProperty(k)) p[k] = extra[k];
+        return p;
+    }
+    assert(GM.Utils.presetEquals(preset({ pathOffset: 0 }), preset({ pathOffset: 20 })) === false,
+        "differing only in pathOffset (0 vs 20) -> not equal");
+    assert(GM.Utils.presetEquals(preset({ pathOffset: 20 }), preset({ pathOffset: 20 })) === true,
+        "same pathOffset -> equal");
+    assert(GM.Utils.presetEquals(preset({}), preset({ pathOffset: 20 })) === true,
+        "an old preset without pathOffset still equals the other side");
+    assert(GM.Utils.presetEquals(preset({ pathOffset: 20 }), preset({})) === true,
+        "...in either direction");
+    assert(GM.Utils.presetEquals(preset({ pathOffset: "20" }), preset({ pathOffset: 20 })) === true,
+        "'20' and 20 compare equal (string compare, like the other fields)");
 })();
 
 // ===== SUMMARY =====

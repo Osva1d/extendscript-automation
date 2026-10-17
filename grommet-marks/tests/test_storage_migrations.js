@@ -224,6 +224,7 @@ console.log("--- v5 forward-fill ---");
     assert(p.pathDist && p.pathDist.useNumber === false, "forward-fill: pathDist.useNumber");
     assert(p.pathDist.number === 24, "forward-fill: pathDist.number");
     assert(p.pathDist.spacing === 105, "forward-fill: pathDist.spacing");
+    assert(p.pathOffset === 0, "forward-fill: pathOffset 0 — old presets keep marks on the path (no double offset)");
 })();
 
 // ===== SUMMARY =====

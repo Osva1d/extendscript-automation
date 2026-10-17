@@ -56,9 +56,16 @@ function buildUI(pData, pathInfo) {
         pathInfo || { ok: false, reason: "no-selection" });
     return ui; // {window, gatherAll, modeUI, pathUI, zonesUI}
 }
-function mockPathInfo(cornerCount, closed, totalLen) {
-    return { ok: true, cornerCount: cornerCount, closed: closed,
-             totalLen: totalLen || 1000, corners: [], circuit: null, pathRef: {} };
+function mockPathInfo(cornerCount, closed, totalLen, extra) {
+    var p = { ok: true, cornerCount: cornerCount, closed: closed, sharpCount: cornerCount, roundCount: 0,
+              totalLen: totalLen || 1000, corners: [], circuit: null, pathRef: {},
+              partial: { state: "none", runs: [], selectedSegs: 0, totalSegs: 4 } };
+    for (var k in (extra || {})) if (extra.hasOwnProperty(k)) p[k] = extra[k];
+    return p;
+}
+function buildUI3(pData, pathInfo, docInfo) {
+    SUI.install();
+    return GM.UI.buildDialog(pData || freshPData(), pathInfo || { ok: false, reason: "no-selection" }, docInfo);
 }
 function done() { SUI.uninstall(); }
 
@@ -375,6 +382,274 @@ console.log("--- UI: disabled 'Selected path' names the reason (audit A5) ---");
             cases[i][0] + ": tooltip names the reason (got '" + ui.modeUI.pathRB.helpTip + "')");
         done();
     }
+})();
+
+// ===== TEST: Czech plural forms =====
+console.log("--- Locale: Czech plural forms ---");
+(function () {
+    assert(GM.L.count("INFO_CORNERS", 1) === "1 roh", "1 roh");
+    assert(GM.L.count("INFO_CORNERS", 3) === "3 rohy", "3 rohy");
+    assert(GM.L.count("INFO_CORNERS", 5) === "5 rohů", "5 rohů");
+    assert(GM.L.count("INFO_ROUND", 4) === "4 zaoblené rohy", "4 zaoblené rohy");
+    assert(GM.L.count("INFO_CORNERS", 11) === "11 rohů", "11 rohů");
+    assert(GM.L.count("INFO_CORNERS", 12) === "12 rohů", "12 rohů");
+    assert(GM.L.count("INFO_CORNERS", 0) === "0 rohů", "0 rohů");
+})();
+
+// ===== TEST: summary line under Placement (spec §8.1) =====
+console.log("--- UI 1.3: summary line (spec §8.1) ---");
+(function () {
+    var ui = buildUI3(null, null, { artboards: 1, width: 1000 * 2.834645669291339, height: 500 * 2.834645669291339, scale: 1 });
+    assert(ui.modeUI.infoLbl.text === "1 artboard · 1000 × 500 mm", "one artboard (got '" + ui.modeUI.infoLbl.text + "')");
+    done();
+    var ui2 = buildUI3(null, null, { artboards: 3, width: 1, height: 1, scale: 1 });
+    assert(ui2.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny", "three artboards");
+    done();
+
+    var p = freshPData();
+    p.presets["[Default]"].placementMode = "path";
+    var ui3 = buildUI3(p, null, { artboards: 1, width: 100, height: 100, scale: 1 });
+    assert(ui3.modeUI.infoLbl.text === GM.L.INFO_FALLBACK, "preset wants a path, none selected: said so");
+    ui3.modeUI.artboardRB.value = true; ui3.modeUI.artboardRB.onClick();
+    assert(ui3.modeUI.infoLbl.text.indexOf("1 artboard") === 0, "choosing the artboard clears the notice");
+    done();
+
+    var ui4 = buildUI3(null, mockPathInfo(5, true), null);
+    ui4.modeUI.pathRB.value = true; ui4.modeUI.pathRB.onClick();
+    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě", "house, offset 0 (got '" + ui4.modeUI.infoLbl.text + "')");
+    ui4.pathUI.offsetIn.text = "20"; ui4.pathUI.offsetIn.onChanging();
+    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "offset 20: no 'on the path'");
+    done();
+
+    var ui5 = buildUI3(null, mockPathInfo(0, true), null);
+    ui5.modeUI.pathRB.value = true; ui5.modeUI.pathRB.onClick();
+    ui5.pathUI.offsetIn.text = "20"; ui5.pathUI.offsetIn.onChanging();
+    assert(ui5.modeUI.infoLbl.text === "Uzavřená cesta · bez rohů · první značka nahoře", "circle");
+    done();
+
+    var ui6 = buildUI3(null, mockPathInfo(5, true, 1000, { sharpCount: 3, roundCount: 2 }), null);
+    ui6.modeUI.pathRB.value = true; ui6.modeUI.pathRB.onClick();
+    ui6.pathUI.offsetIn.text = "20"; ui6.pathUI.offsetIn.onChanging();
+    assert(ui6.modeUI.infoLbl.text === "Uzavřená cesta · 3 rohy, 2 zaoblené", "mixed corners");
+    done();
+})();
+
+// ===== TEST: path offset field and part of the outline (spec §8.2) =====
+console.log("--- UI 1.3: path offset and part of the outline (spec §8.2) ---");
+(function () {
+    var ui = buildUI3(null, mockPathInfo(3, false), null);
+    assert(ui.pathUI.offsetIn.enabled === false && ui.pathUI.offsetIn.helpTip === GM.L.TIP_PATH_OFFSET_OPEN, "open path: offset greyed, says why");
+    done();
+
+    var pd = freshPData();
+    pd.presets["[Default]"].pathOffset = 15;
+    var ui2 = buildUI3(pd, mockPathInfo(4, true), null);
+    assert(String(ui2.pathUI.offsetIn.text) === "15" && ui2.pathUI.offsetIn.enabled === true, "offset from the preset");
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    assert(String(ui2.gatherAll().pathOffset) === "15", "gathered");
+    assert(!("pathPartial" in ui2.gatherAll()), "part of the outline is not part of the settings");
+    ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
+    var ok = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    assert(ok.enabled === false, "invalid offset blocks Generate");
+    done();
+
+    var runs = mockPathInfo(10, true, 1000, { partial: { state: "runs", runs: [{ from: 0, len: 1, segs: 11 }], selectedSegs: 11, totalSegs: 20 } });
+    var ui3 = buildUI3(null, runs, null);
+    ui3.modeUI.pathRB.value = true; ui3.modeUI.pathRB.onClick();
+    assert(ui3.pathUI.partialCB.enabled === true && ui3.pathUI.partialCB.value === false, "partial: offered, off by default");
+    assert(ui3.pathUI.partialCB.text === "Jen vybraná část obvodu (11 z 20 úseků)", "label says how much");
+    assert(ui3.getRunOptions().pathPartial === false, "not ticked: whole outline");
+    ui3.pathUI.partialCB.value = true; ui3.pathUI.partialCB.onClick();
+    assert(ui3.getRunOptions().pathPartial === true, "ticked: part");
+    done();
+
+    var lone = mockPathInfo(4, true, 1000, { partial: { state: "lone", runs: [], selectedSegs: 0, totalSegs: 4 } });
+    var ui4 = buildUI3(null, lone, null);
+    assert(ui4.pathUI.partialCB.enabled === false && ui4.pathUI.partialCB.helpTip === GM.L.TIP_PARTIAL_LONE, "lone anchor: greyed, own tip");
+    done();
+    var ui5 = buildUI3(null, mockPathInfo(4, true), null);
+    assert(ui5.pathUI.partialCB.helpTip === GM.L.TIP_PARTIAL_NONE, "no direct selection: how to make one");
+    done();
+
+    var ui6 = buildUI3(null, mockPathInfo(4, true), null);
+    ui6.pathUI.offsetIn.text = "20";
+    var ddl = SUI.lastWindow().findOne(function (c) { return c.type === "dropdownlist" && c.items.length === 3; });
+    ddl.selection = ddl.items[1]; ddl.onChange();
+    assert(String(ui6.pathUI.offsetIn.text) === "2", "mm -> cm converts the path offset (got " + ui6.pathUI.offsetIn.text + ")");
+    done();
+})();
+
+// ===== TEST: the path offset is a preset change; an invalid one is not "on the path" =====
+console.log("--- UI 1.3: path offset enables Save, invalid offset in the summary ---");
+(function () {
+    var pd = freshPData();
+    pd.presets["[Default]"].placementMode = "path";   // opens in path mode, nothing else differs
+    var ui = buildUI3(pd, mockPathInfo(4, true), null);
+    var save = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.SAVE; });
+    assert(ui.modeUI.pathRB.value === true, "precheck: dialog opened in path mode");
+    assert(save.enabled === false, "unchanged dialog: Save disabled");
+    ui.pathUI.offsetIn.text = "20"; ui.pathUI.offsetIn.onChanging();
+    assert(save.enabled === true, "changing only the path offset enables Save");
+    ui.pathUI.offsetIn.text = "0"; ui.pathUI.offsetIn.onChanging();
+    assert(save.enabled === false, "back to the preset value: Save disabled again");
+    done();
+
+    var ui2 = buildUI3(null, mockPathInfo(4, true), null);
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy",
+        "invalid offset: no 'on the path' clause (got '" + ui2.modeUI.infoLbl.text + "')");
+    ui2.pathUI.offsetIn.text = ""; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy", "empty offset: no clause either");
+    ui2.pathUI.offsetIn.text = "0"; ui2.pathUI.offsetIn.onChanging();
+    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    done();
+})();
+
+// ===== TEST: part of the outline takes Count away from the path row (final review I1) =====
+// A run is marked like an open path: in count mode it would get only its ends and
+// inner corners (spec §5.3), so an editable count (or the whole outline's corner
+// count) would promise marks that never appear. While the box is ticked the row
+// is Spacing, like corner zones do to the edges (G3).
+console.log("--- UI 1.3: part of the outline switches the path row to Spacing (final review I1) ---");
+(function () {
+    var runs = { state: "runs", runs: [{ from: 0, len: 1, segs: 2 }], selectedSegs: 2, totalSegs: 4 };
+    function openIn(corners, over) {
+        var ui = buildUI3(over || null, mockPathInfo(corners, true, 1000, { partial: runs }), null);
+        ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+        return ui;
+    }
+    function tick(ui, on) { ui.pathUI.partialCB.value = on; ui.pathUI.partialCB.onClick(); }
+    assert(typeof GM.L.TIP_PATH_COUNT_PARTIAL === "string" && GM.L.TIP_PATH_COUNT_PARTIAL.length > 0,
+        "locale has TIP_PATH_COUNT_PARTIAL");
+
+    // Smooth path, Count 5 chosen
+    var ui = openIn(0);
+    var P = ui.pathUI;
+    P.numRB.onClick(); P.numIn.text = "5"; P.numIn.onChanging();
+    assert(ui.gatherAll().pathDist.useNumber === true && P.numIn.enabled === true, "precheck: Count 5, editable");
+    tick(ui, true);
+    assert(P.numRB.enabled === false, "ticked: Count radio disabled");
+    assert(P.spcRB.value === true && P.numRB.value === false, "ticked: Spacing selected");
+    assert(P.spcIn.enabled === true && P.numIn.enabled === false, "ticked: Spacing editable, count field not");
+    assert(ui.gatherAll().pathDist.useNumber === false, "ticked: gatherAll reports spacing mode");
+    assert(ui.getRunOptions().pathPartial === true, "ticked: the run is partial");
+    assert(P.numRB.helpTip === GM.L.TIP_PATH_COUNT_PARTIAL && P.numIn.helpTip === GM.L.TIP_PATH_COUNT_PARTIAL,
+        "ticked: Count tooltips say why");
+    tick(ui, false);
+    assert(P.numRB.enabled === true && P.numRB.value === true && P.spcRB.value === false, "unticked: Count radio is back");
+    assert(P.numIn.enabled === true && P.spcIn.enabled === false, "unticked: Count field editable again");
+    assert(ui.gatherAll().pathDist.useNumber === true && String(ui.gatherAll().pathDist.number) === "5",
+        "unticked: Count 5 comes back in gatherAll");
+    assert(P.numRB.helpTip === GM.L.TIP_COUNT && P.numIn.helpTip === GM.L.TIP_COUNT, "unticked: tooltips back to normal");
+    done();
+
+    // A Spacing choice of the user's own stays Spacing
+    var uiS = openIn(0);
+    uiS.pathUI.spcRB.onClick();
+    tick(uiS, true); tick(uiS, false);
+    assert(uiS.gatherAll().pathDist.useNumber === false && uiS.pathUI.numRB.enabled === true,
+        "own Spacing choice: still Spacing after unticking, Count selectable");
+    done();
+
+    // Cornered path: read-only corner count gives way, zones become possible, then all comes back
+    var uiC = openIn(4);
+    var C = uiC.pathUI;
+    C.numRB.onClick();
+    assert(String(uiC.gatherAll().pathDist.number) === "4" && C.numIn.enabled === false && uiC.zonesUI.enableCB.enabled === false,
+        "precheck: cornered path, Count = corner count, zones off");
+    tick(uiC, true);
+    assert(C.numRB.enabled === false && uiC.gatherAll().pathDist.useNumber === false, "cornered, ticked: Spacing");
+    assert(uiC.zonesUI.enableCB.enabled === true, "cornered, ticked: zones possible again (spacing)");
+    tick(uiC, false);
+    assert(uiC.gatherAll().pathDist.useNumber === true && String(uiC.gatherAll().pathDist.number) === "4" && C.numIn.enabled === false,
+        "cornered, unticked: Count = corner count again, read-only");
+    assert(uiC.zonesUI.enableCB.enabled === false && C.numRB.helpTip === GM.L.TIP_PATH_COUNT_DISABLED,
+        "cornered, unticked: zones off again, original Count tooltip");
+    done();
+
+    // Live validation: a bad Count field does not block Generate while Count is not used
+    var uiV = openIn(0);
+    var okV = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+    uiV.pathUI.numRB.onClick(); uiV.pathUI.numIn.text = "abc"; uiV.pathUI.numIn.onChanging();
+    assert(okV.enabled === false, "precheck: bad count blocks Generate");
+    tick(uiV, true);
+    assert(okV.enabled === true && GM.Validation.validate(uiV.gatherAll(), GM.L).valid === true,
+        "ticked: bad (unused) count no longer blocks, validate() agrees");
+    tick(uiV, false);
+    assert(okV.enabled === false, "unticked: bad count blocks again");
+    done();
+
+    // Loading a preset (revert) while ticked keeps the row on Spacing
+    var pd = freshPData();
+    pd.presets["[Default]"].placementMode = "path";
+    pd.presets["[Default]"].pathDist = { useNumber: true, number: 7, spacing: 100 };
+    var uiR = openIn(0, pd);
+    var R2 = uiR.pathUI;
+    assert(R2.numRB.value === true, "precheck: preset opens in Count");
+    tick(uiR, true);
+    var revert = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === "↺"; });
+    assert(revert.enabled === true, "precheck: the forced Spacing is a change from the preset");
+    revert.onClick();
+    assert(R2.numRB.enabled === false && R2.spcRB.value === true && R2.numRB.value === false,
+        "revert while ticked: still Spacing, Count disabled");
+    tick(uiR, false);
+    assert(R2.numRB.value === true && String(uiR.gatherAll().pathDist.number) === "7", "then unticked: the preset's Count 7");
+    done();
+
+    // The box only counts in path mode: artboard mode gives Count back, path mode takes it again
+    var uiM = openIn(0);
+    uiM.pathUI.numRB.onClick();
+    tick(uiM, true);
+    uiM.modeUI.artboardRB.value = true; uiM.modeUI.artboardRB.onClick();
+    assert(uiM.gatherAll().pathDist.useNumber === true && uiM.pathUI.numRB.enabled === true,
+        "artboard mode: the user's own Count choice is gathered (the box does not apply there)");
+    assert(uiM.getRunOptions().pathPartial === false, "artboard mode: not a partial run");
+    uiM.modeUI.pathRB.value = true; uiM.modeUI.pathRB.onClick();
+    assert(uiM.gatherAll().pathDist.useNumber === false && uiM.pathUI.numRB.enabled === false,
+        "back in path mode with the box still ticked: Spacing again");
+    done();
+})();
+
+// ===== TEST: a broken stored path offset opens as the default (final review I2) =====
+// NaN becomes null through JSON. The field then read "" and, on an OPEN path
+// where it is greyed out, Generate alerted about a field nobody could edit.
+console.log("--- UI 1.3: a broken stored path offset opens as 0 (final review I2) ---");
+(function () {
+    var alerts = [];
+    global.alert = function (m) { alerts.push(String(m)); };
+    var bad = [null, NaN, "abc", Infinity];
+    for (var i = 0; i < bad.length; i++) {
+        var label = "stored " + String(bad[i]);
+        var pd = freshPData();
+        pd.presets["[Default]"].placementMode = "path";
+        pd.presets["[Default]"].pathOffset = bad[i];
+
+        var ui = buildUI3(pd, mockPathInfo(3, false), null);       // open path: the field is greyed
+        var ok = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+        assert(ui.modeUI.pathRB.value === true, label + ": precheck, path mode");
+        assert(String(ui.pathUI.offsetIn.text) === "0" && ui.pathUI.offsetIn.enabled === false,
+            label + ": open path, greyed field shows 0 (got '" + ui.pathUI.offsetIn.text + "')");
+        assert(ok.enabled === true, label + ": open path, Generate enabled");
+        assert(ui.gatherAll().pathOffset === 0, label + ": gatherAll().pathOffset is 0");
+        alerts = [];
+        assert(GM.Validation.validate(ui.gatherAll(), GM.L).valid === true && alerts.length === 0,
+            label + ": validate() passes without an alert (" + alerts.join(" | ") + ")");
+        done();
+
+        var ui2 = buildUI3(pd, mockPathInfo(4, true), null);        // closed path: editable field
+        var ok2 = SUI.lastWindow().findOne(function (c) { return c.type === "button" && c.text === GM.L.OK; });
+        assert(String(ui2.pathUI.offsetIn.text) === "0" && ui2.pathUI.offsetIn.enabled === true && ok2.enabled === true,
+            label + ": closed path, field shows 0, editable, Generate enabled");
+        done();
+    }
+    // A good stored number is untouched
+    var pg = freshPData();
+    pg.presets["[Default]"].pathOffset = 12.5;
+    var uiG = buildUI3(pg, mockPathInfo(4, true), null);
+    assert(String(uiG.pathUI.offsetIn.text) === "12.5", "a good stored offset is shown as is");
+    done();
+    delete global.alert;
 })();
 
 // ===== TEST: both locales define the same keys =====

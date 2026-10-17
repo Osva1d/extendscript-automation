@@ -7,7 +7,7 @@ var GM = GM || {};
 
 GM.CONSTANTS = {
     SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "1.2.0",
+    VERSION: "1.3.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
@@ -24,6 +24,9 @@ GM.CONSTANTS = {
     SAMPLES_PER_SEGMENT: 64,   // arc-length table resolution per Bézier
     MAX_MARKS: 9999,           // freeze guard per circuit (matches calcPositions cap)
     SEGMENT_EPS: 0.01,         // doc pt — anchors closer than this count as one
+    OFFSET_TOL: 0.5,           // pt — allowed deviation beyond the check's own sampling error (the cut line's chord sagitta is added)
+    OFFSET_MITER_LIMIT: 4,     // offsetPath's mlim — an eyelet corner at an inner corner lies at most this × D from the corner point
+    OFFSET_CORNER_MIN: 1,      // deg — tangent break that makes an anchor a possible inner corner for the offset check
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },

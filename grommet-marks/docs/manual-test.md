@@ -7,13 +7,13 @@
 >
 > Čísla `v6.x` a dřívější v textu jsou **historické reference** k interní
 > řadě před veřejným vydáním, ne tvrzení o aktuálním stavu.
-> **Aktualizováno:** 2026-09-29 (sekce H a I)
+> **Aktualizováno:** 2026-10-13 (sekce J)
 >
 > Automatické testy (`npm test`) pokrývají čisté moduly (core math, storage
 > migrace, ui_state, validace, UI dialog). Tento protokol jsou **manuální P0 kontroly**,
 > které vyžadují běžící Illustrator.
 >
-> **Priorita, když není čas na všechno:** H1–H6 (opravy z review) → I1–I5 (audit UI) → G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
+> **Priorita, když není čas na všechno:** J1–J10 (tvary v režimu cesty, 1.3.0) → H1–H6 (opravy z review) → I1–I5 (audit UI) → G1, G6 (nové v6) → E1, E3, F1, F3 → C1, C2 (regrese jádra).
 
 ---
 
@@ -134,16 +134,16 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 1. Otevři dokument, **nevybírej nic** a spusť skript.
 - [ ] V panelu Umístění je radio **Vybraná cesta** zašedlé (disabled).
 - [ ] Tooltip na zašedlém radiu říká: „Nic není vybráno. Vyberte jednu cestu…"
-- [ ] Vyber **skupinu** s obdélníkem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt.
+- [ ] Vyber **skupinu** s obdélníkem a ještě jedním objektem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt. *(Skupina, ve které je jen obdélník, se od 1.3.0 bere jako ten obdélník — J12.)*
 
 2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
 - [ ] Radio **Vybraná cesta** je aktivní.
 - [ ] Klikni na něj → panel **Hrany zmizí**, místo něj se zobrazí panel **Cesta**.
-- [ ] Panel Cesta zobrazuje: „Uzavřená cesta · 4 rohů".
+- [ ] Šedý řádek pod Umístěním hlásí: „Uzavřená cesta · 4 rohy · značky leží na cestě".
 
 ### E2 — Cesta bez rohů (kruh)
 1. Nakresli **elipsu** (Ellipse Tool; kruh = Shift), vyber ji, spusť skript.
-- [ ] Panel Cesta: „Uzavřená cesta · bez rohů".
+- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · bez rohů · první značka nahoře · značky leží na cestě".
 - [ ] Radio **Počet** i **Rozestup** jsou oba aktivní (počet povolený bez rohů).
 - [ ] Panel **Rohové zóny** je zašedlý (žádné rohy → zóny nedávají smysl).
 
@@ -156,7 +156,7 @@ Obdélník **100×200 mm**, Rozestup **50 mm**. Přepni na Vybraná cesta → Ge
 
 ### E4 — Otevřená cesta
 1. Nakresli **otevřenou lomenou čáru** (Pen Tool, bez uzavření), vyber ji, spusť.
-- [ ] Panel Cesta: „Otevřená cesta · N rohů" (N ≥ 2, krajní body jsou vždy rohy).
+- [ ] Šedý řádek pod Umístěním: „Otevřená cesta · N rohů · značky leží na cestě" (N ≥ 2, krajní body jsou vždy rohy).
 - [ ] Generovat → krajní body cesty mají **vždy značku** (endpoint = povinný roh).
 
 ### E5 — ERR_PATH_GONE (fallback)
@@ -299,6 +299,289 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 ### I5 — Překlep v čísle (audit A9)
 - [ ] Do **Rozestupu** napiš `1O5` (písmeno O) → pole zčervená a **Generovat zešedne**.
 - [ ] `1 000` → totéž. `12,5` → pole je v pořádku.
+
+---
+
+## J) Tvary v režimu cesty (1.3.0)
+
+> Odsazení od kraje, zaoblené rohy, část obvodu a kontrola před vytvořením
+> značek — [návrh](../../docs/specs/2026-10-11-grommet-marks-path-mode-design.md).
+> Čísla (polohy značek, odsazení, jeden krok Zpět, výška dialogu) už ověřil
+> skutečný build v Illustratoru 30.8.2 (2026-10-13) na tvarech zadaných
+> v bodech. Automatický průchod 2026-10-17 (skript v Illustratoru, tvary
+> zadané body, dialog bez kliknutí) prošel J1–J9, J12, J13, G1 a G6. Ručně
+> zbývá, co se tak ověřit nedá: J10, J11, vzhled dialogu v J8, J12
+> skutečnými kliky, tvar nakreslený rukou (J1, J2 krok 2) a skutečná data
+> (J2 krok 5). Počty značek platí pro
+> rozměry uvedené v kroku; u ručně nakresleného tvaru se mohou lišit o značku
+> na dlouhé straně.
+>
+> **Příprava:** dokument cca 800 × 600 mm, jednotky mm, výchozí Velikost
+> a tahy. Před každým testem smaž vrstvu „Grommet Marks" (nebo dej Zpět) —
+> jinak skript ohlásí značky kryjící se s předchozím během.
+>
+> **Kontrola odsazení očima:** zkopíruj řezovou linku a dej na kopii
+> `Objekt ▸ Cesta ▸ Odsazená cesta…` s posunem **−20 mm** (dovnitř), Spoje
+> čar **Ostré**, Limit úkosu **4** — stejné nastavení jako ve skriptu. Středy
+> značek leží na té kopii. Kopii potom smaž.
+
+### J1 — Štít: odsazení a rohy
+1. Nakresli štít domu (Pen Tool, uzavřená cesta o pěti bodech): základna
+   **600 mm**, stěny **320 mm**, hřeben **210 mm** nad okapy. Vyber ho nástrojem
+   Výběr (V), spusť skript a přepni na **Vybraná cesta**.
+- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · 5 rohů · značky leží na cestě".
+- [ ] Panel Cesta: **Odsazení od kraje** (0), Počet ok / Rozestup, zašedlé
+  **Jen vybraná část obvodu**. Poznámka „posuňte si cestu předem" tam není.
+- [ ] Po zadání Odsazení **20** řádek ztratí „· značky leží na cestě".
+2. Odsazení od kraje **20**, Rozestup **300 mm**, Generovat.
+- [ ] **6 značek**: jedna v každém z pěti rohů a jedna uprostřed spodní strany.
+- [ ] Rohové značky leží **20 mm od obou stran** rohu, uvnitř tvaru. Kontrola
+  očima: všechny středy leží na kopii posunuté o −20 mm.
+- [ ] Řezová linka zůstala beze změny: pořád vybraná, 5 kotev. V dokumentu
+  nezůstala žádná odsazená kopie (panel Vrstvy: původní vrstva a vrstva
+  „Grommet Marks").
+3. Smaž značky, obrať směr cesty (příkaz **Obrátit směr cesty** — název
+   ověřený v české lokalizaci, místo v menu ne — nebo nakresli štít z druhé
+   strany) a Generovat znovu.
+- [ ] Stejných 6 značek na stejných místech.
+
+### J2 — Zaoblený obdélník: živé rohy, R > D i R < D
+1. Nakresli obdélník **600 × 320 mm** (Rectangle Tool) a v panelu Transformace
+   nastav živým rohům poloměr **50 mm**. Vyber ho, spusť skript, **Vybraná
+   cesta**.
+- [ ] Šedý řádek: „Uzavřená cesta · 4 zaoblené rohy · značky leží na cestě".
+- [ ] Zvol **Počet ok**: pole ukáže **4** a je zašedlé (počet je dán rohy,
+  zaoblené se počítají).
+2. Odsazení **20** (poloměr je větší), Rozestup **300 mm**, Generovat.
+- [ ] **6 značek**: v každém rohu **jedna uprostřed oblouku** (na úhlopříčce
+  rohu) a po jedné uprostřed horní a spodní strany. Na svislých stranách
+  (kratších než Rozestup) nic dalšího.
+- [ ] Všechny značky jsou 20 mm od řezu, i v obloucích (kontrola kopií).
+3. Smaž značky. Poloměr rohu změň na **10 mm** (menší než odsazení), Odsazení
+   **20**, Generovat.
+- [ ] Šedý řádek pořád hlásí „4 zaoblené rohy" (čte řezovou linku, na
+  odsazení nezávisí).
+- [ ] 6 značek, rohové v ostrých rozích linky ok — **20 mm od obou stran**, jako
+  u obdélníku s ostrými rohy.
+4. Smaž značky, poloměr **50 mm**, Odsazení **0**, Generovat.
+- [ ] Značky leží na samotné cestě: v každém zaobleném rohu jedna uprostřed
+  oblouku (1.2.0 dávala hladký prstenec od první kotvy).
+5. *(volitelné, chce skutečná data)* Cesta z PDF od klienta se zaobleným
+   rohem.
+- [ ] Roh z jednoho nebo víc Bézierových úseků se hlásí jako **zaoblený** a má
+  jednu značku uprostřed oblouku. Oblouk z mnoha krátkých úseček zaoblený
+  roh nehlásí (známé omezení, návrh §4) — zapiš, jak takové PDF vypadá.
+
+### J3 — Kruh: začátek nahoře, Počet
+1. Nakresli kruh o průměru **600 mm** (Ellipse Tool + Shift), vyber ho, spusť
+   skript, **Vybraná cesta**.
+- [ ] Šedý řádek: „Uzavřená cesta · bez rohů · první značka nahoře · značky leží
+  na cestě". **Počet ok** i **Rozestup** jsou aktivní.
+2. Odsazení **20**, **Počet ok 7**, Generovat.
+- [ ] **7 značek** na kružnici o poloměru 280 mm, první **přesně nahoře** (X
+  značky = X středu kruhu), ostatní souměrně vlevo a vpravo po cca 51,4°.
+3. Smaž značky, přepni na **Rozestup 300 mm**, Generovat.
+- [ ] **6 značek** (obvod linky ok ≈ 1759 mm), první nahoře a jedna dole.
+4. Smaž značky, otoč kruh o 30° (Objekt ▸ Transformovat ▸ Otočit), takže první
+   kotva leží jinde. Generovat s Počtem 7.
+- [ ] Stejné polohy jako v kroku 2 (do 0,3 mm: otočený kruh z Illustratoru
+  není přesná kružnice a jeho nejvyšší bod se posune), první značka zase
+  v nejvyšším bodě — nezávisí na první kotvě ani na tom, kudy je cesta
+  nakreslená.
+5. Smaž značky, Odsazení **0**, Počet 7, Generovat.
+- [ ] Značky leží na samotné kružnici, první nahoře.
+
+### J4 — Část obvodu (Přímý výběr)
+1. Vyber štít z J1 nástrojem **Výběr (V)** (všechny kotvy), spusť skript,
+   **Vybraná cesta**.
+- [ ] **Jen vybraná část obvodu** je zašedlé; nápověda radí vybrat část
+  nástrojem Přímý výběr (A): kotvy na začátku i na konci každého úseku.
+2. Storno. Přímým výběrem klikni **jen na jednu kotvu**, spusť skript.
+- [ ] Zaškrtávátko zašedlé; nápověda říká, že je vybraná jen samostatná kotva
+  a má se označit i druhý konec úseku.
+3. Storno. Přímým výběrem klikni na **spodní stranu** (na úsečku, ne na kotvu)
+   — obě její kotvy jsou vyplněné. Spusť skript, **Vybraná cesta**, Odsazení
+   **20**, Rozestup **300 mm**.
+- [ ] Zaškrtávátko je aktivní, vypnuté, s textem „Jen vybraná část obvodu
+  (1 z 5 úseků)".
+4. Zaškrtni ho a Generovat.
+- [ ] **3 značky** na spodní straně: dvě v dolních rozích linky ok a jedna
+  uprostřed, všechny 20 mm nad spodní hranou. Střecha a stěny bez značek.
+- [ ] Spodní strana je po běhu **pořád vybraná** Přímým výběrem (obě kotvy
+  vyplněné) — výběr se nezměnil na celou cestu.
+5. Spusť skript znovu se stejným výběrem.
+- [ ] Zaškrtávátko je zase **vypnuté** (do předvolby se neukládá).
+- [ ] Zaškrtni, Generovat: stejné tři polohy a upozornění na kryjící se značky
+  (počet: 3).
+6. Spusť skript znovu se stejným výběrem, **Vybraná cesta**, vyber **Počet ok**
+   (na štítu ukáže 5, jen pro čtení).
+- [ ] Zaškrtni **Jen vybraná část obvodu**: řádek se přepne na **Rozestup**
+  (Počet ok zašedne, pole Rozestup jde upravit) a nápověda zašedlého Počtu ok
+  říká, že u vybrané části se značky řídí rozestupem. Zhustit u rohů jde na
+  štítu zase zapnout.
+- [ ] Zruš zaškrtnutí: **Počet ok** je zase vybraný (na štítu 5, jen pro čtení)
+  a pole Rozestup je zašedlé.
+
+### J5 — Kontrola před vytvořením značek: pruh a činka
+1. Nakresli úzký pruh **35 × 350 mm**, vyber ho, spusť skript, **Vybraná
+   cesta**, Odsazení **20** (dvakrát 20 je víc než 35). Generovat.
+- [ ] Jediná hláška (bez „UPOZORNĚNÍ:"): „Odsazení 20 mm je na tento tvar moc
+  velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.
+  Dokument nebyl změněn."
+- [ ] **Nic nevzniklo**: žádná značka, vrstva „Grommet Marks" se nevytvořila
+  (pokud předtím nebyla), pruh zůstal vybraný a beze změny.
+- [ ] `Úpravy ▸ Zpět`: první Zpět vrátí neviditelný krok skriptu (kopii, na
+  které kontrola měřila; v dokumentu se nic nezmění), teprve druhé tvůj
+  poslední krok. Změřeno 2026-10-17 — odmítnutý běh nechá krok v historii,
+  ne v dokumentu.
+2. Znovu, Odsazení **12**, Generovat.
+- [ ] Projde: každá značka leží 12 mm od nejbližší strany pruhu.
+3. Nakresli **činku**: dva kruhy o průměru 150 mm se středy 250 mm od sebe
+   a mezi ně obdélník vysoký **28 mm** (hrdlo), vše spoj v Pathfinderu
+   (Sjednotit) do **jedné cesty**. Vyber ji, **Vybraná cesta**, Odsazení
+   **20**, Generovat.
+- [ ] Hláška „Linka ok se v úzkém místě rozpadá na víc částí (2). Zmenšete
+  odsazení. Dokument nebyl změněn." a nic nevzniklo (ověřeno 2026-10-17).
+4. Znovu, Odsazení **10** (2 × 10 se do hrdla 28 mm vejde), Generovat.
+- [ ] Projde: značky i ve čtyřech vnitřních rozích u hrdla, 10 mm od obou
+  hran. V úzkém hrdle se dvojice značek skoro dotýkají — tak vychází tvar,
+  není to chyba. *(Do 2026-10-17 skript vnitřní rohy odmítal hláškou o moc
+  velkém odsazení, viz J13.)*
+
+### J6 — Otevřená cesta
+1. Nakresli otevřenou lomenou čáru ze tří bodů, dva úseky po cca **375 mm**
+   (úhel u vrcholu cca 100°), vyber ji, spusť skript, **Vybraná cesta**.
+- [ ] Šedý řádek: „Otevřená cesta · 3 rohy · značky leží na cestě".
+- [ ] Pole **Odsazení od kraje** je zašedlé; nápověda říká, že u otevřené
+  cesty nejde určit, na kterou stranu odsadit.
+2. Generovat, Rozestup **300 mm** (v zašedlém poli klidně zůstává 20).
+- [ ] Bez hlášky; **3 značky** přímo na čáře (středem): oba konce a vrchol.
+  Platí pro úseky do 400 mm (u 375 mm je rezerva); od 400 mm výš se mezi
+  konec a vrchol začnou doplňovat další značky (u přesně 400 mm je to
+  rozhraní, proto 375).
+
+### J7 — Stará předvolba s ručně odsazenou cestou
+> **Příprava:** potřebuješ předvolbu, která v souboru nemá `pathOffset` (jako
+> uložená ve verzi 1.2.0). Nejjistější je předvolba uložená skutečným během
+> 1.2.0; jinak si ji vyrob:
+> 1. Spusť skript s vybraným štítem, **Vybraná cesta**, Odsazení **20**,
+>    **Uložit jako…** `Stará 1.2`, Storno.
+> 2. **Zazálohuj** soubor, např. v Terminálu:
+>    `cp -p "$HOME/Library/Application Support/GrommetMarks/GrommetMarksSettings.json"{,.bak}`
+> 3. Soubor je **jeden řádek JSON** bez zalomení. V textovém editoru, který
+>    zvládne dlouhý řádek, najdi `"Stará 1.2":{` a v té předvolbě odstraň
+>    dvojici `"pathOffset":20` **spolu s čárkou před ní**, tedy `,"pathOffset":20`
+>    těsně před uzavírací `}` předvolby (je to její poslední položka; kdyby za
+>    ní ještě něco stálo, vyjmi místo toho čárku za ní). Ostatní předvolby nech
+>    být.
+> 4. Ověř, že je JSON pořád platný (bez výstupu kromě `OK`):
+>    `node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$HOME/Library/Application Support/GrommetMarks/GrommetMarksSettings.json" && echo OK`
+>    Poškozený soubor skript tiše ignoruje (předvolby zmizí z dialogu) a příští
+>    uložení ho přepíše — v tom případě vrať zálohu (`.bak`).
+1. Nakresli štít a **ručně ho odsaď** jako dřív (kopie, `Objekt ▸ Cesta ▸
+   Odsazená cesta…`, posun −20 mm). Vyber odsazenou kopii a spusť skript. Dialog se
+   otevře z `[Last Settings]`; předvolbu `Stará 1.2` načti v seznamu **Načíst**
+   (je-li už vybraná, přepni na `[Výchozí]` a zpět, nebo klikni na ↺).
+- [ ] Režim Vybraná cesta, **Odsazení od kraje** je **0** (ne 20); šedý řádek
+  končí „· značky leží na cestě".
+2. Generovat.
+- [ ] Značky leží přímo na vybrané (ručně odsazené) cestě — **žádné druhé
+  odsazení**. Štít má ostré rohy, takže pro stejnou cestu a nastavení vyjdou
+  stejné polohy jako v 1.2.0.
+3. Zadej Odsazení **20**.
+- [ ] Rozsvítí se **Uložit** a u předvolby hvězdička `*` (změna samotného
+  odsazení se počítá). Po Uložit zkontroluj, že je v předvolbě 20: načti ji
+  (↺, nebo přepni na jinou předvolbu a zpět) — dialog se otevírá z
+  `[Last Settings]`, ne z předvolby.
+
+### J8 — Šedý řádek ve všech stavech a nápovědy zašedlých prvků
+- [ ] Řádek pod Umístěním ukazuje v těchto stavech přesně tyto texty (sleduj
+  taky, že se při přepnutí režimu, jednotek a změně Odsazení mění hned).
+  Řádky uzavřených tvarů končí „· značky leží na cestě" jen při Odsazení 0;
+  tabulka uvádí texty při **Odsazení větším než 0** (zadej 20).
+
+| stav | předpoklad | text |
+|---|---|---|
+| Hrany artboardu, 1 artboard | dokument s jedním artboardem | `1 artboard · 800 × 600 mm` podle dokumentu (po přepnutí na cm `80 × 60 cm`) |
+| Hrany artboardu, víc artboardů | dokument se 3 artboardy (4: `4 artboardy`, 5 a víc: `5 artboardů`) | `3 artboardy · značky dostanou všechny` |
+| předvolba chce cestu, žádná není vybraná | poslední běh (`[Last Settings]`) nebo načtená předvolba byl v režimu Vybraná cesta a při spuštění není nic vybráno | `Předvolba chce cestu, žádná není vybraná — značí se artboard.` Dialog se otevře v režimu Hrany artboardu. |
+| štít | uzavřená cesta, Odsazení 20 | `Uzavřená cesta · 5 rohů` |
+| zaoblený obdélník (J2) | Odsazení 20 | `Uzavřená cesta · 4 zaoblené rohy` |
+| štít s oběma dolními rohy zaoblenými (živé rohy) | Odsazení 20 | `Uzavřená cesta · 3 rohy, 2 zaoblené` |
+| kruh | Odsazení 20 | `Uzavřená cesta · bez rohů · první značka nahoře` |
+| libovolná uzavřená cesta | Odsazení 0 | totéž + ` · značky leží na cestě` |
+| otevřená cesta | libovolné Odsazení (pole je zašedlé) | `Otevřená cesta · 3 rohy · značky leží na cestě` |
+
+- [ ] Nic se v řádku neuřízne ani nepřetéká a dialog neposkakuje při
+  přepínání režimů. Dialog se vejde na obrazovku 13": nejvyšší stav
+  (Hrany artboardu bez zrcadlení) měří 777 px, tlačítka Storno a Generovat
+  jsou vidět celá.
+- [ ] Zašedlé prvky mají nápovědu s důvodem: **Vybraná cesta** (jako I3),
+  **Odsazení od kraje** u otevřené cesty (J6), **Jen vybraná část obvodu**
+  (J4), **Počet ok** při zaškrtnuté části obvodu (J4 krok 6), **Zhustit u
+  rohů** na kruhu a s Počtem ok na tvaru s rohy (jako F3, I1). *(Ukáže se
+  nápověda i na zašedlém prvku? Pokud ne, jde o chování Illustratoru, ne
+  o text.)*
+
+### J9 — Jeden krok Zpět
+1. Štít z J1, Odsazení 20, Generovat. Jednou **Cmd+Z**.
+- [ ] Zmizí všechny značky i vrstva „Grommet Marks" (pokud ji běh vytvořil).
+- [ ] Řezová linka je na svém místě, beze změny (5 kotev, uzavřená) a není
+  v dokumentu žádný odsazený zbytek.
+
+### J10 — Klik Přímým výběrem přímo na zakřivený úsek
+> Tohle je měření, ne test: návrh (§14) neví, co Přímý výběr hlásí při kliknutí
+> **přímo na zakřivený úsek**. Výsledek patří do `docs/extendscript-engine-facts.md`.
+1. Zaoblený obdélník z J2 (poloměr 50 mm). Přímým výběrem klikni doprostřed
+   **oblouku v rohu** (na křivku, ne na kotvu). Spusť skript, **Vybraná cesta**.
+- [ ] Zapiš, co ukáže **Jen vybraná část obvodu**: (a) aktivní s počtem úseků
+  „(1 z 8 úseků)", (b) zašedlé s nápovědou o samostatné kotvě, (c) zašedlé
+  s nápovědou o výběru části obvodu.
+2. Je-li aktivní, zaškrtni a Generovat.
+- [ ] Zapiš, kam značky padly (nezměřené očekávání: konce oblouku a jeho střed,
+  odsazené dovnitř), a zda je výběr po běhu stejný jako před ním.
+
+### J11 — Vypnuté „Nová kresba má základní vzhled"
+> Také měření, ne test: `offsetPath` zakládá kopii řezové linky novým objektem
+> a nastavuje jen výplň a tah. Co udělá vypnutá volba **Nová kresba má základní
+> vzhled** (menu panelu Vzhled), není změřeno — nová kopie by mohla převzít
+> vzhled posledního objektu. Výsledek patří do `docs/extendscript-engine-facts.md`.
+1. V panelu Vzhled (Appearance) vypni v jeho menu **Nová kresba má základní
+   vzhled**. Zopakuj J1 krok 2 (štít, Odsazení 20, Rozestup 300 mm, Generovat).
+- [ ] Zapiš: stejných 6 značek na stejných místech jako s volbou zapnutou?
+  Hlásí skript chybu nebo kontrolu před vytvořením značek? Zůstalo v dokumentu
+  něco navíc (panel Vrstvy)?
+2. Volbu zase zapni.
+
+### J12 — Řezová linka uvnitř skupiny
+> Také měření, ne test: kopii pro odsazení zakládá `offsetPath` na vrstvě řezové
+> linky, ne uvnitř její skupiny. Výsledek patří do
+> `docs/extendscript-engine-facts.md`.
+1. Štít z J1 dej do skupiny (Cmd+G). Přímým výběrem (A) klikni na jeho úsek
+   uvnitř skupiny, spusť skript, **Vybraná cesta**.
+- [ ] Zapiš: je **Vybraná cesta** dostupná a ukazuje šedý řádek „Uzavřená cesta ·
+  5 rohů"?
+2. Odsazení **20**, Rozestup **300 mm**, Generovat.
+- [ ] Zapiš: polohy značek (jako J1?), co zůstalo vybrané po běhu, a zda
+  v dokumentu (skupina, vrstva) nezůstal odsazený zbytek.
+3. Vyber skupinu se štítem nástrojem **Výběr (V)** a spusť skript znovu.
+- [ ] **Vybraná cesta** je dostupná a značky padnou jako v J1: skupina, ve
+  které není nic než jedna cesta, se bere jako ta cesta (Illustrator takovou
+  cestu podle způsobu výběru hlásí jako vybranou skupinu; do 2026-10-17
+  Vybraná cesta zašedla).
+4. Přidej do skupiny ještě jeden objekt, vyber skupinu nástrojem Výběr (V).
+- [ ] Vybraná cesta zašedlá — ve skupině je víc objektů (jako dřív).
+
+### J13 — Vnitřní roh: tvar L
+1. Nakresli tvar L (uzavřená cesta o šesti bodech): **600 × 600 mm**, obě ramena
+   široká **300 mm**. Vyber ho, **Vybraná cesta**, Odsazení **20**, Rozestup
+   **300 mm**, Generovat.
+- [ ] Projde bez hlášky, **8 značek**: v každém z šesti rohů linky ok jedna
+  a po jedné uprostřed dvou dlouhých stran. Značka ve vnitřním rohu leží
+  20 mm od obou hran — od vrcholu vnitřního rohu řezu je tím pádem 28 mm
+  (20 × √2), a tak to má být.
+- [ ] Šedý řádek: „Uzavřená cesta · 6 rohů". Do 2026-10-17 skript takový tvar
+  odmítal hláškou „Odsazení 20 mm je na tento tvar moc velké".
 
 ---
 

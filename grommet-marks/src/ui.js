@@ -217,13 +217,68 @@ GM.UI = {
         return sep;
     },
 
+    /** A length for the summary line: one decimal, locale separator. */
+    formatLen: function (v) {
+        return String(Math.round(v * 10) / 10).replace(".", GM.L.DECIMAL_SEP);
+    },
+
+    /**
+     * The summary line under Placement (spec §8.1): what the run will mark.
+     * @param {Object} st - {pathMode, pathInfo, docInfo, fallback, offset, unit}
+     * @returns {string}
+     */
+    placementInfoText: function (st) {
+        var L = GM.L;
+        if (!st.pathMode) {
+            if (st.fallback) return L.INFO_FALLBACK;
+            var di = st.docInfo;
+            if (!di) return "";
+            if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS;
+            var f = GM.CONSTANTS.UNIT_FACTORS[st.unit] / (di.scale || 1);
+            return L.count("INFO_ARTBOARDS", 1) + " · " +
+                L.format(L.INFO_SIZE, GM.UI.formatLen(di.width / f), GM.UI.formatLen(di.height / f), st.unit);
+        }
+        var pi = st.pathInfo;
+        var sharp = pi.sharpCount !== undefined ? pi.sharpCount : pi.cornerCount;
+        var round = pi.roundCount || 0;
+        var parts = [pi.closed ? L.PATH_INFO_CLOSED : L.PATH_INFO_OPEN];
+        if (!sharp && !round) parts.push(L.PATH_INFO_NO_CORNERS);
+        else if (sharp && round) parts.push(L.count("INFO_CORNERS", sharp) + ", " + L.count("INFO_ROUND_SHORT", round));
+        else if (round) parts.push(L.count("INFO_ROUND", round));
+        else parts.push(L.count("INFO_CORNERS", sharp));
+        if (pi.closed && !sharp && !round) parts.push(L.INFO_TOP_START);
+        if (!pi.closed || st.offset === 0) parts.push(L.INFO_ON_PATH);
+        return parts.join(" · ");
+    },
+
+    /** The longest summary the line can show — its width is fixed by the first text. */
+    longestInfoText: function () {
+        var L = GM.L;
+        var samples = [
+            L.INFO_FALLBACK,
+            [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · "),
+            [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · "),
+            L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm")
+        ];
+        var longest = "";
+        for (var i = 0; i < samples.length; i++) {
+            if (samples[i].length > longest.length) longest = samples[i];
+        }
+        return longest;
+    },
+
     /**
      * Builds the main ScriptUI dialog (canonical single column).
      * @param {Object} pData - Preset wrapper {activePreset, presets}
-     * @param {Object} pathInfo - {ok, cornerCount, closed, totalLen} or {ok:false, reason}
-     * @returns {Object} Dialog object with window, gatherAll, modeUI, pathUI, zonesUI
+     * @param {Object} pathInfo - getSelectedPathInfo() result: {ok, closed, cornerCount,
+     *     sharpCount, roundCount, partial, ...} or {ok:false, reason}
+     * @param {Object} [docInfo] - getDocInfo() result {artboards, width, height, scale};
+     *     feeds the summary line in artboard mode.
+     * @returns {Object} Dialog object with window, gatherAll, getRunOptions
+     *     (per-run choices not stored in presets: {pathPartial}), modeUI (with
+     *     infoLbl), edgeUI, pathUI (with offsetIn, partialCB), zonesUI
      */
-    buildDialog: function (pData, pathInfo) {
+    buildDialog: function (pData, pathInfo, docInfo) {
         // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
         var LO = GM.CONSTANTS.LAYOUT;
         var dlg = new Window("dialog", GM.CONSTANTS.SCRIPT_NAME + " v" + GM.CONSTANTS.VERSION);
@@ -281,13 +336,17 @@ GM.UI = {
         // =================================================================
         var pathOk = !!(pathInfo && pathInfo.ok);
         var modePanel = dlg.add("panel", undefined, GM.L.PLACEMENT_PANEL);
-        modePanel.orientation = "row";
-        modePanel.alignChildren = ["left", "center"];
+        modePanel.orientation = "column";
+        modePanel.alignChildren = ["fill", "top"];
         modePanel.margins = LO.MARGIN;
-        modePanel.spacing = LO.SECTION;
-        var artboardRB = modePanel.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
+        modePanel.spacing = LO.GROUP;
+        var modeRow = modePanel.add("group");
+        modeRow.orientation = "row";
+        modeRow.alignChildren = ["left", "center"];
+        modeRow.spacing = LO.SECTION;
+        var artboardRB = modeRow.add("radiobutton", undefined, GM.L.MODE_ARTBOARD);
         artboardRB.value = true;
-        var pathRB = modePanel.add("radiobutton", undefined, GM.L.MODE_PATH);
+        var pathRB = modeRow.add("radiobutton", undefined, GM.L.MODE_PATH);
         pathRB.enabled = pathOk;
         // Say why the mode is unavailable: customer contours often arrive as a
         // group or a compound path, and "select a path" would not help there.
@@ -299,13 +358,19 @@ GM.UI = {
         pathRB.helpTip = pathOk ? "" : (pathReasonTips[pathInfo && pathInfo.reason] || GM.L.ERR_PATH_NOT_A_PATH);
 
         // Units — global switch lives at the top. Fill spacer pushes it right.
-        var modeSpacer = modePanel.add("group");
+        var modeSpacer = modeRow.add("group");
         modeSpacer.alignment = ["fill", "center"];
-        modePanel.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = modePanel.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        modeRow.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = modeRow.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
         unitsDDL.preferredSize.width = 110;
         unitsDDL.selection = 0;
         unitsDDL.helpTip = GM.L.TIP_UNITS;
+
+        // What the run will mark, in words (spec §8.1). The text changes while
+        // the dialog is open and a ScriptUI label keeps its first width, so it
+        // starts as the longest text it can hold (extendscript-ui-standards §4).
+        var placeInfo = modePanel.add("statictext", undefined, GM.UI.longestInfoText());
+        placeInfo.enabled = false;
 
         // =================================================================
         // Placement stack — Edges and Path are two modes of the SAME slot, so
@@ -442,16 +507,16 @@ GM.UI = {
         pathPanel.maximumSize.height = 0;
         pathPanel.preferredSize.height = 0;
 
-        var infoText = "";
-        if (pathOk) {
-            infoText = (pathInfo.closed ? GM.L.PATH_INFO_CLOSED : GM.L.PATH_INFO_OPEN)
-                + " · "
-                + (pathInfo.cornerCount > 0
-                    ? GM.L.format(GM.L.PATH_INFO_CORNERS, pathInfo.cornerCount)
-                    : GM.L.PATH_INFO_NO_CORNERS);
-        }
-        var pathInfoLbl = pathPanel.add("statictext", undefined, infoText);
-        pathInfoLbl.enabled = false;
+        var pathClosed = pathOk && !!pathInfo.closed;
+        var pathOffRow = pathPanel.add("group");
+        pathOffRow.orientation = "row";
+        pathOffRow.alignChildren = ["left", "center"];
+        pathOffRow.spacing = LO.GROUP;
+        pathOffRow.add("statictext", undefined, GM.L.OFFSET_LABEL);
+        var pathOffsetIn = pathOffRow.add("edittext", undefined, String(defCfg.pathOffset));
+        pathOffsetIn.preferredSize.width = 44;     // as the artboard offsets
+        pathOffsetIn.enabled = pathClosed;
+        pathOffsetIn.helpTip = pathClosed ? GM.L.TIP_PATH_OFFSET : GM.L.TIP_PATH_OFFSET_OPEN;
 
         var pathRow = pathPanel.add("group");
         pathRow.orientation = "row";
@@ -471,6 +536,7 @@ GM.UI = {
 
         var hasCorners = pathOk && pathInfo.cornerCount > 0;
         if (hasCorners) pathNumRB.helpTip = GM.L.TIP_PATH_COUNT_DISABLED;
+        var pathCountTip = pathNumRB.helpTip;   // what Count says when it is selectable
 
         // "Count" means the number of marks. On a SMOOTH path the user picks it.
         // On a CORNERED path the corners dictate it, so the field shows the
@@ -501,10 +567,63 @@ GM.UI = {
         };
         refreshPathDistUI();
 
-        var offsetNote = pathPanel.add("statictext", undefined, GM.L.PATH_OFFSET_NOTE,
-            { multiline: true });
-        offsetNote.enabled = false;
-        offsetNote.preferredSize.width = 330;
+        // Part of the outline (spec §5.4): offered only for a direct selection
+        // with whole segments; off on every run and never stored, so a direct
+        // selection left over from editing changes nothing.
+        var part = (pathOk && pathInfo.partial) ? pathInfo.partial : { state: "none" };
+        var partialLabel = GM.L.PATH_PARTIAL;
+        if (part.state === "runs") partialLabel += GM.L.format(GM.L.PATH_PARTIAL_COUNT, part.selectedSegs, part.totalSegs);
+        var partialCB = pathPanel.add("checkbox", undefined, partialLabel);
+        partialCB.value = false;
+        partialCB.enabled = part.state === "runs";
+        if (part.state === "runs") partialCB.helpTip = GM.L.TIP_PARTIAL;
+        else if (part.state === "lone") partialCB.helpTip = GM.L.TIP_PARTIAL_LONE;
+        else partialCB.helpTip = GM.L.TIP_PARTIAL_NONE;
+
+        // A run is marked like an open path, so Count would give only its ends
+        // and inner corners (spec §5.3) — not the number the field promises.
+        // While the box applies (ticked, path mode) the row is Spacing and
+        // Count is greyed out, like Count on the edges under corner zones; a
+        // Count choice switched away that way comes back when the box stops
+        // applying (unticked, or artboard mode).
+        var pathCountAllowed = true, pathForcedSpacing = false;
+        function partialApplies() {
+            return pathRB.value && partialCB.enabled && partialCB.value;
+        }
+        function forcePathSpacing() {
+            if (!pathNumRB.value) return;
+            pathForcedSpacing = true;
+            pathNumRB.value = false; pathSpcRB.value = true;
+        }
+        function syncPathCountAllowed() {
+            var allowed = !partialApplies();
+            if (allowed === pathCountAllowed) return;
+            pathCountAllowed = allowed;
+            if (!allowed) {
+                forcePathSpacing();
+            } else if (pathForcedSpacing) {
+                pathForcedSpacing = false;
+                pathNumRB.value = true; pathSpcRB.value = false;
+            }
+            pathNumRB.enabled = allowed;
+            pathNumRB.helpTip = allowed ? pathCountTip : GM.L.TIP_PATH_COUNT_PARTIAL;
+            pathNumIn.helpTip = allowed ? GM.L.TIP_COUNT : GM.L.TIP_PATH_COUNT_PARTIAL;
+            refreshPathDistUI();
+        }
+        partialCB.onClick = function () {
+            syncPathCountAllowed();
+            refreshZonesEnabled();   // Spacing on a cornered path allows zones again
+            onUserChange();
+        };
+
+        var fallback = false;   // the preset asked for a path that is not there
+        function refreshInfo() {
+            placeInfo.text = GM.UI.placementInfoText({
+                pathMode: pathRB.value, pathInfo: pathInfo, docInfo: docInfo, fallback: fallback,
+                offset: GM.Validation.parseNumber(pathOffsetIn.text),
+                unit: currentUnit || GM.CONSTANTS.UNIT.MM
+            });
+        }
 
         // =================================================================
         // Corner Zones Panel (shared by both modes)
@@ -577,11 +696,12 @@ GM.UI = {
             var pathMode = pathRB.value;
             showPanel(edgesPanel, !pathMode);
             showPanel(pathPanel, pathMode);
+            syncPathCountAllowed();
             refreshZonesEnabled();
             relayoutDialog();
             onUserChange();
         }
-        artboardRB.onClick = function () { pathRB.value = false; artboardRB.value = true; refreshModeUI(); };
+        artboardRB.onClick = function () { fallback = false; pathRB.value = false; artboardRB.value = true; refreshModeUI(); };
         pathRB.onClick = function () { artboardRB.value = false; pathRB.value = true; refreshModeUI(); };
 
         // =================================================================
@@ -677,7 +797,8 @@ GM.UI = {
                     useNumber: pathNumRB.value,
                     number: GM.Validation.parseNumber(pathNumIn.text),
                     spacing: GM.Validation.parseNumber(pathSpcIn.text)
-                }
+                },
+                pathOffset: GM.Validation.parseNumber(pathOffsetIn.text)
             };
         }
 
@@ -704,9 +825,8 @@ GM.UI = {
             haloWIn.text = s.haloWeight;
 
             var wantPath = (s.placementMode === GM.CONSTANTS.MODE_PATH);
-            if (wantPath && !pathOk) {
-                wantPath = false;
-            }
+            fallback = wantPath && !pathOk;
+            if (fallback) wantPath = false;
             pathRB.value = wantPath; artboardRB.value = !wantPath;
 
             var z = s.cornerZone || defCfg.cornerZone;
@@ -721,6 +841,12 @@ GM.UI = {
             var pdUseNum = !!pd.useNumber;
             pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
             pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
+            pathForcedSpacing = false;
+            if (!pathCountAllowed) forcePathSpacing();
+            // Only a finite number goes into the field: NaN reaches a stored
+            // preset as null, and an empty greyed field cannot be fixed.
+            pathOffsetIn.text = (typeof s.pathOffset === "number" && isFinite(s.pathOffset))
+                ? s.pathOffset : defCfg.pathOffset;
             refreshPathDistUI();
 
             refreshModeUI();
@@ -733,7 +859,7 @@ GM.UI = {
         unitsDDL.onChange = function () {
             var newUnit = GM.UI.getUnitKey(unitsDDL);
             if (newUnit === currentUnit) return;
-            var fields = [offsetXIn, offsetYIn, sizeInput, zonePitchIn, pathSpcIn]
+            var fields = [offsetXIn, offsetYIn, sizeInput, zonePitchIn, pathSpcIn, pathOffsetIn]
                 .concat(topUI.getConvertFields())
                 .concat(leftUI.getConvertFields())
                 .concat(bottomUI.getConvertFields())
@@ -769,7 +895,8 @@ GM.UI = {
             { et: zoneCountIn, rule: R.cornerCount },
             { et: zonePitchIn, rule: R.cornerPitch },
             { et: pathNumIn,   rule: R.pathNumber,  mode: "path" },
-            { et: pathSpcIn,   rule: R.pathSpacing, mode: "path" }
+            { et: pathSpcIn,   rule: R.pathSpacing, mode: "path" },
+            { et: pathOffsetIn, rule: R.pathOffset, mode: "path" }
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
@@ -844,6 +971,7 @@ GM.UI = {
         // Shared change hook — modified indicator + validation
         // =================================================================
         function onUserChange() {
+            refreshInfo();
             refreshModifiedIndicator();
             liveValidateAll();
         }
@@ -961,7 +1089,7 @@ GM.UI = {
 
         // Wire numeric edits to the shared change hook.
         var allEdits = [offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
-                        zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn];
+                        zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn, pathOffsetIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
             allEdits[ei].onChange = onUserChange;
@@ -978,9 +1106,13 @@ GM.UI = {
         return {
             window: dlg,
             gatherAll: gatherAll,
-            modeUI: { artboardRB: artboardRB, pathRB: pathRB },
+            getRunOptions: function () {
+                return { pathPartial: partialApplies() };
+            },
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo },
             edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
-            pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn },
+            pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn,
+                      offsetIn: pathOffsetIn, partialCB: partialCB },
             zonesUI: { enableCB: zoneCB, countIn: zoneCountIn, pitchIn: zonePitchIn }
         };
     }

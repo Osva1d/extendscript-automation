@@ -294,6 +294,49 @@ console.log("--- Validation: zones validate the spacing that is used (G3) ---");
         "zones off: spacing of a Count edge is unused and not checked");
 })();
 
+console.log("--- validate: path offset ---");
+(function () {
+    var cfg = GM.Config.getDefaults();
+    cfg.placementMode = "path";
+    cfg.pathOffset = "12,5";
+    var r = GM.Validation.validate(cfg, L);
+    assert(r.valid === true && r.settings.pathOffset === 12.5, "comma decimal accepted, parsed to 12.5");
+    cfg.pathOffset = "-1";
+    assert(GM.Validation.validate(cfg, L).valid === false, "negative offset rejected");
+    cfg.placementMode = "artboard";
+    assert(GM.Validation.validate(cfg, L).valid === true, "artboard mode ignores the path offset");
+})();
+
+console.log("--- validate: an invalid path offset never reaches the stored settings (final review I2) ---");
+(function () {
+    // Outside path mode the field is not checked, so a typo (or NaN, which JSON
+    // turns into null) used to be stored and came back as an unusable field.
+    var bad = ["abc", "", "-1", null, NaN, undefined, Infinity];
+    for (var i = 0; i < bad.length; i++) {
+        var cfg = GM.Config.getDefaults();
+        cfg.placementMode = "artboard";
+        cfg.pathOffset = bad[i];
+        var r = GM.Validation.validate(cfg, L);
+        assert(r.valid === true && r.settings.pathOffset === 0,
+            "artboard mode, pathOffset " + String(bad[i]) + " -> stored as 0 (got " + (r.settings && r.settings.pathOffset) + ")");
+        var back = JSON.parse(JSON.stringify(r.settings));
+        assert(back.pathOffset === 0, "artboard mode, pathOffset " + String(bad[i]) + " -> still 0 after JSON");
+    }
+    var ok = GM.Config.getDefaults();
+    ok.placementMode = "artboard";
+    ok.pathOffset = "12,5";
+    var r2 = GM.Validation.validate(ok, L);
+    assert(r2.valid === true && r2.settings.pathOffset === 12.5, "artboard mode, a good offset is kept (parsed)");
+    ok.pathOffset = 0;
+    assert(GM.Validation.validate(ok, L).settings.pathOffset === 0, "artboard mode, offset 0 stays 0");
+    // Path mode is unchanged: a bad offset is still an error there
+    var pm = GM.Config.getDefaults();
+    pm.placementMode = "path";
+    pm.pathOffset = null;
+    lastAlert = null;
+    assert(GM.Validation.validate(pm, L).valid === false && lastAlert !== null, "path mode: a null offset is still rejected");
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

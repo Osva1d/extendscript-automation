@@ -465,6 +465,160 @@ Kontrola na kruhu (bez rohů) dala 14,17 pt při každém nastavení — matemat
 offsetu je správná, liší se jen chování v rozích. **Pro ořezovou konturu
 `jntp 0`.**
 
+### Odsazení dovnitř pro grommet-marks (AI 30.8.2)
+
+Postup `GM.Illustrator.offsetPath`: čistá kopie řezové linky (kotvy a úchyty
+přepsané do nové cesty, výplň, bez tahu a bez vzhledu) →
+`applyEffect('<LiveEffect name="Adobe Offset Path"><Dict data="R mlim 4 R ofst -D I jntp 2 "/></LiveEffect>')`
+→ `expandStyle` → čtení geometrie z výběru → smazání výsledku → vrácení výběru.
+`jntp 2` je ostrý spoj (miter), `mlim 4` výchozí mez Illustratoru. Efekty se
+skládají, proto kopie z kotev, ne `duplicate()`; objekt s výplní i tahem by po
+`expandStyle` dal skupinu dvou cest (viz výš).
+
+**Přesnost a tvary** (naměřeno 2026-10-09, AI 30.8.2, vlastní dokumenty,
+D = 56,69 pt = 20 mm):
+
+| tvar | výsledek |
+|---|---|
+| kruh r 500 pt | r 443,31–443,46 pt (čekáno 443,31), 4 → 16 kotev |
+| trojúhelník, štít (po i proti směru hodin) | vrcholy přesně (0,00 pt) |
+| zaoblený obdélník R 150 / R 30 | přesně; R 30 < D dá ostré rohy; 8 → 12 kotev |
+| pruh 100 pt (užší než 2D) | **vrátí původní cestu beze změny**, bez chyby |
+| činka s hrdlem 80 pt | `CompoundPathItem` se 2 smyčkami |
+
+- Záporné `ofst` posouvá dovnitř u obou směrů kreslení (2026-10-09).
+- 33–123 ms na tvar (2026-10-09); obdélník a zaoblený obdélník z M1 níže
+  93–112 ms (2026-10-13).
+- Celý běh (kopie, efekt, `expandStyle`, smazání, nová vrstva, značky) je
+  **jeden krok Zpět** (2026-10-09).
+- Odsazená cesta je nová: její kotvy nesouvisí s kotvami řezové linky
+  (2026-10-09).
+- Kontrola značek k toleranci 0,5 pt přičítá největší průhyb tětiv řezové
+  linky, protože vzdálenost měří k jejím navzorkovaným tětivám (2026-10-13):
+  kruh r 2400 mm ze 4 kotev, D 20 mm, dal k tětivám 0,525 pt a dřív byl
+  odmítnut; průhyb 0,556 pt, mez teď 1,056 pt. Kruh r 2000 mm: 0,458 pt,
+  průhyb 0,463 pt.
+
+**Přímý výběr** (naměřeno 2026-10-05):
+
+- Klik na rovný úsek → obě kotvy `ANCHORPOINT`; sousedé hlásí jen úchyt
+  (`LEFTDIRECTION` / `RIGHTDIRECTION`).
+- Výběr kotev u oblouků se čte stejně (hvězda, 20 bodů, 11 z 20 úseků).
+- Živé rohy jsou skutečná geometrie: 8 kotev, oblouk = jeden Bézierův úsek
+  s úchyty ≈ 0,552·R.
+
+**Měření přes sestavený skript** (2026-10-13, AI 30.8.2): sondy nahrály
+`dist/illustrator-grommet-marks.jsx` (bez BOM, bez řádků `#`, `GM.Main.run();`
+nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez uložení.
+
+- **M1 — kopie bez vzhledu.** Obdélník 1000 × 600 pt s výplní, přerušovaným
+  tahem 5 pt a vlastním efektem Offset Path +30 na originálu; vybrán celý
+  (všechny kotvy `ANCHORPOINT`). `offsetPath` s D 56,6929: jedna smyčka,
+  4 segmenty, odstup od kotev originálu vlevo / nahoře / vpravo / dole
+  56,6929 / 56,6929 / 56,6929 / 56,6934. Vlastní efekt (+30), tah ani čárkování
+  se nepřenesly. Po běhu v dokumentu pořád 1 objekt (po `app.redraw()`),
+  originál má tah 5 pt, čárkování [10, 6] zachováno, 4 body a je vybraný jako
+  předtím. Zaoblený obdélník 1000 × 600, R 100 (8 kotev, úchyty 0,5523·R)
+  s D 56,6929: 8 segmentů, odstup 56,6929–56,6934, `findCorners` na výsledku 4 zaoblené rohy,
+  po běhu 2 objekty ze dvou.
+- **M2 — Large Canvas.** `documents.add(CMYK, 17007,87, 2834,65)` → `scaleFactor`
+  10, artboard vnitřně 1700,79 × 283,47. Čtverec 100 × 100 (vnitřní jednotky),
+  `offsetPath` s D 5,6693 → odstup 5,6694 / 5,6693 / 5,6694 / 5,6691. `ofst` se
+  zadává ve vnitřních jednotkách dokumentu tak, jak jsou: ne děleno 10, ne
+  krát 10. Fyzické D se proto dělí `scaleFactor` jednou, před voláním
+  (`unitFactor` v `main.js` už dělí).
+- **M3 — výběr.** Pětibodová uzavřená cesta (domek). Čerstvá: všechny body
+  `NOSELECTION`, `doc.selection.length` 0. `pathPoints[0].selected =
+  ANCHORPOINT` **vybere cestu** (`doc.selection.length` 1); sousední body
+  hlásí jen úchyt, stavy `A,L,N,N,R`, po bodu 1 `A,A,L,N,R`. Obnova po bodech
+  vrátí i ty úchytové stavy: před i po `A,A,L,N,R`, `doc.selection.length` 1,
+  druhé čtení dá stejný běh jako první, druhý běh dopadne stejně; celá cesta
+  před i po `A,A,A,A,A`, `doc.selection.length` 1.
+- **M3 — `doc.selection = null` neodznačí přímý výběr.** Cesta s vybranými
+  jen některými kotvami (`A,A,L,N,R`) po `doc.selection = null` zůstane vybraná:
+  `item.selected` true, `doc.selection.length` 1, stavy beze změny. Cesta
+  s všemi kotvami vybranými (nástroj Výběr) po něm podle M1 odznačená je:
+  první verze `offsetPath` (jen `doc.selection = null`) řezovou linku
+  s vybranými všemi kotvami při úklidu nesmazala. Přímý výběr odznačí
+  `item.selected = false` (stavy `N,N,N,N,N`, `doc.selection.length` 0)
+  i `null` doplněné nastavením všech bodů na `NOSELECTION`. Vybraná kopie pak
+  dala výběr dvou objektů a po `expandStyle` zůstaly vybrané oba, výsledek
+  i řezová linka (ta s nezměněnou geometrií). První verze `offsetPath` proto
+  při přímém výběru smazala při úklidu **i řezovou linku**: dokument měl po
+  běhu 0 objektů, `loops` 2.
+  Oprava: `src.selected = false` před `doc.selection = null` a kontrola, že po
+  výběru kopie je vybraný právě jeden objekt, tím objektem je kopie
+  (`tmp.selected`) a řezová linka vybraná není (`src.selected`); jinak chyba
+  „could not isolate the offset copy" a nic se nerozbaluje. Počet vybraných
+  objektů sám nestačí: prošel by i s řezovou linkou jako jediným vybraným
+  objektem. Getter `selected` čte to, co se nastavilo (sonda 2026-10-13,
+  celá cesta i přímý výběr jednoho úseku): nová kopie z `pathItems.add()`
+  vybraná není (`false`); po `src.selected = false` a `doc.selection = null`
+  čte řezová linka `false` (stavy `N,N,N,N,N`) a po `tmp.selected = true` kopie
+  `true`, `doc.selection.length` 1 a tím objektem je kopie. Celé běhy skriptu
+  přes tuto kontrolu prošly (Úkol 10, S1 a S5).
+- **Otevřený bod (neměřeno).** Kdyby `expandStyle` kopii nahradil, ale nic
+  nevybral, `offsetPath` ohlásí chybu a rozbalený výsledek by v dokumentu
+  zůstal (nikdy se to nestalo, nepravděpodobné).
+- **Pozor v sondách na `NOSELECTION` u sousedů.** Po `pathPoints[0..1].selected
+  = ANCHORPOINT` (stavy `A,A,L,N,R`) nastavení ostatních bodů na `NOSELECTION`
+  změní i ty dvě kotvy: stavy `R,L,N,N,N`, úsek už vybraný není
+  (2026-10-13). Přímý výběr úseku se v sondě napodobí jen dvěma kotvami.
+- **M4 — vnitřní roh.** Tvar L `[[0,0],[1000,0],[1000,400],[400,400],[400,1000],[0,1000]]`
+  posunutý o (300, 300), D 56,69, `jntp 2`: 6 kotev (stejně jako řezová linka),
+  odstup rovných hran 56,69, **vnitřní (reflexní) roh linky ok leží v
+  (400 − D, 400 − D) = (343,31; 343,31)**, tedy D od obou hran, ostrý spoj bez
+  zkosení a zaoblení. Odchylka od očekávaných rohů nejvýš 0,0006 pt. Obrázek
+  (PNG 20 % a 60 %, černá řezová linka a červená linka ok): červený obrys je
+  uvnitř černého s rovnoměrnou mezerou, na vnitřním rohu pravý úhel, nikde
+  se nekříží.
+- **Vnitřní roh v kontrole (2026-10-17).** Roh linky ok z M4 je D od obou
+  hran, ale od vrcholu vnitřního rohu řezové linky D·√2 (pravý úhel; obecně
+  víc, nejvýš Limit úkosu × D). Kontrola, která měří k nejbližšímu bodu
+  řezové linky, ho proto odmítala: tvar L 600 mm při D 20 mm, činka
+  (kruhy 150 mm, hrdlo 28 mm) při D 10 i 5 mm — značky u hrdla 12,99 mm od
+  řezu při D 10. Opraveno výjimkou pro značku, jejímž nejbližším bodem je
+  zlom řezové linky (kotva, kde se směr zlomí o víc než 1°). Hladká kotva ji
+  dostat nesmí: na kruhu ze 4 kotev s Počtem ok 4 leží každá značka na
+  paprsku kotvy, takže by prošlo i trojnásobné odsazení (Node sonda
+  2026-10-17).
+- **Cesta sama ve skupině: výběr hlásí cestu, nebo skupinu (2026-10-17).**
+  Skupina s jedinou cestou, všechny kotvy `ANCHORPOINT` ve všech případech;
+  `doc.selection` přesto hlásí podle toho, jak se cesta vybrala:
+  `selection = null; path.selected = true` → **skupina**;
+  `selection = null; path.selected = false; path.selected = true` → cesta
+  (jednou, v jiném dokumentu skupina); všechny kotvy po jedné → cesta;
+  `doc.selection = [path]` → cesta; `group.selected = true` → skupina;
+  výsledek `expandStyle` (efekt Pathfinder) → skupina. Po vrácení přímého
+  výběru po bodech (`_restoreSelection`) se cesta z efektu Pathfinder
+  překlopila z cesty na skupinu (při D 20 odmítnuto, při D 10 i 5 prošlo).
+  `getSelectedPathInfo` proto bere skupinu s jedinou cestou (i vnořenou) jako
+  tu cestu.
+- **Odmítnutý běh nechá krok Zpět (2026-10-17).** Čtyři samostatná volání:
+  dokument a řezová linka, pak obdélník jako „poslední krok uživatele", pak
+  běh odmítnutý kontrolou (pruh 35 mm, D 20), pak jedno `app.undo()`:
+  obdélník zůstal — Zpět vrátilo neviditelný krok skriptu (kopie založená
+  a smazaná, výběr). V dokumentu po odmítnutém běhu nic nezůstane.
+- **České názvy (Illustrator.zbin, 2026-10-17).** Lokalizace leží v
+  `Support Files/Resources/cs_CZ/Lang-Resources/Illustrator.zbin` (UTF-16LE,
+  řetězce bez oddělovačů). Offset Path = `Objekt ▸ Cesta ▸ Odsazená cesta…`,
+  v dialogu „Posun", „Spoje čar" s volbami Ostré / Zkosené / Oblé a „Limit
+  úkosu"; menu panelu Vzhled „Nová kresba má základní vzhled"; příkaz
+  „Obrátit směr cesty" existuje (místo v menu neověřeno); Pathfinder
+  „Sjednotit". Ruční test měl „Posunout cestu" a „Nový objekt má základní
+  vzhled" zpaměti — obojí špatně.
+- **J10 — klik Přímým výběrem přímo na zakřivený úsek (ruční test, 2026-10-17).**
+  Zaoblený obdélník z živých rohů (R 50 mm), nevybraný, klik doprostřed
+  oblouku v rohu: Vybraná cesta dostupná, šedý řádek „Uzavřená cesta ·
+  4 zaoblené rohy", Jen vybraná část obvodu použitelná; běh s ní dal značky
+  na oba konce oblouku a doprostřed, odsazené dovnitř. Klik na zakřivený úsek
+  se tedy chová jako výběr jeho dvou koncových kotev. Text s počtem úseků
+  a výběr po běhu nezapsány.
+- **J11 — vypnutá „Nová kresba má základní vzhled" (ruční test, 2026-10-17).**
+  Štít, D 20 mm, Rozestup 300 mm: výsledek stejný jako se zapnutou volbou,
+  bez hlášky, v dokumentu nic navíc. Kopie z `offsetPath` vzhled posledního
+  objektu nepřevezme (výplň a tah jí skript nastaví sám).
+
 ### Pozor na menu příkazy s dialogem
 
 `executeMenuCommand("Expand3")` otevře modální okno `Objekt ▸ Rozdělit…`.
