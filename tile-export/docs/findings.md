@@ -26,6 +26,11 @@ pevnou šířku, jinak ho dlouhý název roztáhne i s dialogem (engine-facts,
 „volné místo v řádku“). **Odloženo do další verze** spolu s vykáním
 a dvojtečkami za popisky (audit společného jazyka, §8 body 1 a 2):
 dvojtečky mění šířku sloupce popisků, levý sloupec se tak přeměří jednou.
+Ve stejném kole: text zaškrtávátek a přepínačů sedí asi o 2 pt výš než
+popisky vedle nich („Rovnoměrně“, „Přeskočit hotové výstupy“, „Směr“).
+Geometrie řádku je přitom stejná (popisek 15 px, prvek 19 px, oba na střed,
+naměřeno 2026-10-17), posun dělá nativní vykreslení — doladit posunem
+a ověřit okem.
 
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
@@ -158,6 +163,7 @@ polích.
 | N46 | vzor bez `{n}` dal plátům se stejným rozměrem stejný název: export si soubor přepsal, se zapnutým přeskakováním další vynechal, bez hlášky (i v 1.0.x); teď Výsledek oba pláty jmenuje, poradí `{n}` a export zablokuje (z přehledu všech názvů, 2026-10-16) | `de84cff` |
 | N47 | barva řezu z předvolby, kterou seznam neměl, se při načtení tiše nahradila první položkou — u zdi registrační, takže by se řezalo v barvě značek (předvolba TEST s `cut`, 2026-10-15; i v 1.0.x); teď „cut  (chybí)“ podle `extendscript-ui-standards` §12.3, upozornění ve Výsledku, barvy v hranatých závorkách seznam řezu nenabízí | `8bd88f1` |
 | N48 | barva značek a PDF preset z předvolby, které dokument nebo Illustrator neměl, se při načtení tiše nahradily první položkou: značky v registrační bez upozornění, PDF s prvním presetem Illustratoru a jiným nastavením (i v 1.0.x); teď „(chybí)“, u značek upozornění, u presetu zablokovaný export (z N47, 2026-10-16) | `afbc923` |
+| N50 | při měřítku kresby 100 byl v panelu Dokument useknutý čistý formát a spad („dole 50“ místo 500 mm) a volba „1:100 jako kre…“: rozvržení s nejširšími texty běželo až po načtení předvolby, jejíž změna výběru v seznamu dialog rozvrhla se skutečnými hodnotami (ruční test 1.1.0, 2026-10-17) | `a5c923c` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka
