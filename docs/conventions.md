@@ -108,8 +108,22 @@ do `app.redraw()`. Obojí je změřené v
 
 ## GUIDANCE — Sdílené jádro (`shared/lib/`)
 
-Jen dva moduly: `json2.js` (prostý soubor, bez namespace) a `ui_state.js`
-(namespace-neutrální factory `buildUIState(NS)`, build za ni připojí volání).
+`json2.js` je prostý soubor bez namespace, v buildu vždy první. Ostatní moduly
+jsou namespace-neutrální factory `buildX(NS)` a build za každou připojí volání
+pro svůj namespace:
+
+| modul | factory | používá |
+|---|---|---|
+| `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE |
+| `cut_marks.js` | `buildCutMarks(NS)` | ZSM, TE |
+| `numbers.js` | `buildNumbers(NS)` | zatím nikdo |
+| `field_paint.js` | `buildFieldPaint(NS)` | zatím nikdo |
+| `registration.js` | `buildRegistration(NS)` | zatím nikdo |
+| `drawing_scale.js` | `buildDrawingScale(NS)` | zatím nikdo |
+
+Poslední čtyři vznikly 2026-10-17 z kódu tile-exportu; nástroje je napojí ve
+svých vláknech (`decisions.md`). Moduly bez vlastního uživatele testuje
+`shared/tests/` (`npm run test:shared`).
 
 **Kritérium sdílení: „oprav jednou platí i tam."** Textová podobnost nestačí —
 `storage`, `validation` a `utils` zůstávají lokální, protože jejich divergence je
@@ -123,6 +137,7 @@ Instalace: `npm install` v kořeni repa.
 | příkaz | co dělá | kdy |
 |---|---|---|
 | `npm run lint` | ESLint na `*/src/**` + `shared/lib/**` — chybějící ES3 metody, syntaxe, neznámé globály | před commitem |
+| `npm run test:shared` | Node testy sdílených modulů v `shared/tests/` | po změně `shared/lib/` |
 | `tools/typecheck.sh <soubory>` | typová kontrola proti Illustrator DOM typings | na **nově psaný** kód |
 | `tools/ai-eval.sh -e '<výraz>'` | spustí ExtendScript v běžícím Illustratoru a vrátí hodnotu | když je otázka „existuje tohle API / co to vrací" |
 
