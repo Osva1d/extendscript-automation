@@ -628,6 +628,15 @@ TE.UI = {
             stCalc: stCalc, btnTiles: btnTiles, btnExport: btnExport
         };
 
+        // One layout with the widest texts still in place, before anything
+        // can write the real ones. A statictext keeps the width of its first
+        // layout (measured), and the real values arrive early: loading the
+        // active preset below changes a list's selection, its onChange runs
+        // refresh(), and that lays the dialog out. At the end of the build
+        // this pass came too late — at drawing scale 100 the clean format,
+        // the bleed and "1:100 jako kresba" were cut (2026-10-17).
+        w.layout.layout(true);
+
         function relayout() { w.layout.layout(true); }
 
         // A preset is not saved over a typo in a field the run uses (P1).
@@ -837,11 +846,6 @@ TE.UI = {
         btnExport.onClick = function () { state.outcome = "export"; w.close(1); };
         btnCancel.onClick = function () { state.outcome = null; w.close(0); };
 
-        // One layout with the widest texts still in place, before refresh()
-        // writes the real ones. A statictext keeps the width of its first
-        // layout (measured), and without this pass the first layout came
-        // after the real values: a longer number later was cut (1.1.0).
-        w.layout.layout(true);
         refresh();
 
         return {

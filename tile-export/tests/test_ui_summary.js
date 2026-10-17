@@ -402,6 +402,18 @@ var rNoDup = refs({ etPattern: { text: "{doc}_{n}_{size}", enabled: true } });
 TE.UI.refresh(null, rNoDup, ctx);
 eq(rNoDup.btnExport.enabled && rNoDup.stCalc.text.indexOf("stejný název") === -1, true, "with {n} every name differs");
 
+console.log("\n=== N50: the widest texts are laid out before the preset loads ===");
+// A label keeps the width of its first layout. Loading the active preset can
+// change a list's selection, whose onChange lays the dialog out with the real
+// values; the pass with the widest texts has to come first, or "1:100 jako
+// kresba", the clean format and the bleed are cut at drawing scale 100.
+var uiSrc = fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8");
+// The pass is a statement of its own; relayout() holds the same call.
+var firstLayout = uiSrc.indexOf("\n        w.layout.layout(true);\n");
+var presetLoad = uiSrc.indexOf("self.apply(refs, activeP)");
+eq(firstLayout > 0 && presetLoad > 0 && firstLayout < presetLoad, true,
+    "the first layout comes before the active preset is applied");
+
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
 // 10 m tall. The old message named neither, so nobody could tell that more

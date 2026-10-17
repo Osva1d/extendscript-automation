@@ -62,8 +62,10 @@ vrať (nebo ulož jako předvolbu):
 výstupu se střídají na jednom místě (naměřeno headless 2026-10-15). Nic
 uříznutého, sloupce zarovnané, levý i pravý končí dole na stejné výšce. Panel
 Dokument ukáže čistý formát a dostupný spad; měřítko kresby 100 nebo 12,5 se
-v nich i v „1:… jako kresba" vejde celé. Výsledek je v pravém sloupci: tučná
-stavová řádka, tabulka plátů, pod ní podrobnosti. Dlouhá chybová hláška (Large
+v nich i v „1:… jako kresba" vejde celé, i když ho napíšeš v otevřeném dialogu
+a předvolba má jinou barvu řezu nebo PDF preset než poslední běh (N50).
+Výsledek je v pravém sloupci: tučná stavová řádka, tabulka plátů, pod ní
+podrobnosti. Dlouhá chybová hláška (Large
 Canvas, měřítko kresby 10, výstup 1:1) se v podrobnostech **zalomí**,
 neuřízne. Patička „© 2025–2026 Ladislav Osvald · v1.1.0", šedá, jako v ostatních
 nástrojích.
@@ -186,4 +188,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N49.
+další číslo v [nálezech](findings.md), naposledy N50.
