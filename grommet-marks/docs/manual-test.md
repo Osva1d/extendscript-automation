@@ -426,7 +426,8 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 1. Nakresli úzký pruh **35 × 350 mm**, vyber ho, spusť skript, **Vybraná
    cesta**, Odsazení **20** (dvakrát 20 je víc než 35). Generovat.
 - [ ] Jediná hláška (bez „UPOZORNĚNÍ:"): „Odsazení 20 mm je na tento tvar moc
-  velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení."
+  velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.
+  Dokument nebyl změněn."
 - [ ] **Nic nevzniklo**: žádná značka, vrstva „Grommet Marks" se nevytvořila
   (pokud předtím nebyla), pruh zůstal vybraný a beze změny.
 - [ ] `Úpravy ▸ Zpět`: první Zpět vrátí neviditelný krok skriptu (kopii, na
@@ -440,7 +441,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    (Sjednotit) do **jedné cesty**. Vyber ji, **Vybraná cesta**, Odsazení
    **20**, Generovat.
 - [ ] Hláška „Linka ok se v úzkém místě rozpadá na víc částí (2). Zmenšete
-  odsazení." a nic nevzniklo (ověřeno 2026-10-17).
+  odsazení. Dokument nebyl změněn." a nic nevzniklo (ověřeno 2026-10-17).
 4. Znovu, Odsazení **10** (2 × 10 se do hrdla 28 mm vejde), Generovat.
 - [ ] Projde: značky i ve čtyřech vnitřních rozích u hrdla, 10 mm od obou
   hran. V úzkém hrdle se dvojice značek skoro dotýkají — tak vychází tvar,

@@ -282,9 +282,14 @@ nejdelší text 409 / 408 px.
 
 ### 9.1 Nové hlášky (CS)
 
-- `Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.`
-- `Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení.`
-- `Illustrator nedokázal cestu posunout (%s).`
+- `Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení. Dokument nebyl změněn.`
+- `Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení. Dokument nebyl změněn.`
+- `Illustrator nedokázal cestu odsadit (%s). Žádná značka nevznikla.`
+
+Odmítnutí končí tím, co se stalo s dokumentem (rodinný kánon
+`extendscript-ui-standards` §12.2, doplněno 2026-10-17). U selhání Illustratoru
+to skript zaručit nemůže (otevřený bod v engine-facts), proto jen „Žádná značka
+nevznikla".
 
 Každý klíč i v angličtině; parita klíčů hlídá stávající test.
 

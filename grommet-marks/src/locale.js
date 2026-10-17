@@ -165,9 +165,9 @@ GM.L = (function () {
             TIP_PARTIAL: "Marks only on segments whose two end anchors are selected. The default is the whole outline; this choice is not saved in the preset.",
             TIP_PARTIAL_NONE: "Select part of the outline with the Direct Selection tool (A): the anchors at both ends of every segment.",
             TIP_PARTIAL_LONE: "Only a lone anchor is selected — select the other end of the segment too, with the Direct Selection tool.",
-            ERR_OFFSET_COLLAPSE: "An offset of %s is too large for this shape — the eyelet line would collapse at its narrowest point. Reduce the offset.",
-            ERR_OFFSET_SPLIT: "The eyelet line breaks into several parts (%s) at a narrow point. Reduce the offset.",
-            ERR_OFFSET_FAILED: "Illustrator could not offset the path (%s).",
+            ERR_OFFSET_COLLAPSE: "An offset of %s is too large for this shape — the eyelet line would collapse at its narrowest point. Reduce the offset. The document was not changed.",
+            ERR_OFFSET_SPLIT: "The eyelet line breaks into several parts (%s) at a narrow point. Reduce the offset. The document was not changed.",
+            ERR_OFFSET_FAILED: "Illustrator could not offset the path (%s). No marks were made.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
@@ -326,9 +326,9 @@ GM.L = (function () {
             TIP_PARTIAL: "Značky jen na úsecích, které mají vybrané obě koncové kotvy. Výchozí je celý obvod; volba se do předvolby neukládá.",
             TIP_PARTIAL_NONE: "Část obvodu vyberte nástrojem Přímý výběr (A): kotvy na začátku i konci každého úseku.",
             TIP_PARTIAL_LONE: "Vybraná je jen samostatná kotva — označte Přímým výběrem i druhý konec úseku.",
-            ERR_OFFSET_COLLAPSE: "Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení.",
-            ERR_OFFSET_SPLIT: "Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení.",
-            ERR_OFFSET_FAILED: "Illustrator nedokázal cestu posunout (%s).",
+            ERR_OFFSET_COLLAPSE: "Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení. Dokument nebyl změněn.",
+            ERR_OFFSET_SPLIT: "Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení. Dokument nebyl změněn.",
+            ERR_OFFSET_FAILED: "Illustrator nedokázal cestu odsadit (%s). Žádná značka nevznikla.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",

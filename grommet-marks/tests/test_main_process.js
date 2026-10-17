@@ -277,6 +277,34 @@ console.log("--- process: path offset through Illustrator (spec §5, §6, §9) -
         "offset failure reported, no mark layer");
 })();
 
+console.log("--- process: refusals say what happened to the document (family language §12.2) ---");
+(function () {
+    var side = 300 * MM;
+    function refuse(off) {
+        fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side), offsetPath: off });
+        alerts = [];
+        GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+        return alerts.join(" | ");
+    }
+    var collapse = refuse(function () { return { ok: true, loops: 1, segments: squareSegs(0, side) }; });
+    var split = refuse(function () { return { ok: true, loops: 2, segments: [] }; });
+    var failed = refuse(function () { return { ok: false, message: "boom" }; });
+    assert(/ The document was not changed\.$/.test(collapse), "collapse ends with the document sentence (" + collapse + ")");
+    assert(/ The document was not changed\.$/.test(split), "split ends with the document sentence (" + split + ")");
+    assert(/\(boom\)\. No marks were made\.$/.test(failed), "offset failure says no marks were made (" + failed + ")");
+    var keepLocale = global.app.locale, CS = {};
+    global.app.locale = "cs_CZ";
+    (function () { var GM = CS; eval(src("locale.js")); })();
+    global.app.locale = keepLocale;
+    var cs = CS.L;
+    assert(!!cs && cs.OK === "Generovat", "Czech table loaded");
+    if (cs) {
+        assert(/ Dokument nebyl změněn\.$/.test(cs.ERR_OFFSET_COLLAPSE) && / Dokument nebyl změněn\.$/.test(cs.ERR_OFFSET_SPLIT),
+            "CS collapse and split end with Dokument nebyl změněn.");
+        assert(cs.ERR_OFFSET_FAILED === "Illustrator nedokázal cestu odsadit (%s). Žádná značka nevznikla.", "CS offset failure: " + cs.ERR_OFFSET_FAILED);
+    }
+})();
+
 console.log("--- process: open path, part of the outline, top start ---");
 (function () {
     var side = 300 * MM;

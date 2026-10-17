@@ -41,7 +41,7 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
 - **Kontrola před vytvořením značek.** Skript odmítne tvar, u kterého by se
   linka ok zhroutila nebo rozpadla na víc částí (úzký pruh, hrdlo činky, příliš
   velké odsazení). Nevznikne žádná značka ani vrstva a hláška říká, co
-  zmenšit. Kontrola hlídá i to, že každá značka leží uvnitř tvaru v zadané
+  zmenšit a že dokument zůstal beze změny. Kontrola hlídá i to, že každá značka leží uvnitř tvaru v zadané
   vzdálenosti od řezu. Značka ve vnitřním (vydutém) rohu tvaru leží v rohu
   linky ok, odsazená od obou hran — od samotného rohu řezu je proto dál, a
   kontrola to uzná. Když Illustrator cestu posunout nedokáže, ohlásí to
