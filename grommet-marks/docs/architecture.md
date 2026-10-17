@@ -147,7 +147,7 @@ GM.Storage.load()
                                           ├ GM.Core.findCorners(linka ok)            // ostré + zaoblené rohy
                                           ├ GM.Core.placeAlong(...)                  // celý obvod: od topmostDist()
                                           │     nebo část obvodu: mapRun → runCorners → placeAlong per běh
-                                          └ GM.Core.checkMarks(marks, řezová linka, D, OFFSET_TOL / scale)   // jen D > 0
+                                          └ GM.Core.checkMarks(marks, řezová linka, D, OFFSET_TOL / scale, zlomy)   // jen D > 0
                                        → {ok:true, marks} | {ok:false, message}
                                          (chyba = alert a konec, vrstva ani značka nevznikne)
                                      → GM.Illustrator.placeMarkGroup() per značka
@@ -165,7 +165,9 @@ Měřené chování Illustratoru: [`../../docs/extendscript-engine-facts.md`](..
   středy značek: řezová linka posunutá o D dovnitř (u otevřené cesty nebo při
   D = 0 řezová linka sama). Rohy a rozmístění se počítají na lince ok, kontrola
   se měří proti řezové lince.
-- **`getSelectedPathInfo()`** je čisté čtení (výběr nemění) a vrací `circuit`,
+- **`getSelectedPathInfo()`** je čisté čtení (výběr nemění); vybraná skupina,
+  ve které není nic než jedna cesta (i vnořeně), se bere jako ta cesta —
+  Illustrator takovou cestu podle způsobu výběru hlásí jako skupinu. Vrací `circuit`,
   `segments` (každý s `sel` = obě koncové kotvy vybrané), `closed`, `sharpCount`,
   `roundCount`, `cornerCount` (= ostré + zaoblené), `cornerDists`, `partial`
   (`state` `none` | `runs` | `lone`, `runs`, `selectedSegs`, `totalSegs`),
@@ -185,7 +187,11 @@ Měřené chování Illustratoru: [`../../docs/extendscript-engine-facts.md`](..
 - **`checkMarks`** (jen D > 0): každá značka uvnitř řezové linky a ve vzdálenosti
   D ± (`OFFSET_TOL` + největší průhyb tětiv řezové linky). Měří k navzorkované
   řezové lince, proto přídavek `_chordSagitta`. Chytí i tichý návrat originálu,
-  který Illustrator vrací u příliš úzkého tvaru.
+  který Illustrator vrací u příliš úzkého tvaru. Výjimka: značka, jejímž
+  nejbližším bodem řezové linky je zlom (kotva, kde se směr zlomí o víc než
+  `OFFSET_CORNER_MIN`), smí ležet dál než D, nejvýš `OFFSET_MITER_LIMIT` × D —
+  ve vnitřním rohu je roh linky ok D od obou hran, ale dál od vrcholu. Hladké
+  kotvy výjimku nedostanou (na kruhu s Počtem ok 4 by prošlo špatné odsazení).
 
 ---
 

@@ -52,7 +52,9 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
 - **Tvar bez rohů začíná nahoře.** První značka leží v nejvyšším bodě, ne na
   první kotvě, kterou operátor nevidí. U kruhu a vzpřímené elipsy je
   rozmístění souměrné podle svislé osy, ať cesta začíná kdekoli a je nakreslená
-  kterýmkoli směrem.
+  kterýmkoli směrem. Kruh otočený o jiný úhel než násobek 90° se odchýlí
+  nejvýš o 0,3 mm: kruh z Illustratoru není přesná kružnice a první značka
+  sedí v jeho skutečném nejvyšším bodě.
 - **Zaoblené rohy už nejsou hladký prstenec od první kotvy.** Dřív skript
   zaoblený roh nepoznal a značky šly rovnoměrně od první kotvy, takže do rohů
   nemusela padnout žádná. Teď má každý zaoblený roh značku a Počet ok na cestě

@@ -134,7 +134,7 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 1. Otevři dokument, **nevybírej nic** a spusť skript.
 - [ ] V panelu Umístění je radio **Vybraná cesta** zašedlé (disabled).
 - [ ] Tooltip na zašedlém radiu říká: „Nic není vybráno. Vyberte jednu cestu…"
-- [ ] Vyber **skupinu** s obdélníkem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt.
+- [ ] Vyber **skupinu** s obdélníkem a ještě jedním objektem (nástroj Výběr) a spusť skript → tooltip radí Přímý výběr (A), rozdělení složené cesty a jeden objekt. *(Skupina, ve které je jen obdélník, se od 1.3.0 bere jako ten obdélník — J12.)*
 
 2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
 - [ ] Radio **Vybraná cesta** je aktivní.

@@ -199,8 +199,11 @@ Před vytvořením první značky:
   (tětivy), ne k její křivce, a bod uvnitř tvaru je k tětivě blíž než ke
   křivce; průhyb je u běžných tvarů zanedbatelný a roste s poloměrem (kruh ze
   4 kotev o poloměru 2,4 m: 0,556 pt, naměřeno 2026-10-13). Výjimka je značka
-  ve vnitřním rohu (§5.5): když je jejím nejbližším bodem řezové linky kotva,
-  smí ležet dál než D, nejvýš 4 D (Limit úkosu); blíž než D nikdy. Při D = 0
+  ve vnitřním rohu (§5.5): když je jejím nejbližším bodem řezové linky zlom
+  (kotva, kde se směr zlomí o víc než 1°), smí ležet dál než D, nejvýš 4 D
+  (Limit úkosu); blíž než D nikdy. Hladká kotva výjimku nedostane — na kruhu
+  s Počtem ok 4 leží každá značka na paprsku kotvy a prošlo by i špatné
+  odsazení (kontrola 2026-10-17). Při D = 0
   kontrola neběží: značky leží na řezové lince z konstrukce.
 
 Porušení → žádná značka, hláška s důvodem. Pravidlo chytí tichý návrat

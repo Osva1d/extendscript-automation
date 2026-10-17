@@ -578,7 +578,10 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   řezové linky, ho proto odmítala: tvar L 600 mm při D 20 mm, činka
   (kruhy 150 mm, hrdlo 28 mm) při D 10 i 5 mm — značky u hrdla 12,99 mm od
   řezu při D 10. Opraveno výjimkou pro značku, jejímž nejbližším bodem je
-  kotva řezové linky.
+  zlom řezové linky (kotva, kde se směr zlomí o víc než 1°). Hladká kotva ji
+  dostat nesmí: na kruhu ze 4 kotev s Počtem ok 4 leží každá značka na
+  paprsku kotvy, takže by prošlo i trojnásobné odsazení (Node sonda
+  2026-10-17).
 - **Cesta sama ve skupině: výběr hlásí cestu, nebo skupinu (2026-10-17).**
   Skupina s jedinou cestou, všechny kotvy `ANCHORPOINT` ve všech případech;
   `doc.selection` přesto hlásí podle toho, jak se cesta vybrala:
