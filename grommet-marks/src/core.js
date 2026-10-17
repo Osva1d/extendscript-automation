@@ -758,7 +758,10 @@ GM.Core = {
      * @param {number} D - Offset (document units).
      * @param {number} tol - Allowed deviation beyond the check's own sampling
      *     error (the cut line's largest chord sagitta is added), document units.
-     * @param {Array<Array<number>>} [anchors] - The cut line's anchor points.
+     * @param {Array<Array<number>>} [anchors] - The cut line's corner points:
+     *     anchors where its direction breaks. Never pass smooth anchors — on a
+     *     circle with Count 4 every mark sits on the radius through one, so a
+     *     wrong offset would be excused (review 2026-10-17).
      *     In an inner (reflex) corner of the cut line the eyelet line's mitred
      *     corner is D from both edges but farther from the corner point
      *     itself (D * sqrt 2 at a right angle, at most OFFSET_MITER_LIMIT * D:

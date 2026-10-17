@@ -419,6 +419,35 @@ console.log("--- process: inner corner passes the check (acceptance test 2026-10
     assert(!!cornerMark(rec, 280 * MM, 280 * MM), "a mark in the inner corner of the eyelet line, 20 mm from both edges");
 })();
 
+console.log("--- process: a smooth anchor is no inner corner (review 2026-10-17) ---");
+(function () {
+    // Count 4 on a circle puts every mark on the radius through an anchor, so
+    // each mark's nearest cut point IS an anchor. A wrong offset (3 D, a units
+    // mistake) must still be refused: only tangent breaks count as corners.
+    var r = 300 * MM, d = 20 * MM;
+    function circle(rad) {
+        var out = [], k = 4 / 3 * Math.tan(Math.PI / 8) * rad;
+        for (var i = 0; i < 4; i++) {
+            var s = i * Math.PI / 2, e = s + Math.PI / 2;
+            var p0 = [rad * Math.cos(s), rad * Math.sin(s)], p3 = [rad * Math.cos(e), rad * Math.sin(e)];
+            out.push({ p0: p0, p1: [p0[0] - k * Math.sin(s), p0[1] + k * Math.cos(s)],
+                       p2: [p3[0] + k * Math.sin(e), p3[1] - k * Math.cos(e)], p3: p3 });
+        }
+        return out;
+    }
+    var rec = fakeDoc({ artboards: [[-r, r, r, -r]], pathInfo: pathInfoOf(circle(r), true),
+        offsetPath: function () { return { ok: true, loops: 1, segments: circle(r - 3 * d) }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: true, number: 4, spacing: 100 } }), {});
+    assert(rec.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0,
+        "circle, Count 4, eyelet line 3 D in: refused (got " + rec.marks.length + " marks, alerts " + alerts.join(" | ") + ")");
+    var rec2 = fakeDoc({ artboards: [[-r, r, r, -r]], pathInfo: pathInfoOf(circle(r), true),
+        offsetPath: function () { return { ok: true, loops: 1, segments: circle(r - d) }; } });
+    alerts = [];
+    GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: true, number: 4, spacing: 100 } }), {});
+    assert(rec2.marks.length === 4 && alerts.length === 0, "the same circle with the right offset passes (" + alerts.join(" | ") + ")");
+})();
+
 console.log("--- process: Large Canvas offset, empty result, decimal separator (spec §6.1, §7, G1) ---");
 (function () {
     var side = 30 * MM, seen = {}, collapse = GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0];

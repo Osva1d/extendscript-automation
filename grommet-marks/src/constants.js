@@ -26,6 +26,7 @@ GM.CONSTANTS = {
     SEGMENT_EPS: 0.01,         // doc pt — anchors closer than this count as one
     OFFSET_TOL: 0.5,           // pt — allowed deviation beyond the check's own sampling error (the cut line's chord sagitta is added)
     OFFSET_MITER_LIMIT: 4,     // offsetPath's mlim — an eyelet corner at an inner corner lies at most this × D from the corner point
+    OFFSET_CORNER_MIN: 1,      // deg — tangent break that makes an anchor a possible inner corner for the offset check
 
     // Unit system — internal keys, display names live in locale
     UNIT: { MM: "mm", CM: "cm", IN: "in" },
