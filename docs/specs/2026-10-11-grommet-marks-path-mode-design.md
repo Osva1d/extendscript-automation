@@ -5,7 +5,9 @@ Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.2.0
 
 Datum: 2026-10-11 · Stav: **schváleno** (uživatel, 2026-10-11);
 implementováno na větvi `feat/grommet-marks-path-mode`, ověřeno v Illustratoru
-30.8.2 (2026-10-13), nevydáno
+30.8.2 (2026-10-13), nevydáno. Doplněno 2026-10-17 po automatickém testu
+v Illustratoru: vnitřní rohy v kontrole (§5.5, §7), skupina s jedinou cestou
+(§8.2, §11)
 
 Vzniklo z průzkumu režimů „Hrany artboardu" a „Vybraná cesta" (2026-10-05 až
 2026-10-10): otázky uživateli, měření v Illustratoru 30.8.2, rešerše praxe
@@ -17,7 +19,7 @@ a interaktivní prototyp dialogu.
 
 Režim Vybraná cesta dnes klade značky **středem na cestu**. Kdo chce oka
 v odsazení od řezu, musí si cestu nejdřív sám posunout (Objekt ▸ Cesta ▸
-Posunout cestu…), spustit skript na posunuté kopii a kopii pak smazat. K tomu:
+Odsazená cesta…), spustit skript na posunuté kopii a kopii pak smazat. K tomu:
 
 - **Zaoblené rohy skript nepozná.** Zaoblený obdélník je pro něj hladká cesta:
   značky jdou rovnoměrně od první kotvy a do rohů nemusí padnout žádná.
@@ -44,7 +46,7 @@ Posunout cestu…), spustit skript na posunuté kopii a kopii pak smazat. K tomu
 | 2 | Zaoblený obdélník je tvarová cesta, ne zvláštní případ artboardu. Varianta „vybraný obdélník jako artboard" padla. | uživatel, 2026-10-05 |
 | 3 | Zaoblený roh = roh: **jedna značka uprostřed oblouku**, zbytek výplň. Varianta „dlouhý oblouk dostane značky na koncích, hranice v dialogu" zahozena. | uživatel + rešerše, 2026-10-09 (§12) |
 | 4 | Tvar bez rohů začíná **nahoře**. | data, 2026-10-09 (§12) |
-| 5 | Linku ok počítá **Illustratorovo Posunout cestu** ze skriptu, ne vlastní výpočet. | měření, 2026-10-09 (§6) |
+| 5 | Linku ok počítá **Illustratorova Odsazená cesta** (Objekt ▸ Cesta ▸ Odsazená cesta…) ze skriptu, ne vlastní výpočet. | měření, 2026-10-09 (§6) |
 | 6 | Skript **kontroluje výsledek**, nepředpovídá chyby tvaru. | měření, 2026-10-09 (§7) |
 | 7 | Vnitřní rohy se značí jako dnes, bez volby. | 2026-10-09 |
 | 8 | Část obvodu = zaškrtávátko, vždy vypnuté, neukládá se. | uživatel, 2026-10-09 |
@@ -77,7 +79,7 @@ oblouku. Zda rozpoznávat i takové oblouky, rozhodne první skutečné PDF (§1
 
 ### 5.1 Linka ok
 
-- Uzavřená cesta a D > 0 → linka ok = výsledek Posunout cestu o D dovnitř (§6).
+- Uzavřená cesta a D > 0 → linka ok = výsledek Odsazené cesty o D dovnitř (§6).
 - D = 0 → linka ok je řezová linka (jako dnes).
 - Otevřená cesta → linka ok je cesta sama; pole Odsazení je zašedlé (nejde
   určit, na kterou stranu odsadit).
@@ -124,8 +126,13 @@ Rohy se hledají **na lince ok**, ne na řezové lince:
 
 ### 5.5 Vnitřní rohy
 
-Odsazení s ostrým spojem (miter, mez 4 — výchozí hodnota Illustratoru): roh
-linky ok leží D od obou hran, stejně jako u vnějšího rohu, a dostane značku.
+Odsazení s ostrým spojem (Spoje čar Ostré, Limit úkosu 4 — výchozí hodnota
+Illustratoru): roh linky ok leží D od obou hran, stejně jako u vnějšího rohu,
+a dostane značku. Od samotného vrcholu vnitřního rohu řezové linky je ale dál
+než D: u pravého úhlu D·√2, u ostřejšího vnitřního rohu víc, nejvýš 4 D (za
+touto mezí Illustrator roh zkosí). Kontrola (§7) s tím počítá — do 2026-10-17
+nepočítala a vnitřní rohy odmítala (automatický test: tvar L 600 mm při D
+20 mm, činka s hrdlem 28 mm při D 10 mm).
 V tvarech uživatele se nevyskytují; naměřeno 2026-10-13 (Illustrator 30.8.2,
 tvar L, D 56,69 pt): vnitřní (reflexní) roh linky ok je ostrý (`jntp 2`, bez
 zkosení a zaoblení) a leží D od obou hran — pro vnitřní roh řezové linky
@@ -191,8 +198,10 @@ Před vytvořením první značky:
   průhyb tětiv řezové linky. Kontrola totiž měří k navzorkované řezové lince
   (tětivy), ne k její křivce, a bod uvnitř tvaru je k tětivě blíž než ke
   křivce; průhyb je u běžných tvarů zanedbatelný a roste s poloměrem (kruh ze
-  4 kotev o poloměru 2,4 m: 0,556 pt, naměřeno 2026-10-13). Při D = 0 kontrola
-  neběží: značky leží na řezové lince z konstrukce.
+  4 kotev o poloměru 2,4 m: 0,556 pt, naměřeno 2026-10-13). Výjimka je značka
+  ve vnitřním rohu (§5.5): když je jejím nejbližším bodem řezové linky kotva,
+  smí ležet dál než D, nejvýš 4 D (Limit úkosu); blíž než D nikdy. Při D = 0
+  kontrola neběží: značky leží na řezové lince z konstrukce.
 
 Porušení → žádná značka, hláška s důvodem. Pravidlo chytí tichý návrat
 originálu (§6.2) i chyby, které dnes nikdo nečeká, protože hlídá přímo to, na
@@ -228,9 +237,9 @@ Předvolby, Hrany, Rohové zóny a Značka se nemění.
 
 | prvek | aktivní, když | jinak |
 |---|---|---|
-| Vybraná cesta | výběr je jedna jednoduchá cesta | zašedlá, nápověda s důvodem (jako dnes) |
+| Vybraná cesta | výběr je jedna jednoduchá cesta, nebo skupina, ve které není nic než ona (Illustrator takovou cestu podle způsobu výběru hlásí jako vybranou skupinu, naměřeno 2026-10-17) | zašedlá, nápověda s důvodem (jako dnes) |
 | Odsazení (Cesta) | cesta je uzavřená | zašedlé, nápověda „U otevřené cesty nejde určit, na kterou stranu odsadit — značky leží na cestě." |
-| Počet ok | není zaškrtnuté Jen vybraná část | zašedlé, řádek je na Rozestupu, nápověda řekne proč; po odškrtnutí se vrátí zvolený Počet ok. Jinak na cestě s rohy ukáže počet rohů jen pro čtení |
+| Počet ok | není zaškrtnuté Jen vybraná část; na cestě s rohy pole jen ukazuje počet rohů (§5.3) | zašedlé, řádek je na Rozestupu, nápověda řekne proč; po odškrtnutí se vrátí zvolený Počet ok |
 | Jen vybraná část | přímý výběr obsahuje aspoň jeden celý úsek | zašedlé; vlastní nápověda pro samostatnou kotvu |
 | Zhustit u rohů | artboard; cesta s rohy (i zaoblenými) a Rozestupem | zašedlé s důvodem (jako dnes) |
 | Generovat | pole aktivního režimu jsou platná | zašedlé, vadné pole zčervená |
@@ -294,6 +303,8 @@ Každý klíč i v angličtině; parita klíčů hlídá stávající test.
   v dialogu.
 - Při D = 0 na cestě s ostrými rohy zůstává rozmístění stejné jako v 1.2.0
   (regresní test).
+- Skupina, ve které je jen jedna cesta, se bere jako ta cesta; dřív Vybraná
+  cesta zašedla (2026-10-17).
 
 ## 12. Data za rozhodnutími 3 a 4
 

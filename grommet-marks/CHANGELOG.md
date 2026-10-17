@@ -13,9 +13,9 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
 
 - **Odsazení od kraje v režimu Vybraná cesta.** Panel Cesta má pole Odsazení
   od kraje: značky leží o zadanou vzdálenost od řezové linky dovnitř tvaru.
-  Dřív bylo nutné cestu předem posunout ručně (Objekt ▸ Cesta ▸ Posunout
-  cestu…), spustit skript na kopii a kopii pak smazat. Linku, na které značky
-  leží, teď spočítá Illustrator (Posunout cestu) přímo ze skriptu; řezová
+  Dřív bylo nutné cestu předem posunout ručně (Objekt ▸ Cesta ▸ Odsazená
+  cesta…), spustit skript na kopii a kopii pak smazat. Linku, na které značky
+  leží, teď spočítá Illustrator (Odsazená cesta) přímo ze skriptu; řezová
   linka zůstane beze změny a výběr se vrátí tak, jak byl. 0 = značky leží
   přímo na cestě, jako dřív. U otevřené cesty je pole zašedlé. Celý běh je
   pořád jeden krok Zpět.
@@ -42,7 +42,9 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
   linka ok zhroutila nebo rozpadla na víc částí (úzký pruh, hrdlo činky, příliš
   velké odsazení). Nevznikne žádná značka ani vrstva a hláška říká, co
   zmenšit. Kontrola hlídá i to, že každá značka leží uvnitř tvaru v zadané
-  vzdálenosti od řezu. Když Illustrator cestu posunout nedokáže, ohlásí to
+  vzdálenosti od řezu. Značka ve vnitřním (vydutém) rohu tvaru leží v rohu
+  linky ok, odsazená od obou hran — od samotného rohu řezu je proto dál, a
+  kontrola to uzná. Když Illustrator cestu posunout nedokáže, ohlásí to
   hláškou.
 
 ### Změněno
@@ -64,6 +66,9 @@ Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvo
 - **Dialog.** Informace o cestě se z panelu Cesta přesunula do Umístění,
   poznámka „posuňte si cestu předem" zmizela. V režimu Hrany artboardu je
   dialog o jeden řádek vyšší (do 777 px), v režimu cesty o něco nižší.
+- **Skupina s jedinou cestou.** Cesta, která je ve skupině sama, jde použít
+  jako Vybraná cesta, i když Illustrator hlásí jako vybranou celou skupinu
+  (záleží na tom, jak se vybrala). Dřív byla Vybraná cesta zašedlá.
 - Při odsazení 0 na cestě s ostrými rohy zůstává rozmístění stejné jako
   v 1.2.0.
 

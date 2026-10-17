@@ -308,8 +308,11 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > značek — [návrh](../../docs/specs/2026-10-11-grommet-marks-path-mode-design.md).
 > Čísla (polohy značek, odsazení, jeden krok Zpět, výška dialogu) už ověřil
 > skutečný build v Illustratoru 30.8.2 (2026-10-13) na tvarech zadaných
-> v bodech. Tady zůstává, co se tak ověřit nedá: kreslení tvarů, kliknutí
-> Přímým výběrem, pohled na dialog a skutečná data. Počty značek platí pro
+> v bodech. Automatický průchod 2026-10-17 (skript v Illustratoru, tvary
+> zadané body, dialog bez kliknutí) prošel J1–J9, J12, J13, G1 a G6. Ručně
+> zbývá, co se tak ověřit nedá: J10, J11, vzhled dialogu v J8, J12
+> skutečnými kliky, tvar nakreslený rukou (J1, J2 krok 2) a skutečná data
+> (J2 krok 5). Počty značek platí pro
 > rozměry uvedené v kroku; u ručně nakresleného tvaru se mohou lišit o značku
 > na dlouhé straně.
 >
@@ -318,9 +321,9 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > jinak skript ohlásí značky kryjící se s předchozím během.
 >
 > **Kontrola odsazení očima:** zkopíruj řezovou linku a dej na kopii
-> `Objekt ▸ Cesta ▸ Posunout cestu…` s posunem **−20 mm** (dovnitř), spoj
-> **Ostrý**, mez 4 — stejné nastavení jako ve skriptu. Středy značek leží na té
-> kopii. Kopii potom smaž.
+> `Objekt ▸ Cesta ▸ Odsazená cesta…` s posunem **−20 mm** (dovnitř), Spoje
+> čar **Ostré**, Limit úkosu **4** — stejné nastavení jako ve skriptu. Středy
+> značek leží na té kopii. Kopii potom smaž.
 
 ### J1 — Štít: odsazení a rohy
 1. Nakresli štít domu (Pen Tool, uzavřená cesta o pěti bodech): základna
@@ -337,8 +340,9 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Řezová linka zůstala beze změny: pořád vybraná, 5 kotev. V dokumentu
   nezůstala žádná odsazená kopie (panel Vrstvy: původní vrstva a vrstva
   „Grommet Marks").
-3. Smaž značky, obrať směr cesty (panel Atributy ▸ Obrátit směr cesty, nebo
-   nakresli štít z druhé strany) a Generovat znovu.
+3. Smaž značky, obrať směr cesty (příkaz **Obrátit směr cesty** — název
+   ověřený v české lokalizaci, místo v menu ne — nebo nakresli štít z druhé
+   strany) a Generovat znovu.
 - [ ] Stejných 6 značek na stejných místech.
 
 ### J2 — Zaoblený obdélník: živé rohy, R > D i R < D
@@ -380,8 +384,10 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] **6 značek** (obvod linky ok ≈ 1759 mm), první nahoře a jedna dole.
 4. Smaž značky, otoč kruh o 30° (Objekt ▸ Transformovat ▸ Otočit), takže první
    kotva leží jinde. Generovat s Počtem 7.
-- [ ] Stejné polohy jako v kroku 2, první značka zase nahoře — nezávisí na
-  první kotvě ani na tom, kudy je cesta nakreslená.
+- [ ] Stejné polohy jako v kroku 2 (do 0,3 mm: otočený kruh z Illustratoru
+  není přesná kružnice a jeho nejvyšší bod se posune), první značka zase
+  v nejvyšším bodě — nezávisí na první kotvě ani na tom, kudy je cesta
+  nakreslená.
 5. Smaž značky, Odsazení **0**, Počet 7, Generovat.
 - [ ] Značky leží na samotné kružnici, první nahoře.
 
@@ -423,21 +429,23 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení."
 - [ ] **Nic nevzniklo**: žádná značka, vrstva „Grommet Marks" se nevytvořila
   (pokud předtím nebyla), pruh zůstal vybraný a beze změny.
-- [ ] `Úpravy ▸ Zpět` nabízí tvůj poslední krok před skriptem, ne krok
-  skriptu. *(Pokud ne, zapiš to: odmítnutý běh po sobě nechává stopu
-  v historii, i když ne v dokumentu.)*
+- [ ] `Úpravy ▸ Zpět`: první Zpět vrátí neviditelný krok skriptu (kopii, na
+  které kontrola měřila; v dokumentu se nic nezmění), teprve druhé tvůj
+  poslední krok. Změřeno 2026-10-17 — odmítnutý běh nechá krok v historii,
+  ne v dokumentu.
 2. Znovu, Odsazení **12**, Generovat.
 - [ ] Projde: každá značka leží 12 mm od nejbližší strany pruhu.
 3. Nakresli **činku**: dva kruhy o průměru 150 mm se středy 250 mm od sebe
    a mezi ně obdélník vysoký **28 mm** (hrdlo), vše spoj v Pathfinderu
    (Sjednotit) do **jedné cesty**. Vyber ji, **Vybraná cesta**, Odsazení
    **20**, Generovat.
-   *Tohle je poprvé, co činku projde celý skript: ověřené je jen samotné
-   odsazení z 2026-10-09 (hrdlo 28 mm dalo dvě smyčky) a Node test hlášky.
-   Zapiš, co se stane; očekávání níže je odvozené, ne ověřené.*
-- [ ] Očekávání: hláška „Linka ok se v úzkém místě rozpadá na víc částí (2).
-  Zmenšete odsazení." a nic nevzniklo. *(Zapiš skutečný text hlášky a zda
-  vznikla vrstva nebo značky.)*
+- [ ] Hláška „Linka ok se v úzkém místě rozpadá na víc částí (2). Zmenšete
+  odsazení." a nic nevzniklo (ověřeno 2026-10-17).
+4. Znovu, Odsazení **10** (2 × 10 se do hrdla 28 mm vejde), Generovat.
+- [ ] Projde: značky i ve čtyřech vnitřních rozích u hrdla, 10 mm od obou
+  hran. V úzkém hrdle se dvojice značek skoro dotýkají — tak vychází tvar,
+  není to chyba. *(Do 2026-10-17 skript vnitřní rohy odmítal hláškou o moc
+  velkém odsazení, viz J13.)*
 
 ### J6 — Otevřená cesta
 1. Nakresli otevřenou lomenou čáru ze tří bodů, dva úseky po cca **375 mm**
@@ -470,7 +478,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 >    Poškozený soubor skript tiše ignoruje (předvolby zmizí z dialogu) a příští
 >    uložení ho přepíše — v tom případě vrať zálohu (`.bak`).
 1. Nakresli štít a **ručně ho odsaď** jako dřív (kopie, `Objekt ▸ Cesta ▸
-   Posunout cestu…` −20 mm). Vyber odsazenou kopii a spusť skript. Dialog se
+   Odsazená cesta…`, posun −20 mm). Vyber odsazenou kopii a spusť skript. Dialog se
    otevře z `[Last Settings]`; předvolbu `Stará 1.2` načti v seznamu **Načíst**
    (je-li už vybraná, přepni na `[Výchozí]` a zpět, nebo klikni na ↺).
 - [ ] Režim Vybraná cesta, **Odsazení od kraje** je **0** (ne 20); šedý řádek
@@ -532,12 +540,12 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Zapiš, kam značky padly (nezměřené očekávání: konce oblouku a jeho střed,
   odsazené dovnitř), a zda je výběr po běhu stejný jako před ním.
 
-### J11 — Vypnuté „Nový objekt má základní vzhled"
+### J11 — Vypnuté „Nová kresba má základní vzhled"
 > Také měření, ne test: `offsetPath` zakládá kopii řezové linky novým objektem
-> a nastavuje jen výplň a tah. Co udělá vypnutá volba **Nový objekt má základní
+> a nastavuje jen výplň a tah. Co udělá vypnutá volba **Nová kresba má základní
 > vzhled** (menu panelu Vzhled), není změřeno — nová kopie by mohla převzít
 > vzhled posledního objektu. Výsledek patří do `docs/extendscript-engine-facts.md`.
-1. V panelu Vzhled (Appearance) vypni v jeho menu **Nový objekt má základní
+1. V panelu Vzhled (Appearance) vypni v jeho menu **Nová kresba má základní
    vzhled**. Zopakuj J1 krok 2 (štít, Odsazení 20, Rozestup 300 mm, Generovat).
 - [ ] Zapiš: stejných 6 značek na stejných místech jako s volbou zapnutou?
   Hlásí skript chybu nebo kontrolu před vytvořením značek? Zůstalo v dokumentu
@@ -555,6 +563,24 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 2. Odsazení **20**, Rozestup **300 mm**, Generovat.
 - [ ] Zapiš: polohy značek (jako J1?), co zůstalo vybrané po běhu, a zda
   v dokumentu (skupina, vrstva) nezůstal odsazený zbytek.
+3. Vyber skupinu se štítem nástrojem **Výběr (V)** a spusť skript znovu.
+- [ ] **Vybraná cesta** je dostupná a značky padnou jako v J1: skupina, ve
+  které není nic než jedna cesta, se bere jako ta cesta (Illustrator takovou
+  cestu podle způsobu výběru hlásí jako vybranou skupinu; do 2026-10-17
+  Vybraná cesta zašedla).
+4. Přidej do skupiny ještě jeden objekt, vyber skupinu nástrojem Výběr (V).
+- [ ] Vybraná cesta zašedlá — ve skupině je víc objektů (jako dřív).
+
+### J13 — Vnitřní roh: tvar L
+1. Nakresli tvar L (uzavřená cesta o šesti bodech): **600 × 600 mm**, obě ramena
+   široká **300 mm**. Vyber ho, **Vybraná cesta**, Odsazení **20**, Rozestup
+   **300 mm**, Generovat.
+- [ ] Projde bez hlášky, **8 značek**: v každém z šesti rohů linky ok jedna
+  a po jedné uprostřed dvou dlouhých stran. Značka ve vnitřním rohu leží
+  20 mm od obou hran — od vrcholu vnitřního rohu řezu je tím pádem 28 mm
+  (20 × √2), a tak to má být.
+- [ ] Šedý řádek: „Uzavřená cesta · 6 rohů". Do 2026-10-17 skript takový tvar
+  odmítal hláškou „Odsazení 20 mm je na tento tvar moc velké".
 
 ---
 

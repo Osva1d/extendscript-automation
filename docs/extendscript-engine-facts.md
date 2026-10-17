@@ -572,6 +572,38 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   (PNG 20 % a 60 %, černá řezová linka a červená linka ok): červený obrys je
   uvnitř černého s rovnoměrnou mezerou, na vnitřním rohu pravý úhel, nikde
   se nekříží.
+- **Vnitřní roh v kontrole (2026-10-17).** Roh linky ok z M4 je D od obou
+  hran, ale od vrcholu vnitřního rohu řezové linky D·√2 (pravý úhel; obecně
+  víc, nejvýš Limit úkosu × D). Kontrola, která měří k nejbližšímu bodu
+  řezové linky, ho proto odmítala: tvar L 600 mm při D 20 mm, činka
+  (kruhy 150 mm, hrdlo 28 mm) při D 10 i 5 mm — značky u hrdla 12,99 mm od
+  řezu při D 10. Opraveno výjimkou pro značku, jejímž nejbližším bodem je
+  kotva řezové linky.
+- **Cesta sama ve skupině: výběr hlásí cestu, nebo skupinu (2026-10-17).**
+  Skupina s jedinou cestou, všechny kotvy `ANCHORPOINT` ve všech případech;
+  `doc.selection` přesto hlásí podle toho, jak se cesta vybrala:
+  `selection = null; path.selected = true` → **skupina**;
+  `selection = null; path.selected = false; path.selected = true` → cesta
+  (jednou, v jiném dokumentu skupina); všechny kotvy po jedné → cesta;
+  `doc.selection = [path]` → cesta; `group.selected = true` → skupina;
+  výsledek `expandStyle` (efekt Pathfinder) → skupina. Po vrácení přímého
+  výběru po bodech (`_restoreSelection`) se cesta z efektu Pathfinder
+  překlopila z cesty na skupinu (při D 20 odmítnuto, při D 10 i 5 prošlo).
+  `getSelectedPathInfo` proto bere skupinu s jedinou cestou (i vnořenou) jako
+  tu cestu.
+- **Odmítnutý běh nechá krok Zpět (2026-10-17).** Čtyři samostatná volání:
+  dokument a řezová linka, pak obdélník jako „poslední krok uživatele", pak
+  běh odmítnutý kontrolou (pruh 35 mm, D 20), pak jedno `app.undo()`:
+  obdélník zůstal — Zpět vrátilo neviditelný krok skriptu (kopie založená
+  a smazaná, výběr). V dokumentu po odmítnutém běhu nic nezůstane.
+- **České názvy (Illustrator.zbin, 2026-10-17).** Lokalizace leží v
+  `Support Files/Resources/cs_CZ/Lang-Resources/Illustrator.zbin` (UTF-16LE,
+  řetězce bez oddělovačů). Offset Path = `Objekt ▸ Cesta ▸ Odsazená cesta…`,
+  v dialogu „Posun", „Spoje čar" s volbami Ostré / Zkosené / Oblé a „Limit
+  úkosu"; menu panelu Vzhled „Nová kresba má základní vzhled"; příkaz
+  „Obrátit směr cesty" existuje (místo v menu neověřeno); Pathfinder
+  „Sjednotit". Ruční test měl „Posunout cestu" a „Nový objekt má základní
+  vzhled" zpaměti — obojí špatně.
 
 ### Pozor na menu příkazy s dialogem
 
