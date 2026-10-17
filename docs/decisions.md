@@ -194,3 +194,37 @@ vyšly desetkrát menší (tile-export N11). ZSM parametr nepředává a měří
 dál bere z aktivního dokumentu, což je v něm správně. Zünd Summa Marks se do
 tile-exportu nezapojuje jako druhý běh, ale přes tohle sdílené jádro
 (rozhodnuto s uživatelem, `docs/reports/2026-09-25-maskovani-platu.md` §8).
+
+## Sdílené jádro rozšířeno o čtyři moduly bez konzumenta (2026-10-17)
+
+Z dodatečného auditu společného jazyka
+([report](reports/2026-10-17-dodatecny-audit-spolecneho-jazyka.md) §4–§5).
+Každý modul vznikl z kódu tile-exportu, který je pro dané chování vzorem
+kánonu (`extendscript-ui-standards` §12), a každý prošel kritériem „oprav
+jednou platí i tam" na doložené opravě, ne na textové podobnosti:
+
+| modul | proč sdílet | doklad |
+|---|---|---|
+| `numbers.js` — `parse`, `format` | GM a TE opravily tutéž třídu překlepů každý zvlášť a jinak; GM a ZSM přes `Number()` berou `0x10` jako 16 | audit N1 (změřeno), zápis čísla zpět do pole s tečkou ve všech třech (N6) |
+| `field_paint.js` — `field`, `text`, `COLORS` | tři kopie obarvení pole (GM `paintField`, ZSM `markFieldValidity`, TE `paintField`) se stejnou opravou výchozího pera | podmínka „až ji převezme TE" z auditu 2026-10-14 §6 splněna |
+| `registration.js` — `swatch`, `name`, `color` | oprava „podle typu, ne podle pozice" udělaná dvakrát (TE, ZSM 2026-10-03), GM ji nemá | P4 |
+| `drawing_scale.js` — `read`, `write`, `load`, `save` | měřítko kresby je jedna hodnota dokumentu pro všechny nástroje (varianta C) a oprava přejmenovaného prefixu (N43) se nemá psát znovu | rozhodnutí 2026-10-17 |
+
+**Zatím je nepoužívá žádný nástroj** — rozhodnutí uživatele: moduly ano,
+napojení v jejich vláknech. U TE by šlo o refaktor beze změny chování, u GM
+a ZSM o změnu chování (gramatika čísel, čárka v polích, registrace v GM), která
+patří do jejich dalších verzí. Nástroj, který modul převezme, smaže svou kopii
+— dvě kopie téhož kódu jsou přesně to, čemu modul brání.
+
+**Testy:** moduly bez vlastního uživatele nemá kdo testovat v sadě nástroje,
+proto `shared/tests/` (`npm run test:shared`, 4 sady). Případy XMP jsou
+převzaté z `tile-export/tests/test_doc.js`. Jednorázové porovnání s originály
+v TE (2026-10-17, Node): převod čísla, čtení i zápis XMP a název registrace
+dávají na stejných vstupech totéž.
+
+**Rodinný klíč měřítka** zůstává jmenný prostor tile-exportu 1.1.0
+(`…/ns/tile-export/1.0/`, `drawingScale`): URI nikdo nevidí a dokumenty, které
+TE už zapsal, tak nepotřebují migraci.
+
+**Bilance sdíleného jádra:** 7 modulů — `json2.js`, `ui_state.js`,
+`cut_marks.js` a čtyři nové bez konzumenta.

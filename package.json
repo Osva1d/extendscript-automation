@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint .",
+    "test:shared": "bash shared/tests/run_all.sh",
     "typecheck": "bash tools/typecheck.sh"
   },
   "devDependencies": {

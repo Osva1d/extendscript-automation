@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
 // Module: UIState (shared) — pure preset state-transition logic
-// Part of: shared core (consumed by grommet-marks and zund-summa-marks)
+// Part of: shared core (consumed by grommet-marks, zund-summa-marks and tile-export)
 //
 // Namespace-neutral factory: buildUIState(NS) registers NS.UIState on the
 // namespace object passed in. Each tool's build cats this file and appends
