@@ -552,6 +552,28 @@ po zobrazení, potřebuje šířku předem — vytvořit label s nejdelším tex
 rezervu v bloku `M`. `layout(true)` má po zobrazení smysl jen po přidání či
 odebrání prvku.
 
+### ScriptUI: programová změna výběru spustí `onChange` (naměřeno 2026-10-17, AI 30.8.2)
+
+| změna ze skriptu | událost |
+|---|---|
+| `dropdownlist.selection` na jinou položku (indexem i položkou) | `onChange` jednou |
+| `selection` na tutéž položku | nic |
+| `edittext.text` | nic, ani `onChange`, ani `onChanging` |
+| `radiobutton.value = true` | nic, žádný `onClick` |
+
+Důsledek: dialog, který po napojení událostí načítá hodnoty, třeba předvolbu,
+spustí obsluhu seznamů ještě před zobrazením. Když ta obsluha přepočítává
+a rozvrhuje, proběhne první rozvržení se skutečnými texty — a text si drží
+šířku prvního rozvržení (výš). tile-export N50: při měřítku 100 useknutý spad
+a čistý formát; rozvržení s nejširšími texty patří hned za stavbu ovládacích
+prvků, před napojení a načtení.
+
+**Enter na zašedlém výchozím tlačítku nic nespustí.** Tlačítko s `{ name:
+"ok" }` a `enabled = false`: Enter dialog nezavřel ani nespustil `onClick`
+(ověřil uživatel v dialogu tile-export 1.1.0, překlep v poli Přelep,
+2026-10-17, AI 30.8.2). Zašednutí tedy jako brána stačí, druhá kontrola
+v `onClick` není potřeba.
+
 ### ScriptUI: víceřádkový `statictext` se zalamuje na 200 px (naměřeno 2026-10-03, AI 30.8.2)
 
 `{ multiline: true }` bez šířky: text, který jednořádkově měří 760 px, dostane

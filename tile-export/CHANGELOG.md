@@ -4,7 +4,7 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
-## [1.1.0] — nevydáno
+## [1.1.0] — 2026-10-17
 
 ### Added
 
@@ -74,15 +74,15 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Barva řezu z předvolby se už tiše nemění.** Barvu, kterou dokument nemá
   — třeba starší `cut` s malým písmenem —, dialog dřív nahradil první
   položkou seznamu; u dokumentu bez přímých barev to byla registrační, takže
-  by se řezalo v barvě značek (i v 1.0.x). Teď seznam ukáže „cut  (chybí)“,
+  by se řezalo v barvě značek (i v 1.0.x). Teď seznam ukáže „cut  (chybí)",
   Výsledek upozorní, že ji export založí, a registrační ani jiné barvy
   v hranatých závorkách seznam řezu nenabízí.
 - **Barva značek a PDF preset z předvolby se už tiše nemění.** Barvu
   značek, kterou dokument nemá, dialog dřív bez slova nahradil registrační;
-  teď ukáže „Bílá  (chybí)“ a Výsledek řekne, že značky budou v registrační.
+  teď ukáže „Bílá  (chybí)" a Výsledek řekne, že značky budou v registrační.
   PDF preset, který tento Illustrator nemá — předvolba z jiného Macu —, dřív
   nahradil první preset ze seznamu a export uložil PDF s jiným nastavením.
-  Teď se ukáže jako „(chybí)“ a export počká, než vyberete jiný; Jen pláty PDF
+  Teď se ukáže jako „(chybí)" a export počká, než vyberete jiný; Jen pláty PDF
   neukládá, zůstává aktivní.
 - **Vzor bez `{n}` už nezapíše jeden soubor za víc plátů.** Pláty se stejným
   rozměrem dostaly stejný název a export si soubor přepsal, se zapnutým
