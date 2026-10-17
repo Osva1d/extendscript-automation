@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [1.3.0] — 2026-10-17
 
 Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvodu
 ([návrh](../docs/specs/2026-10-11-grommet-marks-path-mode-design.md)).

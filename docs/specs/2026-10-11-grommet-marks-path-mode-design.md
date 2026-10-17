@@ -5,7 +5,7 @@ Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.2.0
 
 Datum: 2026-10-11 · Stav: **schváleno** (uživatel, 2026-10-11);
 implementováno na větvi `feat/grommet-marks-path-mode`, ověřeno v Illustratoru
-30.8.2 (2026-10-13), nevydáno. Doplněno 2026-10-17 po automatickém testu
+30.8.2 (2026-10-13), **vydáno jako 1.3.0 (2026-10-17)**. Doplněno 2026-10-17 po automatickém testu
 v Illustratoru: vnitřní rohy v kontrole (§5.5, §7), skupina s jedinou cestou
 (§8.2, §11)
 
