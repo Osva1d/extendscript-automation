@@ -15,6 +15,8 @@ SUITES=(
     "test_field_paint.js"
     "test_registration.js"
     "test_drawing_scale.js"
+    "test_progress.js"
+    "test_summary.js"
 )
 
 PASSED=0
