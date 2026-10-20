@@ -4,9 +4,18 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.2.0] — nevydáno
+
+### Změněno
+
+- Desetinné číslo se do pole vrací s čárkou, jak ho píšete: zapsaných
+  `2,5` se při dalším otevření, po načtení předvolby i po ↺ ukáže zase jako
+  `2,5`, dřív jako `2.5`. Nezaokrouhluje se — linka 0,25 pt zůstane 0,25.
+- Nadpisy v tomto přehledu změn jsou česky, jako u ostatních nástrojů.
+
 ## [1.1.0] — 2026-10-17
 
-### Added
+### Přidáno
 
 - **Měřítko kresby si pamatuje dokument.** Jedno pole „Měřítko kresby 1:"
   místo zaškrtávátka; hodnota se po potvrzeném běhu uloží do dokumentu
@@ -28,7 +37,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   Tlačítko nemají, do vzoru se píšou ručně. U ručního ořezu je `{adds}` totéž
   co `{size}`, u Zündu je `{size}` stránka i se značkami.
 
-### Changed
+### Změněno
 
 - **Jen pláty staví kontrolní pláty.** Místo artboardů a červených linek přes
   originál vznikne vedle něj každý plát zamaskovaný na vlastním artboardu,
@@ -69,7 +78,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   „© 2025–2026 Ladislav Osvald · v1.1.0", bez názvu nástroje, který nese
   titulek okna.
 
-### Fixed
+### Opraveno
 
 - **Barva řezu z předvolby se už tiše nemění.** Barvu, kterou dokument nemá
   — třeba starší `cut` s malým písmenem —, dialog dřív nahradil první
@@ -109,7 +118,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ## [1.0.1] — 2026-10-10
 
-### Changed
+### Změněno
 
 - **Směr plátování se jmenuje jako v dílně.** „Svisle" dělí na svislé pláty
   vedle sebe, jako tapety od stropu k podlaze; „Vodorovně" na vodorovné pláty
@@ -120,7 +129,7 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   je jen jako přeskočené. Volba zůstává pro navázání běhu, který spadl
   v půlce. Uložené předvolby a poslední běh si nesou svou hodnotu.
 
-### Fixed
+### Opraveno
 
 - **Export bral ořez PDF z předvolby importu, ne z umístěné grafiky.** Každý
   plát umisťoval PDF znovu ze souboru a ořez (Trim, Bleed, Media) převzal
@@ -150,7 +159,7 @@ První verze. Plátování velké grafiky na tiskové pláty pro **ruční ořez
 případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
 **strojní ořez na Zündu** s rovným řezem.
 
-### Added
+### Přidáno
 
 **Dělení**
 
@@ -227,7 +236,7 @@ případ, kdy se šev musí vyhnout textu nebo logu a RIP to neumí — a pro
 - PDF presety z Illustratoru, lokalizace cs/en, tlačítka Storno / Jen pláty /
   Vytvořit a exportovat.
 
-### Notes
+### Poznámky
 
 - Vektorový export nese v každém plátu **celou grafiku** — Illustrator obsah
   neořezává ani artboardem, ani maskou. Menší soubor dá rastrový režim.
