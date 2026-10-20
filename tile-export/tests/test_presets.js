@@ -15,6 +15,10 @@ function load(rel) { eval.call(global, fs.readFileSync(path.join(__dirname, ".."
 global.TE = TE;
 load("src/locale.js");
 load("src/lib/utils.js");
+load("../shared/lib/numbers.js");
+global.buildNumbers(TE);
+load("../shared/lib/field_paint.js");
+global.buildFieldPaint(TE);
 load("../shared/lib/ui_state.js");
 global.buildUIState(TE);
 load("src/config.js");
@@ -52,7 +56,7 @@ function refs() {
         rbExpMode: rb(2), rbExpScale: rb(2), etDPI: et(),
         cbLine: cb(), etSpot: et(), etLineW: et(),
         ddPdf: dd(["[Výchozí Illustratoru]", "[PDF/X-4:2008]"], 1),
-        etOut: et(), etPattern: et(), cbSkip: cb(), rbOutType: null
+        etOut: et(), etPattern: et(), cbSkip: cb(), cbOpen: cb(), rbOutType: null
     };
 }
 
@@ -97,6 +101,16 @@ var named = TE.Config.getDefaults();
 named.pdfPreset = "[PDF/X-4:2008]";
 TE.UI.apply(r, named);
 eq(r.ddPdf.selection.text, "[PDF/X-4:2008]", "a present PDF preset is selected");
+// audit P11: [Default] stands for High Quality Print in either language, as
+// in batch-relink-export, not for Illustrator's first preset.
+var rHq = refs();
+rHq.ddPdf = dd(["[Výchozí Illustratoru]", "[Kvalitní tisk]", "[PDF/X-4:2008]"], 0);
+TE.UI.apply(rHq, TE.Config.getDefaults());
+eq(rHq.ddPdf.selection.text, "[Kvalitní tisk]", "[Default] preselects [Kvalitní tisk]");
+rHq.ddPdf = dd(["[Illustrator Default]", "[High Quality Print]"], 0);
+TE.UI.apply(rHq, TE.Config.getDefaults());
+eq(rHq.ddPdf.selection.text, "[High Quality Print]", "and [High Quality Print] in English");
+eq(TE.UI.collect(rHq).pdfPreset, "[High Quality Print]", "which a run then stores by its name");
 
 console.log("\n=== 1.1.0: loading a preset keeps the document's drawing scale ===");
 // Presets saved before 1.1.0 still carry scaleN; the scale is the document's
@@ -164,6 +178,18 @@ var rNaN = refs(), sNaN = TE.Config.getDefaults();
 sNaN.overlap = NaN;
 TE.UI.apply(rNaN, sNaN);
 eq(rNaN.etOverlap.text, "", "the overlap field is empty, and the check will name it");
+
+console.log("\n=== a number comes back with the decimal comma (audit N6) ===");
+// Typed "2,5", stored 2.5: the field used to show "2.5" the next time, and
+// the operator could think the comma does not work. Unrounded: a line of
+// 0,25 pt must not become 0,3 the way the Result rounds to tenths.
+var rDec = refs(), sDec = TE.Config.getDefaults();
+sDec.overlap = 2.5; sDec.lineWidth = 0.25; sDec.addTop = 40;
+TE.UI.apply(rDec, sDec);
+eq(rDec.etOverlap.text, "2,5", "2.5 in the overlap field reads 2,5");
+eq(rDec.etLineW.text, "0,25", "0.25 pt stays 0,25, not rounded");
+eq(rDec.etAddTop.text, "40", "a whole number has no comma");
+eq(TE.UI.collect(rDec).overlap, 2.5, "and reads back as the same number");
 
 console.log("\n=== a stored null takes the default ===");
 // A field left with a typo where the run does not use it is saved as NaN,

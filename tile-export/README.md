@@ -67,7 +67,11 @@ Nástroj běží ve dvou fázích, protože mřížku chceš vidět dřív, než
    vrstvě `TE_panels`, kterou další běh nahradí. Když šev nesedí, uprav
    nastavení nebo vodítka a spusť znovu — ruční úpravy kontrolních plátů
    export nepřevezme, pláty počítá z nastavení znovu.
-3. Spusť znovu a dej **Vytvořit a exportovat**.
+3. Spusť znovu a dej **Vytvořit a exportovat**. Okno průběhu ukazuje, který
+   plát se exportuje; **podržením Esc** export zastavíš po plátu, který právě
+   běží. Na konci je souhrn: kolik plátů se exportovalo, přeskočilo a kolik
+   skončilo chybou, pod tím podrobnosti. Zaškrtnutím **Po dokončení otevřít
+   cílovou složku** (vlevo u tlačítek) se složka po exportu otevře ve Finderu.
 
 Když si jistý jsi, druhý a třetí krok splyne do jednoho tlačítka.
 
@@ -231,17 +235,17 @@ značky, srovná podle nich polohu a natočení a ořízne po řezové cestě. S
   na ni upozorní. Stroj rozlišuje velká a malá písmena.
 - **Spad za řezem** — o kolik grafika přesahuje řez. Běžně 3 nebo 5 mm,
   u velkých plátů s místem na materiálu až 10 mm.
-- **Odstup od motivu** — volné místo mezi koncem grafiky a značkou (výchozí
+- **Mezera od grafiky** — volné místo mezi koncem grafiky a značkou (výchozí
   5 mm), aby stroj značku přečetl.
 - **Barva značek** — oddělená od barvy řezu, značka v barvě řezu by na stroji
   od řezu nešla rozeznat. Výchozí registrační; na černý a čirý materiál bílá
   `Spot 1`. Neznámá barva spadne na registrační, nástroj ji sám nevytvoří;
   dialog ji ukáže jako „Spot 1  (chybí)“ a Výsledek na registrační upozorní.
-- **Průměr značky, max. rozteč, orientační bod** — jako v Zünd Summa Marks,
-  se kterými tile-export sdílí výpočet polohy značek.
+- **Průměr značky, max. rozteč značek, odsazení orientační značky** — jako
+  v Zünd Summa Marks, se kterými tile-export sdílí výpočet polohy značek.
 
-Stránka je maska plus odstup a značka na každé straně: plát 2020 × 1000 mm
-se spadem 5, odstupem 5 a značkou 5 mm dá stránku 2050 × 1030 mm. Výsledek
+Stránka je maska plus mezera a značka na každé straně: plát 2020 × 1000 mm
+se spadem 5, mezerou 5 a značkou 5 mm dá stránku 2050 × 1030 mm. Výsledek
 v dialogu ji ukazuje ve sloupci Stránka PDF.
 
 ### Na co si dát pozor
@@ -249,14 +253,15 @@ v dialogu ji ukazuje ve sloupci Stránka PDF.
 - **Na vnějších hranách musí PDF nést přídavek + spad za řezem.** Jinak by maska
   sáhla za konec grafiky; dialog to hlásí a export zablokuje. Na švech se to
   nekontroluje, tam grafika pokračuje.
-- **Značky se nesmí slít.** U úzkého plátu padne orientační bod na rohovou
+- **Značky se nesmí slít.** U úzkého plátu padne orientační značka na rohovou
   značku (při výchozím nastavení, když je maska široká 85–95 mm), při rozteči
   pod průměrem značky splynou sousední. Dialog jmenuje plát a export zablokuje;
-  pomůže jiná vzdálenost orientačního bodu, případně rozteč.
+  pomůže jiné odsazení orientační značky, případně rozteč.
 - **Cesty v barvě řezu v dokumentu se zatím nepoužijí.** Dialog na ně upozorní
   a použije se rovný ořez.
 - **Starší předvolby** mají barvu `cut` s malým písmenem (dialog ji ukáže
-  jako „cut  (chybí)“) a odstup 10 mm, který se dřív měřil od okraje plátu.
+  jako „cut  (chybí)“) a mezeru od grafiky 10 mm, která se dřív měřila od okraje
+  plátu.
   Po načtení zkontroluj.
 - **PDF preset platí pro oba soubory.** Preset s tiskovými značkami nebo
   spadávkou (třeba `pass4press`) je přidá i do `_cut`. Posun to nezpůsobí,
@@ -282,7 +287,8 @@ převzorkovává podle rozlišení na stránce, a to je v 1:10 desetkrát vyšš
 který má ve skutečné velikosti 72 ppi, by po zvětšení v RIPu měl 30 ppi
 (naměřeno, nález N36).
 
-PDF preset z předvolby, který tento Illustrator nemá — třeba předvolba
+[Výchozí] předvybere preset **[Kvalitní tisk]** (anglicky High Quality Print),
+jako Batch Relink & Export. PDF preset z předvolby, který tento Illustrator nemá — třeba předvolba
 přenesená z jiného Macu —, se v seznamu ukáže jako „název  (chybí)“ a export
 počká, než vybereš jiný. Jiným presetem ho dialog sám nenahradí.
 
@@ -317,6 +323,16 @@ odmítne, stejně jako vzor, který by dvěma plátům dal stejný název — te
 potřebuje `{n}`. Rozměr odpovídá MediaBoxu, když PDF preset nepřidá
 spadávku ani tiskové značky; pass4press stránku zvětší o 12,5 mm na každou
 stranu.
+
+## Přeskočit hotové výstupy
+
+Volba navazuje běh, který skončil v půlce. Přeskočí plát, jehož výstup už
+v cílové složce je a je **novější než uložený pracovní dokument i umístěné
+PDF** — u Zündu musí být novější oba soubory plátu. Starší výstup patří jiné
+zakázce se stejným názvem nebo dřívějšímu stavu této, takže se vytvoří znovu
+a souhrn to u plátu napíše. Neuložené změny pracovního dokumentu volba
+nepozná; dokument, který ještě nebyl uložen, nepřeskočí nic. Ve výchozím
+stavu je vypnutá.
 
 ## Známá omezení
 

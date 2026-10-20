@@ -107,7 +107,7 @@ assert(!/getSF|getEffectiveSF|activeDocument/.test(exBody),
     "exportTile takes every scale from its context");
 var drSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
 var dlBody = drSrc.slice(drSrc.indexOf("drawTileLine: function"),
-                         drSrc.indexOf("getRegistrationName: function"));
+                         drSrc.indexOf("listMarkColors: function"));
 assert(!/getSF|getEffectiveSF|activeDocument/.test(dlBody),
     "drawTileLine takes its scale as an argument");
 
@@ -117,6 +117,8 @@ console.log("\n=== drawTileLine: centred on the panel edge, twice as thick (N13)
 // Zünd mode, and where the edge always falls inside the stroke.
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
 TE.Draw.getOrCreateSpot = function () { return "spot"; };
+global.StrokeCap = { BUTTENDCAP: "BUTT", ROUNDENDCAP: "ROUND" };
+global.StrokeJoin = { MITERENDJOIN: "MITER", ROUNDENDJOIN: "ROUND" };
 var drawn = null;
 var fakeDoc = { pathItems: { rectangle: function (t, l, w, h) {
     drawn = { t: t, l: l, w: w, h: h };
@@ -128,6 +130,10 @@ assertClose(drawn.l, TILE.expanded[0], 1e-9, "path left lies on the panel edge")
 assertClose(drawn.w, 400, 1e-9, "full panel width, no inset");
 assertClose(drawn.h, 800, 1e-9, "full panel height, no inset");
 assertClose(line.strokeWidth, 2, 1e-9, "1 pt visible is a 2 pt stroke");
+// audit P3: a dashed, round-capped selection once leaked into the check
+// panels' lines (measured 2026-10-20); the line sets its own style.
+assert(line.strokeDashes && line.strokeDashes.length === 0, "the line is solid whatever is selected");
+assert(line.strokeCap === "BUTT" && line.strokeJoin === "MITER", "with butt caps and mitred corners");
 line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: 1 }, 0.1);
 assertClose(line.strokeWidth, 0.2, 1e-9, "1:10 output: scaled first, then doubled");
 line = TE.Draw.drawTileLine(fakeDoc, TILE.expanded, { lineWidth: "" }, 1);
@@ -259,6 +265,25 @@ assert((exAll.match(/this\.fileName\(tile, ctx, s\)/g) || []).length === 3,
     "exportTile (print and Zünd) and outputExists all name files through fileName()");
 assert((exAll.match(/buildName\(s\.namePattern/g) || []).length === 1,
     "and only fileName() itself calls buildName with the pattern");
+
+console.log("\n=== audit P2: a finished output is newer than its inputs ===");
+// The rule of batch-relink-export (B8): an output older than the working
+// document or the placed PDF is made again; without an input date, a
+// document never saved, nothing counts as finished.
+var D = function (h) { return new Date(2026, 9, 20, h, 0, 0); };
+var OS = function (o, i) { return TE.Export.outputState(o, i); };
+assert(OS([null], D(10)) === "missing", "no file: export it");
+assert(OS([D(12), null], D(10)) === "missing", "Zünd with the _cut file missing: export it");
+assert(OS([D(12)], D(10)) === "fresh", "newer than the inputs: finished, skip it");
+assert(OS([D(12), D(12)], D(10)) === "fresh", "both Zünd files newer: finished");
+assert(OS([D(9)], D(10)) === "stale", "older than an input: made again");
+assert(OS([D(12), D(9)], D(10)) === "stale", "one Zünd file older: made again");
+assert(OS([D(10)], D(10)) === "stale", "the same time is not newer");
+assert(OS([D(12)], null) === "stale", "no input date, a document never saved: made again");
+var IM = TE.Export.inputsModified;
+assert(IM({ fullName: { modified: D(8) } }, { file: { modified: D(9) } }).getTime() === D(9).getTime(), "the later of the two inputs");
+assert(IM({ get fullName() { throw new Error("never saved"); } }, { file: { modified: D(9) } }) === null,
+    "a document never saved has no date");
 
 console.log("\n=== sourceOrigin, tileOrigin, k ===");
 assertClose(r.sourceOrigin[0], GRAPHIC[0], 0.001, "sourceOrigin drží levý okraj grafiky");

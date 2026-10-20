@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: TE.UI — dialog, live preview, preset handling
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Core, TE.Doc, TE.Export, TE.Grid, TE.L,
-//             TE.Storage, TE.Utils, TE.Validate, TE.UIState
+// Depends on: TE.Config, TE.Core, TE.Doc, TE.Export, TE.FieldPaint, TE.Grid,
+//             TE.L, TE.Numbers, TE.Storage, TE.Utils, TE.Validate, TE.UIState
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -10,7 +10,15 @@ TE.UI = {
     // Shared metrics — the dialog's alignment grid in one place.
     // Every entry is a [deviation] from native sizing and says why.
     M: {
-        LABEL_COL: 150,   // label column; every row label shares this right edge
+        // px; the label column, every row label shares its right edge. The
+        // longest label, "Odsazení orientační značky:", measures 164 px; the
+        // longest English one 140 (measured 2026-10-20, colons included)
+        LABEL_COL: 165,
+        // px; the preset list's own width before the row stretches it. A
+        // dropdown grows with its longest item, and a long preset name once
+        // widened the dialog from 1178 to 1315 px (engine-facts, row slack);
+        // small, the list just fills what the narrower column leaves (N49)
+        PRESET_LIST: 100,
         NUM_FIELD:   7,   // characters, not px — numeric fields scale with locale
         PATH_FIELD: 26,   // characters; output path needs to show a usable tail
         BROWSE_MAX:  90,  // px cap so fill slack goes to the path field, not the button
@@ -29,13 +37,6 @@ TE.UI = {
         // px; three lines of details show, a Zünd job's marks line and its
         // first two files (preview of 2026-10-15); the other names scroll
         RESULT_TEXT_H: 58
-    },
-
-    // Status colours of the family (extendscript-ui-standards §12.6), RGB 0-1.
-    COLORS: {
-        ERR:  [0.90, 0.20, 0.20],
-        WARN: [0.96, 0.60, 0.38],
-        OK:   [0.36, 0.60, 0.34]
     },
 
     // The number fields of TE.Validate.NUMBER_FIELDS: their control and the
@@ -82,7 +83,10 @@ TE.UI = {
         this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
         st.helpTip = tip;
 
-        var et = g.add("edittext", undefined, String(value));
+        // A number goes in with the language's decimal separator, unrounded,
+        // so a typed "2,5" comes back as "2,5" (audit N6).
+        var et = g.add("edittext", undefined,
+            (typeof value === "number") ? TE.Numbers.format(value) : String(value));
         et.characters = this.M.NUM_FIELD;
         et.helpTip = tip;
 
@@ -100,6 +104,53 @@ TE.UI = {
      * @param {string} tip - HelpTip shared by the label and the value.
      * @returns {Object} The value statictext.
      */
+    /**
+     * Adds a labeled radio group stacked in a column, the label level with
+     * the first button: for options too long to stand in one row.
+     * @param {Object} parent - ScriptUI container.
+     * @param {string} label - Row label.
+     * @param {Array} options - Option labels.
+     * @param {number} selected - Index of the initially selected option.
+     * @param {string} tip - HelpTip shared by the label and every button.
+     * @returns {Array} The radiobutton controls.
+     */
+    addRadioColumn: function (parent, label, options, selected, tip) {
+        var g = parent.add("group");
+        g.alignment = ["fill", "top"];
+        g.alignChildren = ["left", "top"];
+
+        var st = g.add("statictext", undefined, label);
+        this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        this.levelWithButton(st);
+        st.helpTip = tip;
+
+        var col = g.add("group");
+        col.orientation = "column";
+        col.alignChildren = ["left", "top"];
+        var out = [], i, rb;
+        for (i = 0; i < options.length; i++) {
+            rb = col.add("radiobutton", undefined, options[i]);
+            rb.helpTip = tip;
+            rb.value = (i === selected);
+            out.push(rb);
+        }
+        return out;
+    },
+
+    /**
+     * Sets a row label level with the text of the radio button or checkbox
+     * beside it. [deviation] The row is the button's 19 px and the label's 15
+     * sit in its middle, yet macOS draws a button's text about 2 px higher
+     * (the user's screenshot of 2026-10-17; the geometry measured the same
+     * in every row): at the top of the row the label meets it. Only for rows
+     * whose tallest control is the button — next to a 23 px field the
+     * centred label is level with the field's text.
+     * @param {Object} st - The label.
+     */
+    levelWithButton: function (st) {
+        st.alignment = ["left", "top"];
+    },
+
     addInfoRow: function (parent, label, widest, tip) {
         var g = parent.add("group");
         g.alignment = ["fill", "top"];
@@ -126,6 +177,7 @@ TE.UI = {
 
         var st = g.add("statictext", undefined, label);
         this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        this.levelWithButton(st);
         st.helpTip = tip;
 
         var out = [], i, rb;
@@ -233,6 +285,7 @@ TE.UI = {
         stPreset.helpTip = l.TIP_PRESET;
         var ddPreset = gPreset.add("dropdownlist", undefined, []);
         ddPreset.alignment = ["fill", "center"];
+        ddPreset.preferredSize.width = this.M.PRESET_LIST;   // [deviation] see M
         ddPreset.helpTip = l.TIP_PRESET;
         // Revert reloads what the list shows, so it sits next to it (user,
         // 2026-10-11). Live only while the preset has unsaved edits (N8). In a
@@ -267,11 +320,15 @@ TE.UI = {
         // What TE found in the document, in real millimetres — once the
         // Result's first and last lines (1.1.0). Shown whatever the split
         // settings, which do not change it.
-        var wide = "9999" + l.DECIMAL + "9";
+        var wide = "9999" + l.DEC_SEP + "9";
         var stCleanInfo = this.addInfoRow(pDoc, l.LBL_CLEAN,
             l.format(l.INFO_CLEAN_VAL, "9" + wide, "9" + wide), l.TIP_CLEAN);
+        // Two lines, left and right over top and bottom: in one line the
+        // reserve for four values was the widest row of the column (N49).
         var stBleedInfo = this.addInfoRow(pDoc, l.LBL_BLEED,
-            l.format(l.INFO_BLEED_VAL, wide, wide, wide, wide), l.TIP_BLEED);
+            l.format(l.INFO_BLEED_LR, wide, wide), l.TIP_BLEED);
+        var stBleedInfo2 = this.addInfoRow(pDoc, "",
+            l.format(l.INFO_BLEED_TB, wide, wide), l.TIP_BLEED);
         // No clean-format fields: the artboard is the clean format. Typed
         // values changed only the preview, while the run kept dividing the
         // artboard (N27); a wrong artboard is fixed in Illustrator.
@@ -312,6 +369,7 @@ TE.UI = {
         gEqual.alignment = ["fill", "top"];
         var stEqualLbl = gEqual.add("statictext", undefined, l.LBL_EQUAL);
         this.lockW(stEqualLbl, this.M.LABEL_COL);
+        this.levelWithButton(stEqualLbl);
         stEqualLbl.helpTip = l.TIP_EQUAL;
         var cbEqual = gEqual.add("checkbox", undefined, l.LBL_EQUAL_CB);
         cbEqual.helpTip = l.TIP_EQUAL;
@@ -336,7 +394,9 @@ TE.UI = {
         if (s.overlapMode === "onesided") {
             carrierIdx = (s.overlapCarrier === "second") ? 2 : 1;
         }
-        var rbOverlapMode = this.addRadioRow(pEdges, l.LBL_OVERLAP_MODE,
+        // Stacked: three long options in a row were the widest row of the
+        // left column, and the column had room below (user, 2026-10-16, N49).
+        var rbOverlapMode = this.addRadioColumn(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);
 
@@ -381,7 +441,7 @@ TE.UI = {
         var etSpot = gLine.add("edittext", undefined, String(s.lineSpot));
         etSpot.characters = 12;
         etSpot.helpTip = l.TIP_LINE_SPOT;
-        var etLineW = gLine.add("edittext", undefined, String(s.lineWidth));
+        var etLineW = gLine.add("edittext", undefined, TE.Numbers.format(s.lineWidth));
         etLineW.characters = 4;
         etLineW.helpTip = l.TIP_LINE_WIDTH;
         gLine.add("statictext", undefined, "pt");
@@ -501,7 +561,7 @@ TE.UI = {
         for (pj = 0; pj < pdfItems.length; pj++) { ddPdf.add("item", pdfItems[pj]); }
         // A stored preset this Illustrator lacks shows as "(chybí)" and stops
         // the export, which could not save with it (§12.3, 2026-10-16).
-        this.selectItem(ddPdf, s.pdfPreset);
+        this.selectItem(ddPdf, s.pdfPreset || this.defaultPdfPreset(ddPdf));
 
         var gOut = pExp.add("group");
         gOut.alignment = ["fill", "top"];
@@ -548,6 +608,7 @@ TE.UI = {
         gSkip.alignment = ["fill", "top"];
         var stSkipLbl = gSkip.add("statictext", undefined, l.LBL_SKIP);
         this.lockW(stSkipLbl, this.M.LABEL_COL);
+        this.levelWithButton(stSkipLbl);
         stSkipLbl.helpTip = l.TIP_SKIP;
         var cbSkip = gSkip.add("checkbox", undefined, "");
         cbSkip.helpTip = l.TIP_SKIP;
@@ -600,8 +661,19 @@ TE.UI = {
         stCopy.enabled = false;   // greyed — intentional, not a bug
 
         // --- Buttons ---------------------------------------------------------
-        var gBtn = w.add("group");
-        gBtn.alignment = "right";
+        // The open-folder option sits by the export it follows. A row of its
+        // own in the right column would have made the dialog taller than a
+        // laptop screen allows (836 px of about 850 with the Dock).
+        var gBtnRow = w.add("group");
+        gBtnRow.alignment = ["fill", "top"];
+        var cbOpen = gBtnRow.add("checkbox", undefined, l.CB_OPEN_AFTER);
+        cbOpen.alignment = ["left", "center"];
+        cbOpen.helpTip = l.TIP_OPEN_AFTER;
+        cbOpen.value = !!s.openOutput;
+        // In a group of its own: a row's slack is shared among all its
+        // controls, and the buttons must keep their width (engine-facts).
+        var gBtn = gBtnRow.add("group");
+        gBtn.alignment = ["right", "center"];
         var btnCancel = gBtn.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var btnTiles  = gBtn.add("button", undefined, l.BTN_TILES_ONLY);
         btnTiles.helpTip = l.TIP_TILES_ONLY;
@@ -609,7 +681,7 @@ TE.UI = {
 
         // --- wiring ----------------------------------------------------------
         var refs = {
-            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo,
+            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo, stBleedInfo2: stBleedInfo2,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
@@ -619,7 +691,7 @@ TE.UI = {
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             gScaleRow: rbExpScale[0].parent, gScaleOne: gScaleOne,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
-            ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
+            ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip, cbOpen: cbOpen,
             rbOutType: rbOutType, gManual: gManual, gZundFields: gZundFields,
             ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
             etMarkSize: etMarkSize, etBleed: etBleed,
@@ -666,7 +738,7 @@ TE.UI = {
         var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
-                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
+                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, cbOpen, ddPdf,
                       etMarkSize, etGapInner, etMaxDist, etOrient, etBleed, ddCutSpot,
                       ddMarkColor];
         // Zünd controls are null when the panel is not built.
@@ -689,7 +761,7 @@ TE.UI = {
         }
 
         btnBrowse.onClick = function () {
-            var f = Folder.selectDialog(l.LBL_OUTPUT);
+            var f = Folder.selectDialog(l.ERR_OUT_DIR_EMPTY);
             if (f) { etOut.text = f.fsName; refresh(); }
         };
 
@@ -752,7 +824,7 @@ TE.UI = {
             var modified = TE.UIState.isModified(shownData(), current());
             var j, key, text;
             btnRevert.enabled = modified;
-            btnSave.enabled = modified && numbersOk && (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            btnSave.enabled = modified && numbersOk;
             btnSaveAs.enabled = numbersOk;
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
             for (j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
@@ -802,6 +874,9 @@ TE.UI = {
 
         /** Overwrites the active preset. Disabled on [Default]. */
         btnSave.onClick = function () {
+            // [Default] is rebuilt from the code on every open: saving over it
+            // would last one session, so Save asks for a name instead (§12.4).
+            if (pData.activePreset === c.PRESET_KEY_DEFAULT) { btnSaveAs.onClick(); return; }
             var res = TE.UIState.save(pData, current());
             if (!res.ok) { return; }
             snapshot();
@@ -810,14 +885,15 @@ TE.UI = {
         };
 
         btnSaveAs.onClick = function () {
-            var raw = prompt(l.ASK_PRESET_NAME, "");
-            if (raw === null || raw === "") { return; }
+            var raw = prompt(l.PROMPT_SAVE_AS, "");
+            if (raw === null) { return; }
+            if (!/\S/.test(raw)) { alert(l.ERR_ENTER_NAME); return; }
             if (!TE.UIState.validatePresetName(raw)) {
                 alert(l.ERR_RESERVED_NAME);
                 return;
             }
             var res = TE.UIState.saveAs(pData, raw, current(), function (name) {
-                return confirm(l.format(l.ASK_PRESET_OVERWRITE, name));
+                return confirm(l.format(l.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!res.ok) { return; }
             snapshot();
@@ -829,7 +905,7 @@ TE.UI = {
         btnDel.onClick = function () {
             var name = pData.activePreset;
             if (name === c.PRESET_KEY_DEFAULT) { return; }   // disabled there anyway
-            if (!confirm(l.format(l.ASK_PRESET_DELETE, name))) { return; }
+            if (!confirm(l.format(l.CONFIRM_DELETE_PRESET, name))) { return; }
             var res = TE.UIState.deleteActive(pData);
             if (!res.ok) { return; }
             self.apply(refs, pData.presets[c.PRESET_KEY_DEFAULT]);
@@ -921,60 +997,49 @@ TE.UI = {
      */
     collect: function (r) {
         var s = TE.Config.getDefaults();
-        s.scaleN      = TE.Utils.parseNumber(r.etScaleN.text);
+        s.scaleN      = TE.Numbers.parse(r.etScaleN.text);
         s.direction   = r.rbDir[1].value ? "vertical" : "horizontal";
         s.divideMode  = r.rbMode[1].value ? "width" : (r.rbMode[2].value ? "guides" : "count");
-        s.tileCount   = TE.Utils.parseNumber(r.etCount.text);
-        s.tileWidth   = TE.Utils.parseNumber(r.etWidth.text);
+        s.tileCount   = TE.Numbers.parse(r.etCount.text);
+        s.tileWidth   = TE.Numbers.parse(r.etWidth.text);
         s.equalPanels = r.cbEqual.value;
-        s.guideRound  = TE.Utils.parseNumber(r.etRound.text);
-        s.overlap     = TE.Utils.parseNumber(r.etOverlap.text);
+        s.guideRound  = TE.Numbers.parse(r.etRound.text);
+        s.overlap     = TE.Numbers.parse(r.etOverlap.text);
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
         s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
-        s.addTop      = TE.Utils.parseNumber(r.etAddTop.text);
-        s.addBottom   = TE.Utils.parseNumber(r.etAddBottom.text);
-        s.addLeft     = TE.Utils.parseNumber(r.etAddLeft.text);
-        s.addRight    = TE.Utils.parseNumber(r.etAddRight.text);
+        s.addTop      = TE.Numbers.parse(r.etAddTop.text);
+        s.addBottom   = TE.Numbers.parse(r.etAddBottom.text);
+        s.addLeft     = TE.Numbers.parse(r.etAddLeft.text);
+        s.addRight    = TE.Numbers.parse(r.etAddRight.text);
         // Raster rows not built: the export is vector, whatever a preset says.
         s.exportMode  = (r.rbExpMode && r.rbExpMode[1].value) ? "raster" : "vector";
         s.exportScale = r.rbExpScale[1].value ? "actual" : "source";
-        if (r.etDPI) { s.rasterDPI = TE.Utils.parseNumber(r.etDPI.text); }
+        if (r.etDPI) { s.rasterDPI = TE.Numbers.parse(r.etDPI.text); }
         s.drawLine    = r.cbLine.value;
         s.lineSpot    = r.etSpot.text;
-        s.lineWidth   = TE.Utils.parseNumber(r.etLineW.text);
+        s.lineWidth   = TE.Numbers.parse(r.etLineW.text);
         // The "no preset" item (N20) stands for "", like [Default]'s value.
         var pdf = this.itemValue(r.ddPdf);
         s.pdfPreset   = (pdf !== TE.L.PDF_PRESET_NONE) ? pdf : "";
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
+        s.openOutput   = r.cbOpen.value;
         if (r.rbOutType) {
             s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = this.itemValue(r.ddCutSpot) || s.cutSpot;
-            s.cutBleed    = TE.Utils.parseNumber(r.etBleed.text);
+            s.cutBleed    = TE.Numbers.parse(r.etBleed.text);
             s.markColor   = this.itemValue(r.ddMarkColor) || "[Registration]";
-            s.markSizeZ   = TE.Utils.parseNumber(r.etMarkSize.text);
-            s.gapInner    = TE.Utils.parseNumber(r.etGapInner.text);
-            s.maxDist     = TE.Utils.parseNumber(r.etMaxDist.text);
-            s.orientDist  = TE.Utils.parseNumber(r.etOrient.text);
+            s.markSizeZ   = TE.Numbers.parse(r.etMarkSize.text);
+            s.gapInner    = TE.Numbers.parse(r.etGapInner.text);
+            s.maxDist     = TE.Numbers.parse(r.etMaxDist.text);
+            s.orientDist  = TE.Numbers.parse(r.etOrient.text);
         } else {
             // No Zünd fields built: the mode cannot be on, whatever a stored
             // preset says.
             s.zundMode = false;
         }
         return s;
-    },
-
-    /**
-     * A stored number as field text. NaN — a typo in a field the run did not
-     * use, kept as it was — and null show as an empty field, which the check
-     * then names; never as "NaN" (audit P1).
-     * @param {*} v - Stored value.
-     * @returns {string} Field text.
-     */
-    numText: function (v) {
-        if (v === null || v === undefined || (typeof v === "number" && !isFinite(v))) { return ""; }
-        return String(v);
     },
 
     /**
@@ -1009,6 +1074,47 @@ TE.UI = {
         missing.teRawValue = text;
         missing.teMissing = true;
         dd.selection = missing;
+    },
+
+    /**
+     * The PDF preset [Default] stands for: the first item naming High
+     * Quality Print in either language (TE.Config.PDF_PRESET_PATTERNS), or ""
+     * — the first item — when this Illustrator has none (audit P11).
+     * @param {Object} dd - The PDF preset dropdownlist.
+     * @returns {string} An item's text, or "".
+     */
+    defaultPdfPreset: function (dd) {
+        var pats = TE.Config.PDF_PRESET_PATTERNS, i, j;
+        for (i = 0; i < dd.items.length; i++) {
+            for (j = 0; j < pats.length; j++) {
+                if (dd.items[i].text.indexOf(pats[j]) !== -1) { return dd.items[i].text; }
+            }
+        }
+        return "";
+    },
+
+    /**
+     * Whether a folder exists. One place, so the tests can stand in for it.
+     * @param {string} path - Folder path.
+     * @returns {boolean} True when it exists.
+     */
+    folderExists: function (path) {
+        try { return new Folder(path).exists; }
+        catch (e) { TE.Utils.log("folderExists: " + e.message); return false; }
+    },
+
+    /**
+     * Why the export cannot write into this folder, or null. Checked in the
+     * dialog: an empty or a missing folder used to show only after the
+     * dialog, once the check panels were built (audit P9).
+     * @param {string} path - The output folder field.
+     * @returns {string|null} The message, or null.
+     */
+    outputDirError: function (path) {
+        var l = TE.L;
+        if (!/\S/.test(String(path || ""))) { return l.ERR_OUT_DIR_EMPTY; }
+        if (!this.folderExists(path)) { return l.format(l.ERR_OUT_DIR_MISSING, path); }
+        return null;
     },
 
     /**
@@ -1049,48 +1155,49 @@ TE.UI = {
         r.rbMode[0].value = (s.divideMode === "count");
         r.rbMode[1].value = (s.divideMode === "width");
         r.rbMode[2].value = (s.divideMode === "guides");
-        r.etCount.text = this.numText(s.tileCount);
-        r.etWidth.text = this.numText(s.tileWidth);
+        r.etCount.text = TE.Numbers.format(s.tileCount);
+        r.etWidth.text = TE.Numbers.format(s.tileWidth);
         r.cbEqual.value = !!s.equalPanels;
-        r.etRound.text = this.numText(s.guideRound);
-        r.etOverlap.text = this.numText(s.overlap);
+        r.etRound.text = TE.Numbers.format(s.guideRound);
+        r.etOverlap.text = TE.Numbers.format(s.overlap);
         var oneSided  = (s.overlapMode === "onesided");
         var carrier2nd = oneSided && (s.overlapCarrier === "second");
         r.rbOverlapMode[0].value = !oneSided;
         r.rbOverlapMode[1].value = oneSided && !carrier2nd;
         r.rbOverlapMode[2].value = carrier2nd;
-        r.etAddTop.text = this.numText(s.addTop);
-        r.etAddBottom.text = this.numText(s.addBottom);
-        r.etAddLeft.text = this.numText(s.addLeft);
-        r.etAddRight.text = this.numText(s.addRight);
+        r.etAddTop.text = TE.Numbers.format(s.addTop);
+        r.etAddBottom.text = TE.Numbers.format(s.addBottom);
+        r.etAddLeft.text = TE.Numbers.format(s.addLeft);
+        r.etAddRight.text = TE.Numbers.format(s.addRight);
         if (r.rbExpMode) {
             r.rbExpMode[0].value = (s.exportMode !== "raster");
             r.rbExpMode[1].value = (s.exportMode === "raster");
         }
         r.rbExpScale[0].value = (s.exportScale !== "actual");
         r.rbExpScale[1].value = (s.exportScale === "actual");
-        if (r.etDPI) { r.etDPI.text = this.numText(s.rasterDPI); }
+        if (r.etDPI) { r.etDPI.text = TE.Numbers.format(s.rasterDPI); }
         r.cbLine.value = !!s.drawLine;
         r.etSpot.text = String(s.lineSpot);
-        r.etLineW.text = this.numText(s.lineWidth);
+        r.etLineW.text = TE.Numbers.format(s.lineWidth);
         // As when the dialog is built: [Default]'s "" takes the first item,
         // a preset deleted from Illustrator shows as "(chybí)". Keeping the
         // previous selection made one preset look different depending on
         // what was loaded before it (N8).
-        this.selectItem(r.ddPdf, s.pdfPreset);
+        this.selectItem(r.ddPdf, s.pdfPreset || this.defaultPdfPreset(r.ddPdf));
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
+        r.cbOpen.value = !!s.openOutput;
         if (!r.rbOutType) { return; }
         r.rbOutType[0].value = !s.zundMode;
         r.rbOutType[1].value = !!s.zundMode;
         this.selectItem(r.ddCutSpot, s.cutSpot);
         this.selectItem(r.ddMarkColor, s.markColor, this.sameMarkColor);
-        r.etMarkSize.text = this.numText(s.markSizeZ);
-        r.etGapInner.text = this.numText(s.gapInner);
-        r.etMaxDist.text = this.numText(s.maxDist);
-        r.etOrient.text = this.numText(s.orientDist);
-        r.etBleed.text = this.numText(s.cutBleed);
+        r.etMarkSize.text = TE.Numbers.format(s.markSizeZ);
+        r.etGapInner.text = TE.Numbers.format(s.gapInner);
+        r.etMaxDist.text = TE.Numbers.format(s.maxDist);
+        r.etOrient.text = TE.Numbers.format(s.orientDist);
+        r.etBleed.text = TE.Numbers.format(s.cutBleed);
     },
 
     /**
@@ -1111,7 +1218,7 @@ TE.UI = {
         var down = !!s && s.direction === "vertical";
         if (code === "TE_MIN_TILES" && s && s.divideMode === "width" && span) {
             return l.format(down ? l.ERR_ONE_PANEL_H : l.ERR_ONE_PANEL_W,
-                TE.Utils.formatMM(Number(s.tileWidth), l.DECIMAL), span);
+                TE.Utils.formatMM(Number(s.tileWidth), l.DEC_SEP), span);
         }
         if (code === "TE_MIN_TILES") { return l.ERR_MIN_TILES; }
         if (code === "TE_BAD_WIDTH") { return down ? l.ERR_BAD_HEIGHT : l.ERR_BAD_WIDTH; }
@@ -1132,26 +1239,6 @@ TE.UI = {
      * @param {Object} r - Control references.
      * @param {Object} ctx - Document context.
      */
-    /**
-     * Paints a number field red while it holds no usable number, and gives
-     * it back the pen it had before. Forcing black would hide the text on the
-     * dark UI (grommet-marks paintField, extendscript-ui-standards §12.3).
-     * @param {Object} et - The edittext.
-     * @param {boolean} valid - False paints it red.
-     */
-    paintField: function (et, valid) {
-        var g = et && et.graphics;
-        if (!g || !g.newPen) { return; }
-        try {
-            if (et.teDefaultPen === undefined) { et.teDefaultPen = g.foregroundColor || null; }
-            g.foregroundColor = valid
-                ? (et.teDefaultPen || g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1], 1))
-                : g.newPen(g.PenType.SOLID_COLOR, this.COLORS.ERR.concat([1]), 1);
-        } catch (e) {
-            TE.Utils.log("paintField: " + e.message);
-        }
-    },
-
     /**
      * The message for a TE.Validate.numberErrors() entry, naming the field
      * as its label does, without the colon a label may carry.
@@ -1214,13 +1301,7 @@ TE.UI = {
     renderStatus: function (st, status) {
         if (!st) { return; }
         st.text = status.text;
-        var g = st.graphics;
-        if (!g || !g.newPen) { return; }
-        try {
-            g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, this.COLORS[status.kind].concat([1]), 1);
-        } catch (e) {
-            TE.Utils.log("status colour: " + e.message);
-        }
+        TE.FieldPaint.text(st, status.kind);
     },
 
     refresh: function (w, r, ctx) {
@@ -1240,7 +1321,7 @@ TE.UI = {
         }
         for (key in this.NUMBER_CONTROLS) {
             if (this.NUMBER_CONTROLS.hasOwnProperty(key) && r[this.NUMBER_CONTROLS[key][0]]) {
-                this.paintField(r[this.NUMBER_CONTROLS[key][0]], !badKeys[key]);
+                TE.FieldPaint.field(r[this.NUMBER_CONTROLS[key][0]], !badKeys[key]);
             }
         }
 
@@ -1255,7 +1336,7 @@ TE.UI = {
         var oneToOne = Math.abs(Number(s.scaleN) - 1) < 1e-9;
         r.gScaleRow.visible = !oneToOne;
         r.gScaleOne.visible = oneToOne;
-        r.rbExpScale[0].text = l.format(l.SCALE_DRAWING, TE.Utils.formatMM(Number(s.scaleN), l.DECIMAL));
+        r.rbExpScale[0].text = l.format(l.SCALE_DRAWING, TE.Utils.formatMM(Number(s.scaleN), l.DEC_SEP));
         // Only the chosen output's fields show (1.1.0). Zünd mode draws no
         // trim line, the cut path takes its place; the line's stored choice
         // waits, hidden, for the manual output (N28). Set here rather than in
@@ -1269,18 +1350,18 @@ TE.UI = {
         var clean = ctx.cleanRect;
         // Document points to displayed millimetres, one decimal.
         var mm = function (pt) {
-            return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DECIMAL);
+            return TE.Utils.formatMM(TE.Utils.fromDoc(pt, s), l.DEC_SEP);
         };
         // Page millimetres, already converted, as "w × h".
         var size = function (w, h) {
-            return TE.Utils.formatMM(w, l.DECIMAL) + " \u00d7 " + TE.Utils.formatMM(h, l.DECIMAL);
+            return TE.Utils.formatMM(w, l.DEC_SEP) + " \u00d7 " + TE.Utils.formatMM(h, l.DEC_SEP);
         };
         var ov = ctx.validation.overhang;
         // Real millimetres need the drawing scale; without one, no numbers.
         r.stCleanInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_CLEAN_VAL,
             mm(clean[2] - clean[0]), mm(clean[1] - clean[3]));
-        r.stBleedInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_BLEED_VAL,
-            mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
+        r.stBleedInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_BLEED_LR, mm(ov.left), mm(ov.right));
+        r.stBleedInfo2.text = badKeys.scaleN ? "" : l.format(l.INFO_BLEED_TB, mm(ov.top), mm(ov.bottom));
 
         var ext = (s.direction === "horizontal")
             ? { start: clean[0], end: clean[2] }
@@ -1383,6 +1464,12 @@ TE.UI = {
             alerts.push("\u2717 " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;
         }
+        // Only the export writes into the folder; Panels only does not need it.
+        var dirErr = this.outputDirError(s.outputDir);
+        if (dirErr) {
+            alerts.push("\u2717 " + dirErr);
+            exportOk = false;
+        }
 
         // The status line says first whether the export can run; the details
         // put errors first, then warnings, then what the run will make, so
@@ -1395,7 +1482,7 @@ TE.UI = {
             status = { kind: "WARN", text: l.format(l.STATUS_WARN, l.count("WARNINGS", warns.length)) };
         } else {
             status = { kind: "OK", text: l.format(l.STATUS_READY, l.count("TILES", count),
-                s.zundMode ? l.OUT_SHORT_ZUND : l.OUT_SHORT_MANUAL, TE.Utils.formatMM(ratio, l.DECIMAL)) };
+                s.zundMode ? l.OUT_SHORT_ZUND : l.OUT_SHORT_MANUAL, TE.Utils.formatMM(ratio, l.DEC_SEP)) };
         }
         this.renderStatus(r.stStatus, status);
         this.renderRows(r.lbTiles, rows);

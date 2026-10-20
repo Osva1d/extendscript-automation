@@ -320,6 +320,7 @@ TE.Check = {
             r.strokeColor = TE.Draw.getOrCreateSpot(doc, s.cutSpot);
             // The export's hairline, as it shows on the rulers.
             r.strokeWidth = 0.125 / (Number(ctx.scaleFactor) || 1);
+            TE.Draw.plainStroke(r);
             r.name = "TE_cut";
             var layMarks = lay.layers.add();
             layMarks.name = TE.Config.layerRegmarks;

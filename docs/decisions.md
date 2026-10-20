@@ -228,3 +228,22 @@ TE už zapsal, tak nepotřebují migraci.
 
 **Bilance sdíleného jádra:** 7 modulů — `json2.js`, `ui_state.js`,
 `cut_marks.js` a čtyři nové bez konzumenta.
+
+## Průběh a souhrn běhu do sdíleného jádra (2026-10-20)
+
+`progress.js` (`Progress.create`, `shorten`) a `summary.js` (`Summary.show`,
+`visiblePairs`) vznikly z `BRE.UI.createProgress` a `BRE.UI.showSummary`,
+na které ukazuje kánon (`extendscript-ui-standards` §12.5: „až je bude
+potřebovat druhý nástroj, přesuňte je do shared/lib"). Druhý nástroj je
+tile-export 1.2.0 (audit P6, P7): export desítek plátů trval bez odezvy
+minuty — tři pláty 4,8 až 23 s, změřeno 2026-10-20. Texty přicházejí
+argumentem, takže každý nástroj si nechá své klíče; BRE modul převezme ve
+svém vlákně a smaže své kopie. Testy v `shared/tests/` s malou náhradou
+ScriptUI (`lib_scriptui_mock.js`).
+
+Tile-export 1.2.0 zároveň napojil čtyři moduly z 2026-10-17 a smazal své
+kopie (`TE.Utils.parseNumber`, `paintField`, `COLORS`, `getRegistrationName`,
+XMP měřítka v `TE.Doc`).
+
+**Bilance sdíleného jádra:** 9 modulů; TE používá všechny kromě `json2.js`,
+který je prostý polyfill a builduje se první.

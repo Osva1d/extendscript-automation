@@ -12,26 +12,6 @@ Postup testu: [ruční testy](manual-test.md).
 
 ## Otevřené
 
-### N49 — návrh: volby přelepu pod sebou, dialog o 186 px užší (další verze)
-
-Návrh uživatele z ručního testu 1.1.0 (2026-10-16): volby Umístění přelepu
-pod sebou místo v řadě, levý sloupec by byl užší a vyplnil by prázdné místo
-dole. Naměřeno headless na skutečném dialogu (AI 30.8.2): samotné
-přeskládání zúží dialog jen z 1178 na 1108 px — nejširší je pak řádek
-„Dostupný spad“ s rezervou na čtyři hodnoty 9999,9. Se spadem na dvou
-řádcích (vlevo, vpravo / nahoře, dole) 992 × 836 px, levý sloupec 444 px
-místo 630, výška beze změny; prázdné místo dole v levém sloupci klesne
-z ~107 na ~40 px. Seznam předvoleb pak dostane ~220 px na název a potřebuje
-pevnou šířku, jinak ho dlouhý název roztáhne i s dialogem (engine-facts,
-„volné místo v řádku“). **Odloženo do další verze** spolu s vykáním
-a dvojtečkami za popisky (audit společného jazyka, §8 body 1 a 2):
-dvojtečky mění šířku sloupce popisků, levý sloupec se tak přeměří jednou.
-Ve stejném kole: text zaškrtávátek a přepínačů sedí asi o 2 pt výš než
-popisky vedle nich („Rovnoměrně“, „Přeskočit hotové výstupy“, „Směr“).
-Geometrie řádku je přitom stejná (popisek 15 px, prvek 19 px, oba na střed,
-naměřeno 2026-10-17), posun dělá nativní vykreslení — doladit posunem
-a ověřit okem.
-
 ### N37 — rozlišení rastru platí pro stránku PDF, v 1:N je ve finále N× nižší
 
 `tile-export/src/export.js`, `rasterizeArt()` — `ro.resolution` je DPI
@@ -164,6 +144,8 @@ polích.
 | N47 | barva řezu z předvolby, kterou seznam neměl, se při načtení tiše nahradila první položkou — u zdi registrační, takže by se řezalo v barvě značek (předvolba TEST s `cut`, 2026-10-15; i v 1.0.x); teď „cut  (chybí)“ podle `extendscript-ui-standards` §12.3, upozornění ve Výsledku, barvy v hranatých závorkách seznam řezu nenabízí | `8bd88f1` |
 | N48 | barva značek a PDF preset z předvolby, které dokument nebo Illustrator neměl, se při načtení tiše nahradily první položkou: značky v registrační bez upozornění, PDF s prvním presetem Illustratoru a jiným nastavením (i v 1.0.x); teď „(chybí)“, u značek upozornění, u presetu zablokovaný export (z N47, 2026-10-16) | `afbc923` |
 | N50 | při měřítku kresby 100 byl v panelu Dokument useknutý čistý formát a spad („dole 50“ místo 500 mm) a volba „1:100 jako kre…“: rozvržení s nejširšími texty běželo až po načtení předvolby, jejíž změna výběru v seznamu dialog rozvrhla se skutečnými hodnotami (ruční test 1.1.0, 2026-10-17) | `a5c923c` |
+| N49 | návrh uživatele (ruční test 1.1.0): levý sloupec užší — volby umístění přelepu pod sebou, dostupný spad na dvou řádcích, seznam předvoleb bez vlivu na šířku, text přepínačů a zaškrtávátek ve výšce popisku; dialog 1022 × 836 px místo 1178 × 836 (1.2.0, 2026-10-20) | `a6c38b2` |
+| N51 | s vybranou čárkovanou cestou vyšly linky kontrolních plátů i řez Zünd čárkované se zaoblenými konci — nová cesta přebírá styl tahu z výběru; export ne, nový dokument začíná čistý (audit P3, změřeno 2026-10-20) | `693c128` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

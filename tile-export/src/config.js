@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.1.0",
+    version: "1.2.0",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
@@ -21,12 +21,6 @@ TE.Config = {
     // original (1.1.0): one sublayer per panel, named like its artboard. A
     // run replaces it whole; what TE reads from the document leaves it out.
     layerCheck: "TE_panels",
-
-    // XMP namespace of the values tile-export keeps in a document: the drawing
-    // scale, which belongs to the document rather than to a preset or the
-    // last run (1.1.0). An identifier under the project's own address, never
-    // fetched, so it cannot collide with anyone else's.
-    xmpNamespace: "https://codeberg.org/Osva1d/extendscript-automation/ns/tile-export/1.0/",
 
     // How the shop writes the ratio in a file name: 1:10 data are named by
     // their real size and "1ku10" (user, 2026-10-10). A naming convention of
@@ -51,6 +45,11 @@ TE.Config = {
     // 2026-09-26: "Cut" is enough). Offered in the cut colour list even when
     // the document lacks it: the export creates it in the output.
     CUT_SPOTS: ["Cut"],
+
+    // [Default] stores no PDF preset; the list then preselects High Quality
+    // Print, [Kvalitní tisk] in Czech, as batch-relink-export does (its
+    // presetSearchPatterns), not Illustrator's first preset (audit P11).
+    PDF_PRESET_PATTERNS: ["High Quality", "Kvalitní tisk"],
 
     // Layer names of a Zünd panel file, the same as zund-summa-marks uses
     // (its src/config.js), so a file from either tool looks the same when
@@ -184,7 +183,10 @@ TE.Config = {
             // re-export the eight that are already on disk. Off unless asked
             // for (user, 2026-10-10): on, a re-export after a fix kept the
             // old files under the same names and only said "skipped".
-            skipExisting: false
+            skipExisting: false,
+            // Off unless asked for: a Finder window opening after every
+            // export would surprise whoever updates (1.2.0, audit P7).
+            openOutput: false
         };
     }
 };

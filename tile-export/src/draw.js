@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Draw — spot colour, trim line, panel artboards
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Doc, TE.L, TE.Utils
+// Depends on: TE.Config, TE.Doc, TE.L, TE.Registration, TE.Utils
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -100,39 +100,27 @@ TE.Draw = {
         p.stroked = true;
         p.strokeColor = spot;
         p.strokeWidth = 2 * sw;
+        this.plainStroke(p);
         p.name = "TE_line";
         return p;
     },
 
-
-
     /**
-     * Name of the registration swatch, found by TYPE. The name is localized —
-     * "[Registrační]" on a Czech install — and index 1, where registration
-     * sits in every document measured, is not trusted: without registration
-     * there, swatches[1] is White and marks would be drawn invisible to the
-     * cutter's camera. With no registration swatch the English default comes
-     * back; it names nothing on a Czech install, so resolveMarkColor falls
-     * through to 100 % K instead of a neighbouring swatch. Same check as
-     * grommet-marks and zund-summa-marks.
-     * @param {Document} doc - Document to read from.
-     * @returns {string} The registration swatch name.
+     * A solid stroke with butt caps and mitred corners, set outright. A new
+     * path takes the document's current stroke style, and a selection
+     * changes it: with a dashed, round-capped path selected, the check
+     * panels' trim lines came out dashed (measured 2026-10-20, AI 30.8.2,
+     * audit P3; grommet-marks _plainStroke). A new document starts plain,
+     * so the export's temporary documents were not affected.
+     * @param {PathItem} p - A stroked path.
      */
-    getRegistrationName: function (doc) {
-        try {
-            var sw = doc.swatches;
-            for (var i = 0; i < sw.length; i++) {
-                var c = sw[i].color;
-                if (c && c.typename === "SpotColor" && c.spot &&
-                        c.spot.colorType === ColorModel.REGISTRATION) {
-                    return sw[i].name;
-                }
-            }
-        } catch (e) {
-            TE.Utils.log("getRegistrationName: swatches unreadable: " + e.message);
-        }
-        return "[Registration]";
+    plainStroke: function (p) {
+        p.strokeDashes = [];
+        p.strokeCap = StrokeCap.BUTTENDCAP;
+        p.strokeJoin = StrokeJoin.MITERENDJOIN;
     },
+
+
 
     /**
      * Colours offerable for registration marks: registration first, then the
@@ -142,7 +130,7 @@ TE.Draw = {
      * @returns {Array} Swatch names.
      */
     listMarkColors: function (doc) {
-        var names = [this.getRegistrationName(doc)];
+        var names = [TE.Registration.name(doc)];
         var i, j, n, dup;
         try {
             for (i = 0; i < doc.spots.length; i++) {
@@ -176,7 +164,7 @@ TE.Draw = {
      * @returns {Object|null} {name, cyan, magenta, yellow, black} or null.
      */
     readSpotDef: function (doc, name) {
-        if (!name || name === this.getRegistrationName(doc) || name.charAt(0) === "[") {
+        if (!name || name === TE.Registration.name(doc) || name.charAt(0) === "[") {
             return null;
         }
         var i, sp, c;
@@ -238,10 +226,10 @@ TE.Draw = {
             }
         }
         try {
-            return doc.swatches.getByName(name || this.getRegistrationName(doc)).color;
+            return doc.swatches.getByName(name || TE.Registration.name(doc)).color;
         } catch (e2) {
             try {
-                return doc.swatches.getByName(this.getRegistrationName(doc)).color;
+                return doc.swatches.getByName(TE.Registration.name(doc)).color;
             } catch (e3) {
                 var k = new CMYKColor();
                 k.black = 100;

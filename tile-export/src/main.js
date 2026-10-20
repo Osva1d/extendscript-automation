@@ -1,8 +1,9 @@
 // ------------------------------------------------------------------------
 // Module: Entry point — IIFE, error boundary, two-phase run
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Doc, TE.Draw, TE.Export, TE.Grid, TE.L,
-//             TE.Storage, TE.UI, TE.Utils, TE.Validate
+// Depends on: TE.Config, TE.Doc, TE.Draw, TE.DrawingScale, TE.Export,
+//             TE.Grid, TE.L, TE.Progress, TE.Storage, TE.Summary, TE.UI,
+//             TE.Utils, TE.Validate
 // ------------------------------------------------------------------------
 (function (TE) {
     try {
@@ -22,12 +23,12 @@
 
         var clean = TE.Doc.findCleanArtboard(doc);
         if (!clean) {
-            alert(TE.L.format(TE.L.ERR_NO_CLEAN_AB, TE.Config.tilePrefix));
+            alert(TE.L.ERROR_PREFIX + TE.L.format(TE.L.ERR_NO_CLEAN_AB, TE.Config.tilePrefix));
             return;
         }
 
         var graphics = TE.Doc.readGraphics(doc);
-        if (graphics.length === 0) { alert(TE.L.ERR_NO_GRAPHIC); return; }
+        if (graphics.length === 0) { alert(TE.L.ERROR_PREFIX + TE.L.ERR_NO_GRAPHIC); return; }
         var gBounds = graphics[0].geometricBounds;
 
         // Spot names feed the dialog's cut colour list; contourSpots are the
@@ -58,7 +59,7 @@
             // Without the extension: the {doc} of the file names.
             docName: String(doc.name).replace(/\.[^.]+$/, ""),
             // The scale this document was last run at, null for a new one.
-            drawingScale: TE.Doc.loadDrawingScale(doc),
+            drawingScale: TE.DrawingScale.load(doc),
             spotNames: spotNames,
             contourSpots: contourSpots,
             markColors: TE.Draw.listMarkColors(doc),
@@ -77,11 +78,11 @@
         var res = TE.UI.show(pData, ctx);
         if (!res || !res.action) { return; }
 
-        if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS); }
+        if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS + " " + TE.L.RUN_CONTINUES); }
         var s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
              || res.wrapper.presets[res.wrapper.activePreset];
         // The document remembers its drawing scale for the next run (1.1.0).
-        TE.Doc.saveDrawingScale(doc, s.scaleN);
+        TE.DrawingScale.save(doc, s.scaleN);
 
         // --- phase 1: rebuild the panels from the clean artboard -------------
         // Mark colour definition, read once from the source document so each
@@ -101,7 +102,7 @@
         if (res.action === "export" && s.zundMode) {
             var conflict = TE.Validate.markConflict(tiles, ctx.validation, s);
             if (conflict) {
-                alert(TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
+                alert(TE.L.ERROR_PREFIX + TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
                 return;
             }
         }
@@ -121,14 +122,14 @@
 
         var msg = [];
         if (guides.hiddenCount > 0) {
-            msg.push(TE.L.format(TE.L.WARN_GUIDE_HIDDEN, guides.hiddenCount));
+            msg.push(TE.L.WARN_PREFIX + TE.L.format(TE.L.WARN_GUIDE_HIDDEN, guides.hiddenCount));
         }
         // Too big to sit beside the original on the canvas, the check panels
         // are left out. Panels only has nothing else to show; the export does
         // not need them.
         if (!check.fits) {
-            if (res.action === "tiles") { alert(TE.L.ERR_CHECK_NO_ROOM); return; }
-            msg.push(TE.L.WARN_CHECK_SKIPPED);
+            if (res.action === "tiles") { alert(TE.L.ERROR_PREFIX + TE.L.ERR_CHECK_NO_ROOM); return; }
+            msg.push(TE.L.WARN_PREFIX + TE.L.WARN_CHECK_SKIPPED);
         }
 
         if (res.action === "tiles") {
@@ -146,7 +147,7 @@
         // panel even though the panels overlap.
         var outFolder = new Folder(s.outputDir);
         if (!s.outputDir || !outFolder.exists) {
-            alert(TE.L.format(TE.L.ERR_OUT_DIR, s.outputDir));
+            alert(TE.L.ERROR_PREFIX + TE.L.format(TE.L.ERR_OUT_DIR, s.outputDir));
             return;
         }
 
@@ -186,29 +187,61 @@
             outFolder: outFolder,
             total: tiles.length,
             pdfOptions: pdfOpts,
-            markDef: markDef
+            markDef: markDef,
+            // What a finished output must be newer than (audit P2).
+            inputsModified: TE.Export.inputsModified(doc, graphics[0])
         };
 
-        var i, done = 0, skipped = 0, failed = [], res;
-        for (i = 0; i < tiles.length; i++) {
-            try {
-                if (s.skipExisting && TE.Export.outputExists(tiles[i], eCtx, s)) {
-                    skipped++;
-                    continue;
+        // The export shows its progress and stops on held Esc, after the
+        // panel in progress (audit P6; the palette of batch-relink-export,
+        // shared/lib/progress.js). It ends with a summary (P7).
+        var L = TE.L;
+        var progress = TE.Progress.create(tiles.length, { title: L.PROGRESS_TITLE, init: L.PROGRESS_INIT,
+            item: L.PROGRESS_ITEM, hint: L.PROGRESS_STOP_HINT, stopping: L.PROGRESS_STOPPING });
+        var i, exported = 0, skipped = 0, failed = [], redone = [], stopped = false, state;
+        try {
+            for (i = 0; i < tiles.length; i++) {
+                if (progress.isCancelled()) { stopped = true; break; }
+                progress.update(i, TE.Export.fileName(tiles[i], eCtx, s));
+                try {
+                    if (s.skipExisting) {
+                        state = TE.Export.panelOutputState(tiles[i], eCtx, s);
+                        if (state === "fresh") { skipped++; continue; }
+                        if (state === "stale") { redone.push(L.format(L.SUM_REDONE_LINE, tiles[i].index)); }
+                    }
+                    TE.Export.exportTile(tiles[i], eCtx, s);
+                    exported++;
+                } catch (expErr) {
+                    failed.push(L.format(L.SUM_FAILED_LINE, tiles[i].index, expErr.message));
                 }
-                res = TE.Export.exportTile(tiles[i], eCtx, s);
-                done++;
-            } catch (expErr) {
-                failed.push(tiles[i].index + ": " + expErr.message);
             }
+            if (!stopped) { progress.finish(); }
+        } finally {
+            progress.close();
         }
 
-        msg.push(TE.L.format(TE.L.SUMMARY_DONE, done, outFolder.fsName));
-        if (skipped > 0) { msg.push(TE.L.format(TE.L.SUMMARY_SKIPPED, skipped)); }
-        if (failed.length > 0) { msg.push(failed.join("\n")); }
-        alert(msg.join("\n"));
+        // Errors first, then the warnings collected before the export, then
+        // the outputs made again.
+        TE.Summary.show({
+            title: L.SUM_TITLE,
+            intro: L.format(L.SUM_FOLDER, outFolder.fsName),
+            pairs: [
+                { label: L.SUM_EXPORTED, value: exported, always: true },
+                { label: L.SUM_SKIPPED, value: skipped },
+                { label: L.SUM_ERRORS, value: failed.length, alert: true, always: true }
+            ],
+            note: stopped ? L.format(L.SUM_STOPPED, exported + skipped + failed.length, tiles.length) : "",
+            details: failed.concat(msg, redone),
+            detailsTitle: L.SUM_DETAILS,
+            allOk: L.SUM_ALL_OK,
+            close: L.BTN_CLOSE
+        });
+        if (s.openOutput) {
+            try { outFolder.execute(); }
+            catch (openErr) { TE.Utils.log("output folder not opened: " + openErr.message); }
+        }
 
     } catch (e) {
-        alert(TE.L.ERR_CRITICAL + e.message + (e.line ? ("\nLine: " + e.line) : ""));
+        alert(TE.L.format(TE.L.ERR_CRITICAL, e.message, String(e.line || "?")));
     }
 })(TE);

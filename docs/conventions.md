@@ -116,13 +116,16 @@ pro svůj namespace:
 |---|---|---|
 | `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE |
 | `cut_marks.js` | `buildCutMarks(NS)` | ZSM, TE |
-| `numbers.js` | `buildNumbers(NS)` | zatím nikdo |
-| `field_paint.js` | `buildFieldPaint(NS)` | zatím nikdo |
-| `registration.js` | `buildRegistration(NS)` | zatím nikdo |
-| `drawing_scale.js` | `buildDrawingScale(NS)` | zatím nikdo |
+| `numbers.js` | `buildNumbers(NS)` | TE |
+| `field_paint.js` | `buildFieldPaint(NS)` | TE |
+| `registration.js` | `buildRegistration(NS)` | TE |
+| `drawing_scale.js` | `buildDrawingScale(NS)` | TE |
+| `progress.js` | `buildProgress(NS)` | TE |
+| `summary.js` | `buildSummary(NS)` | TE |
 
-Poslední čtyři vznikly 2026-10-17 z kódu tile-exportu; nástroje je napojí ve
-svých vláknech (`decisions.md`). Moduly bez vlastního uživatele testuje
+Čtyři vznikly 2026-10-17 z kódu tile-exportu, `progress.js` a `summary.js`
+2026-10-20 z batch-relink-exportu; TE je používá od 1.2.0, ostatní nástroje
+je napojí ve svých vláknech (`decisions.md`). Moduly bez vlastního uživatele testuje
 `shared/tests/` (`npm run test:shared`).
 
 **Kritérium sdílení: „oprav jednou platí i tam."** Textová podobnost nestačí —

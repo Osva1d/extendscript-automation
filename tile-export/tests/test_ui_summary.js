@@ -14,6 +14,10 @@ function load(rel) { eval.call(global, fs.readFileSync(path.join(__dirname, ".."
 global.TE = TE;
 load("src/locale.js");
 load("src/lib/utils.js");
+load("../shared/lib/numbers.js");
+global.buildNumbers(TE);
+load("../shared/lib/field_paint.js");
+global.buildFieldPaint(TE);
 load("src/lib/validation.js");
 load("../shared/lib/cut_marks.js");
 global.buildCutMarks(TE);
@@ -21,6 +25,9 @@ load("src/config.js");
 load("src/grid.js");
 load("src/export.js");
 load("src/ui.js");
+// No file system here: every folder exists unless a test says otherwise.
+var folders = { missing: {} };
+TE.UI.folderExists = function (path) { return !folders.missing[path]; };
 
 var pass = 0, fail = 0, total = 0;
 function eq(got, want, msg) {
@@ -58,11 +65,11 @@ function refs(o) {
         etAddTop: et(0), etAddBottom: et(0), etAddLeft: et(0), etAddRight: et(0),
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
-        ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
-        cbSkip: cb(true), rbOutType: null,
+        ddPdf: { selection: null }, etOut: et("/Users/shop/out"), etPattern: et("{doc}_{n}"),
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
-        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
+        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stBleedInfo2: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
         stStatus: { text: "" }, lbTiles: listbox(),
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
@@ -120,7 +127,8 @@ console.log("\n=== 1.1.0: the Document panel shows what TE found ===");
 var rDoc = refs({});
 TE.UI.refresh(null, rDoc, ctx);
 eq(rDoc.stCleanInfo.text, "3000 × 1000 mm", "clean format at real size");
-eq(rDoc.stBleedInfo.text, "vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "available bleed on each edge");
+eq(rDoc.stBleedInfo.text + " | " + rDoc.stBleedInfo2.text, "vlevo 50, vpravo 50 mm | nahoře 50, dole 50 mm",
+    "available bleed on each edge, in two lines (N49)");
 eq(rDoc.stCalc.text.indexOf("Čistý formát") === -1 && rDoc.stCalc.text.indexOf("Dostupný spad") === -1, true,
     "and the Result no longer repeats them");
 var rDocErr = refs({ etCount: { text: "1", enabled: true } });
@@ -221,7 +229,7 @@ has(rPdf.stStatus.text, "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."
 eq(rPdf.btnExport.enabled === false && rPdf.btnTiles.enabled === true, true, "it stops the export only");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
-has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
+has(tzc, "⚠ Dokument má cesty v barvě „Cut“. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
 has(tzc, "— použije se rovný ořez.", "a contour is not cut: the straight cut is used");
 has(tzc, "rovný ořez v barvě „Cut“.", "and the details still name the straight cut");
 ctx.contourSpots = [];
@@ -244,7 +252,7 @@ eq(rOk.stCalc.text.indexOf("✗") === -1 && rOk.btnExport.enabled, true,
     "the default Zünd job has no conflict and can be exported");
 var rNar = refs(zund({ rbMode: widthMode, etWidth: { text: "1460", enabled: true }, etOverlap: { text: "0" } }));
 TE.UI.refresh(null, rNar, ctx);
-has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)",
+has(rNar.stCalc.text, "✗ Plát 3: orientační značka by se dotýkala jiné značky nebo ji překrývala (středy 0 mm od sebe, průměr 5 mm)",
     "the message names the narrow panel, the distance and the diameter");
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
@@ -300,10 +308,10 @@ ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: 
 console.log("\n=== N40: stacked panels split the height, and the dialog says so ===");
 var r40s = refs({ rbMode: widthMode });
 TE.UI.refresh(null, r40s, ctx);
-eq(r40s.stWidthLbl.text, "Šířka plátu", "Svisle: the field is the panel width");
+eq(r40s.stWidthLbl.text, "Šířka plátu:", "Svisle: the field is the panel width");
 var r40v = refs({ rbDir: stacked, rbMode: widthMode });
 TE.UI.refresh(null, r40v, ctx);
-eq(r40v.stWidthLbl.text, "Výška plátu", "Vodorovně: the field is the panel height");
+eq(r40v.stWidthLbl.text, "Výška plátu:", "Vodorovně: the field is the panel height");
 eq(r40v.etWidth.helpTip.indexOf("Výška plátu načisto") === 0, true, "and so is its tooltip");
 // The reported case: 1000 mm on a graphic 1000 mm tall is one panel.
 has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "1000", enabled: true } }),
@@ -377,7 +385,7 @@ has(summary({ etPattern: { text: "{clean}_{adds}", enabled: true }, cbEqual: { v
     "\n1017x1000mm_1027x1080mm.pdf", "equal panels of 1016,7 mm round to whole millimetres");
 var rSlash = refs({ etPattern: { text: "zakazka/{n}", enabled: true } });
 TE.UI.refresh(null, rSlash, ctx);
-has(rSlash.stCalc.text, "✗ Název souboru zakazka/01 obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
+has(rSlash.stCalc.text, "✗ Název souboru „zakazka/01“ obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
     "a slash in the name is named");
 eq(rSlash.btnExport.enabled === false && rSlash.btnTiles.enabled === true, true,
     "it stops the export only: Panels only writes no file");
@@ -413,6 +421,23 @@ var firstLayout = uiSrc.indexOf("\n        w.layout.layout(true);\n");
 var presetLoad = uiSrc.indexOf("self.apply(refs, activeP)");
 eq(firstLayout > 0 && presetLoad > 0 && firstLayout < presetLoad, true,
     "the first layout comes before the active preset is applied");
+
+console.log("\n=== audit P9: the output folder is checked in the dialog ===");
+// An empty or a missing folder used to show only after the dialog, once the
+// check panels were built. Only the export needs it.
+var rNoDir = refs({ etOut: { text: "", enabled: true } });
+TE.UI.refresh(null, rNoDir, ctx);
+has(rNoDir.stCalc.text, "✗ Vyberte cílovou složku.", "an empty folder is named");
+eq(rNoDir.btnExport.enabled === false && rNoDir.btnTiles.enabled === true, true, "it stops the export, not Panels only");
+has(rNoDir.stStatus.text, "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže.", "and the status line says so");
+folders.missing["/Volumes/Zakazky/old"] = true;
+var rGone = refs({ etOut: { text: "/Volumes/Zakazky/old", enabled: true } });
+TE.UI.refresh(null, rGone, ctx);
+has(rGone.stCalc.text, "✗ Cílová složka „/Volumes/Zakazky/old“ neexistuje. Vyberte jinou.", "a missing folder is named with its path");
+eq(rGone.btnExport.enabled, false, "and stops the export");
+var rDir = refs({});
+TE.UI.refresh(null, rDir, ctx);
+eq(rDir.btnExport.enabled && rDir.stCalc.text.indexOf("složk") === -1, true, "an existing folder says nothing");
 
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and
@@ -481,8 +506,8 @@ function painted(o) {
     TE.UI.refresh(null, r, ctx);
     return r.stStatus.graphics.foregroundColor.rgb;
 }
-eq(painted({}), TE.UI.COLORS.OK.join(","), "green when ready");
-eq(painted({ etOverlap: { text: "2O", enabled: true } }), TE.UI.COLORS.ERR.join(","), "red on an error");
+eq(painted({}), TE.FieldPaint.COLORS.OK.join(","), "green when ready");
+eq(painted({ etOverlap: { text: "2O", enabled: true } }), TE.FieldPaint.COLORS.ERR.join(","), "red on an error");
 
 console.log("\n=== equal panels share a row ===");
 var t5 = summary({ etCount: { text: "5", enabled: true } });

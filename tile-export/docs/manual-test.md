@@ -58,8 +58,10 @@ vrať (nebo ulož jako předvolbu):
 
 ## 1. Co umí jen člověk
 
-**1.1 Dialog okem.** 1178 × 836 px s ručním ořezem i se Zündem — pole obou typů
-výstupu se střídají na jednom místě (naměřeno headless 2026-10-15). Nic
+**1.1 Dialog okem.** 1022 × 836 px s ručním ořezem i se Zündem — pole obou typů
+výstupu se střídají na jednom místě (naměřeno headless 2026-10-20). Volby
+umístění přelepu pod sebou, dostupný spad na dvou řádcích, za každým popiskem
+pole dvojtečka; text přepínačů a zaškrtávátek ve výšce popisku vedle (1.2.0). Nic
 uříznutého, sloupce zarovnané, levý i pravý končí dole na stejné výšce. Panel
 Dokument ukáže čistý formát a dostupný spad; měřítko kresby 100 nebo 12,5 se
 v nich i v „1:… jako kresba" vejde celé, i když ho napíšeš v otevřeném dialogu
@@ -67,16 +69,16 @@ a předvolba má jinou barvu řezu nebo PDF preset než poslední běh (N50).
 Výsledek je v pravém sloupci: tučná stavová řádka, tabulka plátů, pod ní
 podrobnosti. Dlouhá chybová hláška (Large
 Canvas, měřítko kresby 10, výstup 1:1) se v podrobnostech **zalomí**,
-neuřízne. Patička „© 2025–2026 Ladislav Osvald · v1.1.0", šedá, jako v ostatních
+neuřízne. Patička „© 2025–2026 Ladislav Osvald · v1.2.0", šedá, jako v ostatních
 nástrojích.
 
 **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Vytvořit
 a exportovat.
 
 **1.3 Předvolby myší.** Změna pole → „jméno *", ↺ a Uložit zaktivní. ↺ vrátí
-uložené hodnoty. Uložit se zapíše hned a přežije Storno; u [Default] je šedé.
-Uložit jako… s názvem v hranatých závorkách odmítne, s existujícím názvem se
-zeptá. Po běhu s jinými hodnotami, než má aktivní předvolba, se dialog otevře
+uložené hodnoty. Uložit se zapíše hned a přežije Storno; u [Výchozí] otevře Uložit jako….
+Uložit jako… s prázdným názvem řekne „Zadejte název předvolby.“, s názvem
+v hranatých závorkách odmítne, s existujícím názvem se zeptá. Po běhu s jinými hodnotami, než má aktivní předvolba, se dialog otevře
 s hvězdičkou.
 
 **1.4 Prohlížeč.** Prostřední plát exportu 1:1 otevřít v **Acrobatu**
@@ -144,6 +146,30 @@ Jen pláty aktivní; po výběru jiného presetu export zase jde. Zeď, Zünd, �
 133: pod tabulkou 92 názvů (46 plátů po dvou souborech), pole jde rolovat
 a psaní v polích se nezpomalí víc než dřív.
 
+
+**1.13 Export a souhrn (1.2.0).** Zeď, Šířky plátu 500 (12 plátů), Vytvořit
+a exportovat: okno průběhu ukazuje plát, „(n z 12)“ a ukazatel. Podržet **Esc**:
+hláška „Zastavuji — rozpracovaný plát se dokončí…“, export skončí po plátu, který
+běžel, a souhrn napíše „Zastaveno po n z 12 plátů.“ bez „Vše proběhlo bez
+chyb.“ Celý export: souhrn s cílovou složkou, Exportováno 12, Chyby 0 a „Vše
+proběhlo bez chyb.“ Se zaškrtnutým **Po dokončení otevřít cílovou složku** se
+složka otevře ve Finderu. Prázdná cílová složka: „✗ Vyberte cílovou složku.“
+ve Výsledku, export šedý, Jen pláty aktivní; Vybrat… se ptá stejnými slovy.
+
+**1.14 Přeskočit hotové výstupy (1.2.0).** Uložený dokument, export, pak znovu
+se zaškrtnutým Přeskočit hotové výstupy: souhrn Přeskočeno (hotové) 3,
+Exportováno 0. Dokument uložit (je teď novější) a znovu: Exportováno 3
+a v podrobnostech u každého plátu „výstup byl starší než pracovní dokument
+nebo PDF, vytvořil se znovu“.
+
+**1.15 Čárkovaná cesta ve výběru (1.2.0).** Na originálu nakresli cestu
+s čárkovaným tahem a kulatými konci, nech ji vybranou a dej Jen pláty: linky
+kontrolních plátů (i řez u Zündu) jsou plné, s rovnými konci.
+
+**1.16 Desetinná čárka a [Výchozí] (1.2.0).** Přelep `2,5`, Jen pláty, dialog
+znovu otevřít: v poli `2,5`, ne `2.5`. [Výchozí] ukáže PDF preset
+[Kvalitní tisk].
+
 ---
 
 ## 2. Regresní přehled
@@ -172,8 +198,8 @@ v milimetrech.
 | zeď 1:10, výstup 1:1 | S přídavky 2010 \| 2020 \| 2010 × 1000 | 2010 \| 2020 \| 2010 × 1000; plát 2 začíná polem 1990 (přelep), končí 4010 |
 | zeď, Zünd, 1:1 | „✓ … 3 pláty, Zünd, výstup 1:1."; Stránka PDF 2040 × 1030 \| 2050 × 1030 \| 2040 × 1030; pod tabulkou „Značky v barvě „[Registrační]“, rovný ořez v barvě „Cut“." a šest názvů, na plát `…_1ku1.pdf` a `…_1ku1_cut.pdf` | na plát `…_n.pdf` a `…_n_cut.pdf`, stejná stránka; maska 5 mm za řezem, značky 5 mm od masky |
 | zeď, Zünd, přídavek vpravo a nahoře 40 | — | plát 3 řeže 2050 × 1040, stránka 2080 × 1070; na pravé a horní hraně tiskového plátu pásy až po proužek žluté (40 + 5 mm) |
-| arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; řádky „1–2" se stránkou 149 × 103 a „3" s 11 × 103; „✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)…" | export šedý, Jen pláty aktivní |
-| zeď, Zünd, Max. rozteč 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
+| arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; řádky „1–2" se stránkou 149 × 103 a „3" s 11 × 103; „✗ Plát 3: orientační značka by se dotýkala jiné značky nebo ji překrývala (středy 0 mm od sebe, průměr 5 mm)…" | export šedý, Jen pláty aktivní |
+| zeď, Zünd, Max. rozteč značek 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „CHYBA: Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
 | arch, Přelep `2O`, prázdný nebo `-5` | „✗ Nejde spustit: 1 chyba, viz níže."; „✗ Pole „Přelep“: zadejte číslo, třeba 20 nebo 2,5.", u `-5` „… nesmí být záporné."; tabulka prázdná, pole červené | nic nejde spustit, Uložit i Uložit jako… šedé |
 | arch, Měřítko kresby prázdné | „✗ Pole „Měřítko kresby“: zadejte číslo…"; Dokument „—" | totéž |
 | arch, Rastr, Rozlišení 71 (jen s `RASTER_ENABLED`) | „✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI." | export šedý; se 72 projde |
@@ -188,4 +214,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N50.
+další číslo v [nálezech](findings.md), naposledy N51.
