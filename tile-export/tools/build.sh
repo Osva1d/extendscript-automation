@@ -52,6 +52,10 @@ MODULES=(
     "$SRC_DIR/lib/validation.js"
     "../shared/lib/ui_state.js"
     "../shared/lib/cut_marks.js"
+    "../shared/lib/numbers.js"
+    "../shared/lib/field_paint.js"
+    "../shared/lib/registration.js"
+    "../shared/lib/drawing_scale.js"
     "$SRC_DIR/config.js"
     "$SRC_DIR/lib/storage.js"
     "$SRC_DIR/grid.js"
@@ -120,6 +124,18 @@ for m in "${MODULES[@]}"; do
     fi
     if [ "$m" = "../shared/lib/cut_marks.js" ]; then
         echo "buildCutMarks(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/numbers.js" ]; then
+        echo "buildNumbers(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/field_paint.js" ]; then
+        echo "buildFieldPaint(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/registration.js" ]; then
+        echo "buildRegistration(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/drawing_scale.js" ]; then
+        echo "buildDrawingScale(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
     fi
 done
 

@@ -22,12 +22,6 @@ TE.Config = {
     // run replaces it whole; what TE reads from the document leaves it out.
     layerCheck: "TE_panels",
 
-    // XMP namespace of the values tile-export keeps in a document: the drawing
-    // scale, which belongs to the document rather than to a preset or the
-    // last run (1.1.0). An identifier under the project's own address, never
-    // fetched, so it cannot collide with anyone else's.
-    xmpNamespace: "https://codeberg.org/Osva1d/extendscript-automation/ns/tile-export/1.0/",
-
     // How the shop writes the ratio in a file name: 1:10 data are named by
     // their real size and "1ku10" (user, 2026-10-10). A naming convention of
     // the shop, not dialog text, so it does not follow the dialog's language.

@@ -14,6 +14,10 @@ function load(rel) { eval.call(global, fs.readFileSync(path.join(__dirname, ".."
 global.TE = TE;
 load("src/locale.js");
 load("src/lib/utils.js");
+load("../shared/lib/numbers.js");
+global.buildNumbers(TE);
+load("../shared/lib/field_paint.js");
+global.buildFieldPaint(TE);
 load("src/lib/validation.js");
 load("../shared/lib/cut_marks.js");
 global.buildCutMarks(TE);
@@ -481,8 +485,8 @@ function painted(o) {
     TE.UI.refresh(null, r, ctx);
     return r.stStatus.graphics.foregroundColor.rgb;
 }
-eq(painted({}), TE.UI.COLORS.OK.join(","), "green when ready");
-eq(painted({ etOverlap: { text: "2O", enabled: true } }), TE.UI.COLORS.ERR.join(","), "red on an error");
+eq(painted({}), TE.FieldPaint.COLORS.OK.join(","), "green when ready");
+eq(painted({ etOverlap: { text: "2O", enabled: true } }), TE.FieldPaint.COLORS.ERR.join(","), "red on an error");
 
 console.log("\n=== equal panels share a row ===");
 var t5 = summary({ etCount: { text: "5", enabled: true } });

@@ -15,6 +15,10 @@ function load(rel) { eval.call(global, fs.readFileSync(path.join(__dirname, ".."
 global.TE = TE;
 load("src/locale.js");
 load("src/lib/utils.js");
+load("../shared/lib/numbers.js");
+global.buildNumbers(TE);
+load("../shared/lib/field_paint.js");
+global.buildFieldPaint(TE);
 load("../shared/lib/ui_state.js");
 global.buildUIState(TE);
 load("src/config.js");
@@ -164,6 +168,18 @@ var rNaN = refs(), sNaN = TE.Config.getDefaults();
 sNaN.overlap = NaN;
 TE.UI.apply(rNaN, sNaN);
 eq(rNaN.etOverlap.text, "", "the overlap field is empty, and the check will name it");
+
+console.log("\n=== a number comes back with the decimal comma (audit N6) ===");
+// Typed "2,5", stored 2.5: the field used to show "2.5" the next time, and
+// the operator could think the comma does not work. Unrounded: a line of
+// 0,25 pt must not become 0,3 the way the Result rounds to tenths.
+var rDec = refs(), sDec = TE.Config.getDefaults();
+sDec.overlap = 2.5; sDec.lineWidth = 0.25; sDec.addTop = 40;
+TE.UI.apply(rDec, sDec);
+eq(rDec.etOverlap.text, "2,5", "2.5 in the overlap field reads 2,5");
+eq(rDec.etLineW.text, "0,25", "0.25 pt stays 0,25, not rounded");
+eq(rDec.etAddTop.text, "40", "a whole number has no comma");
+eq(TE.UI.collect(rDec).overlap, 2.5, "and reads back as the same number");
 
 console.log("\n=== a stored null takes the default ===");
 // A field left with a typo where the run does not use it is saved as NaN,

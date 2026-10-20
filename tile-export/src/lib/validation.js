@@ -88,8 +88,8 @@ TE.Validate = {
         overlapPt = TE.Utils.toDoc(Number(s.overlap) || 0, s);
         if (tiles.length > 1 && overlapPt >= shortest - eps) {
             errors.push(TE.L.format(TE.L.ERR_OVERLAP_BIG,
-                TE.Utils.formatMM(Number(s.overlap), TE.L.DECIMAL),
-                TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DECIMAL)));
+                TE.Utils.formatMM(Number(s.overlap), TE.L.DEC_SEP),
+                TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DEC_SEP)));
         }
 
         // Zünd: the print mask reaches a bleed past the cut, and on the OUTER
@@ -116,7 +116,7 @@ TE.Validate = {
         // only rasterises nothing.
         if (s.exportMode === "raster" && Number(s.rasterDPI) < TE.Config.RASTER_DPI_MIN) {
             exportErrors.push(TE.L.format(TE.L.ERR_DPI_MIN,
-                TE.Utils.formatMM(Number(s.rasterDPI), TE.L.DECIMAL), TE.Config.RASTER_DPI_MIN));
+                TE.Utils.formatMM(Number(s.rasterDPI), TE.L.DEC_SEP), TE.Config.RASTER_DPI_MIN));
         }
 
         // Panel must fit an Illustrator artboard once the output scale applies.
@@ -133,9 +133,9 @@ TE.Validate = {
             h = (t[1] - t[3]) * k;
             if (w > ctx.maxArtboard || h > ctx.maxArtboard) {
                 exportErrors.push(TE.L.format(TE.L.ERR_AB_TOO_BIG, tiles[i].index,
-                    TE.Utils.formatMM(TE.Utils.pt2mm(w), TE.L.DECIMAL),
-                    TE.Utils.formatMM(TE.Utils.pt2mm(h), TE.L.DECIMAL),
-                    TE.Utils.formatMM(TE.Utils.pt2mm(ctx.maxArtboard), TE.L.DECIMAL)));
+                    TE.Utils.formatMM(TE.Utils.pt2mm(w), TE.L.DEC_SEP),
+                    TE.Utils.formatMM(TE.Utils.pt2mm(h), TE.L.DEC_SEP),
+                    TE.Utils.formatMM(TE.Utils.pt2mm(ctx.maxArtboard), TE.L.DEC_SEP)));
                 break;
             }
         }
@@ -148,8 +148,8 @@ TE.Validate = {
                 w = TE.Utils.fromDoc(t[2] - t[0], s);
                 if (w > Number(ctx.mediaWidth) + eps) {
                     warnings.push(TE.L.format(TE.L.WARN_MEDIA,
-                        TE.Utils.formatMM(w, TE.L.DECIMAL),
-                        TE.Utils.formatMM(Number(ctx.mediaWidth), TE.L.DECIMAL)));
+                        TE.Utils.formatMM(w, TE.L.DEC_SEP),
+                        TE.Utils.formatMM(Number(ctx.mediaWidth), TE.L.DEC_SEP)));
                     break;
                 }
             }
@@ -174,8 +174,8 @@ TE.Validate = {
         var have = TE.Utils.fromDoc(overhangPt, s);
         if (add > have + TE.Config.OVERHANG_TOLERANCE_MM) {
             errors.push(TE.L.format(TE.L.ERR_ADD_OVERHANG, edge,
-                TE.Utils.formatMM(add, TE.L.DECIMAL),
-                TE.Utils.formatMM(have, TE.L.DECIMAL)));
+                TE.Utils.formatMM(add, TE.L.DEC_SEP),
+                TE.Utils.formatMM(have, TE.L.DEC_SEP)));
         }
     },
 
@@ -195,10 +195,10 @@ TE.Validate = {
         var have = TE.Utils.fromDoc(overhangPt, s);
         if (add + bleed > have + TE.Config.OVERHANG_TOLERANCE_MM) {
             out.push(TE.L.format(TE.L.ERR_BLEED_OVERHANG,
-                TE.Utils.formatMM(bleed, TE.L.DECIMAL), edge,
-                TE.Utils.formatMM(add, TE.L.DECIMAL),
-                TE.Utils.formatMM(add + bleed, TE.L.DECIMAL),
-                TE.Utils.formatMM(have, TE.L.DECIMAL)));
+                TE.Utils.formatMM(bleed, TE.L.DEC_SEP), edge,
+                TE.Utils.formatMM(add, TE.L.DEC_SEP),
+                TE.Utils.formatMM(add + bleed, TE.L.DEC_SEP),
+                TE.Utils.formatMM(have, TE.L.DEC_SEP)));
         }
     },
 
@@ -245,8 +245,8 @@ TE.Validate = {
         var tpl = { overlap: TE.L.ERR_MARKS_OVERLAP, orient: TE.L.ERR_MARKS_ORIENT,
                     outside: TE.L.ERR_MARKS_OUTSIDE }[c.type];
         return TE.L.format(tpl, c.index,
-            TE.Utils.formatMM(c.dist, TE.L.DECIMAL),
-            TE.Utils.formatMM(Number(s.markSizeZ), TE.L.DECIMAL));
+            TE.Utils.formatMM(c.dist, TE.L.DEC_SEP),
+            TE.Utils.formatMM(Number(s.markSizeZ), TE.L.DEC_SEP));
     },
 
     /**

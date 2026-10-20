@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Draw — spot colour, trim line, panel artboards
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Doc, TE.L, TE.Utils
+// Depends on: TE.Config, TE.Doc, TE.L, TE.Registration, TE.Utils
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -107,34 +107,6 @@ TE.Draw = {
 
 
     /**
-     * Name of the registration swatch, found by TYPE. The name is localized —
-     * "[Registrační]" on a Czech install — and index 1, where registration
-     * sits in every document measured, is not trusted: without registration
-     * there, swatches[1] is White and marks would be drawn invisible to the
-     * cutter's camera. With no registration swatch the English default comes
-     * back; it names nothing on a Czech install, so resolveMarkColor falls
-     * through to 100 % K instead of a neighbouring swatch. Same check as
-     * grommet-marks and zund-summa-marks.
-     * @param {Document} doc - Document to read from.
-     * @returns {string} The registration swatch name.
-     */
-    getRegistrationName: function (doc) {
-        try {
-            var sw = doc.swatches;
-            for (var i = 0; i < sw.length; i++) {
-                var c = sw[i].color;
-                if (c && c.typename === "SpotColor" && c.spot &&
-                        c.spot.colorType === ColorModel.REGISTRATION) {
-                    return sw[i].name;
-                }
-            }
-        } catch (e) {
-            TE.Utils.log("getRegistrationName: swatches unreadable: " + e.message);
-        }
-        return "[Registration]";
-    },
-
-    /**
      * Colours offerable for registration marks: registration first, then the
      * document's own spot colours. System spots are bracketed and skipped —
      * registration is already in the list.
@@ -142,7 +114,7 @@ TE.Draw = {
      * @returns {Array} Swatch names.
      */
     listMarkColors: function (doc) {
-        var names = [this.getRegistrationName(doc)];
+        var names = [TE.Registration.name(doc)];
         var i, j, n, dup;
         try {
             for (i = 0; i < doc.spots.length; i++) {
@@ -176,7 +148,7 @@ TE.Draw = {
      * @returns {Object|null} {name, cyan, magenta, yellow, black} or null.
      */
     readSpotDef: function (doc, name) {
-        if (!name || name === this.getRegistrationName(doc) || name.charAt(0) === "[") {
+        if (!name || name === TE.Registration.name(doc) || name.charAt(0) === "[") {
             return null;
         }
         var i, sp, c;
@@ -238,10 +210,10 @@ TE.Draw = {
             }
         }
         try {
-            return doc.swatches.getByName(name || this.getRegistrationName(doc)).color;
+            return doc.swatches.getByName(name || TE.Registration.name(doc)).color;
         } catch (e2) {
             try {
-                return doc.swatches.getByName(this.getRegistrationName(doc)).color;
+                return doc.swatches.getByName(TE.Registration.name(doc)).color;
             } catch (e3) {
                 var k = new CMYKColor();
                 k.black = 100;

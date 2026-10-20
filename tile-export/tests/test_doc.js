@@ -103,45 +103,5 @@ var gCheck = TE.Doc.readGuides(dCheck, "horizontal");
 assert(gCheck.positions.length === 1 && gCheck.positions[0] === 400, "a panel's guide frame is not a seam");
 assert(TE.Doc.findCheckLayer(dCheck) === checkRoot, "the check layer is found by its name");
 
-console.log("\n=== the drawing scale lives in the document's XMP (1.1.0) ===");
-// What Illustrator writes, trimmed to its shape: one rdf:RDF holding one or
-// more rdf:Description elements.
-var XMP = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
-    + '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreatorTool>Adobe Illustrator</xmp:CreatorTool>'
-    + "</rdf:Description></rdf:RDF></x:xmpmeta>";
-assert(TE.Doc.readDrawingScale(XMP) === null, "a document never run through 1.1.0 has no scale");
-var x10 = TE.Doc.writeDrawingScale(XMP, 10);
-assert(TE.Doc.readDrawingScale(x10) === 10, "written as 10, read back as 10");
-assert(x10.indexOf(TE.Config.xmpNamespace) !== -1, "under tile-export's own namespace");
-assert(x10.indexOf("xmp:CreatorTool") !== -1, "the rest of the packet is kept");
-var x125 = TE.Doc.writeDrawingScale(x10, 12.5);
-assert(TE.Doc.readDrawingScale(x125) === 12.5, "rewriting replaces the value");
-assert(x125.split("te:drawingScale>").length === 3, "and does not add a second one");
-// An XMP toolkit may store a simple property as an attribute instead.
-var xAttr = XMP.replace('<rdf:Description rdf:about=""',
-    '<rdf:Description rdf:about="" xmlns:te="' + TE.Config.xmpNamespace + '" te:drawingScale="20"');
-assert(TE.Doc.readDrawingScale(xAttr) === 20, "the attribute form is read too");
-assert(TE.Doc.readDrawingScale(TE.Doc.writeDrawingScale(xAttr, 5)) === 5, "and rewritten in place");
-assert(TE.Doc.writeDrawingScale("<x:xmpmeta/>", 10) === null, "no RDF to write into: nothing written");
-assert(TE.Doc.readDrawingScale(XMP.replace("</rdf:RDF>",
-    '<rdf:Description xmlns:te="' + TE.Config.xmpNamespace + '"><te:drawingScale>0</te:drawingScale>'
-    + "</rdf:Description></rdf:RDF>")) === null,
-    "a zero scale counts as none");
-// Illustrator re-serializes the packet it is given: the value moves into its
-// own description and the prefix "te" may come back renamed (measured
-// 2026-10-11, AI 30.8.2: "te_1_"). The namespace is what identifies it.
-var XMP_AI = XMP.replace('xmlns:xmp="http://ns.adobe.com/xap/1.0/"',
-    'xmlns:xmp="http://ns.adobe.com/xap/1.0/"\n            xmlns:te_1_="' + TE.Config.xmpNamespace + '"')
-    .replace("</xmp:CreatorTool>", "</xmp:CreatorTool>\n         <te_1_:drawingScale>10</te_1_:drawingScale>");
-assert(TE.Doc.readDrawingScale(XMP_AI) === 10, "a renamed prefix is read through its namespace");
-var xAi = TE.Doc.writeDrawingScale(XMP_AI, 12.5);
-assert(TE.Doc.readDrawingScale(xAi) === 12.5, "and rewritten");
-assert(xAi.split("drawingScale>").length === 3, "in place, without a second value beside it");
-var xOther = XMP.replace("</rdf:RDF>", '<rdf:Description xmlns:foo="http://example.com/other/">'
-    + "<foo:drawingScale>7</foo:drawingScale></rdf:Description></rdf:RDF>");
-assert(TE.Doc.readDrawingScale(xOther) === null, "another namespace's drawingScale is not ours");
-assert(TE.Doc.readDrawingScale(TE.Doc.writeDrawingScale(xOther, 4)) === 4, "and writing ours leaves it be");
-assert(TE.Doc.readDrawingScale(null) === null, "an unreadable packet counts as none");
-
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: Entry point — IIFE, error boundary, two-phase run
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Doc, TE.Draw, TE.Export, TE.Grid, TE.L,
-//             TE.Storage, TE.UI, TE.Utils, TE.Validate
+// Depends on: TE.Config, TE.Doc, TE.Draw, TE.DrawingScale, TE.Export,
+//             TE.Grid, TE.L, TE.Storage, TE.UI, TE.Utils, TE.Validate
 // ------------------------------------------------------------------------
 (function (TE) {
     try {
@@ -58,7 +58,7 @@
             // Without the extension: the {doc} of the file names.
             docName: String(doc.name).replace(/\.[^.]+$/, ""),
             // The scale this document was last run at, null for a new one.
-            drawingScale: TE.Doc.loadDrawingScale(doc),
+            drawingScale: TE.DrawingScale.load(doc),
             spotNames: spotNames,
             contourSpots: contourSpots,
             markColors: TE.Draw.listMarkColors(doc),
@@ -81,7 +81,7 @@
         var s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
              || res.wrapper.presets[res.wrapper.activePreset];
         // The document remembers its drawing scale for the next run (1.1.0).
-        TE.Doc.saveDrawingScale(doc, s.scaleN);
+        TE.DrawingScale.save(doc, s.scaleN);
 
         // --- phase 1: rebuild the panels from the clean artboard -------------
         // Mark colour definition, read once from the source document so each

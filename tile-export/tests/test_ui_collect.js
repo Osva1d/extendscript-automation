@@ -11,6 +11,10 @@ var TE = {};
 global.app = { documents: { length: 1 }, activeDocument: { scaleFactor: 1 }, locale: "cs_CZ" };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "numbers.js"), "utf8"));
+buildNumbers(TE);
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "field_paint.js"), "utf8"));
+buildFieldPaint(TE);
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8"));
 
@@ -95,7 +99,7 @@ var ui = fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8");
 var bare = ui.match(/(?<![\w.])Number\(\s*r\.et\w+\.text\s*\)/g) || [];
 eq(bare.length, 0, "collect() parses every field (found: " + bare.join(", ") + ")");
 var collectSrc = ui.slice(ui.indexOf("    collect: function"), ui.indexOf("    apply: function"));
-eq(/parseNumber\([^)]*\)\s*\|\|/.test(collectSrc) || /toNumber/.test(collectSrc), false,
+eq(/Numbers\.parse\([^)]*\)\s*\|\|/.test(collectSrc) || /toNumber/.test(collectSrc), false,
     "and no field hides a typo behind a default (audit P1)");
 
 console.log("\n=== N20: the PDF preset list never names a preset Illustrator lacks ===");
@@ -144,8 +148,8 @@ eq(/function current\(\) \{ return self\.presetValues\(self\.collect\(refs\)\); 
 eq(/etScaleN = this\.addRow\(pDoc, l\.LBL_SCALE, ctx\.drawingScale \|\| 1,/.test(ui), true,
     "the field starts at the document's scale, 1:1 when it has none");
 var mainSrc = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
-eq(/drawingScale:\s*TE\.Doc\.loadDrawingScale\(doc\)/.test(mainSrc), true, "main.js reads it before the dialog");
-eq(/TE\.Doc\.saveDrawingScale\(doc, s\.scaleN\)/.test(mainSrc), true, "and stores it after a confirmed run");
+eq(/drawingScale:\s*TE\.DrawingScale\.load\(doc\)/.test(mainSrc), true, "main.js reads it before the dialog");
+eq(/TE\.DrawingScale\.save\(doc, s\.scaleN\)/.test(mainSrc), true, "and stores it after a confirmed run");
 
 console.log("\n=== 1.1.0: raster output is out of the dialog ===");
 // The shop rasterises in Photoshop; Illustrator's raster is still to be

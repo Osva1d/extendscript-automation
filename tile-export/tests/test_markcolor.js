@@ -11,6 +11,8 @@ var TE = {};
 global.app = { documents: { length: 1 }, activeDocument: { scaleFactor: 1 } };
 global.ColorModel = { SPOT: "SPOT", REGISTRATION: "REGISTRATION" };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "registration.js"), "utf8"));
+buildRegistration(TE);
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
 
@@ -46,21 +48,12 @@ function mockDoc(spots, swatchNames) {
     };
 }
 
-console.log("\n=== getRegistrationName ===");
-// Found by type: the name is LOCALIZED and index 1 is not trusted.
-var czDoc = mockDoc([], ["Nic", "[Registrační]", "cut"]);
-assert(TE.Draw.getRegistrationName(czDoc) === "[Registrační]",
-    "bere swatches[1], nespoléhá na anglický název");
-var enDoc = mockDoc([], ["None", "[Registration]"]);
-assert(TE.Draw.getRegistrationName(enDoc) === "[Registration]", "a v angličtině taky");
-assert(TE.Draw.getRegistrationName({}) === "[Registration]",
-    "dokument bez swatchů nespadne, vrátí anglický default");
+console.log("\n=== registration found by type (shared/lib/registration.js) ===");
+// The name is LOCALIZED and index 1 is not trusted; the lookup itself is
+// tested in shared/tests. The mark list starts with what it finds.
 var movedDoc = mockDoc([], ["Nic", "Bílá", "Černá", "[Registrační]"]);
-assert(TE.Draw.getRegistrationName(movedDoc) === "[Registrační]",
-    "registrace jinde než na indexu 1 se najde podle typu, ne Bílá z indexu 1");
-var noRegDoc = mockDoc([], ["Nic", "Bílá", "Černá"]);
-assert(TE.Draw.getRegistrationName(noRegDoc) === "[Registration]",
-    "bez registrace vrátí anglický default, ne Bílou");
+assert(TE.Draw.listMarkColors(movedDoc)[0] === "[Registrační]",
+    "the mark colours lead with registration found by type, not White at index 1");
 
 console.log("\n=== listMarkColors ===");
 var d = mockDoc(

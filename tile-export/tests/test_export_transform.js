@@ -107,7 +107,7 @@ assert(!/getSF|getEffectiveSF|activeDocument/.test(exBody),
     "exportTile takes every scale from its context");
 var drSrc = code(fs.readFileSync(path.join(__dirname, "..", "src", "draw.js"), "utf8"));
 var dlBody = drSrc.slice(drSrc.indexOf("drawTileLine: function"),
-                         drSrc.indexOf("getRegistrationName: function"));
+                         drSrc.indexOf("listMarkColors: function"));
 assert(!/getSF|getEffectiveSF|activeDocument/.test(dlBody),
     "drawTileLine takes its scale as an argument");
 
