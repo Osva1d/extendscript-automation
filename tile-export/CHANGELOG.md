@@ -6,12 +6,50 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 
 ## [1.2.0] — nevydáno
 
+### Přidáno
+
+- **Průběh exportu.** Okno ukazuje, který plát se exportuje a kolik zbývá.
+  **Podržením klávesy Esc** se export zastaví po plátu, který právě běží.
+- **Souhrn po exportu** místo hlášky: cílová složka, kolik plátů se
+  exportovalo, kolik se přeskočilo a kolik skončilo chybou (červeně), pod tím
+  podrobnosti. Zastavený export nikdy nehlásí, že vše proběhlo bez chyb.
+- **Po dokončení otevřít cílovou složku** — zaškrtávátko vlevo v řádku
+  tlačítek, ve výchozím stavu vypnuté.
+
 ### Změněno
 
+- **Přeskočit hotové výstupy přeskočí jen výstup novější než uložený
+  pracovní dokument i umístěné PDF**, jako Batch Relink & Export. Starší
+  výstup patří jiné zakázce se stejným názvem nebo dřívějšímu stavu této
+  a vytvoří se znovu; souhrn to u plátu napíše. U dokumentu, který ještě
+  nebyl uložen, se nepřeskočí nic. Dřív stačil jakýkoli soubor se stejným
+  názvem.
+- **Cílová složka se kontroluje v dialogu.** Prázdná nebo neexistující složka
+  se ukáže ve Výsledku a export zašedne, Jen pláty zůstanou. Dřív se na to
+  přišlo až po zavření dialogu, když už vznikly kontrolní pláty.
+- **[Výchozí] předvybere PDF preset [Kvalitní tisk]**, jako Batch Relink &
+  Export, ne první preset Illustratoru.
+- **Uložit u [Výchozí] otevře Uložit jako…**, jako v Grommet Marks a Zünd Summa
+  Marks; dřív bylo šedé. Prázdný název předvolby dialog odmítne.
+- **Texty jako v ostatních nástrojích:** dialog vyká, za popiskem pole je
+  dvojtečka, Zünd pole se jmenují jako v Zünd Summa Marks — Mezera od grafiky,
+  Max. rozteč značek, Odsazení orientační značky — a hlášky mluví
+  o orientační značce. Názvy v hláškách stojí v „…“, chyby a upozornění po
+  běhu začínají CHYBA: a UPOZORNĚNÍ:.
+- **Užší dialog, 1022 × 836 px** (1.1.0: 1178 px na šířku). Volby umístění
+  přelepu jsou pod sebou, dostupný spad na dvou řádcích a dlouhý název
+  předvolby už dialog nerozšíří.
 - Desetinné číslo se do pole vrací s čárkou, jak ho píšete: zapsaných
   `2,5` se při dalším otevření, po načtení předvolby i po ↺ ukáže zase jako
   `2,5`, dřív jako `2.5`. Nezaokrouhluje se — linka 0,25 pt zůstane 0,25.
 - Nadpisy v tomto přehledu změn jsou česky, jako u ostatních nástrojů.
+
+### Opraveno
+
+- **Linky kontrolních plátů jsou vždy plné.** S vybranou čárkovanou cestou
+  vyšly linky i řez Zünd v kontrolních plátech čárkované, se zaoblenými konci
+  — nová cesta přebírá styl tahu, který nastavil výběr. Export se netýkal,
+  kreslí do nového dokumentu.
 
 ## [1.1.0] — 2026-10-17
 
