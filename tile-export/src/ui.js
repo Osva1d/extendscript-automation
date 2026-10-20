@@ -10,7 +10,10 @@ TE.UI = {
     // Shared metrics — the dialog's alignment grid in one place.
     // Every entry is a [deviation] from native sizing and says why.
     M: {
-        LABEL_COL: 150,   // label column; every row label shares this right edge
+        // px; the label column, every row label shares its right edge. The
+        // longest label, "Odsazení orientační značky:", measures 164 px; the
+        // longest English one 140 (measured 2026-10-20, colons included)
+        LABEL_COL: 165,
         NUM_FIELD:   7,   // characters, not px — numeric fields scale with locale
         PATH_FIELD: 26,   // characters; output path needs to show a usable tail
         BROWSE_MAX:  90,  // px cap so fill slack goes to the path field, not the button
@@ -806,14 +809,15 @@ TE.UI = {
         };
 
         btnSaveAs.onClick = function () {
-            var raw = prompt(l.ASK_PRESET_NAME, "");
-            if (raw === null || raw === "") { return; }
+            var raw = prompt(l.PROMPT_SAVE_AS, "");
+            if (raw === null) { return; }
+            if (!/\S/.test(raw)) { alert(l.ERR_ENTER_NAME); return; }
             if (!TE.UIState.validatePresetName(raw)) {
                 alert(l.ERR_RESERVED_NAME);
                 return;
             }
             var res = TE.UIState.saveAs(pData, raw, current(), function (name) {
-                return confirm(l.format(l.ASK_PRESET_OVERWRITE, name));
+                return confirm(l.format(l.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!res.ok) { return; }
             snapshot();
@@ -825,7 +829,7 @@ TE.UI = {
         btnDel.onClick = function () {
             var name = pData.activePreset;
             if (name === c.PRESET_KEY_DEFAULT) { return; }   // disabled there anyway
-            if (!confirm(l.format(l.ASK_PRESET_DELETE, name))) { return; }
+            if (!confirm(l.format(l.CONFIRM_DELETE_PRESET, name))) { return; }
             var res = TE.UIState.deleteActive(pData);
             if (!res.ok) { return; }
             self.apply(refs, pData.presets[c.PRESET_KEY_DEFAULT]);

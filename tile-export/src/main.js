@@ -22,12 +22,12 @@
 
         var clean = TE.Doc.findCleanArtboard(doc);
         if (!clean) {
-            alert(TE.L.format(TE.L.ERR_NO_CLEAN_AB, TE.Config.tilePrefix));
+            alert(TE.L.ERROR_PREFIX + TE.L.format(TE.L.ERR_NO_CLEAN_AB, TE.Config.tilePrefix));
             return;
         }
 
         var graphics = TE.Doc.readGraphics(doc);
-        if (graphics.length === 0) { alert(TE.L.ERR_NO_GRAPHIC); return; }
+        if (graphics.length === 0) { alert(TE.L.ERROR_PREFIX + TE.L.ERR_NO_GRAPHIC); return; }
         var gBounds = graphics[0].geometricBounds;
 
         // Spot names feed the dialog's cut colour list; contourSpots are the
@@ -77,7 +77,7 @@
         var res = TE.UI.show(pData, ctx);
         if (!res || !res.action) { return; }
 
-        if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS); }
+        if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS + " " + TE.L.RUN_CONTINUES); }
         var s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
              || res.wrapper.presets[res.wrapper.activePreset];
         // The document remembers its drawing scale for the next run (1.1.0).
@@ -101,7 +101,7 @@
         if (res.action === "export" && s.zundMode) {
             var conflict = TE.Validate.markConflict(tiles, ctx.validation, s);
             if (conflict) {
-                alert(TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
+                alert(TE.L.ERROR_PREFIX + TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
                 return;
             }
         }
@@ -121,14 +121,14 @@
 
         var msg = [];
         if (guides.hiddenCount > 0) {
-            msg.push(TE.L.format(TE.L.WARN_GUIDE_HIDDEN, guides.hiddenCount));
+            msg.push(TE.L.WARN_PREFIX + TE.L.format(TE.L.WARN_GUIDE_HIDDEN, guides.hiddenCount));
         }
         // Too big to sit beside the original on the canvas, the check panels
         // are left out. Panels only has nothing else to show; the export does
         // not need them.
         if (!check.fits) {
-            if (res.action === "tiles") { alert(TE.L.ERR_CHECK_NO_ROOM); return; }
-            msg.push(TE.L.WARN_CHECK_SKIPPED);
+            if (res.action === "tiles") { alert(TE.L.ERROR_PREFIX + TE.L.ERR_CHECK_NO_ROOM); return; }
+            msg.push(TE.L.WARN_PREFIX + TE.L.WARN_CHECK_SKIPPED);
         }
 
         if (res.action === "tiles") {
@@ -146,7 +146,7 @@
         // panel even though the panels overlap.
         var outFolder = new Folder(s.outputDir);
         if (!s.outputDir || !outFolder.exists) {
-            alert(TE.L.format(TE.L.ERR_OUT_DIR, s.outputDir));
+            alert(TE.L.ERROR_PREFIX + TE.L.format(TE.L.ERR_OUT_DIR, s.outputDir));
             return;
         }
 
@@ -209,6 +209,6 @@
         alert(msg.join("\n"));
 
     } catch (e) {
-        alert(TE.L.ERR_CRITICAL + e.message + (e.line ? ("\nLine: " + e.line) : ""));
+        alert(TE.L.format(TE.L.ERR_CRITICAL, e.message, String(e.line || "?")));
     }
 })(TE);

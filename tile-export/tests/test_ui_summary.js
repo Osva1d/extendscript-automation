@@ -225,7 +225,7 @@ has(rPdf.stStatus.text, "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."
 eq(rPdf.btnExport.enabled === false && rPdf.btnTiles.enabled === true, true, "it stops the export only");
 ctx.contourSpots = ["Cut"];
 var tzc = summary(zund({}));
-has(tzc, "⚠ Dokument má cesty v barvě Cut. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
+has(tzc, "⚠ Dokument má cesty v barvě „Cut“. Tvarový ořez v této verzi ještě není", "a contour is announced as not cut yet");
 has(tzc, "— použije se rovný ořez.", "a contour is not cut: the straight cut is used");
 has(tzc, "rovný ořez v barvě „Cut“.", "and the details still name the straight cut");
 ctx.contourSpots = [];
@@ -248,7 +248,7 @@ eq(rOk.stCalc.text.indexOf("✗") === -1 && rOk.btnExport.enabled, true,
     "the default Zünd job has no conflict and can be exported");
 var rNar = refs(zund({ rbMode: widthMode, etWidth: { text: "1460", enabled: true }, etOverlap: { text: "0" } }));
 TE.UI.refresh(null, rNar, ctx);
-has(rNar.stCalc.text, "✗ Plát 3: orientační bod by se dotýkal jiné značky nebo ji překrýval (středy 0 mm od sebe, průměr 5 mm)",
+has(rNar.stCalc.text, "✗ Plát 3: orientační značka by se dotýkala jiné značky nebo ji překrývala (středy 0 mm od sebe, průměr 5 mm)",
     "the message names the narrow panel, the distance and the diameter");
 eq(rNar.btnExport.enabled, false, "and the export is blocked");
 eq(rNar.btnTiles.enabled, true, "Panels only draws no marks and stays available");
@@ -304,10 +304,10 @@ ctx.guidesByDirection = { horizontal: { positions: [] }, vertical: { positions: 
 console.log("\n=== N40: stacked panels split the height, and the dialog says so ===");
 var r40s = refs({ rbMode: widthMode });
 TE.UI.refresh(null, r40s, ctx);
-eq(r40s.stWidthLbl.text, "Šířka plátu", "Svisle: the field is the panel width");
+eq(r40s.stWidthLbl.text, "Šířka plátu:", "Svisle: the field is the panel width");
 var r40v = refs({ rbDir: stacked, rbMode: widthMode });
 TE.UI.refresh(null, r40v, ctx);
-eq(r40v.stWidthLbl.text, "Výška plátu", "Vodorovně: the field is the panel height");
+eq(r40v.stWidthLbl.text, "Výška plátu:", "Vodorovně: the field is the panel height");
 eq(r40v.etWidth.helpTip.indexOf("Výška plátu načisto") === 0, true, "and so is its tooltip");
 // The reported case: 1000 mm on a graphic 1000 mm tall is one panel.
 has(summary({ rbDir: stacked, rbMode: widthMode, etWidth: { text: "1000", enabled: true } }),
@@ -381,7 +381,7 @@ has(summary({ etPattern: { text: "{clean}_{adds}", enabled: true }, cbEqual: { v
     "\n1017x1000mm_1027x1080mm.pdf", "equal panels of 1016,7 mm round to whole millimetres");
 var rSlash = refs({ etPattern: { text: "zakazka/{n}", enabled: true } });
 TE.UI.refresh(null, rSlash, ctx);
-has(rSlash.stCalc.text, "✗ Název souboru zakazka/01 obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
+has(rSlash.stCalc.text, "✗ Název souboru „zakazka/01“ obsahuje lomítko nebo dvojtečku, které macOS čte jako složku.",
     "a slash in the name is named");
 eq(rSlash.btnExport.enabled === false && rSlash.btnTiles.enabled === true, true,
     "it stops the export only: Panels only writes no file");
