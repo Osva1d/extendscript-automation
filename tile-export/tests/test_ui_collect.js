@@ -42,7 +42,7 @@ function refs(textOverrides) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(d.rasterDPI),
         cbLine: cb(true), etSpot: et(d.lineSpot), etLineW: et(d.lineWidth),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et(d.namePattern),
-        cbSkip: cb(true), rbOutType: null
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null
     };
     var k;
     for (k in textOverrides) { if (textOverrides.hasOwnProperty(k)) { r[k].text = textOverrides[k]; } }
@@ -253,6 +253,23 @@ TE.UI.selectItem(marks, "Bílá", TE.UI.sameMarkColor);
 eq(marks.selection.text === "Bílá  (chybí)" && TE.UI.itemValue(marks) === "Bílá", true, "a missing one shows as (chybí)");
 eq(TE.UI.sameMarkColor("[Registrační]", "Spot 1") || TE.UI.sameMarkColor("Spot 1", "[Registration]"), false,
     "registration and a spot colour are not the same");
+
+console.log("\n=== 1.2.0: open the output folder when done ===");
+var rOpen = refs({});
+rOpen.cbOpen.value = true;
+eq(TE.UI.collect(rOpen).openOutput, true, "the option is collected");
+eq(TE.Config.getDefaults().openOutput, false, "and off unless asked for");
+var mainRun = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+eq(/if \(s\.openOutput\) \{\s*try \{ outFolder\.execute\(\); \}/.test(mainRun), true, "main.js opens the folder only when asked");
+
+console.log("\n=== 1.2.0: the export shows progress, stops on Esc, ends with a summary ===");
+// The loop needs Illustrator; check that it is wired as designed (audit P6, P7, P2).
+var loop = mainRun.slice(mainRun.indexOf("TE.Progress.create("), mainRun.indexOf("TE.Summary.show("));
+eq(/if \(progress\.isCancelled\(\)\) \{ stopped = true; break; \}/.test(loop), true, "held Esc stops between panels");
+eq(/progress\.close\(\);/.test(loop) && /\} finally \{/.test(loop), true, "the palette closes whatever happens");
+eq(/state === "fresh"\) \{ skipped\+\+; continue; \}/.test(loop) && /panelOutputState\(/.test(loop), true,
+    "only a finished output is skipped");
+eq(/TE\.Summary\.show\(/.test(mainRun) && !/SUMMARY_DONE/.test(mainRun), true, "the run ends with the summary window");
 
 console.log("\n=== Save on [Default] opens Save As (canon §12.4) ===");
 // [Default] is rebuilt from the code on every open, so saving over it would

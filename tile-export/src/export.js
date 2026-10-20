@@ -167,20 +167,62 @@ TE.Export = {
     },
 
     /**
-     * Whether this panel's output file is already on disk.
-     * Lets a run that died on panel 9 of 12 resume without redoing the eight
-     * already finished — same crash-recovery behaviour as batch-relink-export.
-     * @param {Object} tile - Panel to check.
-     * @param {Object} ctx - Export context.
-     * @param {Object} s - Settings.
-     * @returns {boolean} True when the output exists.
+     * Whether a panel's outputs count as finished. PURE FUNCTION.
+     * A run that died on panel 9 of 12 resumes without redoing the eight
+     * finished ones. An output older than the working document or the
+     * placed PDF belongs to another job with the same name, or to an
+     * earlier state of this one, and is made again — the rule of
+     * batch-relink-export (B8, audit P2). With no date for the inputs, a
+     * working document never saved, nothing counts as finished.
+     * @param {Array} outputs - Each output file's modified Date, or null
+     *        when it is missing.
+     * @param {Date|null} inputsModified - The later of the two inputs' dates.
+     * @returns {string} "missing", "fresh" or "stale".
      */
-    outputExists: function (tile, ctx, s) {
+    outputState: function (outputs, inputsModified) {
+        var i;
+        for (i = 0; i < outputs.length; i++) {
+            if (!outputs[i]) { return "missing"; }
+        }
+        if (!inputsModified) { return "stale"; }
+        for (i = 0; i < outputs.length; i++) {
+            if (!(outputs[i].getTime() > inputsModified.getTime())) { return "stale"; }
+        }
+        return "fresh";
+    },
+
+    /**
+     * The state of a panel's outputs on disk, for "Přeskočit hotové
+     * výstupy". Zünd writes two files; a panel is finished only when both
+     * are.
+     * @param {Object} tile - Panel to check.
+     * @param {Object} ctx - Export context; inputsModified as outputState().
+     * @param {Object} s - Settings.
+     * @returns {string} "missing", "fresh" or "stale".
+     */
+    panelOutputState: function (tile, ctx, s) {
         var name = this.fileName(tile, ctx, s);
         var dir = ctx.outFolder.fsName + "/";
-        if (!new File(dir + name + ".pdf").exists) { return false; }
-        // Zünd writes two files; a panel is finished only when both are there.
-        return !s.zundMode || new File(dir + this.cutName(name) + ".pdf").exists;
+        var files = [new File(dir + name + ".pdf")], dates = [], i;
+        if (s.zundMode) { files.push(new File(dir + this.cutName(name) + ".pdf")); }
+        for (i = 0; i < files.length; i++) { dates.push(files[i].exists ? files[i].modified : null); }
+        return this.outputState(dates, ctx.inputsModified);
+    },
+
+    /**
+     * The later of the working document's and the placed PDF's modified
+     * dates, as saved on disk; null when either is unknown — a document
+     * never saved has no file, and its fullName throws.
+     * @param {Document} doc - The working document.
+     * @param {PlacedItem} graphic - The placed PDF.
+     * @returns {Date|null} The date, or null.
+     */
+    inputsModified: function (doc, graphic) {
+        var d = null, p = null;
+        try { d = doc.fullName.modified; } catch (e) { d = null; }
+        try { p = graphic.file.modified; } catch (e2) { p = null; }
+        if (!d || !p) { return null; }
+        return (d.getTime() > p.getTime()) ? d : p;
     },
 
     /**

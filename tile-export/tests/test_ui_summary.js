@@ -66,7 +66,7 @@ function refs(o) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
         ddPdf: { selection: null }, etOut: et("/Users/shop/out"), etPattern: et("{doc}_{n}"),
-        cbSkip: cb(true), rbOutType: null,
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
         stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },

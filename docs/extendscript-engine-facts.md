@@ -1064,6 +1064,14 @@ u nové skupiny taky ne.
 **Důsledek:** cesta ze skriptu, na jejímž vzhledu záleží, si musí
 `strokeDashes = []`, `strokeCap` a `strokeJoin` nastavit výslovně.
 
+Doměřeno 2026-10-20 (AI 30.8.2) na tile-exportu: s vybranou čárkovanou cestou
+`[12,6]` s kulatými konci a spoji vyšly ve stejném dokumentu čárkované
+i linky kontrolních plátů a řez Zünd, které `rectangle()` kreslí do
+pracovního dokumentu (oprava `TE.Draw.plainStroke`). **Nový dokument
+(`documents.add()`) začíná čistý** — `[]`, BUTTENDCAP, MITERENDJOIN — i když je
+v jiném dokumentu vybraná čárkovaná cesta; export do dočasného dokumentu se
+tedy netýká.
+
 ### Large Canvas: všechno v bodech ×`scaleFactor`, PDF s `/UserUnit`
 
 Stejná značka ve fyzicky stejném artboardu 300 × 300 mm — v normálním

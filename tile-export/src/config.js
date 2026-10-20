@@ -183,7 +183,10 @@ TE.Config = {
             // re-export the eight that are already on disk. Off unless asked
             // for (user, 2026-10-10): on, a re-export after a fix kept the
             // old files under the same names and only said "skipped".
-            skipExisting: false
+            skipExisting: false,
+            // Off unless asked for: a Finder window opening after every
+            // export would surprise whoever updates (1.2.0, audit P7).
+            openOutput: false
         };
     }
 };

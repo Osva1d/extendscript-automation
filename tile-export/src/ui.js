@@ -599,8 +599,19 @@ TE.UI = {
         stCopy.enabled = false;   // greyed — intentional, not a bug
 
         // --- Buttons ---------------------------------------------------------
-        var gBtn = w.add("group");
-        gBtn.alignment = "right";
+        // The open-folder option sits by the export it follows. A row of its
+        // own in the right column would have made the dialog taller than a
+        // laptop screen allows (836 px of about 850 with the Dock).
+        var gBtnRow = w.add("group");
+        gBtnRow.alignment = ["fill", "top"];
+        var cbOpen = gBtnRow.add("checkbox", undefined, l.CB_OPEN_AFTER);
+        cbOpen.alignment = ["left", "center"];
+        cbOpen.helpTip = l.TIP_OPEN_AFTER;
+        cbOpen.value = !!s.openOutput;
+        // In a group of its own: a row's slack is shared among all its
+        // controls, and the buttons must keep their width (engine-facts).
+        var gBtn = gBtnRow.add("group");
+        gBtn.alignment = ["right", "center"];
         var btnCancel = gBtn.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var btnTiles  = gBtn.add("button", undefined, l.BTN_TILES_ONLY);
         btnTiles.helpTip = l.TIP_TILES_ONLY;
@@ -618,7 +629,7 @@ TE.UI = {
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
             gScaleRow: rbExpScale[0].parent, gScaleOne: gScaleOne,
             cbLine: cbLine, etSpot: etSpot, etLineW: etLineW,
-            ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip,
+            ddPdf: ddPdf, etOut: etOut, etPattern: etPattern, cbSkip: cbSkip, cbOpen: cbOpen,
             rbOutType: rbOutType, gManual: gManual, gZundFields: gZundFields,
             ddCutSpot: ddCutSpot, ddMarkColor: ddMarkColor,
             etMarkSize: etMarkSize, etBleed: etBleed,
@@ -665,7 +676,7 @@ TE.UI = {
         var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
                       etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
-                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, ddPdf,
+                      etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, cbOpen, ddPdf,
                       etMarkSize, etGapInner, etMaxDist, etOrient, etBleed, ddCutSpot,
                       ddMarkColor];
         // Zünd controls are null when the panel is not built.
@@ -951,6 +962,7 @@ TE.UI = {
         s.outputDir   = r.etOut.text;
         s.namePattern = r.etPattern.text;
         s.skipExisting = r.cbSkip.value;
+        s.openOutput   = r.cbOpen.value;
         if (r.rbOutType) {
             s.zundMode    = r.rbOutType[1].value;
             s.cutSpot     = this.itemValue(r.ddCutSpot) || s.cutSpot;
@@ -1113,6 +1125,7 @@ TE.UI = {
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
+        r.cbOpen.value = !!s.openOutput;
         if (!r.rbOutType) { return; }
         r.rbOutType[0].value = !s.zundMode;
         r.rbOutType[1].value = !!s.zundMode;

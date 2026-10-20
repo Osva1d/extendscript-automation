@@ -100,8 +100,24 @@ TE.Draw = {
         p.stroked = true;
         p.strokeColor = spot;
         p.strokeWidth = 2 * sw;
+        this.plainStroke(p);
         p.name = "TE_line";
         return p;
+    },
+
+    /**
+     * A solid stroke with butt caps and mitred corners, set outright. A new
+     * path takes the document's current stroke style, and a selection
+     * changes it: with a dashed, round-capped path selected, the check
+     * panels' trim lines came out dashed (measured 2026-10-20, AI 30.8.2,
+     * audit P3; grommet-marks _plainStroke). A new document starts plain,
+     * so the export's temporary documents were not affected.
+     * @param {PathItem} p - A stroked path.
+     */
+    plainStroke: function (p) {
+        p.strokeDashes = [];
+        p.strokeCap = StrokeCap.BUTTENDCAP;
+        p.strokeJoin = StrokeJoin.MITERENDJOIN;
     },
 
 
