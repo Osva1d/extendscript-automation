@@ -101,6 +101,16 @@ var named = TE.Config.getDefaults();
 named.pdfPreset = "[PDF/X-4:2008]";
 TE.UI.apply(r, named);
 eq(r.ddPdf.selection.text, "[PDF/X-4:2008]", "a present PDF preset is selected");
+// audit P11: [Default] stands for High Quality Print in either language, as
+// in batch-relink-export, not for Illustrator's first preset.
+var rHq = refs();
+rHq.ddPdf = dd(["[Výchozí Illustratoru]", "[Kvalitní tisk]", "[PDF/X-4:2008]"], 0);
+TE.UI.apply(rHq, TE.Config.getDefaults());
+eq(rHq.ddPdf.selection.text, "[Kvalitní tisk]", "[Default] preselects [Kvalitní tisk]");
+rHq.ddPdf = dd(["[Illustrator Default]", "[High Quality Print]"], 0);
+TE.UI.apply(rHq, TE.Config.getDefaults());
+eq(rHq.ddPdf.selection.text, "[High Quality Print]", "and [High Quality Print] in English");
+eq(TE.UI.collect(rHq).pdfPreset, "[High Quality Print]", "which a run then stores by its name");
 
 console.log("\n=== 1.1.0: loading a preset keeps the document's drawing scale ===");
 // Presets saved before 1.1.0 still carry scaleN; the scale is the document's

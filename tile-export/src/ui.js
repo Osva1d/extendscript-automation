@@ -500,7 +500,7 @@ TE.UI = {
         for (pj = 0; pj < pdfItems.length; pj++) { ddPdf.add("item", pdfItems[pj]); }
         // A stored preset this Illustrator lacks shows as "(chybí)" and stops
         // the export, which could not save with it (§12.3, 2026-10-16).
-        this.selectItem(ddPdf, s.pdfPreset);
+        this.selectItem(ddPdf, s.pdfPreset || this.defaultPdfPreset(ddPdf));
 
         var gOut = pExp.add("group");
         gOut.alignment = ["fill", "top"];
@@ -688,7 +688,7 @@ TE.UI = {
         }
 
         btnBrowse.onClick = function () {
-            var f = Folder.selectDialog(l.LBL_OUTPUT);
+            var f = Folder.selectDialog(l.ERR_OUT_DIR_EMPTY);
             if (f) { etOut.text = f.fsName; refresh(); }
         };
 
@@ -751,7 +751,7 @@ TE.UI = {
             var modified = TE.UIState.isModified(shownData(), current());
             var j, key, text;
             btnRevert.enabled = modified;
-            btnSave.enabled = modified && numbersOk && (pData.activePreset !== c.PRESET_KEY_DEFAULT);
+            btnSave.enabled = modified && numbersOk;
             btnSaveAs.enabled = numbersOk;
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
             for (j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
@@ -801,6 +801,9 @@ TE.UI = {
 
         /** Overwrites the active preset. Disabled on [Default]. */
         btnSave.onClick = function () {
+            // [Default] is rebuilt from the code on every open: saving over it
+            // would last one session, so Save asks for a name instead (§12.4).
+            if (pData.activePreset === c.PRESET_KEY_DEFAULT) { btnSaveAs.onClick(); return; }
             var res = TE.UIState.save(pData, current());
             if (!res.ok) { return; }
             snapshot();
@@ -1000,6 +1003,47 @@ TE.UI = {
     },
 
     /**
+     * The PDF preset [Default] stands for: the first item naming High
+     * Quality Print in either language (TE.Config.PDF_PRESET_PATTERNS), or ""
+     * — the first item — when this Illustrator has none (audit P11).
+     * @param {Object} dd - The PDF preset dropdownlist.
+     * @returns {string} An item's text, or "".
+     */
+    defaultPdfPreset: function (dd) {
+        var pats = TE.Config.PDF_PRESET_PATTERNS, i, j;
+        for (i = 0; i < dd.items.length; i++) {
+            for (j = 0; j < pats.length; j++) {
+                if (dd.items[i].text.indexOf(pats[j]) !== -1) { return dd.items[i].text; }
+            }
+        }
+        return "";
+    },
+
+    /**
+     * Whether a folder exists. One place, so the tests can stand in for it.
+     * @param {string} path - Folder path.
+     * @returns {boolean} True when it exists.
+     */
+    folderExists: function (path) {
+        try { return new Folder(path).exists; }
+        catch (e) { TE.Utils.log("folderExists: " + e.message); return false; }
+    },
+
+    /**
+     * Why the export cannot write into this folder, or null. Checked in the
+     * dialog: an empty or a missing folder used to show only after the
+     * dialog, once the check panels were built (audit P9).
+     * @param {string} path - The output folder field.
+     * @returns {string|null} The message, or null.
+     */
+    outputDirError: function (path) {
+        var l = TE.L;
+        if (!/\S/.test(String(path || ""))) { return l.ERR_OUT_DIR_EMPTY; }
+        if (!this.folderExists(path)) { return l.format(l.ERR_OUT_DIR_MISSING, path); }
+        return null;
+    },
+
+    /**
      * The value of a list's selection: the stored value behind a "(chybí)"
      * item, else the item's text; "" with nothing selected.
      * @param {Object} dd - The dropdownlist.
@@ -1065,7 +1109,7 @@ TE.UI = {
         // a preset deleted from Illustrator shows as "(chybí)". Keeping the
         // previous selection made one preset look different depending on
         // what was loaded before it (N8).
-        this.selectItem(r.ddPdf, s.pdfPreset);
+        this.selectItem(r.ddPdf, s.pdfPreset || this.defaultPdfPreset(r.ddPdf));
         r.etOut.text = String(s.outputDir);
         r.etPattern.text = String(s.namePattern);
         r.cbSkip.value = !!s.skipExisting;
@@ -1344,6 +1388,12 @@ TE.UI = {
         } catch (err) {
             alerts.push("\u2717 " + this.describeError(err, s, mm(ext.end - ext.start)));
             ok = false;
+        }
+        // Only the export writes into the folder; Panels only does not need it.
+        var dirErr = this.outputDirError(s.outputDir);
+        if (dirErr) {
+            alerts.push("\u2717 " + dirErr);
+            exportOk = false;
         }
 
         // The status line says first whether the export can run; the details

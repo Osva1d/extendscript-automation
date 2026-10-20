@@ -46,6 +46,11 @@ TE.Config = {
     // the document lacks it: the export creates it in the output.
     CUT_SPOTS: ["Cut"],
 
+    // [Default] stores no PDF preset; the list then preselects High Quality
+    // Print, [Kvalitní tisk] in Czech, as batch-relink-export does (its
+    // presetSearchPatterns), not Illustrator's first preset (audit P11).
+    PDF_PRESET_PATTERNS: ["High Quality", "Kvalitní tisk"],
+
     // Layer names of a Zünd panel file, the same as zund-summa-marks uses
     // (its src/config.js), so a file from either tool looks the same when
     // opened. The cut layer is named after the cut colour. Not localized.

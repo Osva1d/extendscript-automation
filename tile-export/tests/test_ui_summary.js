@@ -25,6 +25,9 @@ load("src/config.js");
 load("src/grid.js");
 load("src/export.js");
 load("src/ui.js");
+// No file system here: every folder exists unless a test says otherwise.
+var folders = { missing: {} };
+TE.UI.folderExists = function (path) { return !folders.missing[path]; };
 
 var pass = 0, fail = 0, total = 0;
 function eq(got, want, msg) {
@@ -62,7 +65,7 @@ function refs(o) {
         etAddTop: et(0), etAddBottom: et(0), etAddLeft: et(0), etAddRight: et(0),
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
-        ddPdf: { selection: null }, etOut: et(""), etPattern: et("{doc}_{n}"),
+        ddPdf: { selection: null }, etOut: et("/Users/shop/out"), etPattern: et("{doc}_{n}"),
         cbSkip: cb(true), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
@@ -417,6 +420,23 @@ var firstLayout = uiSrc.indexOf("\n        w.layout.layout(true);\n");
 var presetLoad = uiSrc.indexOf("self.apply(refs, activeP)");
 eq(firstLayout > 0 && presetLoad > 0 && firstLayout < presetLoad, true,
     "the first layout comes before the active preset is applied");
+
+console.log("\n=== audit P9: the output folder is checked in the dialog ===");
+// An empty or a missing folder used to show only after the dialog, once the
+// check panels were built. Only the export needs it.
+var rNoDir = refs({ etOut: { text: "", enabled: true } });
+TE.UI.refresh(null, rNoDir, ctx);
+has(rNoDir.stCalc.text, "✗ Vyberte cílovou složku.", "an empty folder is named");
+eq(rNoDir.btnExport.enabled === false && rNoDir.btnTiles.enabled === true, true, "it stops the export, not Panels only");
+has(rNoDir.stStatus.text, "✗ Export nejde, Jen pláty ano: 1 chyba, viz níže.", "and the status line says so");
+folders.missing["/Volumes/Zakazky/old"] = true;
+var rGone = refs({ etOut: { text: "/Volumes/Zakazky/old", enabled: true } });
+TE.UI.refresh(null, rGone, ctx);
+has(rGone.stCalc.text, "✗ Cílová složka „/Volumes/Zakazky/old“ neexistuje. Vyberte jinou.", "a missing folder is named with its path");
+eq(rGone.btnExport.enabled, false, "and stops the export");
+var rDir = refs({});
+TE.UI.refresh(null, rDir, ctx);
+eq(rDir.btnExport.enabled && rDir.stCalc.text.indexOf("složk") === -1, true, "an existing folder says nothing");
 
 console.log("\n=== T6.3b: the artboard message says what is too big (N6) ===");
 // Large Canvas x10 with manual 1:10, 1:1 output: the panel is 20 m wide and

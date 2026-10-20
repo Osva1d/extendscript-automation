@@ -254,5 +254,13 @@ eq(marks.selection.text === "Bílá  (chybí)" && TE.UI.itemValue(marks) === "B�
 eq(TE.UI.sameMarkColor("[Registrační]", "Spot 1") || TE.UI.sameMarkColor("Spot 1", "[Registration]"), false,
     "registration and a spot colour are not the same");
 
+console.log("\n=== Save on [Default] opens Save As (canon §12.4) ===");
+// [Default] is rebuilt from the code on every open, so saving over it would
+// last one session. The button handlers need ScriptUI; check the source.
+var saveSrc = ui.slice(ui.indexOf("btnSave.onClick = function"), ui.indexOf("btnSaveAs.onClick = function"));
+eq(/activePreset === c\.PRESET_KEY_DEFAULT\) \{ btnSaveAs\.onClick\(\); return; \}/.test(saveSrc), true,
+    "Save on [Default] hands over to Save As");
+eq(/btnSave\.enabled = modified && numbersOk;/.test(ui), true, "and is live on [Default] once something changed");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
