@@ -194,7 +194,8 @@ TE.L = (function () {
             ERR_PDF_PRESET_MISSING: "PDF preset \"%s\" is not in this Illustrator, and the export could not save with it. Choose another preset.",
             DDL_MISSING_SUFFIX:  "(missing)",
             LBL_BLEED:           "Available bleed:",
-            INFO_BLEED_VAL:      "left %s, right %s, top %s, bottom %s mm",
+            INFO_BLEED_LR:       "left %s, right %s mm",
+            INFO_BLEED_TB:       "top %s, bottom %s mm",
             TIP_BLEED:           "How far the placed PDF reaches past the clean format on each edge: what there is for the adds and, in Zünd mode, for the bleed past the cut.",
 
             // --- presets ---
@@ -422,7 +423,8 @@ TE.L = (function () {
             ERR_PDF_PRESET_MISSING: "PDF preset „%s“ v tomto Illustratoru není a export by s ním PDF neuložil. Vyberte jiný preset.",
             DDL_MISSING_SUFFIX:  "(chybí)",
             LBL_BLEED:           "Dostupný spad:",
-            INFO_BLEED_VAL:      "vlevo %s, vpravo %s, nahoře %s, dole %s mm",
+            INFO_BLEED_LR:       "vlevo %s, vpravo %s mm",
+            INFO_BLEED_TB:       "nahoře %s, dole %s mm",
             TIP_BLEED:           "O kolik umístěné PDF přesahuje čistý formát na každé hraně — kolik je na přídavky a v Zünd režimu i na spad za řezem.",
 
             // --- presets ---

@@ -14,6 +14,11 @@ TE.UI = {
         // longest label, "Odsazení orientační značky:", measures 164 px; the
         // longest English one 140 (measured 2026-10-20, colons included)
         LABEL_COL: 165,
+        // px; the preset list's own width before the row stretches it. A
+        // dropdown grows with its longest item, and a long preset name once
+        // widened the dialog from 1178 to 1315 px (engine-facts, row slack);
+        // small, the list just fills what the narrower column leaves (N49)
+        PRESET_LIST: 100,
         NUM_FIELD:   7,   // characters, not px — numeric fields scale with locale
         PATH_FIELD: 26,   // characters; output path needs to show a usable tail
         BROWSE_MAX:  90,  // px cap so fill slack goes to the path field, not the button
@@ -99,6 +104,53 @@ TE.UI = {
      * @param {string} tip - HelpTip shared by the label and the value.
      * @returns {Object} The value statictext.
      */
+    /**
+     * Adds a labeled radio group stacked in a column, the label level with
+     * the first button: for options too long to stand in one row.
+     * @param {Object} parent - ScriptUI container.
+     * @param {string} label - Row label.
+     * @param {Array} options - Option labels.
+     * @param {number} selected - Index of the initially selected option.
+     * @param {string} tip - HelpTip shared by the label and every button.
+     * @returns {Array} The radiobutton controls.
+     */
+    addRadioColumn: function (parent, label, options, selected, tip) {
+        var g = parent.add("group");
+        g.alignment = ["fill", "top"];
+        g.alignChildren = ["left", "top"];
+
+        var st = g.add("statictext", undefined, label);
+        this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        this.levelWithButton(st);
+        st.helpTip = tip;
+
+        var col = g.add("group");
+        col.orientation = "column";
+        col.alignChildren = ["left", "top"];
+        var out = [], i, rb;
+        for (i = 0; i < options.length; i++) {
+            rb = col.add("radiobutton", undefined, options[i]);
+            rb.helpTip = tip;
+            rb.value = (i === selected);
+            out.push(rb);
+        }
+        return out;
+    },
+
+    /**
+     * Sets a row label level with the text of the radio button or checkbox
+     * beside it. [deviation] The row is the button's 19 px and the label's 15
+     * sit in its middle, yet macOS draws a button's text about 2 px higher
+     * (the user's screenshot of 2026-10-17; the geometry measured the same
+     * in every row): at the top of the row the label meets it. Only for rows
+     * whose tallest control is the button — next to a 23 px field the
+     * centred label is level with the field's text.
+     * @param {Object} st - The label.
+     */
+    levelWithButton: function (st) {
+        st.alignment = ["left", "top"];
+    },
+
     addInfoRow: function (parent, label, widest, tip) {
         var g = parent.add("group");
         g.alignment = ["fill", "top"];
@@ -125,6 +177,7 @@ TE.UI = {
 
         var st = g.add("statictext", undefined, label);
         this.lockW(st, this.M.LABEL_COL);   // [deviation] shared label axis
+        this.levelWithButton(st);
         st.helpTip = tip;
 
         var out = [], i, rb;
@@ -232,6 +285,7 @@ TE.UI = {
         stPreset.helpTip = l.TIP_PRESET;
         var ddPreset = gPreset.add("dropdownlist", undefined, []);
         ddPreset.alignment = ["fill", "center"];
+        ddPreset.preferredSize.width = this.M.PRESET_LIST;   // [deviation] see M
         ddPreset.helpTip = l.TIP_PRESET;
         // Revert reloads what the list shows, so it sits next to it (user,
         // 2026-10-11). Live only while the preset has unsaved edits (N8). In a
@@ -269,8 +323,12 @@ TE.UI = {
         var wide = "9999" + l.DEC_SEP + "9";
         var stCleanInfo = this.addInfoRow(pDoc, l.LBL_CLEAN,
             l.format(l.INFO_CLEAN_VAL, "9" + wide, "9" + wide), l.TIP_CLEAN);
+        // Two lines, left and right over top and bottom: in one line the
+        // reserve for four values was the widest row of the column (N49).
         var stBleedInfo = this.addInfoRow(pDoc, l.LBL_BLEED,
-            l.format(l.INFO_BLEED_VAL, wide, wide, wide, wide), l.TIP_BLEED);
+            l.format(l.INFO_BLEED_LR, wide, wide), l.TIP_BLEED);
+        var stBleedInfo2 = this.addInfoRow(pDoc, "",
+            l.format(l.INFO_BLEED_TB, wide, wide), l.TIP_BLEED);
         // No clean-format fields: the artboard is the clean format. Typed
         // values changed only the preview, while the run kept dividing the
         // artboard (N27); a wrong artboard is fixed in Illustrator.
@@ -311,6 +369,7 @@ TE.UI = {
         gEqual.alignment = ["fill", "top"];
         var stEqualLbl = gEqual.add("statictext", undefined, l.LBL_EQUAL);
         this.lockW(stEqualLbl, this.M.LABEL_COL);
+        this.levelWithButton(stEqualLbl);
         stEqualLbl.helpTip = l.TIP_EQUAL;
         var cbEqual = gEqual.add("checkbox", undefined, l.LBL_EQUAL_CB);
         cbEqual.helpTip = l.TIP_EQUAL;
@@ -335,7 +394,9 @@ TE.UI = {
         if (s.overlapMode === "onesided") {
             carrierIdx = (s.overlapCarrier === "second") ? 2 : 1;
         }
-        var rbOverlapMode = this.addRadioRow(pEdges, l.LBL_OVERLAP_MODE,
+        // Stacked: three long options in a row were the widest row of the
+        // left column, and the column had room below (user, 2026-10-16, N49).
+        var rbOverlapMode = this.addRadioColumn(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);
 
@@ -547,6 +608,7 @@ TE.UI = {
         gSkip.alignment = ["fill", "top"];
         var stSkipLbl = gSkip.add("statictext", undefined, l.LBL_SKIP);
         this.lockW(stSkipLbl, this.M.LABEL_COL);
+        this.levelWithButton(stSkipLbl);
         stSkipLbl.helpTip = l.TIP_SKIP;
         var cbSkip = gSkip.add("checkbox", undefined, "");
         cbSkip.helpTip = l.TIP_SKIP;
@@ -619,7 +681,7 @@ TE.UI = {
 
         // --- wiring ----------------------------------------------------------
         var refs = {
-            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo,
+            etScaleN: etScaleN, stCleanInfo: stCleanInfo, stBleedInfo: stBleedInfo, stBleedInfo2: stBleedInfo2,
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
@@ -1298,8 +1360,8 @@ TE.UI = {
         // Real millimetres need the drawing scale; without one, no numbers.
         r.stCleanInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_CLEAN_VAL,
             mm(clean[2] - clean[0]), mm(clean[1] - clean[3]));
-        r.stBleedInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_BLEED_VAL,
-            mm(ov.left), mm(ov.right), mm(ov.top), mm(ov.bottom));
+        r.stBleedInfo.text = badKeys.scaleN ? "—" : l.format(l.INFO_BLEED_LR, mm(ov.left), mm(ov.right));
+        r.stBleedInfo2.text = badKeys.scaleN ? "" : l.format(l.INFO_BLEED_TB, mm(ov.top), mm(ov.bottom));
 
         var ext = (s.direction === "horizontal")
             ? { start: clean[0], end: clean[2] }

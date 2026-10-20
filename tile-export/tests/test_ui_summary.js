@@ -69,7 +69,7 @@ function refs(o) {
         cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
-        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
+        stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stBleedInfo2: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
         stStatus: { text: "" }, lbTiles: listbox(),
         stCalc: { text: "" }, btnTiles: { enabled: true }, btnExport: { enabled: true }
     };
@@ -127,7 +127,8 @@ console.log("\n=== 1.1.0: the Document panel shows what TE found ===");
 var rDoc = refs({});
 TE.UI.refresh(null, rDoc, ctx);
 eq(rDoc.stCleanInfo.text, "3000 × 1000 mm", "clean format at real size");
-eq(rDoc.stBleedInfo.text, "vlevo 50, vpravo 50, nahoře 50, dole 50 mm", "available bleed on each edge");
+eq(rDoc.stBleedInfo.text + " | " + rDoc.stBleedInfo2.text, "vlevo 50, vpravo 50 mm | nahoře 50, dole 50 mm",
+    "available bleed on each edge, in two lines (N49)");
 eq(rDoc.stCalc.text.indexOf("Čistý formát") === -1 && rDoc.stCalc.text.indexOf("Dostupný spad") === -1, true,
     "and the Result no longer repeats them");
 var rDocErr = refs({ etCount: { text: "1", enabled: true } });
