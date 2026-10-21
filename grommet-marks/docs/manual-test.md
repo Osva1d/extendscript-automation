@@ -614,8 +614,15 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    a nespustí se. Spusť **Tile Export** (1.1.0 a novější), zadej Měřítko
    kresby **1:10** a potvrď. Tile Export zapíše měřítko hned po potvrzení
    dialogu; export pak nech doběhnout do zkušební složky (v Tile Exportu
-   1.2.0 ho jde zastavit podržením Esc, starší verze to neumí). Dokument
-   nezavírej. Spusť Grommet Marks.
+   1.2.0 ho jde zastavit podržením Esc, starší verze to neumí). Po každém
+   běhu Tile Exportu zůstanou v dokumentu kontrolní pláty — artboardy
+   `TE_01`…`TE_0n` a vrstva `TE_panels`, další běh je nahradí. **Smaž je**
+   (artboardy v panelu Artboardy, původní artboard 800 × 600 mm nech; vrstvu
+   v panelu Vrstvy), jinak by Grommet Marks viděl víc artboardů, řádek by
+   ukázal třeba „3 artboardy · značky dostanou všechny“ a značky by vznikly
+   na všech. Měřítko leží v metadatech dokumentu (XMP), ne v artboardech ani
+   ve vrstvách, mazání ho nemění — ověří to první kontrola níž (pole ukazuje
+   10). Dokument nezavírej. Spusť Grommet Marks.
 - [ ] Pole **Měřítko kresby 1:** ukazuje **10**.
 - [ ] Šedý řádek pod Umístěním je `1 artboard · 8000 × 6000 mm · 1:10`.
   Velikost artboardu je **skutečná** (800 × 600 mm × 10), ne velikost
