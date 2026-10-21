@@ -36,6 +36,8 @@ eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"))
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
+// Field text is read by the shared GM.Numbers (the family grammar).
+require("./lib/load_shared.js")(GM, ["numbers"]);
 
 // ===== TEST FRAMEWORK =====
 var pass = 0, fail = 0, total = 0;
@@ -257,23 +259,43 @@ console.log("--- Validation v6: shape requirement + weights ---");
     assert(ok.valid === true && ok.settings.regWeight === 1.0, "defaults valid, regWeight parsed");
 })();
 
-// ===== TEST: strict number parsing (audit A9) =====
+// ===== TEST: strict number parsing (audit A9, spec 6.1) =====
 // parseFloat read the digits at the start and dropped the rest: "1O5" became
-// 1, "1 000" became 1, and the field looked valid. A typo must be NaN.
-console.log("--- Validation.parseNumber: typos are not numbers (audit A9) ---");
+// 1, "1 000" became 1, and the field looked valid. A typo must be invalid.
+// Since 1.4.0 the grammar is the shared GM.Numbers.parse (the family's): a
+// comma or a dot, spaces around — and "1e3", ".5", "0x10", which Number()
+// used to read as numbers, are typos as well.
+console.log("--- Validation: typos are not numbers (audit A9, spec 6.1) ---");
 (function () {
-    var P = GM.Validation.parseNumber;
-    assert(typeof P === "function", "parseNumber exists");
-    if (typeof P !== "function") return;
-    var bad = ["1O5", "1 000", "10.5.2", "5o", "", "   ", "abc", "null"];
-    for (var i = 0; i < bad.length; i++) {
-        assert(isNaN(P(bad[i])), "'" + bad[i] + "' is not a number (got " + P(bad[i]) + ")");
+    assert(GM.Validation.parseNumber === undefined,
+        "GM.Validation.parseNumber is gone: one converter, GM.Numbers.parse");
+
+    var bad = ["1O5", "1 000", "10.5.2", "5o", "", "   ", "abc", "null",
+               "1e3", ".5", "0x10", "20 mm"];
+    var i, r;
+    for (i = 0; i < bad.length; i++) {
+        lastAlert = null;
+        assert(GM.Validation.validateNumber(bad[i], R.markSize, "S", L) === null,
+            "validateNumber: '" + bad[i] + "' is not a number");
+        assert(lastAlert !== null, "validateNumber: '" + bad[i] + "' raises the alert");
+        r = GM.Validation.validate(validCfg({ markSize: bad[i] }), L);
+        assert(r.valid === false && r.settings === null,
+            "validate: markSize '" + bad[i] + "' is invalid (was " + (r.valid ? "accepted" : "refused") + ")");
     }
-    assert(P("12,5") === 12.5, "decimal comma");
-    assert(P("12.5") === 12.5, "decimal dot");
-    assert(P(" 7 ") === 7, "surrounding spaces ignored");
-    assert(P(7) === 7, "numbers pass through");
-    assert(P("0") === 0, "zero is a number (range rules decide)");
+    var fields = ["offsetX", "offsetY", "regWeight", "haloWeight"];
+    for (i = 0; i < fields.length; i++) {
+        var over = {}; over[fields[i]] = "1e3";
+        assert(GM.Validation.validate(validCfg(over), L).valid === false, fields[i] + " '1e3' is invalid");
+    }
+
+    var good = [["2,5", 2.5], [" 3 ", 3], ["2.5", 2.5], ["12,5", 12.5], ["7", 7], [7, 7]];
+    for (i = 0; i < good.length; i++) {
+        r = GM.Validation.validate(validCfg({ markSize: good[i][0] }), L);
+        assert(r.valid === true && r.settings.markSize === good[i][1],
+            "validate: markSize " + JSON.stringify(good[i][0]) + " is " + good[i][1]);
+    }
+    assert(GM.Validation.validateNumber("0", { min: 0, max: 10, integer: false }, "X", L) === 0,
+        "zero is a number (range rules decide)");
 })();
 
 // ===== TEST: corner zones fill edges by spacing (review G3) =====

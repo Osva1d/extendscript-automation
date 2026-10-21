@@ -5,7 +5,9 @@
 // Pure validation logic decoupled from ScriptUI. Numeric checks use
 // a shared validateNumber helper. Can be tested in Node without Illustrator.
 //
-// Depends on: GM.L (error messages)
+// Depends on: GM.L (error messages), GM.Numbers (shared/lib/numbers.js: reads
+// the field text — one converter for the dialog fields, live validation and
+// validate())
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -26,20 +28,6 @@ GM.Validation = {
     },
 
     /**
-     * Reads a number the way the operator typed it: surrounding spaces are
-     * ignored, the decimal separator may be a comma or a dot. Anything else
-     * ("1O5", "1 000", "10.5.2", an empty field) is NaN — never the number
-     * its first digits spell, which parseFloat would silently return.
-     * Shared by the dialog fields, live validation and validate().
-     * @param {string|number} val - Raw field value.
-     * @returns {number} The number, or NaN.
-     */
-    parseNumber: function (val) {
-        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
-        return (str === "") ? NaN : Number(str);
-    },
-
-    /**
      * Validates a numeric value against a rule.
      * @param {string|number} val - Raw value.
      * @param {Object} rule - {min, max, integer}.
@@ -48,7 +36,7 @@ GM.Validation = {
      * @returns {number|null} Parsed number or null if invalid.
      */
     validateNumber: function (val, rule, label, L) {
-        var n = GM.Validation.parseNumber(val);
+        var n = GM.Numbers.parse(val);
         if (isNaN(n)) {
             alert(L.format(L.ERR_MUST_BE_NUMBER || "%s must be a number!", label));
             return null;
@@ -171,7 +159,7 @@ GM.Validation = {
             // Not checked outside path mode, but it is stored with the preset:
             // a typo or NaN (null after JSON) there must not come back as a
             // field that cannot be fixed. Anything unusable is stored as 0.
-            var storedOffset = GM.Validation.parseNumber(cfg.pathOffset);
+            var storedOffset = GM.Numbers.parse(cfg.pathOffset);
             settings.pathOffset = (isFinite(storedOffset) && storedOffset >= 0) ? storedOffset : 0;
         }
 

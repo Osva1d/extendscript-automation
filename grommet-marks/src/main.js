@@ -297,7 +297,7 @@ GM.Main = {
         }
         // Nothing to draw (an empty or degenerate eyelet line) is a failure,
         // never a silent success.
-        var shown = String(cfg.pathOffset).replace(".", GM.L.DECIMAL_SEP) + " " + cfg.units;
+        var shown = String(cfg.pathOffset).replace(".", GM.L.DEC_SEP) + " " + cfg.units;
         if (marks.length === 0) {
             return { ok: false, message: GM.L.format(GM.L.ERR_OFFSET_COLLAPSE, shown) };
         }

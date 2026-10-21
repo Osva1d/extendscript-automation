@@ -67,6 +67,7 @@ eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"))
 GM.L = { ERR_WRITE_SETTINGS: "Cannot write settings file." };
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers (presetEquals)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 
 // JSON polyfill (in case Node version is ancient, unlikely but safe)

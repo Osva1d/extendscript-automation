@@ -15,6 +15,7 @@ var GM = {};
 // ===== LOAD PRODUCTION CODE =====
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers (presetEquals)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(GM);   // shared core module — bind to GM

@@ -27,6 +27,7 @@ eval(src("locale.js"));
 eval(src("lib/utils.js"));
 eval(src("config.js"));
 eval(src("lib/validation.js"));
+require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers
 eval(src("core.js"));
 // main.js ends with the auto-run call; drop it so the suite drives process().
 var mainSrc = src("main.js");
@@ -520,7 +521,7 @@ console.log("--- process: Large Canvas offset, empty result, decimal separator (
         offsetPath: function () { return { ok: true, loops: 1, segments: squareSegs(0, big) }; } });
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 2.5 }), {});
-    assert(alerts.length === 1 && alerts[0].indexOf("2" + GM.L.DECIMAL_SEP + "5 mm") > 0 &&
+    assert(alerts.length === 1 && alerts[0].indexOf("2" + GM.L.DEC_SEP + "5 mm") > 0 &&
         alerts[0].indexOf("2.5 mm") > 0, "offset 2.5 shown as 2.5 mm (" + alerts.join(" | ") + ")");
 })();
 

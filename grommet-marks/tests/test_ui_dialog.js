@@ -31,6 +31,7 @@ eval(src("locale.js"));
 eval(src("lib/utils.js"));
 eval(src("config.js"));
 eval(src("lib/validation.js"));
+require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(GM);   // shared core module — bind to GM
 eval(src("core.js"));
@@ -647,9 +648,58 @@ console.log("--- UI 1.3: a broken stored path offset opens as 0 (final review I2
     var pg = freshPData();
     pg.presets["[Default]"].pathOffset = 12.5;
     var uiG = buildUI3(pg, mockPathInfo(4, true), null);
-    assert(String(uiG.pathUI.offsetIn.text) === "12.5", "a good stored offset is shown as is");
+    assert(String(uiG.pathUI.offsetIn.text) === "12,5",
+        "a good stored offset is shown with the Czech decimal comma (got '" + uiG.pathUI.offsetIn.text + "')");
     done();
     delete global.alert;
+})();
+
+// ===== TEST: a decimal comma stays a comma (spec 6.1, review focus 1) =====
+// Numbers go into the fields with the locale's separator and without rounding,
+// and the dialog does not take a preset it just wrote for a changed one.
+console.log("--- UI 1.4: a decimal comma stays a comma (spec 6.1) ---");
+(function () {
+    var pd = freshPData();
+    var s = pd.presets["[Default]"];
+    s.markSize = 2.5;
+    s.cornerZone = { enabled: false, count: 5, pitch: 12.5 };
+    s.offsetX = 7.25; s.regWeight = 0.75;
+    s.top = { enabled: true, useNumber: false, number: 10, spacing: 105.5 };
+    var ui = buildUI3(pd, null, null);
+    var w = SUI.lastWindow();
+    function field(text) { return w.findOne(function (c) { return c.type === "edittext" && c.text === text; }); }
+    var sizeField = field("2,5");
+    assert(GM.L.DEC_SEP === ",", "the Czech table carries DEC_SEP ','");
+    assert(GM.L.DECIMAL_SEP === undefined, "the old key DECIMAL_SEP is gone");
+    assert(!!sizeField, "markSize 2.5 opens as '2,5'");
+    if (!sizeField) { done(); return; }
+    assert(String(ui.zonesUI.pitchIn.text) === "12,5", "zone pitch 12.5 opens as '12,5' (got '" + ui.zonesUI.pitchIn.text + "')");
+    assert(!!field("7,25"), "offsetX 7.25 opens as '7,25' (no rounding)");
+    assert(!!field("0,75"), "regWeight 0.75 opens as '0,75'");
+    assert(String(ui.edgeUI.top.spcIn.text) === "105,5", "top spacing 105.5 opens as '105,5'");
+    assert(String(ui.edgeUI.top.numIn.text) === "10", "a whole number has no separator");
+
+    var cfg = ui.gatherAll();
+    assert(cfg.markSize === 2.5 && cfg.cornerZone.pitch === 12.5 && cfg.top.spacing === 105.5,
+        "gatherAll reads the commas back as the same numbers");
+    var list = w.findOne(function (c) { return c.type === "dropdownlist" && c.items.length === 1; });
+    var save = w.findOne(function (c) { return c.type === "button" && c.text === GM.L.SAVE; });
+    assert(!!list && list.items[0].text.indexOf(" *") < 0,
+        "the preset list shows no '*' for a freshly opened preset (got '" + (list && list.items[0].text) + "')");
+    assert(save.enabled === false, "...and Save is off");
+
+    // Typing a dot where the preset holds a comma is the same value, not a change
+    sizeField.text = "2.5"; sizeField.onChange();
+    assert(list.items[0].text.indexOf(" *") < 0 && save.enabled === false, "'2.5' typed over '2,5' is no change");
+    sizeField.text = "2,5";
+
+    // mm -> cm: written back with the comma, unrounded
+    var units = w.findOne(function (c) { return c.type === "dropdownlist" && c.items.length === 3; });
+    units.selection = units.items[1]; units.onChange();
+    assert(sizeField.text === "0,25", "2,5 mm -> cm writes '0,25' (got '" + sizeField.text + "')");
+    assert(String(ui.zonesUI.pitchIn.text) === "1,25", "12,5 mm -> cm writes '1,25' (got '" + ui.zonesUI.pitchIn.text + "')");
+    assert(ui.gatherAll().markSize === 0.25, "...and it reads back as 0.25");
+    done();
 })();
 
 // ===== TEST: both locales define the same keys =====

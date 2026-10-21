@@ -25,6 +25,7 @@ var GM = {};
 function src(rel) { return fs.readFileSync(path.join(__dirname, "..", "src", rel), "utf8"); }
 eval(src("constants.js"));
 eval(src("lib/utils.js"));
+require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers
 eval(src("core.js"));
 eval(src("illustrator.js"));
 

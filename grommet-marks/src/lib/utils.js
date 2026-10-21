@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: GM.Utils — shared utility functions
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS
+// Depends on: GM.CONSTANTS, GM.Numbers (shared/lib/numbers.js, for presetEquals)
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -34,9 +34,12 @@ GM.Utils = {
     /**
      * Deep-equality test for two GM settings objects.
      * Used by the UI to detect "modified" state (UI values diverged
-     * from the stored preset). Numeric coercion via String() so 5
-     * and "5" compare equal — UI inputs are strings, stored values
-     * may be numbers.
+     * from the stored preset). Text fields compare through String(), so
+     * true and "true" are equal. Number fields compare as numbers, read the
+     * way the dialog reads them (GM.Numbers.parse): the dialog writes "2,5"
+     * into a field where the preset holds 2.5, and those are one value. A
+     * value that is no number on either side (a typo, a field the object
+     * lacks) falls back to its text, so "abc" never equals 5.
      *
      * @param {Object} a - First settings object.
      * @param {Object} b - Second settings object.
@@ -44,13 +47,27 @@ GM.Utils = {
      */
     presetEquals: function (a, b) {
         if (!a || !b) return false;
-        var keys = [
-            "offsetX", "offsetY", "bottomMirror", "rightMirror",
-            "units", "markSize"
-        ];
-        for (var i = 0; i < keys.length; i++) {
-            if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
+
+        function sameNumber(x, y) {
+            var nx = GM.Numbers.parse(String(x)), ny = GM.Numbers.parse(String(y));
+            if (isNaN(nx) || isNaN(ny)) return String(x) === String(y);
+            return nx === ny;
         }
+        // Compares the listed fields of two objects: text keys as text,
+        // number keys as numbers.
+        function sameFields(x, y, textKeys, numKeys) {
+            var i;
+            for (i = 0; i < textKeys.length; i++) {
+                if (String(x[textKeys[i]]) !== String(y[textKeys[i]])) return false;
+            }
+            for (i = 0; i < numKeys.length; i++) {
+                if (!sameNumber(x[numKeys[i]], y[numKeys[i]])) return false;
+            }
+            return true;
+        }
+
+        if (!sameFields(a, b, ["bottomMirror", "rightMirror", "units"],
+                              ["offsetX", "offsetY", "markSize"])) return false;
         // Presence-guard the v5 fields: pre-v5 presets lack them. Storage.load()
         // forward-fills from getDefaults() after load, so at runtime both sides
         // always carry them; the guard only protects hand-built presets in tests
@@ -61,39 +78,24 @@ GM.Utils = {
         }
         // Compare edge sub-objects
         var edgeNames = ["top", "left", "bottom", "right"];
-        var edgeKeys = ["enabled", "useNumber", "number", "spacing"];
         for (var ei = 0; ei < edgeNames.length; ei++) {
-            var aE = a[edgeNames[ei]] || {};
-            var bE = b[edgeNames[ei]] || {};
-            for (var ek = 0; ek < edgeKeys.length; ek++) {
-                if (String(aE[edgeKeys[ek]]) !== String(bE[edgeKeys[ek]])) return false;
-            }
+            if (!sameFields(a[edgeNames[ei]] || {}, b[edgeNames[ei]] || {},
+                    ["enabled", "useNumber"], ["number", "spacing"])) return false;
         }
         // Compare v5 sub-objects only when both sides carry the field
         if (a.cornerZone !== undefined && b.cornerZone !== undefined) {
-            var zA = a.cornerZone, zB = b.cornerZone;
-            var zoneKeys = ["enabled", "count", "pitch"];
-            for (var zk = 0; zk < zoneKeys.length; zk++) {
-                if (String(zA[zoneKeys[zk]]) !== String(zB[zoneKeys[zk]])) return false;
-            }
+            if (!sameFields(a.cornerZone, b.cornerZone, ["enabled"], ["count", "pitch"])) return false;
         }
         if (a.pathDist !== undefined && b.pathDist !== undefined) {
-            var pA = a.pathDist, pB = b.pathDist;
-            var pdKeys = ["useNumber", "number", "spacing"];
-            for (var pk = 0; pk < pdKeys.length; pk++) {
-                if (String(pA[pdKeys[pk]]) !== String(pB[pdKeys[pk]])) return false;
-            }
+            if (!sameFields(a.pathDist, b.pathDist, ["useNumber"], ["number", "spacing"])) return false;
         }
         // Compare v6 fields only when both sides carry them (presence-guard mirrors v5).
-        var v6Keys = ["markCircle", "markCross", "regWeight", "haloWeight"];
         if (a.markCircle !== undefined && b.markCircle !== undefined) {
-            for (var vi = 0; vi < v6Keys.length; vi++) {
-                if (String(a[v6Keys[vi]]) !== String(b[v6Keys[vi]])) return false;
-            }
+            if (!sameFields(a, b, ["markCircle", "markCross"], ["regWeight", "haloWeight"])) return false;
         }
         // Compare the 1.3.0 path offset only when both sides carry it.
         if (a.pathOffset !== undefined && b.pathOffset !== undefined) {
-            if (String(a.pathOffset) !== String(b.pathOffset)) return false;
+            if (!sameNumber(a.pathOffset, b.pathOffset)) return false;
         }
         return true;
     }

@@ -159,18 +159,18 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                // parseNumber keeps "10.5" as 10.5, so the edgeCount integer
+                // Numbers.parse keeps "10.5" as 10.5, so the edgeCount integer
                 // rule sees it, and makes a typo like "1O5" NaN instead of 1.
-                number: GM.Validation.parseNumber(numIn.text),
-                spacing: GM.Validation.parseNumber(spcIn.text)
+                number: GM.Numbers.parse(numIn.text),
+                spacing: GM.Numbers.parse(spcIn.text)
             };
         };
         api.apply = function (e) {
             cb.value = e.enabled;
             numRB.value = e.useNumber;
             spcRB.value = !e.useNumber;
-            numIn.text = e.number;
-            spcIn.text = e.spacing;
+            numIn.text = GM.Numbers.format(e.number);
+            spcIn.text = GM.Numbers.format(e.spacing);
             forcedSpacing = false;
             if (!countAllowed) forceSpacing();
             refresh();
@@ -219,7 +219,7 @@ GM.UI = {
 
     /** A length for the summary line: one decimal, locale separator. */
     formatLen: function (v) {
-        return String(Math.round(v * 10) / 10).replace(".", GM.L.DECIMAL_SEP);
+        return String(Math.round(v * 10) / 10).replace(".", GM.L.DEC_SEP);
     },
 
     /**
@@ -620,7 +620,7 @@ GM.UI = {
         function refreshInfo() {
             placeInfo.text = GM.UI.placementInfoText({
                 pathMode: pathRB.value, pathInfo: pathInfo, docInfo: docInfo, fallback: fallback,
-                offset: GM.Validation.parseNumber(pathOffsetIn.text),
+                offset: GM.Numbers.parse(pathOffsetIn.text),
                 unit: currentUnit || GM.CONSTANTS.UNIT.MM
             });
         }
@@ -769,8 +769,8 @@ GM.UI = {
         // =================================================================
         function gatherAll() {
             return {
-                offsetX: GM.Validation.parseNumber(offsetXIn.text),
-                offsetY: GM.Validation.parseNumber(offsetYIn.text),
+                offsetX: GM.Numbers.parse(offsetXIn.text),
+                offsetY: GM.Numbers.parse(offsetYIn.text),
                 top: topUI.gather(),
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
@@ -778,11 +778,11 @@ GM.UI = {
                 bottomMirror: mirrorTopCB.value,
                 rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
-                markSize: GM.Validation.parseNumber(sizeInput.text),
+                markSize: GM.Numbers.parse(sizeInput.text),
                 markCircle: circleCB.value,
                 markCross: crossCB.value,
-                regWeight: GM.Validation.parseNumber(regWIn.text),
-                haloWeight: GM.Validation.parseNumber(haloWIn.text),
+                regWeight: GM.Numbers.parse(regWIn.text),
+                haloWeight: GM.Numbers.parse(haloWIn.text),
                 placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
                 cornerZone: {
                     // Effective state: a checked-but-disabled box (zones are
@@ -790,15 +790,15 @@ GM.UI = {
                     // validate() would check count/pitch fields that live
                     // validation skipped as disabled — OK enabled, submit alerts.
                     enabled: zoneCB.value && zoneCB.enabled,
-                    count: GM.Validation.parseNumber(zoneCountIn.text),
-                    pitch: GM.Validation.parseNumber(zonePitchIn.text)
+                    count: GM.Numbers.parse(zoneCountIn.text),
+                    pitch: GM.Numbers.parse(zonePitchIn.text)
                 },
                 pathDist: {
                     useNumber: pathNumRB.value,
-                    number: GM.Validation.parseNumber(pathNumIn.text),
-                    spacing: GM.Validation.parseNumber(pathSpcIn.text)
+                    number: GM.Numbers.parse(pathNumIn.text),
+                    spacing: GM.Numbers.parse(pathSpcIn.text)
                 },
-                pathOffset: GM.Validation.parseNumber(pathOffsetIn.text)
+                pathOffset: GM.Numbers.parse(pathOffsetIn.text)
             };
         }
 
@@ -806,8 +806,8 @@ GM.UI = {
             GM.UI.selectUnit(unitsDDL, s.units || GM.CONSTANTS.UNIT.MM);
             currentUnit = s.units || GM.CONSTANTS.UNIT.MM;
 
-            offsetXIn.text = s.offsetX;
-            offsetYIn.text = s.offsetY;
+            offsetXIn.text = GM.Numbers.format(s.offsetX);
+            offsetYIn.text = GM.Numbers.format(s.offsetY);
 
             topUI.apply(s.top);
             leftUI.apply(s.left);
@@ -818,11 +818,11 @@ GM.UI = {
             mirrorLeftCB.value = !!s.rightMirror;
             refreshMirrorRows();
 
-            sizeInput.text = s.markSize;
+            sizeInput.text = GM.Numbers.format(s.markSize);
             circleCB.value = !!s.markCircle;
             crossCB.value = !!s.markCross;
-            regWIn.text = s.regWeight;
-            haloWIn.text = s.haloWeight;
+            regWIn.text = GM.Numbers.format(s.regWeight);
+            haloWIn.text = GM.Numbers.format(s.haloWeight);
 
             var wantPath = (s.placementMode === GM.CONSTANTS.MODE_PATH);
             fallback = wantPath && !pathOk;
@@ -831,8 +831,8 @@ GM.UI = {
 
             var z = s.cornerZone || defCfg.cornerZone;
             zoneCB.value = !!z.enabled;
-            zoneCountIn.text = z.count;
-            zonePitchIn.text = z.pitch;
+            zoneCountIn.text = GM.Numbers.format(z.count);
+            zonePitchIn.text = GM.Numbers.format(z.pitch);
 
             var pd = s.pathDist || defCfg.pathDist;
             // Count mode is valid on a cornered path too (marks = corners); the
@@ -840,13 +840,14 @@ GM.UI = {
             // recomputes it from the current path.
             var pdUseNum = !!pd.useNumber;
             pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
-            pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
+            pathNumIn.text = GM.Numbers.format(pd.number);
+            pathSpcIn.text = GM.Numbers.format(pd.spacing);
             pathForcedSpacing = false;
             if (!pathCountAllowed) forcePathSpacing();
             // Only a finite number goes into the field: NaN reaches a stored
             // preset as null, and an empty greyed field cannot be fixed.
-            pathOffsetIn.text = (typeof s.pathOffset === "number" && isFinite(s.pathOffset))
-                ? s.pathOffset : defCfg.pathOffset;
+            pathOffsetIn.text = GM.Numbers.format((typeof s.pathOffset === "number" && isFinite(s.pathOffset))
+                ? s.pathOffset : defCfg.pathOffset);
             refreshPathDistUI();
 
             refreshModeUI();
@@ -866,9 +867,9 @@ GM.UI = {
                 .concat(rightUI.getConvertFields());
 
             for (var i = 0; i < fields.length; i++) {
-                var v = GM.Validation.parseNumber(fields[i].text);
+                var v = GM.Numbers.parse(fields[i].text);
                 if (!isNaN(v)) {
-                    fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
+                    fields[i].text = GM.Numbers.format(GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit)));
                 }
             }
             currentUnit = newUnit;
@@ -926,7 +927,7 @@ GM.UI = {
         }
 
         function fieldInRange(et, rule) {
-            var n = GM.Validation.parseNumber(et.text);
+            var n = GM.Numbers.parse(et.text);
             if (isNaN(n)) return false;
             if (rule.integer && n !== Math.floor(n)) return false;
             return n >= rule.min && n <= rule.max;
