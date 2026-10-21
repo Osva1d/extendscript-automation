@@ -4,14 +4,15 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 
 ## Funkce
 
-- **Automatické rozmístění** — pozice značek podle pevného počtu nebo preferovaného rozestupu, samostatně pro každou hranu (Horní, Dolní, Levá, Pravá) se zrcadlením protějších hran.
+- **Automatické rozmístění** — pozice značek podle pevného počtu nebo preferované rozteče, samostatně pro každou hranu (Horní, Dolní, Levá, Pravá) se zrcadlením protějších hran.
 - **Rozmístění na tvar** — volba „Vybraná cesta" umístí značky na uzavřenou nebo otevřenou vektorovou cestu (kruh, štít, zaoblený obdélník…); ostrý roh dostane značku přímo v rohu a otevřená cesta i oba krajní body. U uzavřené cesty zadáš **odsazení od kraje**: značky leží o tuto vzdálenost od řezové linky dovnitř tvaru, linku ok spočítá Illustrator (Odsazená cesta), takže si cestu nemusíš posouvat ručně. **Zaoblený roh** (živé rohy, oblouk z PDF) dostane jednu značku uprostřed oblouku (oblouk nakreslený jako mnoho krátkých úseček, typicky PDF z CADu, se jako roh nepozná: značky zůstanou ve správné vzdálenosti od řezu, jen nemusí padnout doprostřed oblouku), tvar bez rohů začíná nahoře. Volitelně jen **vybraná část obvodu** (Přímý výběr). Pravidla do detailu: [návrh](../docs/specs/2026-10-11-grommet-marks-path-mode-design.md).
-- **Rohové zóny** — zhustí N značek u každého rohu s vlastní roztečí; střed hrany/cesty pak jede standardním rozestupem.
+- **Rohové zóny** — zhustí N značek u každého rohu s vlastní roztečí; střed hrany/cesty pak jede standardní roztečí.
 - **Globální odsazení X/Y** — měřeno ke středu značky, zarovnané v rozích.
+- **Měřítko kresby 1:N** — banner nakreslený zmenšeně (třeba 1:10): hodnoty v dialogu zadáš ve skutečné velikosti a skript je při kreslení vydělí N, včetně velikosti značky a tlouštěk tahů. Měřítko patří dokumentu (sdílí ho s Tile Exportem), do předvoleb se neukládá; platí 1–100, i desetinné.
 - **Jednotný vzhled značky** — registrační Esko-styl terč (bílé halo + registrační tah, kruh a/nebo kříž); vždy na samostatnou vrstvu „Grommet Marks".
-- **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); indikátor neuložených změn.
+- **Předvolby** — uložit / uložit jako / smazat; automatická paměť posledního běhu (`[Last Settings]`); hvězdička u aktivní předvolby s neuloženými změnami. Uložit jde jen s platnými poli.
 - **Robustnost** — chybějící vrstva „Grommet Marks" se vytvoří; zamčená vrstva se dočasně odemkne a zase zamkne; skrytá se zviditelní a skript to oznámí.
-- **Živá validace** — neplatná číselná pole zčervenají a zablokují tlačítko Generovat.
+- **Živá validace** — neplatná číselná pole zčervenají a zablokují tlačítko Generovat; šedý řádek pod Umístěním řekne proč.
 - **Lokalizace** — čeština / angličtina podle jazyka Illustratoru.
 
 ## Instalace
@@ -27,7 +28,9 @@ Skript pro Adobe Illustrator, který automaticky vytváří značky pro oka (kro
 2. Spusť skript (`Soubor ▸ Skripty ▸ …`).
 3. Nastav parametry a klikni **Generovat**.
 
-**Tvarový banner** (kruh, štít, zaoblený obdélník): vyber řezovou linku, spusť skript, zvol **Vybraná cesta** a zadej **odsazení od kraje** (vzdálenost středu oka od řezu, dovnitř tvaru) a Počet ok nebo Rozestup. Šedý řádek pod Umístěním říká, co skript z cesty poznal (rohy, zaoblené rohy, tvar bez rohů). Kdo chce značky jen na části obvodu, označí ji Přímým výběrem (A) — kotvy na začátku i na konci úseků — a zaškrtne **Jen vybraná část obvodu**. Když je odsazení na tvar příliš velké, skript nic nevytvoří a řekne to. Odsazení 0 = značky leží přímo na cestě; předvolby uložené před verzí 1.3 mají odsazení 0, takže kdo si cestu posouvá ručně, nic nemění.
+**Tvarový banner** (kruh, štít, zaoblený obdélník): vyber řezovou linku, spusť skript, zvol **Vybraná cesta** a zadej **odsazení od kraje** (vzdálenost středu oka od řezu, dovnitř tvaru) a Počet ok nebo Rozteč. Šedý řádek pod Umístěním říká, co skript z cesty poznal (rohy, zaoblené rohy, tvar bez rohů). Kdo chce značky jen na části obvodu, označí ji Přímým výběrem (A) — kotvy na začátku i na konci úseků — a zaškrtne **Jen vybraná část obvodu**. Když je odsazení na tvar příliš velké, skript nic nevytvoří a řekne to. Odsazení 0 = značky leží přímo na cestě; předvolby uložené před verzí 1.3 mají odsazení 0, takže kdo si cestu posouvá ručně, nic nemění.
+
+**Banner nakreslený zmenšeně** (třeba v měřítku 1:10): v druhém řádku panelu Umístění zadej **Měřítko kresby 1:** — dokument, kterému měřítko zapsal Tile Export, ho nabídne sám — a všechny ostatní hodnoty piš ve skutečné velikosti: velikost značky, tahy, rozteč, odsazení. Skript je při kreslení vydělí a velikost artboardu v šedém řádku ukáže také ve skutečné velikosti. Měřítko se do dokumentu zapíše po úspěšném běhu; neplatné číslo pole zčervená. Kdo dřív dělil hodnoty deseti v hlavě, teď zadá skutečné a nechá měřítko 1:10 na skriptu.
 
 ---
 
@@ -52,9 +55,12 @@ src/
 └── main.js              GM.Main — vstupní bod, procesní smyčka
 ```
 
-Sdílené jádro `json2.js` (JSON polyfill) a `ui_state.js` (`GM.UIState`) žijí v
-`../shared/lib/` v kořeni repozitáře — build vkládá `json2.js` jako první a
-`ui_state.js` přes `buildUIState(GM)`. Viz [../docs/decisions.md](../docs/decisions.md).
+Sdílené jádro žije v `../shared/lib/` v kořeni repozitáře: `json2.js` (JSON
+polyfill, build ho vkládá jako první), `ui_state.js` (`GM.UIState`, přes
+`buildUIState(GM)`) a od 1.4.0 `numbers.js` (čtení a zápis čísel v polích),
+`field_paint.js` (červená neplatných polí), `registration.js` (registrační barva
+podle typu) a `drawing_scale.js` (měřítko kresby v dokumentu). Viz
+[../docs/decisions.md](../docs/decisions.md).
 
 Podrobnosti (datové struktury, data flow, migrační řetěz) viz [docs/architecture.md](docs/architecture.md).
 
