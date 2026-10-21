@@ -169,47 +169,47 @@ console.log("--- Migration: v2 per-edge offsets -> v3 global ---");
     delete preset.offsetY;
     preset.top.x = 12;
     preset.top.y = 15;
-    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    var data = { activePreset: "Old", presets: { "Old": preset } };
     setup(data);
 
     var result = GM.Storage.load();
-    assert(result.presets["[Default]"].offsetX === 12, "v2: offsetX from top.x");
-    assert(result.presets["[Default]"].offsetY === 15, "v2: offsetY from top.y");
-    assert(result.presets["[Default]"].top.x === undefined, "v2: top.x removed");
-    assert(result.presets["[Default]"].top.y === undefined, "v2: top.y removed");
+    assert(result.presets["Old"].offsetX === 12, "v2: offsetX from top.x");
+    assert(result.presets["Old"].offsetY === 15, "v2: offsetY from top.y");
+    assert(result.presets["Old"].top.x === undefined, "v2: top.x removed");
+    assert(result.presets["Old"].top.y === undefined, "v2: top.y removed");
 })();
 
 console.log("--- Migration: v3.0 localized units -> v3.1 internal keys ---");
 (function () {
     var preset = GM.Config.getDefaults();
     preset.units = "Milimetry";
-    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    var data = { activePreset: "Old", presets: { "Old": preset } };
     setup(data);
 
     var result = GM.Storage.load();
-    assert(result.presets["[Default]"].units === "mm", "units: Milimetry -> mm");
+    assert(result.presets["Old"].units === "mm", "units: Milimetry -> mm");
 })();
 
 console.log("--- Migration: v3.0 localized sentinels -> __create__ ---");
 (function () {
     var preset = GM.Config.getDefaults();
     preset.fillSwatchName = "[Create 'Grommet Marks']";
-    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    var data = { activePreset: "Old", presets: { "Old": preset } };
     setup(data);
 
     var result = GM.Storage.load();
-    assert(result.presets["[Default]"].fillSwatchName === "__create__",
+    assert(result.presets["Old"].fillSwatchName === "__create__",
         "sentinel: localized -> __create__");
 })();
 
 console.log("--- Forward-fill: new keys added to old presets ---");
 (function () {
     var preset = { offsetX: 5, offsetY: 5, units: "mm", markSize: 2 };
-    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    var data = { activePreset: "Old", presets: { "[Default]": GM.Config.getDefaults(), "Old": preset } };
     setup(data);
 
     var result = GM.Storage.load();
-    var p = result.presets["[Default]"];
+    var p = result.presets["Old"];
     assert(p.markCircle === true, "forward-fill: markCircle added from defaults");
     assert(p.markCross === false, "forward-fill: markCross added from defaults");
     assert(p.regWeight === 1.0, "forward-fill: regWeight added");
@@ -221,11 +221,11 @@ console.log("--- Forward-fill: new keys added to old presets ---");
 console.log("--- v5 forward-fill ---");
 (function () {
     var preset = { offsetX: 5, offsetY: 5, units: "mm", markSize: 2 };
-    var data = { activePreset: "[Default]", presets: { "[Default]": preset } };
+    var data = { activePreset: "Old", presets: { "[Default]": GM.Config.getDefaults(), "Old": preset } };
     setup(data);
 
     var result = GM.Storage.load();
-    var p = result.presets["[Default]"];
+    var p = result.presets["Old"];
     assert(p.placementMode === "artboard", "forward-fill: placementMode added");
     assert(p.cornerZone && p.cornerZone.enabled === false, "forward-fill: cornerZone.enabled");
     assert(p.cornerZone.count === 5, "forward-fill: cornerZone.count");
@@ -234,6 +234,51 @@ console.log("--- v5 forward-fill ---");
     assert(p.pathDist.number === 24, "forward-fill: pathDist.number");
     assert(p.pathDist.spacing === 105, "forward-fill: pathDist.spacing");
     assert(p.pathOffset === 0, "forward-fill: pathOffset 0 — old presets keep marks on the path (no double offset)");
+})();
+
+// ===== TEST: [Default] is built from the code on every load (spec 6.4, P13) =====
+// A file that holds another [Default] — an older version's, a hand edit — does
+// not change what "default" means. The other presets and the active key stay.
+console.log("--- Storage.load: [Default] always comes from getDefaults(), the rest is left alone ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    var bent = GM.Config.getDefaults();
+    bent.markSize = 99; bent.offsetX = 1234; bent.top.spacing = 5; bent.cornerZone.pitch = 7;
+    var mine = GM.Config.getDefaults();
+    mine.markSize = 4.5; mine.units = "cm";
+    var data = { activePreset: "Mine", presets: { "[Default]": bent, "Mine": mine } };
+    setup(data);
+
+    var result = GM.Storage.load();
+    assert(JSON.stringify(result.presets["[Default]"]) === JSON.stringify(D),
+        "a file's [Default] with markSize 99 loads as getDefaults()");
+    assert(result.presets["Mine"].markSize === 4.5 && result.presets["Mine"].units === "cm",
+        "another preset is not touched");
+    assert(result.activePreset === "Mine", "the active preset key is not touched");
+
+    // A [Default] with older shape (pre-v5 keys missing) is rebuilt, not forward-filled
+    setup({ activePreset: "[Default]", presets: { "[Default]": { offsetX: 5, offsetY: 5, units: "mm", markSize: 2 } } });
+    var old = GM.Storage.load();
+    assert(JSON.stringify(old.presets["[Default]"]) === JSON.stringify(D), "an old-shape [Default] loads as getDefaults()");
+    assert(old.activePreset === "[Default]", "active [Default] stays active");
+
+    // The sentinel / legacy names still land on [Default], which then holds the code's values
+    setup({ activePreset: "__default__", presets: { "__default__": bent } });
+    var legacy = GM.Storage.load();
+    assert(JSON.stringify(legacy.presets["[Default]"]) === JSON.stringify(D) && legacy.presets["__default__"] === undefined,
+        "a legacy default key is renamed and holds the code's values");
+    assert(legacy.activePreset === "[Default]", "...and stays the active one");
+
+    // A file without [Default]: it is there
+    setup({ activePreset: "Mine", presets: { "Mine": mine } });
+    var none = GM.Storage.load();
+    assert(JSON.stringify(none.presets["[Default]"]) === JSON.stringify(D) && none.activePreset === "Mine",
+        "no [Default] in the file: it is added, the active key stays");
+
+    // Not shared with the next load
+    none.presets["[Default]"].markSize = 77;
+    setup({ activePreset: "[Default]", presets: {} });
+    assert(GM.Storage.load().presets["[Default]"].markSize === D.markSize, "each load builds a fresh [Default]");
 })();
 
 // ===== TEST: a failed settings write is no error (ruling R4) =====

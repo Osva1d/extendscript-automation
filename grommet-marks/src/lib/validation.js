@@ -6,8 +6,9 @@
 // a shared validateNumber helper. Can be tested in Node without Illustrator.
 //
 // Depends on: GM.L (error messages), GM.Utils (error: the alert with its
-// prefix), GM.Numbers (shared/lib/numbers.js: reads the field text — one
-// converter for the dialog fields, live validation and validate())
+// prefix; deepCopy), GM.Config (getDefaults: what storable() falls back to),
+// GM.Numbers (shared/lib/numbers.js: reads the field text — one converter for
+// the dialog fields, live validation, validate() and storable())
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -65,6 +66,54 @@ GM.Validation = {
             return null;
         }
         return n;
+    },
+
+    /**
+     * The configuration as a preset may hold it: every numeric field is a
+     * number its rule accepts, or that field's default from the code. A preset
+     * never stores what the next opening cannot read — a typo, NaN (null after
+     * JSON) or a value outside the rule — and that includes the fields a run
+     * does not check (the other placement mode, a disabled edge, zones off).
+     * Values that are already numbers are not read as text: String(1e-7) is
+     * "1e-7", which the field grammar refuses.
+     * @param {Object} cfg - Raw config from gatherAll(); not changed.
+     * @returns {Object} A copy of cfg with usable numbers.
+     */
+    storable: function (cfg) {
+        var rules = GM.Validation.rules;
+        var dflt = GM.Config.getDefaults();
+        var out = GM.Utils.deepCopy(cfg);
+
+        function usable(val, rule, fallback) {
+            var n = (typeof val === "number") ? val : GM.Numbers.parse(val);
+            if (!isFinite(n)) return fallback;
+            if (rule.integer && n !== Math.floor(n)) return fallback;
+            return (n >= rule.min && n <= rule.max) ? n : fallback;
+        }
+
+        out.offsetX = usable(cfg.offsetX, rules.offsetX, dflt.offsetX);
+        out.offsetY = usable(cfg.offsetY, rules.offsetY, dflt.offsetY);
+        out.markSize = usable(cfg.markSize, rules.markSize, dflt.markSize);
+        out.regWeight = usable(cfg.regWeight, rules.regWeight, dflt.regWeight);
+        out.haloWeight = usable(cfg.haloWeight, rules.haloWeight, dflt.haloWeight);
+        out.pathOffset = usable(cfg.pathOffset, rules.pathOffset, dflt.pathOffset);
+
+        var edgeKeys = ["top", "left", "bottom", "right"];
+        for (var i = 0; i < edgeKeys.length; i++) {
+            var k = edgeKeys[i];
+            if (!cfg[k]) continue;
+            out[k].number = usable(cfg[k].number, rules.edgeCount, dflt[k].number);
+            out[k].spacing = usable(cfg[k].spacing, rules.edgeSpacing, dflt[k].spacing);
+        }
+        if (cfg.cornerZone) {
+            out.cornerZone.count = usable(cfg.cornerZone.count, rules.cornerCount, dflt.cornerZone.count);
+            out.cornerZone.pitch = usable(cfg.cornerZone.pitch, rules.cornerPitch, dflt.cornerZone.pitch);
+        }
+        if (cfg.pathDist) {
+            out.pathDist.number = usable(cfg.pathDist.number, rules.pathNumber, dflt.pathDist.number);
+            out.pathDist.spacing = usable(cfg.pathDist.spacing, rules.pathSpacing, dflt.pathDist.spacing);
+        }
+        return out;
     },
 
     /**
@@ -155,8 +204,9 @@ GM.Validation = {
             }
         }
 
-        // Build clean settings (parsed numbers replace raw strings)
-        var settings = GM.Utils.deepCopy(cfg);
+        // Build clean settings: storable() makes every number usable (the
+        // fields not checked above included), then the validated values.
+        var settings = GM.Validation.storable(cfg);
         settings.offsetX = offsetX;
         settings.offsetY = offsetY;
         settings.markSize = markSize;
@@ -170,12 +220,6 @@ GM.Validation = {
             if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
             else settings.pathDist.spacing = pathSpacing;
             settings.pathOffset = pathOffset;
-        } else {
-            // Not checked outside path mode, but it is stored with the preset:
-            // a typo or NaN (null after JSON) there must not come back as a
-            // field that cannot be fixed. Anything unusable is stored as 0.
-            var storedOffset = GM.Numbers.parse(cfg.pathOffset);
-            settings.pathOffset = (isFinite(storedOffset) && storedOffset >= 0) ? storedOffset : 0;
         }
 
         return { valid: true, settings: settings };

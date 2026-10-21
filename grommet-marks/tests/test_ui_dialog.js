@@ -743,6 +743,232 @@ console.log("--- UI 1.4: a decimal comma stays a comma (spec 6.1) ---");
     done();
 })();
 
+// ===== TESTS: presets behave like the family (spec 6.4, 7; canon 9, 12.4) =====
+// Three presets, "A" active; markSize 4 and 6 are the only values that differ from
+// the defaults, so the field that holds them is found by its text.
+function presetPData(active) {
+    var p = freshPData();
+    var a = GM.Config.getDefaults(); a.markSize = 4;
+    var b = GM.Config.getDefaults(); b.markSize = 6;
+    p.presets["A"] = a; p.presets["B"] = b;
+    p.activePreset = active || "A";
+    return p;
+}
+function winBtn(w, text) { return w.findOne(function (c) { return c.type === "button" && c.text === text; }); }
+function presetList(w) { return w.findOne(function (c) { return c.type === "dropdownlist" && c.helpTip === GM.L.TIP_PRESET_LOAD; }); }
+function listTexts(list) { var t = []; for (var i = 0; i < list.items.length; i++) t.push(list.items[i].text); return t; }
+function textField(w, text) { return w.findOne(function (c) { return c.type === "edittext" && c.text === text; }); }
+function isRedPen(pen) {
+    var c = pen && pen.color;
+    return !!c && c[0] === GM.FieldPaint.COLORS.ERR[0] && c[1] === GM.FieldPaint.COLORS.ERR[1] && c[2] === GM.FieldPaint.COLORS.ERR[2];
+}
+// Writes go to a list instead of the disk; prompt/confirm answer what the test says.
+function withStubs(answers, fn) {
+    var saved = [], origSave = GM.Storage.save;
+    GM.Storage.save = function (d) { saved.push(JSON.stringify(d)); return true; };
+    global.prompt = function () { return answers.prompt === undefined ? null : answers.prompt; };
+    global.confirm = function () { return answers.confirm !== false; };
+    global.alert = function () {};
+    try { fn(saved); }
+    finally { GM.Storage.save = origSave; delete global.prompt; delete global.confirm; delete global.alert; }
+}
+
+console.log("--- UI 1.4 presets: the star is on the active preset only, every item is relabelled (P5) ---");
+(function () {
+    var pd = presetPData("A");
+    buildUI3(pd, null, null);
+    var w = SUI.lastWindow();
+    var list = presetList(w);
+    assert(listTexts(list).join("|") === "[Výchozí]|A|B", "precheck: the list is [Výchozí], A, B (got " + listTexts(list).join("|") + ")");
+
+    var f = textField(w, "4");
+    f.text = "4,5"; f.onChange();
+    assert(listTexts(list).join("|") === "[Výchozí]|A *|B", "an edited A is 'A *' (got " + listTexts(list).join("|") + ")");
+
+    list.selection = list.items[2]; list.onChange();
+    assert(pd.activePreset === "B", "precheck: B is active now");
+    assert(listTexts(list).join("|") === "[Výchozí]|A|B",
+        "switching to B takes the star off A and B has none (got " + listTexts(list).join("|") + ")");
+
+    var g = textField(w, "6");
+    g.text = "7"; g.onChange();
+    assert(listTexts(list).join("|") === "[Výchozí]|A|B *", "an edited B is 'B *' (got " + listTexts(list).join("|") + ")");
+    list.selection = list.items[0]; list.onChange();
+    assert(listTexts(list).join("|") === "[Výchozí]|A|B", "and on to [Výchozí]: no star anywhere (got " + listTexts(list).join("|") + ")");
+    done();
+})();
+
+console.log("--- UI 1.4 presets: Save and Save As stay grey while a checked field is invalid ---");
+(function () {
+    withStubs({}, function (saved) {
+        var pd = presetPData("A");
+        buildUI3(pd, null, null);
+        var w = SUI.lastWindow();
+        var list = presetList(w);
+        var save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS), revert = winBtn(w, "↺");
+        assert(save.enabled === false && revert.enabled === false && saveAs.enabled === true,
+            "a freshly opened preset: Save and ↺ off, Save As on");
+
+        var f = textField(w, "4");
+        f.text = "abc"; f.onChange();
+        assert(save.enabled === false, "'abc' in a visible field: Save is grey");
+        assert(saveAs.enabled === false, "'abc' in a visible field: Save As is grey");
+        assert(revert.enabled === true, "...and ↺ is lit, there is something to take back");
+        assert(listTexts(list)[1] === "A *", "...and the list says A is changed");
+
+        f.text = "4,5"; f.onChange();
+        assert(save.enabled === true && saveAs.enabled === true && revert.enabled === true, "fixed to 4,5: Save, Save As and ↺ are on");
+
+        save.onClick();
+        assert(pd.presets["A"].markSize === 4.5, "Save stored the number 4.5 (got " + pd.presets["A"].markSize + ")");
+        assert(saved.length === 1, "...and wrote the file once (" + saved.length + ")");
+        assert(save.enabled === false, "after Save: Save is grey");
+        assert(revert.enabled === false, "after Save: ↺ is grey");
+        assert(saveAs.enabled === true, "after Save: Save As is on");
+        assert(listTexts(list).join("|") === "[Výchozí]|A|B", "after Save: no star (got " + listTexts(list).join("|") + ")");
+
+        // Typo in a field that is greyed (a disabled edge) does not count
+        var ui = buildUI3(presetPData("A"), null, null);
+        var w2 = SUI.lastWindow();
+        var save2 = winBtn(w2, GM.L.SAVE), saveAs2 = winBtn(w2, GM.L.BTN_SAVE_AS);
+        ui.edgeUI.bottom.numIn.text = "abc"; ui.edgeUI.bottom.numIn.onChange();
+        assert(saveAs2.enabled === true, "a typo in the mirrored bottom edge (not checked) leaves Save As on");
+        assert(save2.enabled === false, "...and Save stays grey (nothing the preset would change)");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 presets: only the numbers gate Save; Generate has the structure too (ruling R1) ---");
+(function () {
+    withStubs({}, function () {
+        var ui = buildUI3(presetPData("A"), null, null);
+        var w = SUI.lastWindow();
+        var ok = winBtn(w, GM.L.OK), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS);
+        assert(ok.enabled === true, "precheck: Generate is on");
+
+        // No edge at all: Generate is off, the numbers are fine
+        ui.edgeUI.top.cb.value = false; ui.edgeUI.top.cb.onClick();
+        ui.edgeUI.left.cb.value = false; ui.edgeUI.left.cb.onClick();
+        assert(ok.enabled === false, "no edge: Generate is grey");
+        assert(saveAs.enabled === true, "no edge: Save As is on");
+        assert(save.enabled === true, "no edge, changed: Save is on");
+
+        // No shape: the same
+        ui.edgeUI.top.cb.value = true; ui.edgeUI.top.cb.onClick();
+        var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
+        circle.value = false; circle.onClick();
+        assert(ok.enabled === false && saveAs.enabled === true && save.enabled === true,
+            "no shape: Generate grey, Save As and Save on");
+
+        // A bad number: all three are grey
+        circle.value = true; circle.onClick();
+        var f = textField(w, "4");
+        f.text = "x"; f.onChange();
+        assert(ok.enabled === false && save.enabled === false && saveAs.enabled === false, "a bad number: Generate, Save, Save As are grey");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 presets: an unchecked field with junk is stored as the default (review focus 2) ---");
+(function () {
+    withStubs({}, function (saved) {
+        function isDefaultHidden(p) {
+            var D = GM.Config.getDefaults();
+            return p.pathDist.spacing === D.pathDist.spacing && p.pathOffset === D.pathOffset;
+        }
+        // A holds path values of its own; junk in the hidden fields is stored as the defaults
+        var pd = presetPData("A");
+        pd.presets["A"].pathDist = { useNumber: false, number: 24, spacing: 50 };
+        pd.presets["A"].pathOffset = 5;
+        var ui = buildUI3(pd, mockPathInfo(4, true), null);
+        var w = SUI.lastWindow();
+        var save = winBtn(w, GM.L.SAVE), revert = winBtn(w, "↺"), ok = winBtn(w, GM.L.OK);
+        assert(ui.modeUI.artboardRB.value === true, "precheck: artboard mode, the path fields are hidden");
+        assert(String(ui.pathUI.spcIn.text) === "50" && String(ui.pathUI.offsetIn.text) === "5", "precheck: A's path values are in the hidden fields");
+        ui.pathUI.spcIn.text = "abc"; ui.pathUI.spcIn.onChange();
+        ui.pathUI.offsetIn.text = "99999"; ui.pathUI.offsetIn.onChange();
+        assert(ok.enabled === true, "hidden junk does not grey Generate");
+        assert(save.enabled === true, "...and Save is on: it would store other values than A holds");
+        save.onClick();
+        assert(pd.presets["A"].pathDist.spacing === 105, "Save stored the default spacing 105 (got " + pd.presets["A"].pathDist.spacing + ")");
+        assert(pd.presets["A"].pathOffset === 0, "Save stored the offset 0, not 99999 (got " + pd.presets["A"].pathOffset + ")");
+        assert(typeof pd.presets["A"].pathDist.spacing === "number" && JSON.stringify(pd.presets["A"]).indexOf("null") < 0, "...numbers, no null after JSON");
+        assert(save.enabled === false && revert.enabled === false, "after Save the junk is no change to save: Save and ↺ are grey");
+        assert(listTexts(presetList(w))[1] === "A", "...and A has no star (got " + listTexts(presetList(w))[1] + ")");
+        done();
+
+        // The next opening: no red field, in either mode, Generate on
+        var ui2 = buildUI3(pd, mockPathInfo(4, true), null);
+        var w2 = SUI.lastWindow();
+        assert(String(ui2.pathUI.spcIn.text) === "105" && String(ui2.pathUI.offsetIn.text) === "0", "reopened: the path fields hold 105 and 0");
+        ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+        assert(!isRedPen(ui2.pathUI.spcIn.graphics.foregroundColor) && !isRedPen(ui2.pathUI.offsetIn.graphics.foregroundColor),
+            "reopened, path mode: no red field");
+        assert(winBtn(w2, GM.L.OK).enabled === true, "reopened, path mode: Generate is on");
+        done();
+
+        // Save As takes the same road
+        var pd3 = presetPData("A");
+        var ui3 = buildUI3(pd3, mockPathInfo(4, true), null);
+        var w3 = SUI.lastWindow();
+        ui3.pathUI.spcIn.text = "abc"; ui3.pathUI.spcIn.onChange();
+        ui3.pathUI.offsetIn.text = "99999"; ui3.pathUI.offsetIn.onChange();
+        var save3 = winBtn(w3, GM.L.SAVE), saveAs3 = winBtn(w3, GM.L.BTN_SAVE_AS);
+        assert(saveAs3.enabled === true, "junk in the hidden fields leaves Save As on");
+        assert(save3.enabled === false && winBtn(w3, "↺").enabled === false,
+            "A already holds the defaults the junk would be stored as: nothing to save, Save and ↺ are grey");
+        global.prompt = function () { return "C"; };
+        winBtn(w3, GM.L.BTN_SAVE_AS).onClick();
+        assert(!!pd3.presets["C"] && pd3.activePreset === "C", "Save As made the preset C and made it active");
+        assert(isDefaultHidden(pd3.presets["C"]), "Save As stored the defaults for the junk (got " + pd3.presets["C"].pathDist.spacing + ", " + pd3.presets["C"].pathOffset + ")");
+        assert(listTexts(presetList(w3)).join("|") === "[Výchozí]|A|B|C", "the list has C (got " + listTexts(presetList(w3)).join("|") + ")");
+        assert(winBtn(w3, GM.L.SAVE).enabled === false, "after Save As: Save is grey");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 presets: Save on [Výchozí] asks for a name ---");
+(function () {
+    withStubs({ prompt: "Mine" }, function (saved) {
+        var pd = freshPData();
+        buildUI3(pd, null, null);
+        var w = SUI.lastWindow();
+        var f = textField(w, "3");
+        f.text = "3,5"; f.onChange();
+        var save = winBtn(w, GM.L.SAVE);
+        assert(save.enabled === true, "[Výchozí] changed: Save is on");
+        save.onClick();
+        assert(pd.activePreset === "Mine" && pd.presets["Mine"].markSize === 3.5, "Save on [Výchozí] went through Save As");
+        assert(pd.presets["[Default]"].markSize === 3, "[Výchozí] is untouched");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 presets: the panel follows the canon's template (canon 9) ---");
+(function () {
+    buildUI3(presetPData("A"), null, null);
+    var w = SUI.lastWindow();
+    var list = presetList(w);
+    var revert = winBtn(w, "↺"), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS), del = winBtn(w, GM.L.DELETE);
+    var row = list.parent;
+    assert(revert.parent !== row && revert.parent.type === "group" && revert.parent.parent === row,
+        "↺ sits in a group of its own, in the list's row");
+    assert(revert.parent.children.length === 1, "...alone in it");
+    assert(revert.parent.alignment && revert.parent.alignment[0] === "right", "...the group aligned right");
+    assert(list.alignment && list.alignment[0] === "fill", "the list fills the row");
+    assert(save.parent === saveAs.parent && saveAs.parent === del.parent && del.parent !== row, "Save, Save As and Delete share a row of their own");
+    assert(del.parent.alignment && del.parent.alignment[0] === "right", "...aligned right");
+    var btns = [save, saveAs, del];
+    for (var i = 0; i < btns.length; i++) {
+        assert(!(btns[i].preferredSize.width > 0), "'" + btns[i].text + "' has no preferredSize.width (native width), got " + btns[i].preferredSize.width);
+    }
+    assert(del.enabled === true, "Delete is on for a preset of the user's");
+    done();
+    buildUI3(presetPData("[Default]"), null, null);
+    assert(winBtn(SUI.lastWindow(), GM.L.DELETE).enabled === false, "...and off on [Výchozí]");
+    done();
+})();
+
 // ===== TEST: both locales define the same keys =====
 // The table of one language, built the way the script builds it: locale.js run
 // with that app.locale (the suite's own GM.L stays the one loaded at the top).

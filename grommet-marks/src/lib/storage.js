@@ -111,8 +111,9 @@ GM.Storage = {
      * Migration chain:
      *   1. Flat {presetName: settings} -> wrapper {activePreset, presets}
      *   2. __default__ -> [Default] key rename
-     *   3. Per-preset value migrations (v2->v3, v3.0->v3.1)
-     *   4. Forward-fill new default keys
+     *   3. [Default] is rebuilt from GM.Config.getDefaults() (always)
+     *   4. Per-preset value migrations (v2->v3, v3.0->v3.1)
+     *   5. Forward-fill new default keys
      * Returns null on failure; caller falls back to getDefaults().
      * @returns {Object|null} Full preset wrapper or null.
      */
@@ -163,10 +164,11 @@ GM.Storage = {
                 }
             }
 
-            // Ensure [Default] exists
-            if (!data.presets[DEF]) {
-                data.presets[DEF] = GM.Config.getDefaults();
-            }
+            // [Default] is built from the code on every load: what the file
+            // holds under that name (an older version's, a hand edit) does not
+            // change what "default" means. The other presets and the active
+            // key are left as they are.
+            data.presets[DEF] = GM.Config.getDefaults();
 
             // Ensure activePreset is valid
             if (!data.presets[data.activePreset]) {

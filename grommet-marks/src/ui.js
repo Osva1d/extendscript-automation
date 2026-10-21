@@ -301,7 +301,10 @@ GM.UI = {
         setPanel.margins = LO.MARGIN;
         setPanel.spacing = LO.GROUP;
 
-        // Row 1: label + dropdown (fills) + revert (↺), ZSM layout.
+        // Row 1: label + dropdown (fills) + revert (↺), canon 9. ↺ is in a group
+        // of its own: ScriptUI shares a row's slack among ALL its controls, so a
+        // bare button would grow with the list. 30 px is the canon's one
+        // allowed deviation (a single glyph; the native width dwarfs the row).
         var presetTop = setPanel.add("group");
         presetTop.alignment = ["fill", "top"];
         presetTop.spacing = LO.GROUP;
@@ -309,25 +312,23 @@ GM.UI = {
         var loadDDL = presetTop.add("dropdownlist", undefined, []);
         loadDDL.alignment = ["fill", "center"];
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
-        var revertBtn = presetTop.add("button", undefined, "↺");
+        var revertGrp = presetTop.add("group");
+        revertGrp.alignment = ["right", "center"];
+        var revertBtn = revertGrp.add("button", undefined, "↺");
         revertBtn.preferredSize = [30, 24];
-        revertBtn.alignment = ["right", "center"];
         revertBtn.helpTip = GM.L.TIP_REVERT;
         revertBtn.enabled = false;
 
-        // Row 2: Save / Save As / Delete, right-aligned, equal width (ZSM layout).
-        var PRESET_BTN_W = 92;
+        // Row 2: Save / Save As / Delete, right-aligned, at native widths
+        // (the 92 px of 1.3.0 was too narrow for "Uložit jako…").
         var presetBtns = setPanel.add("group");
         presetBtns.alignment = ["right", "top"];
         presetBtns.spacing = LO.GROUP;
         var saveBtn = presetBtns.add("button", undefined, GM.L.SAVE);
-        saveBtn.preferredSize.width = PRESET_BTN_W;
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
         var saveAsBtn = presetBtns.add("button", undefined, GM.L.BTN_SAVE_AS);
-        saveAsBtn.preferredSize.width = PRESET_BTN_W;
         saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
         var deleteBtn = presetBtns.add("button", undefined, GM.L.DELETE);
-        deleteBtn.preferredSize.width = PRESET_BTN_W;
         deleteBtn.helpTip = GM.L.TIP_DELETE;
         deleteBtn.enabled = false;
 
@@ -912,13 +913,20 @@ GM.UI = {
             return n >= rule.min && n <= rule.max;
         }
 
+        // The numbers of the fields this check looks at are fine — the active
+        // mode's, the enabled ones. Save and Save As follow it (a preset never
+        // stores what the next opening cannot read, canon 12.4); Generate also
+        // needs the structure below (ruling R1). Set by liveValidateAll(), which
+        // runs before refreshModifiedIndicator() reads it.
+        var numbersOk = true;
+
         function liveValidateAll() {
             // Only the ACTIVE placement mode's fields gate OK. The inactive
             // mode's panel is hidden, so validating it would grey out Generate
             // with the offending field off-screen — and validate() skips it on
             // submit anyway, making live validation stricter than the real one.
             var mode = pathRB.value ? "path" : "artboard";
-            var allValid = true;
+            var fieldsOk = true;
             for (var i = 0; i < validationTargets.length; i++) {
                 var t = validationTargets[i];
                 if (!t.et) continue;
@@ -926,25 +934,27 @@ GM.UI = {
                 if (!t.et.enabled) { GM.FieldPaint.field(t.et, true); continue; }
                 var ok = fieldInRange(t.et, t.rule);
                 GM.FieldPaint.field(t.et, ok);
-                if (!ok) allValid = false;
+                if (!ok) fieldsOk = false;
             }
 
             // Structural checks (mirror GM.Validation.validate) so OK greys out
             // for these too, not just numeric ranges. These have no single field
             // to paint, so they only gate the button.
+            var structureOk = true;
             // 1) At least one effective edge enabled (artboard mode only).
             if (!pathRB.value) {
                 var topOn = topUI.cb.value;
                 var leftOn = leftUI.cb.value;
                 var bottomOn = mirrorTopCB.value ? topOn : bottomUI.cb.value;
                 var rightOn = mirrorLeftCB.value ? leftOn : rightUI.cb.value;
-                if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+                if (!topOn && !leftOn && !bottomOn && !rightOn) structureOk = false;
             }
             // 2) Marks must have at least one shape (circle and/or cross).
-            if (!circleCB.value && !crossCB.value) allValid = false;
+            if (!circleCB.value && !crossCB.value) structureOk = false;
 
-            try { okBtn.enabled = allValid; } catch (e) {}
-            return allValid;
+            numbersOk = fieldsOk;
+            try { okBtn.enabled = fieldsOk && structureOk; } catch (e) {}
+            return numbersOk;
         }
 
         // =================================================================
@@ -952,8 +962,8 @@ GM.UI = {
         // =================================================================
         function onUserChange() {
             refreshInfo();
+            liveValidateAll();               // sets numbersOk first
             refreshModifiedIndicator();
-            liveValidateAll();
         }
 
         // Edge panels notify on any internal change.
@@ -966,26 +976,50 @@ GM.UI = {
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)
         // =================================================================
-        function refreshModifiedIndicator() {
-            var modified;
-            try { modified = GM.UIState.isModified(pData, gatherAll()); } catch (e) { modified = false; }
-            try { saveBtn.enabled = modified; } catch (e) {}
-            try { revertBtn.enabled = modified; } catch (e) {}
+        // What the dialog holds, for comparing with the active preset. With the
+        // checked fields valid, a typo left in a field nobody checks (the other
+        // mode, a disabled edge) counts as the default it would be saved as:
+        // otherwise Save would store that default and the preset would still
+        // look changed. With a checked field invalid the raw values are
+        // compared, so the typo is a change and ↺ takes it back.
+        function currentValues() {
+            var raw = gatherAll();
+            return numbersOk ? GM.Validation.storable(raw) : raw;
+        }
 
-            if (!loadDDL.selection) return;
-            var idx = loadDDL.selection.index;
-            var key = sortedKeys[idx];
-            if (key !== pData.activePreset) return;
-            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.PRESET_DEFAULT : key;
-            if (modified) displayText += " *";
-            try { loadDDL.items[idx].text = displayText; } catch (e) {
-                updatePresetList();
+        /**
+         * Asterisk and button states after any change. Relabels every item of
+         * the list, not only the active one: switching away from an edited
+         * preset would otherwise leave its asterisk behind (canon 12.4,
+         * tile-export refreshModifiedIndicator).
+         */
+        function refreshModifiedIndicator() {
+            var modified = false, entries = [];
+            try {
+                var now = currentValues();
+                modified = GM.UIState.isModified(pData, now);
+                entries = GM.UIState.formatPresetList(pData, now, GM.L);
+            } catch (e) { modified = false; }
+            try { revertBtn.enabled = modified; } catch (e) {}
+            try { saveBtn.enabled = modified && numbersOk; } catch (e) {}
+            try { saveAsBtn.enabled = numbersOk; } catch (e) {}
+
+            // The list holds the same keys in the same order as the entries
+            // (updatePresetList builds both from formatPresetList).
+            for (var j = 0; j < entries.length && j < loadDDL.items.length; j++) {
+                if (entries[j].key !== sortedKeys[j]) continue;
+                try {
+                    if (loadDDL.items[j].text !== entries[j].displayText) loadDDL.items[j].text = entries[j].displayText;
+                } catch (e) {
+                    updatePresetList();
+                    return;
+                }
             }
         }
 
         function updatePresetList() {
             loadDDL.removeAll();
-            var entries = GM.UIState.formatPresetList(pData, gatherAll(), GM.L);
+            var entries = GM.UIState.formatPresetList(pData, currentValues(), GM.L);
             sortedKeys = [];
             var selIdx = 0;
             for (var i = 0; i < entries.length; i++) {
@@ -1014,10 +1048,13 @@ GM.UI = {
             refreshModifiedIndicator();
         };
 
+        // A preset stores GM.Validation.storable(): numbers the next opening
+        // can read (Save and Save As are grey while a checked field is invalid;
+        // what is left over is in the fields nobody checks).
         saveBtn.onClick = function () {
-            var r = GM.UIState.save(pData, gatherAll());
+            var r = GM.UIState.save(pData, GM.Validation.storable(gatherAll()));
             if (r.ok) {
-                updatePresetList();
+                refreshModifiedIndicator();
                 GM.Storage.save(pData);   // reports failure itself
                 return;
             }
@@ -1035,7 +1072,7 @@ GM.UI = {
                 alert(isEmpty ? GM.L.ERR_ENTER_NAME : GM.L.ERR_RESERVED_NAME);
                 return;
             }
-            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function (name) {
+            var r = GM.UIState.saveAs(pData, raw, GM.Validation.storable(gatherAll()), function (name) {
                 return confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!r.ok) return;
@@ -1078,10 +1115,11 @@ GM.UI = {
         circleCB.onClick = onUserChange;
         crossCB.onClick = onUserChange;
 
-        // Initial pass: modified indicator (Save disabled when UI matches the
-        // active preset) + live validation (paints fields, sets OK initial state).
-        refreshModifiedIndicator();
+        // Initial pass: live validation (paints fields, sets OK initial state
+        // and numbersOk) + modified indicator (Save disabled when UI matches
+        // the active preset).
         liveValidateAll();
+        refreshModifiedIndicator();
 
         return {
             window: dlg,
