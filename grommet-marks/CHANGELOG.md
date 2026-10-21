@@ -26,9 +26,10 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   beze změny a dokument bez měřítka s během v 1:1 také. V měřítku 1:1
   vycházejí stejné polohy i velikosti jako v 1.3.0.
 - **Měřítko v šedém řádku.** Je-li jiné než 1:1, řádek pod Umístěním je
-  uvede na konci („1 artboard · 8000 × 6000 mm · měřítko 1:10“, „Uzavřená
-  cesta · 5 rohů · měřítko 1:10“). Velikost artboardu v režimu Hrany ukáže
-  ve skutečné velikosti (artboard × N), protože všechny hodnoty v dialogu
+  uvede na konci („1 artboard · 8000 × 6000 mm · 1:10“, „Uzavřená cesta ·
+  5 rohů · 1:10“) — bez slova „měřítko“, které by dialog rozšířilo.
+  Velikost artboardu v režimu Hrany ukáže ve skutečné velikosti
+  (artboard × N), protože všechny hodnoty v dialogu
   jsou ve skutečné velikosti — takže měřítko, které přišlo z dokumentu, je
   vidět v poli i v řádku, ne jen v poli.
 - **Šedý řádek říká, proč je Generovat šedé.** Dokud Generovat nejde

@@ -1505,51 +1505,51 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
 (function () {
     var ui = buildUI3(null, null, docAt(800, 600, 10));
     var line = ui.modeUI.infoLbl;
-    var expected = "1 artboard · " + GM.UI.formatLen(800 * 10) + " × " + GM.UI.formatLen(600 * 10) + " mm · měřítko 1:10";
+    var expected = "1 artboard · " + GM.UI.formatLen(800 * 10) + " × " + GM.UI.formatLen(600 * 10) + " mm · 1:10";
     assert(line.text === expected, "artboard 800 x 600 mm at 1:10: real size x 10 (got '" + line.text + "')");
-    assert(line.text === "1 artboard · 8000 × 6000 mm · měřítko 1:10", "...in formatLen's format: '8000 × 6000 mm'");
+    assert(line.text === "1 artboard · 8000 × 6000 mm · 1:10", "...in formatLen's format: '8000 × 6000 mm'");
     assert(lineIsFinding(line), "...a finding, grey");
 
     // It follows the field while typing
     ui.modeUI.scaleIn.text = "1"; ui.modeUI.scaleIn.onChanging();
     assert(line.text === "1 artboard · 800 × 600 mm", "typed '1': no suffix, the artboard as it is (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "2,5"; ui.modeUI.scaleIn.onChanging();
-    assert(line.text === "1 artboard · 2000 × 1500 mm · měřítko 1:2,5", "typed '2,5': the comma, the size x 2.5 (got '" + line.text + "')");
+    assert(line.text === "1 artboard · 2000 × 1500 mm · 1:2,5", "typed '2,5': the comma, the size x 2.5 (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "1,0"; ui.modeUI.scaleIn.onChanging();
     assert(line.text === "1 artboard · 800 × 600 mm", "typed '1,0' is 1:1: no suffix (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "0"; ui.modeUI.scaleIn.onChanging();
-    assert(lineIsErr(ui.modeUI.infoLbl) && line.text.indexOf("měřítko 1:") < 0, "typed '0': the reason, no suffix (got '" + line.text + "')");
+    assert(lineIsErr(ui.modeUI.infoLbl) && line.text.indexOf(" · 1:") < 0, "typed '0': the reason, no suffix (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "10"; ui.modeUI.scaleIn.onChanging();
     assert(line.text === expected && lineIsFinding(line), "back to '10': the finding with the suffix again");
 
     // The unit changes the number, not the suffix
     var units = unitsList(SUI.lastWindow());
     units.selection = units.items[1]; units.onChange();
-    assert(line.text === "1 artboard · 800 × 600 cm · měřítko 1:10", "cm: 800 x 600 cm (got '" + line.text + "')");
+    assert(line.text === "1 artboard · 800 × 600 cm · 1:10", "cm: 800 x 600 cm (got '" + line.text + "')");
     done();
 
     // Large Canvas: the document's own factor and the drawing scale multiply
     var big = buildUI3(null, null, docAt(30, 20, 10, { scale: 10 }));
-    assert(big.modeUI.infoLbl.text === "1 artboard · 3000 × 2000 mm · měřítko 1:10",
+    assert(big.modeUI.infoLbl.text === "1 artboard · 3000 × 2000 mm · 1:10",
         "Large Canvas x 1:10: 30 x 20 mm in the file is 3000 x 2000 mm (got '" + big.modeUI.infoLbl.text + "')");
     done();
 
     var three = buildUI3(null, null, docAt(1, 1, 10, { artboards: 3 }));
-    assert(three.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny · měřítko 1:10", "several artboards: the suffix at the end (got '" + three.modeUI.infoLbl.text + "')");
+    assert(three.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny · 1:10", "several artboards: the suffix at the end (got '" + three.modeUI.infoLbl.text + "')");
     done();
 
     var pd = freshPData();
     pd.presets["[Default]"].placementMode = "path";
     var fb = buildUI3(pd, null, docAt(100, 100, 10));
-    assert(fb.modeUI.infoLbl.text === GM.L.INFO_FALLBACK + " · měřítko 1:10", "the notice that no path is selected also ends with the scale (got '" + fb.modeUI.infoLbl.text + "')");
+    assert(fb.modeUI.infoLbl.text === GM.L.INFO_FALLBACK + " · 1:10", "the notice that no path is selected also ends with the scale (got '" + fb.modeUI.infoLbl.text + "')");
     done();
 
     // Path mode: the same ending, after the clause
     var p = buildUI3(null, mockPathInfo(5, true), docAt(100, 100, 10));
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
-    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě · měřítko 1:10", "closed path, offset 0 (got '" + p.modeUI.infoLbl.text + "')");
+    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě · 1:10", "closed path, offset 0 (got '" + p.modeUI.infoLbl.text + "')");
     p.pathUI.offsetIn.text = "20"; p.pathUI.offsetIn.onChanging();
-    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · měřítko 1:10", "closed path, offset 20 (got '" + p.modeUI.infoLbl.text + "')");
+    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · 1:10", "closed path, offset 20 (got '" + p.modeUI.infoLbl.text + "')");
     p.modeUI.scaleIn.text = "1"; p.modeUI.scaleIn.onChanging();
     assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "...and at 1:1 the 1.3.0 text (got '" + p.modeUI.infoLbl.text + "')");
     p.modeUI.artboardRB.value = true; p.modeUI.artboardRB.onClick();
@@ -1566,9 +1566,9 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
         assert(GM.UI.placementInfoText(st) === base, "st.drawingScale " + cases[i] + ": nothing added");
     }
     st.drawingScale = 4;
-    assert(GM.UI.placementInfoText(st) === "1 artboard · 4000 × 2000 mm · měřítko 1:4", "st.drawingScale 4: the size x 4 and the suffix (got '" + GM.UI.placementInfoText(st) + "')");
+    assert(GM.UI.placementInfoText(st) === "1 artboard · 4000 × 2000 mm · 1:4", "st.drawingScale 4: the size x 4 and the suffix (got '" + GM.UI.placementInfoText(st) + "')");
     st.drawingScale = 100;
-    assert(GM.UI.placementInfoText(st) === "1 artboard · 100000 × 50000 mm · měřítko 1:100", "st.drawingScale 100 (got '" + GM.UI.placementInfoText(st) + "')");
+    assert(GM.UI.placementInfoText(st) === "1 artboard · 100000 × 50000 mm · 1:100", "st.drawingScale 100 (got '" + GM.UI.placementInfoText(st) + "')");
     st.docInfo = null; st.drawingScale = 10;
     assert(GM.UI.placementInfoText(st) === "", "no docInfo: the empty line stays empty, no dangling suffix");
 })();
@@ -1584,7 +1584,7 @@ console.log("--- UI 1.4 scale: the line is wide enough for the finding with the 
         docInfo: null, fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
     worst.push(GM.UI.placementInfoText({ pathMode: true, pathInfo: mockPathInfo(0, true, 1000), docInfo: null, fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
     for (var i = 0; i < worst.length; i++) {
-        assert(worst[i].indexOf("měřítko 1:99,5") > 0, "precheck " + i + ": the sample carries the scale (got '" + worst[i] + "')");
+        assert(worst[i].indexOf(" · 1:99,5") > 0, "precheck " + i + ": the sample carries the scale (got '" + worst[i] + "')");
         assert(longest.length >= worst[i].length,
             "longestInfoText (" + longest.length + ") holds '" + worst[i] + "' (" + worst[i].length + ")");
     }
@@ -1735,15 +1735,18 @@ console.log("--- Locale: the drawing scale (spec 4.3, 5; canon 12.1) ---");
     var cs = tableFor("cs_CZ"), en = tableFor("en_US");
     assert(cs.SCALE_LABEL === "Měřítko kresby 1:" && en.SCALE_LABEL === "Drawing scale 1:",
         "SCALE_LABEL: the family's label, ends with the colon (got '" + cs.SCALE_LABEL + "' / '" + en.SCALE_LABEL + "')");
-    assert(cs.INFO_SCALE === " · měřítko 1:%s" && en.INFO_SCALE === " · scale 1:%s",
-        "INFO_SCALE: the ending of the grey line (got '" + cs.INFO_SCALE + "' / '" + en.INFO_SCALE + "')");
+    // The short ending: measured in Illustrator 30.8.2 on 2026-10-21, the CS
+    // dialog is 583 px wide with " · měřítko 1:99,9" and 535 px with
+    // " · 1:99,9" (EN 566 / 534; 1.3.0 was 521 px).
+    assert(cs.INFO_SCALE === " · 1:%s" && en.INFO_SCALE === " · 1:%s",
+        "INFO_SCALE: the short ending of the grey line, ' · 1:N' (got '" + cs.INFO_SCALE + "' / '" + en.INFO_SCALE + "')");
     assert(cs.SCALE_FIELD === "Měřítko kresby" && en.SCALE_FIELD === "Drawing scale",
         "SCALE_FIELD: the field's name in a reason, no colon (got '" + cs.SCALE_FIELD + "' / '" + en.SCALE_FIELD + "')");
     assert(typeof cs.TIP_SCALE === "string" && cs.TIP_SCALE.indexOf("1:10") >= 0 && cs.TIP_SCALE.indexOf("zapamatuje") > 0 &&
         cs.TIP_SCALE.indexOf("skutečné velikosti") > 0, "CS TIP_SCALE: 1:10, the document remembers it, real size (got '" + cs.TIP_SCALE + "')");
     assert(typeof en.TIP_SCALE === "string" && en.TIP_SCALE.indexOf("1:10") >= 0 && en.TIP_SCALE.indexOf("remembers") > 0 &&
         en.TIP_SCALE.indexOf("real-world") > 0, "EN TIP_SCALE: 1:10, the document remembers it, real-world size (got '" + en.TIP_SCALE + "')");
-    assert(cs.format(cs.INFO_SCALE, "2,5") === " · měřítko 1:2,5" && en.format(en.INFO_SCALE, "10") === " · scale 1:10", "INFO_SCALE takes the scale once");
+    assert(cs.format(cs.INFO_SCALE, "2,5") === " · 1:2,5" && en.format(en.INFO_SCALE, "10") === " · 1:10", "INFO_SCALE takes the scale once");
     // Czech wording: vykání, no quotes, no '!' (the generic locale tests cover every key too)
     assert(!/[!"]/.test(cs.TIP_SCALE + cs.SCALE_LABEL + cs.INFO_SCALE + cs.SCALE_FIELD), "CS: no '!' and no straight quote in the new texts");
 })();

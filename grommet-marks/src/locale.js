@@ -153,7 +153,9 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboards",
             INFO_ALL_ARTBOARDS: "marks go on every one",
             INFO_SIZE: "%s × %s %s",
-            INFO_SCALE: " · scale 1:%s",
+            // Short on purpose: " · scale 1:N" widened the dialog by 32 px
+            // (docs/extendscript-engine-facts.md, measured 2026-10-21).
+            INFO_SCALE: " · 1:%s",
             INFO_FALLBACK: "The preset wants a path, none is selected — marking the artboard.",
             INFO_CORNERS_1: "%s corner",
             INFO_CORNERS_2: "%s corners",
@@ -333,7 +335,9 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboardů",
             INFO_ALL_ARTBOARDS: "značky dostanou všechny",
             INFO_SIZE: "%s × %s %s",
-            INFO_SCALE: " · měřítko 1:%s",
+            // Schválně krátké: „ · měřítko 1:N“ rozšířilo dialog o 48 px
+            // (docs/extendscript-engine-facts.md, naměřeno 2026-10-21).
+            INFO_SCALE: " · 1:%s",
             INFO_FALLBACK: "Předvolba chce cestu, žádná není vybraná — značí se artboard.",
             INFO_CORNERS_1: "%s roh",
             INFO_CORNERS_2: "%s rohy",

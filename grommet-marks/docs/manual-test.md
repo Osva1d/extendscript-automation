@@ -611,10 +611,10 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    potvrzení dialogu, export pak nech doběhnout (nebo ho zastav podržením
    Esc). Dokument nezavírej. Spusť Grommet Marks.
 - [ ] Pole **Měřítko kresby 1:** ukazuje **10**.
-- [ ] Šedý řádek pod Umístěním je `1 artboard · 8000 × 6000 mm · měřítko 1:10`.
+- [ ] Šedý řádek pod Umístěním je `1 artboard · 8000 × 6000 mm · 1:10`.
   Velikost artboardu je **skutečná** (800 × 600 mm × 10), ne velikost
   v souboru.
-- [ ] Přepni Jednotky na cm: řádek je `1 artboard · 800 × 600 cm · měřítko 1:10`,
+- [ ] Přepni Jednotky na cm: řádek je `1 artboard · 800 × 600 cm · 1:10`,
   Měřítko zůstává 10.
 - [ ] Měřítko je vidět na dvou místech — v poli a na konci řádku. Nejde ho
   přehlédnout dřív, než klikneš na Generovat.
@@ -649,7 +649,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    60 mm, stěny 32 mm, hřeben 21 mm nad okapy). Vyber ho, **Vybraná cesta**,
    Měřítko **10**, Odsazení od kraje **20**, Rozteč **300 mm**, Velikost
    **30**.
-- [ ] Šedý řádek před spuštěním: `Uzavřená cesta · 5 rohů · měřítko 1:10`.
+- [ ] Šedý řádek před spuštěním: `Uzavřená cesta · 5 rohů · 1:10`.
 4. Generovat.
 - [ ] Stejných **6 značek** jako v J1 (pět rohů a jedna uprostřed základny).
   Rohové značky leží **2 mm** od obou stran rohu (20 mm ve skutečnosti ÷ 10):
@@ -684,7 +684,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 | # | stav | jak ho vyvolat | text v řádku |
 |---|---|---|---|
 | 1 | normální | Hrany artboardu, dokument bez měřítka | `1 artboard · 800 × 600 mm` (šedě) |
-| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · měřítko 1:10`; s vybraným štítem v režimu Vybraná cesta `Uzavřená cesta · 5 rohů · měřítko 1:10` (šedě) |
+| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · 1:10`; s vybraným štítem v režimu Vybraná cesta `Uzavřená cesta · 5 rohů · 1:10` (šedě) |
 | 3 | jedno neplatné pole | Velikost `abc` | `✗ Velikost: zadejte číslo od 0,01 do 9999 mm.` (červeně) |
 | 4 | víc neplatných polí | `abc` do Velikosti, Reg. tahu a Bílého hala | `✗ Neplatná pole: 3 — opravte červená pole.` (červeně) |
 | 5 | bez tvaru, bez hrany | odškrtni Kruh i Kříž; v jiném běhu vypni Horní i Levou hranu | `✗ Značka nemá tvar — zapněte Kruh nebo Kříž.`; `✗ Není zapnutá žádná hrana.` (červeně) |
@@ -801,7 +801,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   [__]“ je na jednom řádku a nic se neřeže.
 2. Spusť skript s vybraným štítem a v poli Měřítko kresby 1: napiš `99,9`;
    potom přepni Jednotky a režimy (Hrany artboardu ⇄ Vybraná cesta).
-- [ ] Šedý řádek se vejde i s koncem „· měřítko 1:99,9“ v obou režimech
+- [ ] Šedý řádek se vejde i s koncem „· 1:99,9“ v obou režimech
   a **dialog při tom nemění šířku**.
 - [ ] Nejdelší důvody se vejdou taky: zapni Rohové zóny a do Rozteče napiš
   `x` → `✗ Rohové zóny — Rozteč: zadejte číslo od 0,01 do 9999 mm.`
