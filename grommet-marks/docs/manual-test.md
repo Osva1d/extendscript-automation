@@ -597,19 +597,25 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > na světlém i tmavém UI, vzhled předvoleb v seznamu a rozměry dialogu. Rozměry
 > v K7 jsou změřené v Illustratoru (úkol 7), nejsou odhad.
 >
-> **Příprava:** dokument cca 800 × 600 mm s jedním artboardem, jednotky mm,
-> výchozí hodnoty (`[Výchozí]`), Illustrator česky. Před každým testem smaž
-> vrstvu „Grommet Marks“ (nebo dej Zpět) — jinak skript ohlásí značky kryjící
-> se s předchozím během. **Měřítko si pamatuje dokument:** pokud test nepíše
-> jinak, začíná na dokumentu bez měřítka (nový dokument, nebo v tomhle zadej
-> 1 a jednou Generovat). Před K5 si zazálohuj nastavení:
+> **Příprava:** dokument cca 800 × 600 mm s jedním artboardem (K1 si vyžádá
+> zakázku Tile Exportu, viz tam), jednotky mm, výchozí hodnoty (`[Výchozí]`),
+> Illustrator česky. Před každým testem smaž vrstvu „Grommet Marks“ (nebo dej
+> Zpět) — jinak skript ohlásí značky kryjící se s předchozím během.
+> **Měřítko si pamatuje dokument:** pokud test nepíše jinak, začíná na
+> dokumentu bez měřítka (nový dokument, nebo v tomhle zadej 1 a jednou
+> Generovat). Před K5 si zazálohuj nastavení:
 > `cp -p "$HOME/Library/Application Support/GrommetMarks/GrommetMarksSettings.json"{,.bak}`
 
 ### K1 — Měřítko z Tile Exportu (nečekaná velikost značek)
-1. V dokumentu 800 × 600 mm spusť **Tile Export** (1.1.0 a novější), zadej
-   Měřítko kresby **1:10** a potvrď. Tile Export zapíše měřítko hned po
-   potvrzení dialogu, export pak nech doběhnout (nebo ho zastav podržením
-   Esc). Dokument nezavírej. Spusť Grommet Marks.
+1. Dokument pro K1 je zakázka Tile Exportu: artboard 800 × 600 mm
+   s umístěným (linkovaným) PDF, které artboard pokrývá a které na disku
+   existuje, a s cílovou složkou nastavenou v dialogu Tile Exportu — bez
+   umístěné grafiky Tile Export hlásí „V dokumentu není umístěná grafika.“
+   a nespustí se. Spusť **Tile Export** (1.1.0 a novější), zadej Měřítko
+   kresby **1:10** a potvrď. Tile Export zapíše měřítko hned po potvrzení
+   dialogu; export pak nech doběhnout do zkušební složky (v Tile Exportu
+   1.2.0 ho jde zastavit podržením Esc, starší verze to neumí). Dokument
+   nezavírej. Spusť Grommet Marks.
 - [ ] Pole **Měřítko kresby 1:** ukazuje **10**.
 - [ ] Šedý řádek pod Umístěním je `1 artboard · 8000 × 6000 mm · 1:10`.
   Velikost artboardu je **skutečná** (800 × 600 mm × 10), ne velikost
@@ -671,6 +677,13 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Měřítko zůstává **10**; ostatní délky se přepočítají (jako C5).
 3. Přepni v seznamu předvoleb na `[Výchozí]` a zpět na `Test A`.
 - [ ] Měřítko zůstává **10** — předvolba ho nemění a nenese.
+4. **Zpět vrací značky, ne měřítko.** Nastav Měřítko **7**, Generovat (smaž
+   předtím vrstvu značek), jednou **Cmd+Z** a spusť skript znovu.
+- [ ] Značky z toho běhu zmizely, ale pole Měřítko kresby 1: ukazuje **7**:
+  měřítko se do dokumentu zapíše mimo krok Zpět (změřeno 2026-10-21, viz
+  `docs/extendscript-engine-facts.md`) a dokument si ho drží. Opravíš ho
+  přepsáním pole; dokument bez měřítka dostaneš zpět zadáním `1` a jedním
+  Generovat.
 
 ### K4 — Šedý řádek v pěti stavech, na světlém i tmavém UI
 > Řádek má dvě podoby: **nález** (šedý, jako zašedlý text) a **důvod**

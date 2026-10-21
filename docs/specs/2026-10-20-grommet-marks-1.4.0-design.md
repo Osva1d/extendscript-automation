@@ -167,10 +167,11 @@ v Tile Exportu.
 ## 5. Šedý řádek
 
 **Nález** jako v 1.3.0. Když měřítko není 1:1, připojí se na konec
-`· měřítko 1:N` (N podle §6.1), v obou režimech:
+`· 1:N` (N podle §6.1), v obou režimech (návrh původně počítal s
+`· měřítko 1:N`; delší konec dialog rozšířil, viz „Odchylky od návrhu“):
 
-- `1 artboard · 8 000 × 6 000 mm · měřítko 1:10`
-- `Uzavřená cesta · 5 rohů · měřítko 1:10`
+- `1 artboard · 8 000 × 6 000 mm · 1:10`
+- `Uzavřená cesta · 5 rohů · 1:10`
 
 **Důvod šedého Generovat** (kánon §12.3, audit P8). Dokud Generovat nejde
 stisknout, řádek místo nálezu ukáže důvod v barvě chyby kánonu (§12.6,
@@ -309,3 +310,30 @@ vidět celá.
 - Přesné texty důvodů v šedém řádku a anglické texty.
 - Kde přesně v běhu se měřítko zapíše vzhledem ke kroku Zpět (měřit).
 - Rozdělení práce do commitů a testů.
+
+## 13. Odchylky od návrhu (implementace 2026-10-21)
+
+Co se při stavbě změnilo proti textu výš; čísla jsou z měření v Illustratoru
+30.8.2 (`docs/extendscript-engine-facts.md`, 2026-10-21).
+
+- **Měřítko se zapisuje po úspěšném běhu, ne po dialogu** (§4.2). Odmítnutý
+  běh slibuje „Dokument nebyl změněn.“, takže nesmí změnit ani měřítko; Tile
+  Export zapisuje hned po dialogu, GM až po běhu, který kreslil.
+- **Konec šedého řádku je ` · 1:N`, ne ` · měřítko 1:N`** (§5). S delším
+  koncem měřil dialog 583 px (EN 566 px), s krátkým 535 px (EN 534 px);
+  měřítko zůstává vidět v poli i v řádku.
+- **Dialog je česky 535 px široký, anglicky 534 px** (§4.4 slibovalo 521 px
+  jako v 1.3.0). Šířku určuje šedý řádek, jehož popisek má šířku nejdelšího
+  možného textu (nález s koncem ` · 1:99,9`). Nejvyšší stav (Hrany artboardu
+  bez zrcadlení) měří 804 px (`window.size`; i se záhlavím okna 832 px),
+  strop z §8 je cca 850 px; ostatní stavy 758 a 678 px.
+- **Zpět vrací značky, ne měřítko** (§4.2 nechávalo otevřené, jestli zápis do
+  XMP patří do kroku Zpět). Změřeno: jedno `app.undo()` po běhu, který měřítko
+  změnil, odstraní značky, ale měřítko zůstane v XMP dokumentu, takže další
+  dialog nabídne měřítko vráceného běhu. Přijato a popsáno v README a v ručním
+  testu K3.
+- **`field_paint` nepřečte vlastní pero pole** (§6.2). Před zobrazením dialogu
+  vrací `graphics.foregroundColor` prázdnou hodnotu u všech polí i u šedého
+  řádku, takže platné pole dostane záložní světle šedou (0,75), stejně jako
+  `paintField` v 1.3.0. Jestli jde pero přečíst po `show()`, neměřeno; barvy na
+  světlém a tmavém UI ověřuje ruční test K4.
