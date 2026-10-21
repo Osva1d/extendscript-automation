@@ -26,7 +26,9 @@ GM.Storage = {
      * Serializes and saves the full preset wrapper to disk.
      * Reports write failures to the user itself (single source of truth for
      * all call-sites) — a stale on-disk state that "resurrects" a deleted
-     * preset after restart is a data-integrity bug, never swallow it.
+     * preset after restart is a data-integrity bug, never swallow it. The
+     * alert is the bare consequence sentence, with no error prefix: the run
+     * goes on (or the dialog stays open) without the settings.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
      * @returns {boolean} True if the file was written.
      */
@@ -35,7 +37,7 @@ GM.Storage = {
             var f = GM.Storage.getFile();
             f.encoding = "UTF-8";
             if (!f.open("w")) {
-                GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+                alert(GM.L.ERR_WRITE_SETTINGS);
                 return false;
             }
             f.write(JSON.stringify(data));
@@ -43,7 +45,7 @@ GM.Storage = {
             return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
-            GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+            alert(GM.L.ERR_WRITE_SETTINGS);
             return false;
         }
     },

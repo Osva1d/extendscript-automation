@@ -43,28 +43,36 @@ function MockFile(p) {
 Object.defineProperty(MockFile.prototype, "exists", {
     get: function () { return mockFS.hasOwnProperty(this._path); }
 });
+var failOpenForWrite = false;    // a write that cannot start: open("w") returns false
+var failWrite = false;           // a write that throws
 MockFile.prototype.open = function (mode) {
     this._mode = mode;
+    if (mode === "w" && failOpenForWrite) return false;
     if (mode === "w") this._buffer = "";
     return true;
 };
 MockFile.prototype.read = function () {
     return mockFS[this._path] || "";
 };
-MockFile.prototype.write = function (s) { this._buffer += s; };
+MockFile.prototype.write = function (s) {
+    if (failWrite) throw new Error("disk full");
+    this._buffer += s;
+};
 MockFile.prototype.close = function () {
     if (this._mode === "w") mockFS[this._path] = this._buffer;
 };
 global.File = MockFile;
 
-global.alert = function () {};
+var alerts = [];
+global.alert = function (m) { alerts.push(String(m)); };
 global.$ = { writeln: function () {} };
 
 // ===== LOAD PRODUCTION CODE =====
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
 
-// Stub locale (needed by storage error paths)
-GM.L = { ERR_WRITE_SETTINGS: "Cannot write settings file." };
+// The real locale (storage's error path says what the operator reads)
+global.app = { locale: "en_US" };
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers (presetEquals)
@@ -226,6 +234,55 @@ console.log("--- v5 forward-fill ---");
     assert(p.pathDist.number === 24, "forward-fill: pathDist.number");
     assert(p.pathDist.spacing === 105, "forward-fill: pathDist.spacing");
     assert(p.pathOffset === 0, "forward-fill: pathOffset 0 — old presets keep marks on the path (no double offset)");
+})();
+
+// ===== TEST: a failed settings write is no error (ruling R4) =====
+// The run goes on (or the dialog stays open) without the settings, so the alert
+// is the bare consequence sentence: no "CHYBA: " / "ERROR: " in front, as in the
+// other tools. Both ways a write fails: open("w") refuses, or writing throws.
+console.log("--- Storage.save: a failed write alerts ERR_WRITE_SETTINGS and nothing else ---");
+(function () {
+    function tableFor(locale) {
+        var saved = global.app.locale;
+        global.app.locale = locale;
+        var table = new Function("GM", fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8") +
+            "\nreturn GM.L;")({});
+        global.app.locale = saved;
+        return table;
+    }
+    var data = { activePreset: "[Default]", presets: { "[Default]": GM.Config.getDefaults() } };
+    var kept = GM.L;
+    var langs = ["en_US", "cs_CZ"];
+    for (var li = 0; li < langs.length; li++) {
+        GM.L = tableFor(langs[li]);
+        var tag = langs[li] + ": ";
+
+        setup();
+        alerts = [];
+        assert(GM.Storage.save(data) === true && alerts.length === 0, tag + "a good write: true, no alert");
+        assert(mockFS.hasOwnProperty(SETTINGS_PATH), tag + "...and the file is written");
+
+        setup();
+        alerts = [];
+        failOpenForWrite = true;
+        var r1 = GM.Storage.save(data);
+        failOpenForWrite = false;
+        assert(r1 === false, tag + "open('w') refused: save returns false");
+        assert(alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS,
+            tag + "open('w') refused: exactly ERR_WRITE_SETTINGS (got '" + alerts.join(" | ") + "')");
+        assert(alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_PREFIX) < 0,
+            tag + "...with no error prefix");
+
+        setup();
+        alerts = [];
+        failWrite = true;
+        var r2 = GM.Storage.save(data);
+        failWrite = false;
+        assert(r2 === false, tag + "write throws: save returns false");
+        assert(alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS,
+            tag + "write throws: exactly ERR_WRITE_SETTINGS (got '" + alerts.join(" | ") + "')");
+    }
+    GM.L = kept;
 })();
 
 // ===== SUMMARY =====

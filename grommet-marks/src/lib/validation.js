@@ -28,6 +28,17 @@ GM.Validation = {
     },
 
     /**
+     * A refusal of validate(): the error alert and, at its end, what happened
+     * to the document — nothing, the values are checked before anything is
+     * drawn (canon 12.2). The one place that sentence is added.
+     * @param {Object} L - Locale object (GM.L).
+     * @param {string} msg - What is wrong.
+     */
+    refuse: function (L, msg) {
+        GM.Utils.error(msg + " " + (L.DOC_UNCHANGED || "The document was not changed."));
+    },
+
+    /**
      * Validates a numeric value against a rule.
      * @param {string|number} val - Raw value.
      * @param {Object} rule - {min, max, integer}.
@@ -40,15 +51,17 @@ GM.Validation = {
         var n = GM.Numbers.parse(val);
         var name = String(label).replace(/\s*:\s*$/, "");
         if (isNaN(n)) {
-            GM.Utils.error(L.format(L.ERR_MUST_BE_NUMBER || "Field \"%s\" must be a number.", name));
+            GM.Validation.refuse(L, L.format(L.ERR_MUST_BE_NUMBER || "Field \"%s\" must be a number.", name));
             return null;
         }
         if (rule.integer && n !== Math.floor(n)) {
-            GM.Utils.error(L.format(L.ERR_MUST_BE_INTEGER || "Field \"%s\" must be a whole number.", name));
+            GM.Validation.refuse(L, L.format(L.ERR_MUST_BE_INTEGER || "Field \"%s\" must be a whole number.", name));
             return null;
         }
         if (n < rule.min || n > rule.max) {
-            GM.Utils.error(L.format(L.ERR_OUT_OF_RANGE || "Field \"%s\" must be between %s and %s.", name, rule.min, rule.max));
+            // The limits are written the way the fields are (Czech: "0,01").
+            GM.Validation.refuse(L, L.format(L.ERR_OUT_OF_RANGE || "Field \"%s\" must be between %s and %s.", name,
+                GM.Numbers.format(rule.min, L.DEC_SEP), GM.Numbers.format(rule.max, L.DEC_SEP)));
             return null;
         }
         return n;
@@ -92,7 +105,7 @@ GM.Validation = {
         var haloWeight = vn(cfg.haloWeight, rules.haloWeight, L.HALO_WEIGHT || "Halo", L);
         if (haloWeight === null) return { valid: false, settings: null };
         if (!cfg.markCircle && !cfg.markCross) {
-            GM.Utils.error(L.ERR_NO_APPEARANCE);
+            GM.Validation.refuse(L, L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
 
@@ -118,7 +131,7 @@ GM.Validation = {
             var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
             var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
             if (!topOn && !leftOn && !bottomOn && !rightOn) {
-                GM.Utils.error(L.ERR_NO_EDGE);
+                GM.Validation.refuse(L, L.ERR_NO_EDGE);
                 return { valid: false, settings: null };
             }
 

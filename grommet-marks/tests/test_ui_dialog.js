@@ -850,6 +850,9 @@ console.log("--- Locale: the preset sentences are the canon's (12.4), the critic
         "CS ERR_CRITICAL is the canon's template (got '" + cs.ERR_CRITICAL + "')");
     assert(en.ERR_CRITICAL === "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer.",
         "EN ERR_CRITICAL is the canon's template (got '" + en.ERR_CRITICAL + "')");
+    // What happened to the document, said once for the refusals of validate() (ruling R5)
+    assert(cs.DOC_UNCHANGED === "Dokument nebyl změněn." && en.DOC_UNCHANGED === "The document was not changed.",
+        "DOC_UNCHANGED: 'Dokument nebyl změněn.' / 'The document was not changed.'");
     assert(cs.ERR_UNEXPECTED === undefined && en.ERR_UNEXPECTED === undefined,
         "ERR_UNEXPECTED is gone: ERR_CRITICAL replaced it");
     assert(cs.ERR_NO_DOC === "Před spuštěním skriptu otevřete dokument.", "ERR_NO_DOC is the canon's text, unchanged");

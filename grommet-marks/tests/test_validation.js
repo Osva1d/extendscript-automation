@@ -99,7 +99,7 @@ console.log("--- Validation.validate: invalid ---");
     var noApp = validCfg({ markCircle: false, markCross: false });
     lastAlert = null;
     assert(GM.Validation.validate(noApp, L).valid === false, "no circle/cross → invalid");
-    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_APPEARANCE, "no-appearance alert shown (got " + lastAlert + ")");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_APPEARANCE + " " + L.DOC_UNCHANGED, "no-appearance alert shown (got " + lastAlert + ")");
 
     // no edges (top+left off, both mirrored)
     var noEdge = validCfg({
@@ -109,7 +109,7 @@ console.log("--- Validation.validate: invalid ---");
     });
     lastAlert = null;
     assert(GM.Validation.validate(noEdge, L).valid === false, "no enabled edges → invalid");
-    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_EDGE, "no-edge alert shown (got " + lastAlert + ")");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_EDGE + " " + L.DOC_UNCHANGED, "no-edge alert shown (got " + lastAlert + ")");
 
     // non-mirrored enabled edge with bad count
     var badCount = validCfg({
@@ -360,7 +360,9 @@ console.log("--- validate: an invalid path offset never reaches the stored setti
 // ===== TEST: a blocking alert is "CHYBA: ..." and never shouts (spec 6.5) =====
 // validate() refuses with an alert after which the run ends: the family's
 // prefix in front, no exclamation mark, the field's name in quotes without the
-// label's colon ("Odsazení X:" is a label, the message names the field).
+// label's colon ("Odsazení X:" is a label, the message names the field), and
+// at the end what happened to the document (canon 12.2, ruling R5): nothing,
+// the dialog's values are checked before anything is drawn.
 console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) ---");
 (function () {
     var refusals = [
@@ -394,6 +396,11 @@ console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) --
             assert(lastAlert.indexOf(prefix) === 0, tag + ": starts with '" + prefix + "' (got '" + lastAlert + "')");
             assert(lastAlert.indexOf("!") < 0, tag + ": no exclamation mark (got '" + lastAlert + "')");
             assert(lastAlert.indexOf("%s") < 0 && lastAlert.indexOf("undefined") < 0, tag + ": no unfilled placeholder (got '" + lastAlert + "')");
+            var sentence = String(GM.L.DOC_UNCHANGED), tail = " " + sentence;
+            assert(lastAlert.length > tail.length && lastAlert.substring(lastAlert.length - tail.length) === tail,
+                tag + ": ends with '" + tail + "' (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf(sentence) === lastAlert.lastIndexOf(sentence),
+                tag + ": the sentence stands once");
             assert(lastAlert.substring(prefix.length).indexOf(":") < 0,
                 tag + ": the label's colon is not carried into the sentence (got '" + lastAlert + "')");
         }
@@ -402,16 +409,29 @@ console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) --
     // The exact words, Czech and English
     GM.L = tableFor("cs_CZ");
     lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
-    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být číslo.", "CS number: got '" + lastAlert + "'");
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být číslo. Dokument nebyl změněn.", "CS number: got '" + lastAlert + "'");
     lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
-    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být mezi 0 a 9999.", "CS range: got '" + lastAlert + "'");
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být mezi 0 a 9999. Dokument nebyl změněn.", "CS range: got '" + lastAlert + "'");
     lastAlert = null; GM.Validation.validate(validCfg({ top: { enabled: true, useNumber: true, number: 3.5, spacing: 105 } }), GM.L);
-    assert(lastAlert === "CHYBA: Pole „Počet ok“ musí být celé číslo.", "CS whole number: got '" + lastAlert + "'");
+    assert(lastAlert === "CHYBA: Pole „Počet ok“ musí být celé číslo. Dokument nebyl změněn.", "CS whole number: got '" + lastAlert + "'");
     GM.L = tableFor("en_US");
     lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
-    assert(lastAlert === 'ERROR: Field "Offset X" must be a number.', "EN number: got '" + lastAlert + "'");
+    assert(lastAlert === 'ERROR: Field "Offset X" must be a number. The document was not changed.', "EN number: got '" + lastAlert + "'");
     lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
-    assert(lastAlert === 'ERROR: Field "Offset X" must be between 0 and 9999.', "EN range: got '" + lastAlert + "'");
+    assert(lastAlert === 'ERROR: Field "Offset X" must be between 0 and 9999. The document was not changed.', "EN range: got '" + lastAlert + "'");
+
+    // The limits in a range message are written the way the fields are: the
+    // Czech comma, not a dot (ruling R5b); the dot stays in English.
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ markSize: 0 }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Velikost“ musí být mezi 0,01 a 9999. Dokument nebyl změněn.",
+        "CS markSize range shows '0,01' (got '" + lastAlert + "')");
+    lastAlert = null; GM.Validation.validate(validCfg({ regWeight: 0 }), GM.L);
+    assert(lastAlert.indexOf("mezi 0,1 a 50.") > 0, "CS weight range shows '0,1' (got '" + lastAlert + "')");
+    GM.L = tableFor("en_US");
+    lastAlert = null; GM.Validation.validate(validCfg({ markSize: 0 }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Size" must be between 0.01 and 9999. The document was not changed.',
+        "EN markSize range keeps '0.01' (got '" + lastAlert + "')");
 
     // The zone's spacing field is named by the glossary's word
     GM.L = tableFor("cs_CZ");

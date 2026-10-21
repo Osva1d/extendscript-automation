@@ -118,6 +118,7 @@ GM.L = (function () {
 
             // Errors
             ERR_PREFIX: "ERROR: ",
+            DOC_UNCHANGED: "The document was not changed.",
             ERR_NO_DOC: "Open a document before running the script.",
             ERR_NO_EDGE: "At least one edge must be enabled.",
             ERR_NO_APPEARANCE: "Marks must have at least one shape — circle and/or cross.",
@@ -280,6 +281,7 @@ GM.L = (function () {
 
             // Errors
             ERR_PREFIX: "CHYBA: ",
+            DOC_UNCHANGED: "Dokument nebyl změněn.",
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
             ERR_NO_EDGE: "Musí být zapnutá alespoň jedna hrana.",
             ERR_NO_APPEARANCE: "Značka musí mít aspoň jeden tvar — kruh a/nebo kříž.",
