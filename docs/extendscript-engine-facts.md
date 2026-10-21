@@ -619,6 +619,116 @@ nahrazeno vyvedením `GM`), každá ve vlastním dokumentu zavřeném bez ulože
   bez hlášky, v dokumentu nic navíc. Kopie z `offsetPath` vzhled posledního
   objektu nepřevezme (výplň a tah jí skript nastaví sám).
 
+### Měřítko kresby a rozměry dialogu grommet-marks 1.4.0 (naměřeno 2026-10-21, AI 30.8.2)
+
+Sondy přes sestavený `dist/illustrator-grommet-marks.jsx` stejně jako výš
+(vyvedené `GM`, zachycené hlášky, nastavení v souboru sondy), každý běh
+skriptu ve vlastním volání `ai-eval.sh`, jen vlastní dokumenty. Dialog se
+nezobrazil (`show()` nahrazené); rozměry jsou `window.size` po
+`layout.layout(true)`, tedy po prvním rozvržení, jaké udělá `show()`.
+Šířky s dlouhým koncem řádku jsou z buildu před zkrácením (6a06a47,
+`GM.L.INFO_SCALE` přepsané v sondě před `buildDialog`), ostatní z buildu
+s krátkým koncem (96e0a22).
+
+**Měřítko 1:10 proti 1:1.** Stejné hodnoty v dialogu (Velikost 10 mm, Kruh
+i Kříž, Reg. tah 1 pt, Bílé halo 3 pt; u cesty Odsazení od kraje 20 mm
+a Rozteč 300 mm, u Hran Rozteč 105 mm), tvar i artboard v 1:10 desetkrát
+menší, měřítko napsané do pole:
+
+| tvar | značek | největší odchylka od 1:1 ÷ 10 (poloha / rozměr / tah) |
+|---|---|---|
+| štít z J1 | 6 / 6 | 0,0008 / 0,0000 / 0,00000001 pt |
+| zaoblený obdélník z J2 (R 50) | 6 / 6 | 0,0008 / 0,0000 / 0,00000001 pt |
+| Hrany artboardu 800 × 600 mm | 28 / 28 | 0,0000 / 0,0000 / 0,00000001 pt |
+
+Tahy v 1:10 vyšly 0,3 a 0,1 pt (halo, registrace), značka 2,835 pt místo
+28,346 pt. Štít v 1:1 dal na tisícinu bodu tytéž polohy jako 1.3.0 v J1
+(2026-10-17); zaoblený obdélník se od J2 liší nejvýš o 0,001 pt (J2 měl
+dokument 800 × 520 mm, tady 800 × 700 mm).
+
+**Large Canvas × 1:10.** `documents.add` 6000 × 1000 mm → `scaleFactor` 10,
+artboard vnitřně 1700,79 × 283,46 pt. Štít zmenšený stokrát proti 1:1:
+6 značek, poloha nejvýš 0,0008 pt od 1:1 ÷ 100, tahy 0,03 a 0,01 pt, značka
+0,283 pt. Hrany artboardu (Odsazení 700 mm, Velikost 300 mm, tahy 10 a 30 pt,
+Rozteč 5000 mm) proti běžnému dokumentu 600 × 100 mm v 1:1 s hodnotami ÷ 100:
+28 / 28 značek, odchylka 0,00005 pt. Šedý řádek „1 artboard · 60000 × 10000 mm
+· 1:10“ (artboard × `scaleFactor` × N).
+
+**Měřítko v dokumentu (XMP).** Volání nad jedním vlastním dokumentem
+800 × 600 mm, po řadě:
+
+1. `GM.DrawingScale.save(doc, 10)` → v paketu `te:drawingScale` 10, `load` 10.
+2. Běh bez zásahu: pole „10“, řádek „1 artboard · 8000 × 6000 mm · 1:10“, běh
+   paket nezměnil (týž řetězec před i po). **Paket ale roste mezi skripty:**
+   po běhu, který nakreslil značky, měl na začátku dalšího volání 409 668
+   znaků místo 40 753 — Illustrator přepsal náhled `xmp:Thumbnails` (base64);
+   `te:drawingScale` zůstal 10. Porovnávat celý paket napříč voláními proto
+   nejde, jen hodnotu.
+3. Běh s polem „2,5“ → `load` 2,5, v paketu `te:drawingScale` 2.5.
+4. **Jedno `app.undo()` vrátí značky, ne měřítko.** Značek 72 → 36 (zmizely
+   jen ty z běhu 2,5), `load` dál 2,5, paket stejný jako po běhu. Zápis do
+   `XMPString` v kroku Zpět běhu není. Po Zpět tedy další otevření nabídne
+   měřítko vráceného běhu. Druhé `undo()` neměřeno.
+5. Odmítnutý běh (pruh 35 × 350 mm, Vybraná cesta, Měřítko 5, Odsazení od
+   kraje 100 mm): jediná hláška „CHYBA: Odsazení 100 mm je na tento tvar moc
+   velké … Dokument nebyl změněn.“, měřítko zůstalo 2,5, paket, značky
+   i vrstvy beze změny.
+
+**Rozměry dialogu** (px, `window.size` bez záhlaví okna; `frameSize`
+nejvyššího stavu 535 × 832):
+
+| stav | CS | EN |
+|---|---|---|
+| Hrany artboardu, zrcadlení zapnuté (výchozí) | 535 × 758 | 534 × 758 |
+| Hrany artboardu bez zrcadlení (nejvyšší) | 535 × 804 | 534 × 804 |
+| Vybraná cesta (štít, Odsazení od kraje 20) | 535 × 678 | 534 × 678 |
+| předvolba chce cestu, nic není vybráno | 535 × 758 | 534 × 758 |
+| nejširší důvod (Rohové zóny, Rozteč `x`) | 535 × 758 | 534 × 758 |
+| kruh, Odsazení 0, měřítko 10 (nejdelší nález) | 535 × 678 | 534 × 678 |
+
+V 1.3.0 měřil dialog 521 × 731 / 777 / 651 (2026-10-13). Přibylo 27 px na
+výšku; strop 850 px drží i s `frameSize`.
+
+**Šířku dělá šedý řádek.** Popisek se založí s textem `longestInfoText()`
+a `buildDialog` mu ještě před prvním rozvržením přepíše text na skutečný
+nález; po `layout(true)` má přesto šířku nejdelšího textu (459 px proti
+162 px textu, který ukazuje). Šířka dialogu podle konce řádku (nejdelší
+vzorek je v obou jazycích nález kruhu s Odsazením 0 a konec s 99,9):
+
+| konec řádku | CS | EN |
+|---|---|---|
+| bez konce | 485 | neměřeno |
+| ` · měřítko 1:%s` / ` · scale 1:%s` | 583 | 566 |
+| ` · 1:%s` (v 1.4.0) | 535 | 534 |
+
+Bez konce by dialog měl 485 px; co v 1.3.0 drželo 521 px, tady neměřeno.
+Nejdelší text podle počtu znaků je i nejširší v pixelech (CS 459 px, EN
+458 px); nejširší skutečný důvod „✗ Rohové zóny — Rozteč: zadejte číslo od
+0,01 do 9999 mm.“ má 357 px (EN „✗ Corner zones — Spacing: …“ 393 px).
+Měřítko přepsané v otevřeném dialogu na 99,9 dá nález 459 px — vejde se.
+
+**Ostatní prvky.** Tlačítka předvoleb v přirozené šířce: ↺ 30 px, Uložit
+80, Uložit jako… 103 (text 75 px), Smazat 80; EN Save 80, Save As… 85,
+Delete 80. Rohové zóny jsou v jednom řádku (obsah končí na 387 z 495 px,
+EN „Densify at corners — first [5] marks, spacing [100]“ na 395 z 494 px),
+řádek Jednotky a Měřítko kresby 1: končí na 349 px (EN 323 px), nic se
+nepřekrývá. Hvězdička v pravém ScriptUI: změna pole u předvolby `Test A`
+přepíše vybranou položku na „Test A *“, návrat hodnoty hvězdičku odebere
+a Uložit zhasne.
+
+**Vlastní pero pole se před zobrazením přečíst nedá.** Po `buildDialog`
+(první `liveValidateAll` proběhne ještě v něm) mají všech 19 edittextů
+i šedý řádek zapamatované pero `null`: `graphics.foregroundColor` se před
+zobrazením čte jako prázdná hodnota. `FieldPaint.field(…, true)` jim proto
+nastaví `FALLBACK` (šedá 0,75), už při prvním průchodu, ne až po opravě
+pole — stejně jako `paintField` v 1.3.0. Jestli se pero dá přečíst po
+`show()`, neměřeno.
+
+**Neměřeno:** zobrazený dialog na displeji 13" (ruční test K7), barva polí
+a řádku na světlém a tmavém UI (K4), zalomení hlášky `ERR_CRITICAL`, jak
+měřítko zapsané z GM přečte dialog Tile Exportu (K1 krok 3; klíč je tentýž),
+běh přes Soubor › Skripty.
+
 ### Pozor na menu příkazy s dialogem
 
 `executeMenuCommand("Expand3")` otevře modální okno `Objekt ▸ Rozdělit…`.

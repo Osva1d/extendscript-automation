@@ -79,7 +79,9 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   políčka vzorníku; stál-li tam jiný vzorek (třeba Bílá), vyšly značky ve
   100 % K. Dokument bez registrační barvy kreslí 100 % K jako dřív.
 - **Dialog je o jeden řádek vyšší.** Jednotky se přesunuly do druhého řádku
-  Umístění k Měřítku kresby.
+  Umístění k Měřítku kresby. Nejvyšší stav (Hrany artboardu bez zrcadlení)
+  měří 804 px místo 777 px a dialog je 535 px široký místo 521 px, aby se do
+  šedého řádku vešel i konec s měřítkem.
 
 ### Opraveno
 

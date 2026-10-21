@@ -594,8 +594,8 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > [návrh](../../docs/specs/2026-10-20-grommet-marks-1.4.0-design.md). Logiku
 > (dělení délek, texty řádku, předvolby, slovník, parita CS/EN) hlídají Node
 > testy; tady je to, co Node nevidí: zápis měřítka do dokumentu, barvy řádku
-> na světlém i tmavém UI, vzhled předvoleb v seznamu a rozměry dialogu. Čísla
-> označená **naměří úkol 7** doplní měření v Illustratoru, nejsou odhad.
+> na světlém i tmavém UI, vzhled předvoleb v seznamu a rozměry dialogu. Rozměry
+> v K7 jsou změřené v Illustratoru (úkol 7), nejsou odhad.
 >
 > **Příprava:** dokument cca 800 × 600 mm s jedním artboardem, jednotky mm,
 > výchozí hodnoty (`[Výchozí]`), Illustrator česky. Před každým testem smaž
@@ -781,15 +781,17 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 ### K7 — Dialog na 13" displeji: tlačítka celá
 > Cíl z návrhu (§8): dialog nejvýš cca 850 px na výšku (strop jako u Tile
 > Exportu), bez uřízlých tlačítek. Displej uživatele je 1512 × 982 s Dockem.
-> Rozměry změří úkol 7 headless v Illustratoru a doplní je do tabulky; tady
-> se ověřuje, že na skutečném displeji nic nepřesahuje.
+> Rozměry změřil úkol 7 headless v Illustratoru 30.8.2 (2026-10-21,
+> `window.size` bez záhlaví okna; nejvyšší stav i se záhlavím 832 px,
+> podrobnosti v `docs/extendscript-engine-facts.md`); tady se ověřuje, že na
+> skutečném displeji nic nepřesahuje.
 
 | stav dialogu | výška (px) | šířka (px) |
 |---|---|---|
-| Hrany artboardu, obě zrcadlení zapnutá (výchozí) | naměří úkol 7 | naměří úkol 7 |
-| Hrany artboardu, obě zrcadlení vypnutá (nejvyšší) | naměří úkol 7 | naměří úkol 7 |
-| Vybraná cesta (štít) | naměří úkol 7 | naměří úkol 7 |
-| totéž anglicky | naměří úkol 7 | naměří úkol 7 |
+| Hrany artboardu, obě zrcadlení zapnutá (výchozí) | 758 | 535 |
+| Hrany artboardu, obě zrcadlení vypnutá (nejvyšší) | 804 | 535 |
+| Vybraná cesta (štít) | 678 | 535 |
+| totéž anglicky | 758 / 804 / 678 | 534 |
 
 1. Projdi stavy v tabulce; v každém se podívej na spodní okraj dialogu.
 - [ ] **Storno** a **Generovat** jsou vidět **celé** a dialog nezasahuje pod
