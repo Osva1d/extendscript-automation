@@ -31,7 +31,7 @@ eval(src("locale.js"));
 eval(src("lib/utils.js"));
 eval(src("config.js"));
 eval(src("lib/validation.js"));
-require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers
+require("./lib/load_shared.js")(GM, ["numbers", "field_paint"]);   // shared: GM.Numbers, GM.FieldPaint
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(GM);   // shared core module — bind to GM
 eval(src("core.js"));
@@ -347,6 +347,44 @@ console.log("--- UI: tooltips of greyed-out controls match the reason (audit A3,
     assert(ui3.edgeUI.top.numRB.helpTip === GM.L.TIP_COUNT_ZONES, "zones on: Count tooltip explains why");
     ui3.zonesUI.enableCB.value = false; ui3.zonesUI.enableCB.onClick();
     assert(ui3.edgeUI.top.numRB.helpTip === GM.L.TIP_COUNT, "zones off: Count tooltip back to normal");
+    done();
+})();
+
+// ===== TEST: an invalid field is painted red, its own pen comes back (spec 6.2) =====
+// The behaviour of the removed private paintField, now the shared
+// GM.FieldPaint.field: forcing black would hide the text on the dark UI.
+console.log("--- UI: invalid field turns red, valid gives its own pen back (spec 6.2) ---");
+(function () {
+    function isErr(pen) {
+        var c = pen && pen.color;
+        return !!c && c[0] === GM.FieldPaint.COLORS.ERR[0] && c[1] === GM.FieldPaint.COLORS.ERR[1] &&
+            c[2] === GM.FieldPaint.COLORS.ERR[2];
+    }
+    var ui = buildUI(null, mockPathInfo(4, true));
+    var top = ui.edgeUI.top;
+    top.spcRB.value = true; top.spcRB.onClick();
+    var g = top.spcIn.graphics;
+    assert(g.foregroundColor === g.ownPen, "a valid field shows its own pen");
+    top.spcIn.text = "1O5"; top.spcIn.onChange();
+    assert(isErr(g.foregroundColor), "'1O5' paints the field in the family red");
+    top.spcIn.text = "12,5"; top.spcIn.onChange();
+    assert(g.foregroundColor === g.ownPen, "'12,5' gives the field its own pen back, not black");
+    top.spcIn.text = "abc"; top.spcIn.onChange();
+    top.spcIn.text = "13"; top.spcIn.onChange();
+    assert(g.foregroundColor === g.ownPen, "and again after a second round");
+
+    // A wrong value in the hidden mode's field is not painted: it does not count.
+    var hid = ui.pathUI.spcIn.graphics;
+    ui.pathUI.spcIn.text = "abc"; ui.pathUI.spcIn.onChange();
+    assert(hid.foregroundColor === hid.ownPen, "a bad field of the hidden mode stays in its own pen");
+
+    // Switching the mode paints the field that was hidden and wrong, and
+    // gives the pen back to the one that was red and is now hidden.
+    top.spcIn.text = "abc"; top.spcIn.onChange();
+    assert(isErr(g.foregroundColor), "precheck: the edge field is red while its mode is active");
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    assert(isErr(hid.foregroundColor), "the bad field is red once its mode is active");
+    assert(g.foregroundColor === g.ownPen, "and the edge field, now hidden, is back in its own pen");
     done();
 })();
 

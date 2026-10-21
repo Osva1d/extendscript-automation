@@ -285,24 +285,16 @@ GM.Illustrator = {
 
     /**
      * Returns the document's registration colour, the stroke colour of every
-     * mark: swatches[1] in any AI locale ([Registration], [Registrační];
-     * index 0 is [None]), or 100% K CMYK as a fallback. The index is checked,
-     * not trusted — the swatch must be a spot of colorType REGISTRATION.
+     * mark: the swatch of colorType REGISTRATION wherever it sits in the
+     * Swatches panel ([Registration], [Registrační]; index 1 may hold White),
+     * or 100% K CMYK when the document has none. The lookup is the shared
+     * GM.Registration, by type, never by name or position.
      * A script cannot remove [Registration] (measured: remove() passes with no
-     * effect); whether the Swatches panel can is unverified, so the check stays.
+     * effect); whether the Swatches panel can is unverified, so the fallback stays.
      * @returns {Color} Registration (or black) colour.
      */
     registrationColor: function () {
-        try {
-            var c = GM.Illustrator.doc.swatches[1].color;
-            if (c && c.typename === "SpotColor" && c.spot &&
-                c.spot.colorType === ColorModel.REGISTRATION) {
-                return c;
-            }
-        } catch (e) {}
-        var k = new CMYKColor();
-        k.cyan = 0; k.magenta = 0; k.yellow = 0; k.black = 100;
-        return k;
+        return GM.Registration.color(GM.Illustrator.doc);
     },
 
     /**

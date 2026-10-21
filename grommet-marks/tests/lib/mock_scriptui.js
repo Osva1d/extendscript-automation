@@ -29,13 +29,18 @@
     var lastWindow = null;
     var origGlobals = {};
 
-    // A minimal ScriptUIGraphics stub so ui.js paintField()/newPen() calls are
-    // harmless no-ops in tests (real colouring needs a realised OS control).
+    // A minimal ScriptUIGraphics stub so the shared FieldPaint.field() calls
+    // are harmless in tests (real colouring needs a realised OS control). A pen
+    // carries the colour it was made with, so a test can tell red from the
+    // field's own pen; foregroundColor starts as that own pen, the way a real
+    // control shows its theme colour, and ownPen is the test's handle to it.
     function makeGraphics() {
+        var own = { own: true };
         return {
-            newPen: function () { return {}; },
+            newPen: function (type, color, width) { return { type: type, color: color, width: width }; },
             newBrush: function () { return {}; },
-            foregroundColor: null,
+            foregroundColor: own,
+            ownPen: own,
             PenType: { SOLID_COLOR: 0 },
             BrushType: { SOLID_COLOR: 0 }
         };

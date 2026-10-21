@@ -905,27 +905,6 @@ GM.UI = {
             validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing, mode: "artboard" });
         }
 
-        function paintField(et, valid) {
-            try {
-                var g = et.graphics;
-                if (!g || !g.newPen) return;
-                // Capture the field's DEFAULT foreground pen once (after the
-                // graphics object is realised). "Valid" restores that theme
-                // default — forcing black [0,0,0] makes the text invisible on
-                // the dark UI. Light-grey is a safe fallback if it can't be read.
-                if (et._gmDefPen === undefined) {
-                    et._gmDefPen = g.foregroundColor || null;
-                }
-                if (valid) {
-                    g.foregroundColor = et._gmDefPen
-                        ? et._gmDefPen
-                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                } else {
-                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
-                }
-            } catch (e) {}
-        }
-
         function fieldInRange(et, rule) {
             var n = GM.Numbers.parse(et.text);
             if (isNaN(n)) return false;
@@ -943,10 +922,10 @@ GM.UI = {
             for (var i = 0; i < validationTargets.length; i++) {
                 var t = validationTargets[i];
                 if (!t.et) continue;
-                if (t.mode && t.mode !== mode) { paintField(t.et, true); continue; }
-                if (!t.et.enabled) { paintField(t.et, true); continue; }
+                if (t.mode && t.mode !== mode) { GM.FieldPaint.field(t.et, true); continue; }
+                if (!t.et.enabled) { GM.FieldPaint.field(t.et, true); continue; }
                 var ok = fieldInRange(t.et, t.rule);
-                paintField(t.et, ok);
+                GM.FieldPaint.field(t.et, ok);
                 if (!ok) allValid = false;
             }
 

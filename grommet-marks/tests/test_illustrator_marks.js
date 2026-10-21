@@ -17,7 +17,7 @@ global.app = { locale: "en_US" };
 global.$ = { writeln: function () {} };
 global.StrokeCap = { BUTTENDCAP: "BUTT", ROUNDENDCAP: "ROUND", PROJECTINGENDCAP: "PROJECTING" };
 global.ColorModel = { REGISTRATION: "REGISTRATION", SPOT: "SPOT", PROCESS: "PROCESS" };
-global.CMYKColor = function () { this.typename = "CMYKColor"; };
+global.CMYKColor = function () { this.typename = "CMYKColor"; this.cyan = 0; this.magenta = 0; this.yellow = 0; this.black = 0; };
 global.PathPointSelection = { ANCHORPOINT: "ANCHOR", NOSELECTION: "NONE",
                               LEFTDIRECTION: "LEFT", RIGHTDIRECTION: "RIGHT" };
 
@@ -25,7 +25,7 @@ var GM = {};
 function src(rel) { return fs.readFileSync(path.join(__dirname, "..", "src", rel), "utf8"); }
 eval(src("constants.js"));
 eval(src("lib/utils.js"));
-require("./lib/load_shared.js")(GM, ["numbers"]);   // shared: GM.Numbers
+require("./lib/load_shared.js")(GM, ["numbers", "registration"]);   // shared: GM.Numbers, GM.Registration
 eval(src("core.js"));
 eval(src("illustrator.js"));
 
@@ -52,8 +52,19 @@ function fakeLayer() {
     };
     return { layer: { groupItems: { add: function () { return grp; } } }, created: created };
 }
+// The registration swatch sits where a real document can put it: not at
+// index 1 (there is White) but behind other swatches (spec 6.3).
+function plainSwatch(name, typename) { return { name: name, color: { typename: typename, tag: name } }; }
+function spotSwatch(name, colorType) {
+    return { name: name, color: { typename: "SpotColor", spot: { colorType: colorType }, tag: name } };
+}
 GM.Illustrator.doc = {
-    swatches: [null, { color: { typename: "SpotColor", spot: { colorType: ColorModel.REGISTRATION } } }]
+    swatches: [
+        plainSwatch("[None]", "NoColor"),
+        plainSwatch("White", "CMYKColor"),
+        spotSwatch("CutContour", ColorModel.SPOT),
+        spotSwatch("[Registration]", ColorModel.REGISTRATION)
+    ]
 };
 
 // ===== TEST: marks do not inherit the document stroke style (review G2) =====
@@ -71,6 +82,40 @@ console.log("--- placeMarkGroup: explicit stroke style (G2) ---");
     }
     assert(solid, "every path has a solid stroke (no inherited dashes)");
     assert(butt, "every path has butt caps (no inherited round caps)");
+})();
+
+// ===== TEST: the registration colour is found by type, wherever it sits (spec 6.3) =====
+console.log("--- registrationColor: found by type, not by position (spec 6.3) ---");
+(function () {
+    var saved = GM.Illustrator.doc;
+    var reg = GM.Illustrator.registrationColor();
+    assert(reg === saved.swatches[3].color && reg.tag === "[Registration]",
+        "registration at index 3 is found (index 1 holds White)");
+
+    // The marks are drawn with it.
+    var f = fakeLayer();
+    GM.Illustrator.placeMarkGroup(f.layer, 100, 100, 10, { circle: true, cross: false, regWeight: 1, haloWeight: 3 });
+    assert(f.created.length === 2 && f.created[1].strokeColor === saved.swatches[3].color,
+        "the registration stroke of a mark carries the registration colour");
+
+    // Czech install: another name, the same type.
+    GM.Illustrator.doc = { swatches: [plainSwatch("[Žádná]", "NoColor"), plainSwatch("Bílá", "CMYKColor"),
+                                      spotSwatch("[Registrační]", ColorModel.REGISTRATION)] };
+    assert(GM.Illustrator.registrationColor().tag === "[Registrační]", "the localized swatch is found by its type");
+
+    // A document without a registration swatch: 100 % K, as before.
+    GM.Illustrator.doc = { swatches: [plainSwatch("[None]", "NoColor"), plainSwatch("White", "CMYKColor"),
+                                      spotSwatch("CutContour", ColorModel.SPOT)] };
+    var k = GM.Illustrator.registrationColor();
+    assert(k.typename === "CMYKColor" && k.cyan === 0 && k.magenta === 0 && k.yellow === 0 && k.black === 100,
+        "no registration swatch: CMYK 0/0/0/100");
+
+    // Swatches that cannot be read: the same fallback, no throw.
+    GM.Illustrator.doc = {};
+    var k2 = GM.Illustrator.registrationColor();
+    assert(k2.typename === "CMYKColor" && k2.black === 100, "unreadable swatch list: 100 % K");
+
+    GM.Illustrator.doc = saved;
 })();
 
 // ===== TEST: selected path with a duplicated closing anchor (review G6) =====
