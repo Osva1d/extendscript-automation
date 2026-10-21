@@ -560,6 +560,42 @@ console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) --
     GM.L = saved;
 })();
 
+// ===== TEST: the drawing scale 1:N is a number from 1 to 100 (spec 4.3) =====
+// The scale is not part of the configuration (it is the document's, not the
+// preset's), so validate() does not see it; the dialog checks it live and run()
+// checks it once more with this rule, so the rule is tested by itself.
+console.log("--- Validation 1.4: the drawingScale rule (spec 4.3) ---");
+(function () {
+    var rule = GM.Validation.rules.drawingScale;
+    assert(!!rule && rule.min === 1 && rule.max === 100 && rule.integer === false,
+        "drawingScale: 1 to 100, decimal (got " + JSON.stringify(rule) + ")");
+    if (!rule) return;
+    var vn = GM.Validation.validateNumber;
+    assert(vn("1", rule, "Drawing scale", L) === 1, "1 is the lowest scale: 1:1");
+    assert(vn("100", rule, "Drawing scale", L) === 100, "100 is the highest");
+    assert(vn("2,5", rule, "Drawing scale", L) === 2.5, "a decimal comma: 1:2,5");
+    assert(vn(2.5, rule, "Drawing scale", L) === 2.5, "a number as well (what getRunOptions hands over)");
+    var bad = ["0,5", "0", "-2", "101", "1000", "abc", "", "1e2"];
+    for (var i = 0; i < bad.length; i++) {
+        lastAlert = null;
+        assert(vn(bad[i], rule, "Drawing scale", L) === null && lastAlert !== null,
+            "'" + bad[i] + "' is refused with an alert");
+    }
+
+    // The words: the field is named like the dialog names it (SCALE_FIELD, no colon)
+    // (GM.Utils.error reads the prefix from GM.L, so GM.L is swapped with the table)
+    var keep = GM.L, cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    GM.L = cs;
+    lastAlert = null; vn("101", rule, cs.SCALE_FIELD, cs);
+    assert(lastAlert === "CHYBA: Pole „Měřítko kresby“ musí být mezi 1 a 100. Dokument nebyl změněn.", "CS range: got '" + lastAlert + "'");
+    lastAlert = null; vn("abc", rule, cs.SCALE_FIELD, cs);
+    assert(lastAlert === "CHYBA: Pole „Měřítko kresby“ musí být číslo. Dokument nebyl změněn.", "CS number: got '" + lastAlert + "'");
+    GM.L = en;
+    lastAlert = null; vn("0,5", rule, en.SCALE_FIELD, en);
+    assert(lastAlert === 'ERROR: Field "Drawing scale" must be between 1 and 100. The document was not changed.', "EN range: got '" + lastAlert + "'");
+    GM.L = keep;
+})();
+
 // ===== SUMMARY =====
 console.log("\nResults: " + pass + "/" + total + " passed, " + fail + " failed");
 process.exit(fail > 0 ? 1 : 0);

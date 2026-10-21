@@ -179,7 +179,8 @@ console.log("--- UI: revert button ---");
     assert(!!revert, "revert (↺) button exists");
     assert(revert.enabled === false, "revert disabled when not modified");
 
-    var offX = w.findOne(function (c) { return c.type === "edittext"; });
+    // the first "7": Offset X (the scale field now stands above, with "1")
+    var offX = w.findOne(function (c) { return c.type === "edittext" && c.text === "7"; });
     offX.text = "999";
     if (typeof offX.onChange === "function") offX.onChange();
     assert(revert.enabled === true, "revert enabled after a change");
@@ -1322,6 +1323,277 @@ console.log("--- UI 1.4 reason: the line is wide enough for the longest reason -
     done();
 })();
 
+// ===== TESTS: the drawing scale 1:N (spec 4, 5; Task 6) =====
+// The field sits on the second row of the Placement panel, after the units; the
+// document supplies the starting value; the scale is not a setting (no preset,
+// no modified indicator); invalid, it greys Generate, Save and Save As.
+var MMPT = 2.834645669291339;
+function docAt(wMm, hMm, drawingScale, extra) {
+    var d = { artboards: 1, width: wMm * MMPT, height: hMm * MMPT, scale: 1 };
+    if (drawingScale !== undefined) d.drawingScale = drawingScale;
+    for (var k in (extra || {})) if (extra.hasOwnProperty(k)) d[k] = extra[k];
+    return d;
+}
+// By its tip: with three presets the preset list also has three items
+function unitsList(w) { return w.findOne(function (c) { return c.type === "dropdownlist" && c.helpTip === GM.L.TIP_UNITS; }); }
+function types(group) { var t = []; for (var i = 0; i < group.children.length; i++) t.push(group.children[i].type); return t.join(","); }
+// The controls of a row in reading order, the groups that only space them opened up
+function leaves(group, out) {
+    out = out || [];
+    for (var i = 0; i < group.children.length; i++) {
+        var c = group.children[i];
+        if (c.type === "group") leaves(c, out); else out.push(c);
+    }
+    return out;
+}
+
+console.log("--- UI 1.4 scale: Units and Drawing scale share the second row of Placement (spec 4.4) ---");
+(function () {
+    var ui = buildUI3(null, null, docAt(1000, 500, 2.5));
+    var w = SUI.lastWindow();
+    var scale = ui.modeUI.scaleIn;
+    assert(!!scale && scale.type === "edittext", "modeUI.scaleIn is an edittext");
+    if (!scale) { done(); return; }
+    var panel = ui.modeUI.infoLbl.parent;
+    assert(panel.children.length === 3 && panel.children[2] === ui.modeUI.infoLbl,
+        "the panel has three rows: the modes, units + scale, the grey line (got " + panel.children.length + ")");
+    var modes = panel.children[0], row = leaves(panel.children[1]);
+    assert(types(modes) === "radiobutton,radiobutton" && modes.children[0].text === GM.L.MODE_ARTBOARD && modes.children[1].text === GM.L.MODE_PATH,
+        "row 1: only the two modes, the units have moved out (got " + types(modes) + ")");
+    var rowTypes = []; for (var t = 0; t < row.length; t++) rowTypes.push(row[t].type);
+    assert(rowTypes.join(",") === "statictext,dropdownlist,statictext,edittext", "row 2 is label, list, label, field (got " + rowTypes.join(",") + ")");
+    assert(row.length === 4 && row[0].text === "Jednotky:" && row[2].text === "Měřítko kresby 1:",
+        "row 2 reads 'Jednotky: [..]  Měřítko kresby 1: [..]'");
+    assert(row.length === 4 && row[1] === unitsList(w) && row[3] === scale, "the list and the field are the units list and the scale field");
+    assert(row.length === 4 && row[0].text.charAt(row[0].text.length - 1) === ":" && row[2].text.charAt(row[2].text.length - 1) === ":",
+        "both labels end with the colon (canon)");
+    assert(row.length === 4 && scale.helpTip === GM.L.TIP_SCALE && row[2].helpTip === GM.L.TIP_SCALE && GM.L.TIP_SCALE.length > 20,
+        "the tip is on the field and on its label");
+    assert(unitsList(w).helpTip === GM.L.TIP_UNITS, "the units keep their tip");
+    done();
+})();
+
+console.log("--- UI 1.4 scale: the field starts with the document's scale (spec 4.2) ---");
+(function () {
+    function start(doc) { var ui = buildUI3(null, null, doc); var t = ui.modeUI.scaleIn.text; done(); return t; }
+    assert(start(docAt(1000, 500, 2.5)) === "2,5", "2.5 in the document opens as '2,5' (the comma stays a comma)");
+    assert(start(docAt(1000, 500, 10)) === "10", "10 opens as '10'");
+    assert(start(docAt(1000, 500)) === "1", "no drawingScale in docInfo: '1'");
+    assert(start(docAt(1000, 500, 1)) === "1", "1 (a document without a scale): '1'");
+    assert(start(null) === "1", "no docInfo at all: '1'");
+    assert(start(docAt(1000, 500, 250)) === "250", "a scale outside the rule is shown as it is (Tile Export writes no upper limit)");
+    var ui = buildUI3(null, null, docAt(1000, 500, 250));
+    assert(isRedPen(ui.modeUI.scaleIn.graphics.foregroundColor), "...and it is red at once");
+    assert(winBtn(SUI.lastWindow(), GM.L.OK).enabled === false, "...Generate is grey");
+    assert(ui.modeUI.infoLbl.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "...and the line says why (got '" + ui.modeUI.infoLbl.text + "')");
+    done();
+})();
+
+console.log("--- UI 1.4 scale: a wrong scale greys Generate, Save, Save As and says why (spec 4.3, ruling R1) ---");
+(function () {
+    withStubs({}, function () {
+        var ui = buildUI3(presetPData("A"), null, docAt(1000, 500, 1));
+        var w = SUI.lastWindow();
+        var scale = ui.modeUI.scaleIn, line = ui.modeUI.infoLbl;
+        var ok = winBtn(w, GM.L.OK), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS);
+        var size = textField(w, "4");
+        size.text = "5"; size.onChange();
+        assert(ok.enabled === true && save.enabled === true && saveAs.enabled === true, "precheck: a valid change, all three are on");
+        assert(scale.graphics.foregroundColor === scale.graphics.ownPen, "precheck: the scale shows its own pen");
+
+        var bad = ["0,5", "0", "101", "abc", "", "1e1", "-3"];
+        for (var i = 0; i < bad.length; i++) {
+            scale.text = bad[i]; scale.onChange();
+            var tag = "'" + bad[i] + "'";
+            assert(isRedPen(scale.graphics.foregroundColor), tag + ": the field is red");
+            assert(ok.enabled === false && save.enabled === false && saveAs.enabled === false, tag + ": Generate, Save, Save As are grey");
+            assert(line.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100." && lineIsErr(line),
+                tag + ": the line gives the reason in the error colour (got '" + line.text + "')");
+            scale.text = "2"; scale.onChange();
+            assert(scale.graphics.foregroundColor === scale.graphics.ownPen && ok.enabled === true && save.enabled === true && saveAs.enabled === true,
+                tag + " fixed to '2': the own pen is back, all three are on");
+        }
+
+        // Typing counts as well (onChanging), and the limits are valid
+        scale.text = "101"; scale.onChanging();
+        assert(ok.enabled === false, "'101' while typing: Generate is grey");
+        scale.text = "100"; scale.onChanging();
+        assert(ok.enabled === true && isRedPen(scale.graphics.foregroundColor) === false, "'100' is the highest valid scale");
+        scale.text = "1"; scale.onChanging();
+        assert(ok.enabled === true, "'1' is the lowest valid scale");
+        scale.text = "1,5"; scale.onChanging();
+        assert(ok.enabled === true, "'1,5' and a dot '1.5' are valid");
+        scale.text = "1.5"; scale.onChanging();
+        assert(ok.enabled === true, "'1.5' is valid");
+
+        // It counts with the others: a wrong scale and a wrong size are two fields
+        scale.text = "0"; scale.onChange();
+        size.text = "x"; size.onChange();
+        assert(line.text === "✗ Neplatná pole: 2 — opravte červená pole.", "scale and size wrong: counted (got '" + line.text + "')");
+        size.text = "5"; size.onChange();
+        assert(line.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "size fixed: the scale is named (got '" + line.text + "')");
+
+        // Checked in both modes: the field is not tied to one of them
+        var ui2 = buildUI3(null, mockPathInfo(4, true), docAt(1000, 500, 1));
+        var ok2 = winBtn(SUI.lastWindow(), GM.L.OK);
+        ui2.modeUI.scaleIn.text = "0"; ui2.modeUI.scaleIn.onChange();
+        assert(ok2.enabled === false, "artboard mode: Generate is grey");
+        ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+        assert(ok2.enabled === false && isRedPen(ui2.modeUI.scaleIn.graphics.foregroundColor) &&
+            ui2.modeUI.infoLbl.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "path mode: still grey, red, the reason (got '" + ui2.modeUI.infoLbl.text + "')");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 scale: units and presets leave the scale alone; it is no setting (spec 4.2) ---");
+(function () {
+    withStubs({}, function () {
+        var ui = buildUI3(presetPData("A"), null, docAt(1000, 500, 1));
+        var w = SUI.lastWindow();
+        var scale = ui.modeUI.scaleIn, units = unitsList(w), list = presetList(w);
+        var save = winBtn(w, GM.L.SAVE), revert = winBtn(w, "↺");
+        var size = textField(w, "4");   // the mark size of preset A, found before the scale is also '4'
+        assert(save.enabled === false && revert.enabled === false, "precheck: nothing is changed");
+
+        // The scale is not a change of the preset
+        scale.text = "4"; scale.onChange();
+        assert(save.enabled === false && revert.enabled === false && listTexts(list).join("|") === "[Výchozí]|A|B",
+            "typing a scale: Save and ↺ stay off, the list shows no star (got " + listTexts(list).join("|") + ")");
+        assert(!ui.gatherAll().hasOwnProperty("drawingScale") && !ui.gatherAll().hasOwnProperty("scale"), "gatherAll() carries no scale");
+        assert(JSON.stringify(GM.Validation.storable(ui.gatherAll())).indexOf("cale") < 0, "...nor does what a preset would store");
+
+        // Units: the scale does not convert
+        units.selection = units.items[1]; units.onChange();
+        assert(scale.text === "4", "mm -> cm: the scale stays '4' (got '" + scale.text + "')");
+        assert(size.text === "0,4", "...while the mark size was converted (got '" + size.text + "')");
+        units.selection = units.items[2]; units.onChange();
+        assert(scale.text === "4", "cm -> in: the scale stays '4'");
+        units.selection = units.items[0]; units.onChange();
+        scale.text = "2,5"; scale.onChange();
+        units.selection = units.items[1]; units.onChange();
+        assert(scale.text === "2,5", "a decimal scale is not converted either (got '" + scale.text + "')");
+        units.selection = units.items[0]; units.onChange();
+
+        // Presets: choosing one leaves the scale as it is
+        var idx = listTexts(list).indexOf("B");
+        list.selection = list.items[idx]; list.onChange();
+        assert(ui.gatherAll().markSize === 6, "precheck: preset B is loaded (markSize 6)");
+        assert(scale.text === "2,5", "choosing preset B: the scale stays '2,5' (got '" + scale.text + "')");
+        winBtn(w, "↺").onClick();
+        assert(scale.text === "2,5", "↺: the scale stays '2,5'");
+        done();
+    });
+})();
+
+console.log("--- UI 1.4 scale: getRunOptions hands the scale over (spec 4.2) ---");
+(function () {
+    var ui = buildUI3(null, null, docAt(1000, 500, 2.5));
+    var o = ui.getRunOptions();
+    assert(o.drawingScale === 2.5 && o.pathPartial === false, "opened at 2,5: {pathPartial: false, drawingScale: 2.5}");
+    ui.modeUI.scaleIn.text = "10"; ui.modeUI.scaleIn.onChange();
+    assert(ui.getRunOptions().drawingScale === 10, "typed '10': 10");
+    ui.modeUI.scaleIn.text = "3.25"; ui.modeUI.scaleIn.onChange();
+    assert(ui.getRunOptions().drawingScale === 3.25, "typed '3.25': 3.25");
+    ui.modeUI.scaleIn.text = "abc"; ui.modeUI.scaleIn.onChange();
+    assert(isNaN(ui.getRunOptions().drawingScale), "'abc': NaN, not 1 (run() refuses it)");
+    done();
+    assert(buildUI3(null, null, null).getRunOptions().drawingScale === 1, "a document without a scale: 1");
+    done();
+})();
+
+console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is the real one (spec 4.6, 5; ruling R3) ---");
+(function () {
+    var ui = buildUI3(null, null, docAt(800, 600, 10));
+    var line = ui.modeUI.infoLbl;
+    var expected = "1 artboard · " + GM.UI.formatLen(800 * 10) + " × " + GM.UI.formatLen(600 * 10) + " mm · měřítko 1:10";
+    assert(line.text === expected, "artboard 800 x 600 mm at 1:10: real size x 10 (got '" + line.text + "')");
+    assert(line.text === "1 artboard · 8000 × 6000 mm · měřítko 1:10", "...in formatLen's format: '8000 × 6000 mm'");
+    assert(lineIsFinding(line), "...a finding, grey");
+
+    // It follows the field while typing
+    ui.modeUI.scaleIn.text = "1"; ui.modeUI.scaleIn.onChanging();
+    assert(line.text === "1 artboard · 800 × 600 mm", "typed '1': no suffix, the artboard as it is (got '" + line.text + "')");
+    ui.modeUI.scaleIn.text = "2,5"; ui.modeUI.scaleIn.onChanging();
+    assert(line.text === "1 artboard · 2000 × 1500 mm · měřítko 1:2,5", "typed '2,5': the comma, the size x 2.5 (got '" + line.text + "')");
+    ui.modeUI.scaleIn.text = "1,0"; ui.modeUI.scaleIn.onChanging();
+    assert(line.text === "1 artboard · 800 × 600 mm", "typed '1,0' is 1:1: no suffix (got '" + line.text + "')");
+    ui.modeUI.scaleIn.text = "0"; ui.modeUI.scaleIn.onChanging();
+    assert(lineIsErr(ui.modeUI.infoLbl) && line.text.indexOf("měřítko 1:") < 0, "typed '0': the reason, no suffix (got '" + line.text + "')");
+    ui.modeUI.scaleIn.text = "10"; ui.modeUI.scaleIn.onChanging();
+    assert(line.text === expected && lineIsFinding(line), "back to '10': the finding with the suffix again");
+
+    // The unit changes the number, not the suffix
+    var units = unitsList(SUI.lastWindow());
+    units.selection = units.items[1]; units.onChange();
+    assert(line.text === "1 artboard · 800 × 600 cm · měřítko 1:10", "cm: 800 x 600 cm (got '" + line.text + "')");
+    done();
+
+    // Large Canvas: the document's own factor and the drawing scale multiply
+    var big = buildUI3(null, null, docAt(30, 20, 10, { scale: 10 }));
+    assert(big.modeUI.infoLbl.text === "1 artboard · 3000 × 2000 mm · měřítko 1:10",
+        "Large Canvas x 1:10: 30 x 20 mm in the file is 3000 x 2000 mm (got '" + big.modeUI.infoLbl.text + "')");
+    done();
+
+    var three = buildUI3(null, null, docAt(1, 1, 10, { artboards: 3 }));
+    assert(three.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny · měřítko 1:10", "several artboards: the suffix at the end (got '" + three.modeUI.infoLbl.text + "')");
+    done();
+
+    var pd = freshPData();
+    pd.presets["[Default]"].placementMode = "path";
+    var fb = buildUI3(pd, null, docAt(100, 100, 10));
+    assert(fb.modeUI.infoLbl.text === GM.L.INFO_FALLBACK + " · měřítko 1:10", "the notice that no path is selected also ends with the scale (got '" + fb.modeUI.infoLbl.text + "')");
+    done();
+
+    // Path mode: the same ending, after the clause
+    var p = buildUI3(null, mockPathInfo(5, true), docAt(100, 100, 10));
+    p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
+    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě · měřítko 1:10", "closed path, offset 0 (got '" + p.modeUI.infoLbl.text + "')");
+    p.pathUI.offsetIn.text = "20"; p.pathUI.offsetIn.onChanging();
+    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · měřítko 1:10", "closed path, offset 20 (got '" + p.modeUI.infoLbl.text + "')");
+    p.modeUI.scaleIn.text = "1"; p.modeUI.scaleIn.onChanging();
+    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "...and at 1:1 the 1.3.0 text (got '" + p.modeUI.infoLbl.text + "')");
+    p.modeUI.artboardRB.value = true; p.modeUI.artboardRB.onClick();
+    assert(p.modeUI.infoLbl.text === "1 artboard · 100 × 100 mm", "back to the artboard at 1:1: no suffix (got '" + p.modeUI.infoLbl.text + "')");
+    done();
+
+    // The function itself: no scale, 1 and unusable ones add nothing
+    var st = { pathMode: false, pathInfo: null, docInfo: docAt(1000, 500, 1), fallback: false, offset: 0, unit: "mm" };
+    var base = GM.UI.placementInfoText(st);
+    assert(base === "1 artboard · 1000 × 500 mm", "no st.drawingScale: the 1.3.0 text (got '" + base + "')");
+    var cases = [1, NaN, 0, -2, undefined, null];
+    for (var i = 0; i < cases.length; i++) {
+        st.drawingScale = cases[i];
+        assert(GM.UI.placementInfoText(st) === base, "st.drawingScale " + cases[i] + ": nothing added");
+    }
+    st.drawingScale = 4;
+    assert(GM.UI.placementInfoText(st) === "1 artboard · 4000 × 2000 mm · měřítko 1:4", "st.drawingScale 4: the size x 4 and the suffix (got '" + GM.UI.placementInfoText(st) + "')");
+    st.drawingScale = 100;
+    assert(GM.UI.placementInfoText(st) === "1 artboard · 100000 × 50000 mm · měřítko 1:100", "st.drawingScale 100 (got '" + GM.UI.placementInfoText(st) + "')");
+    st.docInfo = null; st.drawingScale = 10;
+    assert(GM.UI.placementInfoText(st) === "", "no docInfo: the empty line stays empty, no dangling suffix");
+})();
+
+console.log("--- UI 1.4 scale: the line is wide enough for the finding with the scale (spec 5) ---");
+(function () {
+    var longest = GM.UI.longestInfoText();
+    var worst = [];
+    worst.push(GM.UI.placementInfoText({ pathMode: false, docInfo: docAt(999.9, 999.9, 99.5), fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
+    worst.push(GM.UI.placementInfoText({ pathMode: false, docInfo: null, fallback: true, offset: 0, unit: "mm", drawingScale: 99.5 }));
+    worst.push(GM.UI.placementInfoText({ pathMode: false, docInfo: docAt(1, 1, 99.5, { artboards: 99 }), fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
+    worst.push(GM.UI.placementInfoText({ pathMode: true, pathInfo: mockPathInfo(198, true, 1000, { sharpCount: 99, roundCount: 99 }),
+        docInfo: null, fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
+    worst.push(GM.UI.placementInfoText({ pathMode: true, pathInfo: mockPathInfo(0, true, 1000), docInfo: null, fallback: false, offset: 0, unit: "mm", drawingScale: 99.5 }));
+    for (var i = 0; i < worst.length; i++) {
+        assert(worst[i].indexOf("měřítko 1:99,5") > 0, "precheck " + i + ": the sample carries the scale (got '" + worst[i] + "')");
+        assert(longest.length >= worst[i].length,
+            "longestInfoText (" + longest.length + ") holds '" + worst[i] + "' (" + worst[i].length + ")");
+    }
+    // The reason for the scale field is among the samples as well
+    var reasonScale = GM.L.REASON_MARK + GM.L.format(GM.L.REASON_FIELD, GM.UI.reasonLabels().scale, "1", "100", "");
+    assert(GM.UI.reasonLabels().scale === "Měřítko kresby" && reasonScale === "✗ Měřítko kresby: zadejte číslo od 1 do 100.",
+        "the reason's name for the field is SCALE_FIELD (got '" + GM.UI.reasonLabels().scale + "')");
+})();
+
 // ===== TEST: both locales define the same keys =====
 // The table of one language, built the way the script builds it: locale.js run
 // with that app.locale (the suite's own GM.L stays the one loaded at the top).
@@ -1456,6 +1728,24 @@ console.log("--- Locale: the reasons for a grey Generate (spec 5; canon 12.1, 12
     // The count stands after the colon, never before the noun (canon 12.1)
     assert(/Neplatná pole: %s/.test(cs.REASON_MANY), "CS: the count of fields stands after the colon");
     assert(/Invalid fields: %s/.test(en.REASON_MANY), "EN: the count of fields stands after the colon");
+})();
+
+console.log("--- Locale: the drawing scale (spec 4.3, 5; canon 12.1) ---");
+(function () {
+    var cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    assert(cs.SCALE_LABEL === "Měřítko kresby 1:" && en.SCALE_LABEL === "Drawing scale 1:",
+        "SCALE_LABEL: the family's label, ends with the colon (got '" + cs.SCALE_LABEL + "' / '" + en.SCALE_LABEL + "')");
+    assert(cs.INFO_SCALE === " · měřítko 1:%s" && en.INFO_SCALE === " · scale 1:%s",
+        "INFO_SCALE: the ending of the grey line (got '" + cs.INFO_SCALE + "' / '" + en.INFO_SCALE + "')");
+    assert(cs.SCALE_FIELD === "Měřítko kresby" && en.SCALE_FIELD === "Drawing scale",
+        "SCALE_FIELD: the field's name in a reason, no colon (got '" + cs.SCALE_FIELD + "' / '" + en.SCALE_FIELD + "')");
+    assert(typeof cs.TIP_SCALE === "string" && cs.TIP_SCALE.indexOf("1:10") >= 0 && cs.TIP_SCALE.indexOf("zapamatuje") > 0 &&
+        cs.TIP_SCALE.indexOf("skutečné velikosti") > 0, "CS TIP_SCALE: 1:10, the document remembers it, real size (got '" + cs.TIP_SCALE + "')");
+    assert(typeof en.TIP_SCALE === "string" && en.TIP_SCALE.indexOf("1:10") >= 0 && en.TIP_SCALE.indexOf("remembers") > 0 &&
+        en.TIP_SCALE.indexOf("real-world") > 0, "EN TIP_SCALE: 1:10, the document remembers it, real-world size (got '" + en.TIP_SCALE + "')");
+    assert(cs.format(cs.INFO_SCALE, "2,5") === " · měřítko 1:2,5" && en.format(en.INFO_SCALE, "10") === " · scale 1:10", "INFO_SCALE takes the scale once");
+    // Czech wording: vykání, no quotes, no '!' (the generic locale tests cover every key too)
+    assert(!/[!"]/.test(cs.TIP_SCALE + cs.SCALE_LABEL + cs.INFO_SCALE + cs.SCALE_FIELD), "CS: no '!' and no straight quote in the new texts");
 })();
 
 // ===== SUMMARY =====

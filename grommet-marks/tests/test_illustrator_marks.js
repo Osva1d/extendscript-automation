@@ -25,7 +25,7 @@ var GM = {};
 function src(rel) { return fs.readFileSync(path.join(__dirname, "..", "src", rel), "utf8"); }
 eval(src("constants.js"));
 eval(src("lib/utils.js"));
-require("./lib/load_shared.js")(GM, ["numbers", "registration"]);   // shared: GM.Numbers, GM.Registration
+require("./lib/load_shared.js")(GM, ["numbers", "registration", "drawing_scale"]);   // shared: GM.Numbers, GM.Registration, GM.DrawingScale
 eval(src("core.js"));
 eval(src("illustrator.js"));
 
@@ -194,6 +194,44 @@ console.log("--- getDocInfo ---");
     assert(d.artboards === 2 && d.width === 1000 && d.height === 500 && d.scale === 10, "count, first artboard size, scale");
     delete GM.Illustrator.doc.scaleFactor;
     assert(GM.Illustrator.getDocInfo().scale === 1, "no scaleFactor -> 1");
+})();
+
+// ===== TEST: the drawing scale the document remembers (spec 4.2) =====
+// getDocInfo hands the dialog the scale GM.DrawingScale reads from the
+// document's XMP packet — the key Tile Export writes — or 1:1 when there is none.
+console.log("--- getDocInfo: drawingScale from the document's XMP (spec 4.2) ---");
+(function () {
+    var doc = GM.Illustrator.doc;
+    var saved = doc.XMPString, savedBoards = doc.artboards, ns = GM.DrawingScale.NAMESPACE;
+    function packet(inner) {
+        return '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+            inner + '</rdf:RDF></x:xmpmeta>';
+    }
+    function scaled(value) {
+        return packet('<rdf:Description rdf:about="" xmlns:te="' + ns + '"><te:drawingScale>' + value +
+            '</te:drawingScale></rdf:Description>');
+    }
+    doc.artboards = [{ artboardRect: [0, 500, 1000, 0] }];
+    doc.XMPString = scaled(10);
+    assert(GM.Illustrator.getDocInfo().drawingScale === 10, "a document with 1:10 -> 10");
+    doc.XMPString = scaled("2.5");
+    assert(GM.Illustrator.getDocInfo().drawingScale === 2.5, "1:2.5 -> 2.5 (decimal)");
+    // Illustrator renames the prefix when it re-serializes a packet (te -> te_1_)
+    doc.XMPString = packet('<rdf:Description rdf:about="" xmlns:te_1_="' + ns + '"><te_1_:drawingScale>4</te_1_:drawingScale></rdf:Description>');
+    assert(GM.Illustrator.getDocInfo().drawingScale === 4, "a renamed prefix is still found through the namespace");
+    doc.XMPString = packet("");
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "a packet without the key -> 1");
+    doc.XMPString = scaled(0);
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "a stored 0 is no scale -> 1");
+    delete doc.XMPString;
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "no XMP at all -> 1");
+    Object.defineProperty(doc, "XMPString", { configurable: true, get: function () { throw new Error("XMP unreadable"); } });
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "an unreadable XMP -> 1, getDocInfo does not throw");
+    delete doc.XMPString;
+    if (saved !== undefined) doc.XMPString = saved;
+    var d = GM.Illustrator.getDocInfo();
+    assert(d.artboards === 1 && d.width === 1000 && d.height === 500, "the rest of docInfo is as before");
+    doc.artboards = savedBoards;
 })();
 
 // ===== TEST: what Task 5 delivers — rounded corners counted, selection aligned (review) =====

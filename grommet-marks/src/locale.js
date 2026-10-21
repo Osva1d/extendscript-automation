@@ -68,6 +68,12 @@ GM.L = (function () {
             MODE_ARTBOARD: "Artboard edges",
             MODE_PATH: "Selected path",
 
+            // Drawing scale 1:N (spec 4) — dialog values are real-world size; the
+            // document remembers the scale. SCALE_FIELD names the field in a reason.
+            SCALE_LABEL: "Drawing scale 1:",
+            TIP_SCALE: "The scale the document is drawn at: 1:10 means the artwork is ten times smaller than the real thing. The document remembers it. Every value in the dialog is entered at real-world size, mark size and stroke weights included.",
+            SCALE_FIELD: "Drawing scale",
+
             // Path panel
             PATH_PANEL: "Path",
             PATH_INFO_CLOSED: "Closed path",
@@ -147,6 +153,7 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboards",
             INFO_ALL_ARTBOARDS: "marks go on every one",
             INFO_SIZE: "%s × %s %s",
+            INFO_SCALE: " · scale 1:%s",
             INFO_FALLBACK: "The preset wants a path, none is selected — marking the artboard.",
             INFO_CORNERS_1: "%s corner",
             INFO_CORNERS_2: "%s corners",
@@ -241,6 +248,12 @@ GM.L = (function () {
             MODE_ARTBOARD: "Hrany artboardu",
             MODE_PATH: "Vybraná cesta",
 
+            // Měřítko kresby 1:N (spec 4) — hodnoty v dialogu jsou ve skutečné velikosti;
+            // dokument si měřítko pamatuje. SCALE_FIELD je název pole v důvodu.
+            SCALE_LABEL: "Měřítko kresby 1:",
+            TIP_SCALE: "V jakém měřítku je dokument nakreslený: 1:10 znamená, že grafika je desetkrát menší než ve skutečnosti. Dokument si ho zapamatuje. Hodnoty v dialogu se zadávají ve skutečné velikosti, včetně velikosti značky a tloušťky tahů.",
+            SCALE_FIELD: "Měřítko kresby",
+
             // Path panel
             PATH_PANEL: "Cesta",
             PATH_INFO_CLOSED: "Uzavřená cesta",
@@ -320,6 +333,7 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboardů",
             INFO_ALL_ARTBOARDS: "značky dostanou všechny",
             INFO_SIZE: "%s × %s %s",
+            INFO_SCALE: " · měřítko 1:%s",
             INFO_FALLBACK: "Předvolba chce cestu, žádná není vybraná — značí se artboard.",
             INFO_CORNERS_1: "%s roh",
             INFO_CORNERS_2: "%s rohy",

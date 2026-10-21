@@ -225,19 +225,26 @@ GM.UI = {
 
     /**
      * The summary line under Placement (spec §8.1): what the run will mark.
-     * @param {Object} st - {pathMode, pathInfo, docInfo, fallback, offset, unit}
+     * With a drawing scale other than 1:1 the line ends with it (spec 5), and
+     * the artboard is shown at real size — the dialog's values are real size,
+     * so the artboard is N times what the file holds (spec 4.6).
+     * @param {Object} st - {pathMode, pathInfo, docInfo, fallback, offset, unit,
+     *     drawingScale}; a missing or unusable drawingScale counts as 1 (an
+     *     unusable one is shown as the reason instead of this line).
      * @returns {string}
      */
     placementInfoText: function (st) {
         var L = GM.L;
+        var n = (st.drawingScale > 0 && isFinite(st.drawingScale)) ? st.drawingScale : 1;
+        var tail = (n === 1) ? "" : L.format(L.INFO_SCALE, GM.Numbers.format(n));
         if (!st.pathMode) {
-            if (st.fallback) return L.INFO_FALLBACK;
+            if (st.fallback) return L.INFO_FALLBACK + tail;
             var di = st.docInfo;
             if (!di) return "";
-            if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS;
+            if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS + tail;
             var f = GM.CONSTANTS.UNIT_FACTORS[st.unit] / (di.scale || 1);
             return L.count("INFO_ARTBOARDS", 1) + " · " +
-                L.format(L.INFO_SIZE, GM.UI.formatLen(di.width / f), GM.UI.formatLen(di.height / f), st.unit);
+                L.format(L.INFO_SIZE, GM.UI.formatLen(di.width * n / f), GM.UI.formatLen(di.height * n / f), st.unit) + tail;
         }
         var pi = st.pathInfo;
         var sharp = pi.sharpCount !== undefined ? pi.sharpCount : pi.cornerCount;
@@ -249,7 +256,7 @@ GM.UI = {
         else parts.push(L.count("INFO_CORNERS", sharp));
         if (pi.closed && !sharp && !round) parts.push(L.INFO_TOP_START);
         if (!pi.closed || st.offset === 0) parts.push(L.INFO_ON_PATH);
-        return parts.join(" · ");
+        return parts.join(" · ") + tail;
     },
 
     /**
@@ -266,7 +273,7 @@ GM.UI = {
      * the colon. A field that shares its label says where it sits — the edge's
      * row name over the column's header, the panel's title, the arrow of the
      * offset. One list for the dialog's checks and for the width of the line.
-     * @returns {Object} Name by key: offsetX, offsetY, markSize, regWeight,
+     * @returns {Object} Name by key: scale, offsetX, offsetY, markSize, regWeight,
      *     haloWeight, zoneCount, zonePitch, pathNumber, pathSpacing, pathOffset,
      *     and <edge>Count, <edge>Spacing for top, left, bottom, right.
      */
@@ -274,6 +281,7 @@ GM.UI = {
         var L = GM.L, bare = GM.UI.bareLabel;
         var offset = bare(L.OFFSET_LABEL);
         var out = {
+            scale: L.SCALE_FIELD,   // the label ends in "1:", so the field has a name of its own
             offsetX: offset + " ↔",
             offsetY: offset + " ↕",
             markSize: bare(L.SIZE_LABEL),
@@ -318,16 +326,19 @@ GM.UI = {
 
     /**
      * The longest text the line can show — its width is fixed by the first
-     * text: the findings, and the reasons (spec 5) at their worst: every label
-     * with the widest limits of the rules, in the longest unit.
+     * text: the findings with the drawing scale at their end (spec 5), and the
+     * reasons (spec 5) at their worst: every label with the widest limits of
+     * the rules, in the longest unit.
      */
     longestInfoText: function () {
         var L = GM.L;
+        var tail = L.format(L.INFO_SCALE, GM.Numbers.format(99.9));
         var samples = [
-            L.INFO_FALLBACK,
-            [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · "),
-            [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · "),
-            L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm"),
+            L.INFO_FALLBACK + tail,
+            [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · ") + tail,
+            [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · ") + tail,
+            L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm") + tail,
+            L.count("INFO_ARTBOARDS", 99) + " · " + L.INFO_ALL_ARTBOARDS + tail,
             L.REASON_MARK + L.format(L.REASON_MANY, 99),
             L.REASON_MARK + L.REASON_NO_SHAPE,
             L.REASON_MARK + L.REASON_NO_EDGE
@@ -357,11 +368,13 @@ GM.UI = {
      * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} pathInfo - getSelectedPathInfo() result: {ok, closed, cornerCount,
      *     sharpCount, roundCount, partial, ...} or {ok:false, reason}
-     * @param {Object} [docInfo] - getDocInfo() result {artboards, width, height, scale};
-     *     feeds the summary line in artboard mode.
+     * @param {Object} [docInfo] - getDocInfo() result {artboards, width, height, scale,
+     *     drawingScale}; feeds the summary line in artboard mode and the starting
+     *     value of the drawing scale field (missing: 1).
      * @returns {Object} Dialog object with window, gatherAll, getRunOptions
-     *     (per-run choices not stored in presets: {pathPartial}), modeUI (with
-     *     infoLbl), edgeUI, pathUI (with offsetIn, partialCB), zonesUI
+     *     (per-run choices not stored in presets: {pathPartial, drawingScale}),
+     *     modeUI (with infoLbl, scaleIn), edgeUI, pathUI (with offsetIn,
+     *     partialCB), zonesUI
      */
     buildDialog: function (pData, pathInfo, docInfo) {
         // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
@@ -443,14 +456,35 @@ GM.UI = {
         };
         pathRB.helpTip = pathOk ? "" : (pathReasonTips[pathInfo && pathInfo.reason] || GM.L.ERR_PATH_NOT_A_PATH);
 
-        // Units — global switch lives at the top. Fill spacer pushes it right.
-        var modeSpacer = modeRow.add("group");
-        modeSpacer.alignment = ["fill", "center"];
-        modeRow.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = modeRow.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        // Row 2 (spec 4.4): Units — the global switch — and the drawing scale
+        // 1:N. Each pair is a group of its own (label -> control is GROUP), the
+        // pairs are SECTION apart. The scale starts as the document remembers it
+        // (1 for a document without one); it is the document's, not a setting:
+        // no preset holds it, switching units or presets leaves it alone, and it
+        // is not among the fields unitsDDL.onChange converts.
+        var unitRow = modePanel.add("group");
+        unitRow.orientation = "row";
+        unitRow.alignChildren = ["left", "center"];
+        unitRow.spacing = LO.SECTION;
+        var unitGrp = unitRow.add("group");
+        unitGrp.orientation = "row";
+        unitGrp.alignChildren = ["left", "center"];
+        unitGrp.spacing = LO.GROUP;
+        unitGrp.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = unitGrp.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
         unitsDDL.preferredSize.width = 110;
         unitsDDL.selection = 0;
         unitsDDL.helpTip = GM.L.TIP_UNITS;
+        var scaleGrp = unitRow.add("group");
+        scaleGrp.orientation = "row";
+        scaleGrp.alignChildren = ["left", "center"];
+        scaleGrp.spacing = LO.GROUP;
+        var scaleLbl = scaleGrp.add("statictext", undefined, GM.L.SCALE_LABEL);
+        scaleLbl.helpTip = GM.L.TIP_SCALE;
+        var startScale = (docInfo && docInfo.drawingScale > 0) ? docInfo.drawingScale : 1;
+        var scaleIn = scaleGrp.add("edittext", undefined, GM.Numbers.format(startScale));
+        scaleIn.preferredSize.width = 50;
+        scaleIn.helpTip = GM.L.TIP_SCALE;
 
         // What the run will mark, in words (spec §8.1). The text changes while
         // the dialog is open and a ScriptUI label keeps its first width, so it
@@ -724,7 +758,8 @@ GM.UI = {
             placeInfo.text = GM.UI.placementInfoText({
                 pathMode: pathRB.value, pathInfo: pathInfo, docInfo: docInfo, fallback: fallback,
                 offset: GM.Numbers.parse(pathOffsetIn.text),
-                unit: currentUnit || GM.CONSTANTS.UNIT.MM
+                unit: currentUnit || GM.CONSTANTS.UNIT.MM,
+                drawingScale: GM.Numbers.parse(scaleIn.text)
             });
             GM.FieldPaint.field(placeInfo, true);
             placeInfo.enabled = false;
@@ -1002,6 +1037,8 @@ GM.UI = {
         var LEN = "len", PT = " pt";
         /** @type {Object[]} {et, rule, mode, label, unit, mirrored} */
         var validationTargets = [
+            // The drawing scale applies to both modes (no `mode`) and is always enabled.
+            { et: scaleIn,     rule: R.drawingScale,                  label: RL.scale,       unit: "" },
             { et: offsetXIn,   rule: R.offsetX,     mode: "artboard", label: RL.offsetX,     unit: LEN },
             { et: offsetYIn,   rule: R.offsetY,     mode: "artboard", label: RL.offsetY,     unit: LEN },
             { et: sizeInput,   rule: R.markSize,                      label: RL.markSize,    unit: LEN },
@@ -1231,7 +1268,7 @@ GM.UI = {
         };
 
         // Wire numeric edits to the shared change hook.
-        var allEdits = [offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
+        var allEdits = [scaleIn, offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
                         zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn, pathOffsetIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
@@ -1251,9 +1288,11 @@ GM.UI = {
             window: dlg,
             gatherAll: gatherAll,
             getRunOptions: function () {
-                return { pathPartial: partialApplies() };
+                // drawingScale: the field as a number (NaN while it is wrong —
+                // Generate is grey then, and run() refuses it again).
+                return { pathPartial: partialApplies(), drawingScale: GM.Numbers.parse(scaleIn.text) };
             },
-            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo },
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo, scaleIn: scaleIn },
             edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
             pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn,
                       offsetIn: pathOffsetIn, partialCB: partialCB },

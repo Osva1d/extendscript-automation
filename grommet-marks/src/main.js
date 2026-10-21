@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: GM.Main — entry point and artboard processing loop
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.Illustrator, GM.Storage, GM.Validation, GM.Core, GM.UI, GM.Config
+// Depends on: GM.Illustrator, GM.Storage, GM.Validation, GM.Core, GM.UI, GM.Config,
+//             GM.DrawingScale (the scale the document remembers)
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -46,11 +47,28 @@ GM.Main = {
             var result = GM.Validation.validate(cfg, GM.L);
             if (!result.valid) return;
 
+            // The drawing scale 1:N is the document's, not a setting: it is
+            // checked here (the dialog keeps Generate grey while it is wrong)
+            // but joins neither the configuration nor [Last Settings].
+            var runOpts = ui.getRunOptions();
+            var drawingScale = GM.Validation.validateNumber(runOpts.drawingScale,
+                GM.Validation.rules.drawingScale, GM.L.SCALE_FIELD, GM.L);
+            if (drawingScale === null) return;
+            runOpts.drawingScale = drawingScale;
+
             // Auto-save [Last Settings]
             pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
             GM.Storage.save(pData);
 
-            GM.Main.process(result.settings, ui.getRunOptions());
+            var drew = GM.Main.process(result.settings, runOpts);
+
+            // The document remembers the scale for the next run — only when it
+            // differs from what the document held (a document without a scale and
+            // a run at 1:1 stays untouched) and only after a run that drew: a
+            // refusal promises "the document was not changed".
+            if (drew && drawingScale !== docInfo.drawingScale) {
+                GM.DrawingScale.save(GM.Illustrator.doc, drawingScale);
+            }
 
             app.redraw();
         } catch (e) {
@@ -64,7 +82,11 @@ GM.Main = {
      * @param {Object} cfg - Validated settings.
      * @param {Object} [opts] - Per-run choices that are not stored in
      *     presets: {pathPartial} — restrict the marks to the selected part
-     *     of the outline. Missing means no choices.
+     *     of the outline; {drawingScale} — N of the drawing scale 1:N, the
+     *     dialog's values being real size (missing or unusable means 1).
+     *     Missing opts means no choices.
+     * @returns {boolean} False when the run ended without reaching the
+     *     document (a refusal, an unexpected error), true after it drew.
      */
     process: function (cfg, opts) {
         try {
@@ -74,7 +96,15 @@ GM.Main = {
             // out scaleFactor times larger. Convert physical sizes to document
             // units once, here — everything below works in document units.
             var scale = doc.scaleFactor || 1;
-            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units] / scale;
+            // The drawing scale 1:N (spec 4.1): the dialog holds real-world
+            // values and the drawing is N times smaller, so every length is
+            // divided by N as well — the two factors multiply. Counts are not
+            // lengths. `scale` stays the document's own factor: the tolerances
+            // below (OFFSET_TOL, the 0.1 pt grid of place()) describe
+            // Illustrator's precision in document units, not a value typed in.
+            var drawingScale = (opts && opts.drawingScale > 0) ? opts.drawingScale : 1;
+            var lengthDiv = scale * drawingScale;
+            var unitFactor = GM.CONSTANTS.UNIT_FACTORS[cfg.units] / lengthDiv;
 
             var warnings = [];
             function addWarning(msg) {
@@ -106,7 +136,7 @@ GM.Main = {
                     pathPlan = GM.Main.pathMarks(cfg, opts || {}, pathInfo, unitFactor, scale, zoneCfg);
                     if (!pathPlan.ok) {
                         GM.Utils.error(pathPlan.message);
-                        return;
+                        return false;
                     }
                 }
             }
@@ -118,8 +148,8 @@ GM.Main = {
             var markOpts = {
                 circle: !!cfg.markCircle,
                 cross: !!cfg.markCross,
-                regWeight: cfg.regWeight / scale,
-                haloWeight: cfg.haloWeight / scale
+                regWeight: cfg.regWeight / lengthDiv,
+                haloWeight: cfg.haloWeight / lengthDiv
             };
 
             var prevLocked = false, prevVisible = true, sessionOpen = false;
@@ -238,11 +268,13 @@ GM.Main = {
             }
 
             if (warnings.length > 0) alert(GM.L.WARN_PREFIX + warnings.join("\n"));
+            return true;
         } catch (e) {
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; } catch (eRst2) {}
             }
             alert(GM.L.format(GM.L.ERR_CRITICAL, e.message, String(e.line || "?")));
+            return false;
         }
     },
 
@@ -254,8 +286,10 @@ GM.Main = {
      * @param {Object} cfg - Validated settings.
      * @param {Object} opts - {pathPartial} — per run, not stored.
      * @param {Object} pathInfo - getSelectedPathInfo() result (ok).
-     * @param {number} unitFactor - Dialog units -> document units.
-     * @param {number} scale - Document scaleFactor.
+     * @param {number} unitFactor - Dialog units -> document units (the
+     *     drawing scale already divided in).
+     * @param {number} scale - Document scaleFactor only, not the drawing
+     *     scale: the check's tolerance is Illustrator's precision.
      * @param {Object} zoneCfg - Corner zones, document units.
      * @returns {Object} {ok:true, marks} or {ok:false, message}
      */

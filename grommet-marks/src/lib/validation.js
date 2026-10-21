@@ -25,7 +25,11 @@ GM.Validation = {
         cornerPitch:  { min: 0.01, max: 9999, integer: false },
         pathNumber:   { min: 1,    max: 9999, integer: true  },
         pathSpacing:  { min: 0.01, max: 9999, integer: false },
-        pathOffset:   { min: 0,    max: 9999, integer: false }
+        pathOffset:   { min: 0,    max: 9999, integer: false },
+        // The drawing scale 1:N is the document's, not a setting: it is no part
+        // of the configuration, so validate() does not see it — the dialog
+        // checks it live and GM.Main.run() checks it once more (spec 4.3).
+        drawingScale: { min: 1,    max: 100,  integer: false }
     },
 
     /**

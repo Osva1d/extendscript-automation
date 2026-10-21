@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: GM.Illustrator — Adobe Illustrator DOM adapter
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.L
+// Depends on: GM.CONSTANTS, GM.L, GM.DrawingScale (getDocInfo)
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -83,14 +83,16 @@ GM.Illustrator = {
 
     /**
      * Artboard count and the first artboard's size, for the dialog's summary
-     * line. Raw document units plus the scale factor — on a Large Canvas the
-     * caller divides by `scale`.
-     * @returns {Object} {artboards, width, height, scale}
+     * line, and the drawing scale the document remembers. Raw document units
+     * plus the scale factor — on a Large Canvas the caller divides by `scale`.
+     * @returns {Object} {artboards, width, height, scale, drawingScale}
+     *     scale = the document's scaleFactor (Large Canvas); drawingScale = N
+     *     of the drawing scale 1:N, 1 when the document has none.
      */
     getDocInfo: function () {
         var doc = GM.Illustrator.doc, r = doc.artboards[0].artboardRect;
         return { artboards: doc.artboards.length, width: r[2] - r[0], height: r[1] - r[3],
-                 scale: doc.scaleFactor || 1 };
+                 scale: doc.scaleFactor || 1, drawingScale: GM.DrawingScale.load(doc) || 1 };
     },
 
     /**

@@ -559,6 +559,218 @@ console.log("--- process: a refusal starts with the error prefix (spec 6.5) ---"
     GM.L = saved;
 })();
 
+// ===== TEST: drawing scale 1:N divides every length (spec 4.1) =====
+// The dialog holds real-world values; a drawing at 1:N is N times smaller, so
+// every length from the dialog is divided by N (and, as before, by the Large
+// Canvas factor — the two multiply). Counts and the document's own tolerances
+// are not divided. A 300 mm real layout drawn at 1:10 sits on a 30 mm artboard,
+// so every position of the 1:10 run is the 1:1 run's divided by ten.
+console.log("--- process: drawing scale 1:N divides every length (spec 4.1) ---");
+(function () {
+    // A configuration that uses most lengths: the two offsets differ, the edges
+    // run by spacing, corner zones on, the mark and both strokes are not defaults.
+    function lengths() {
+        var s = settings({ offsetX: 7, offsetY: 11, markSize: 4, regWeight: 1.5, haloWeight: 3.5 });
+        s.top = GM.Config.createEdgeDef(true, false, 10, 80);
+        s.left = GM.Config.createEdgeDef(true, false, 10, 60);
+        s.cornerZone = { enabled: true, count: 3, pitch: 20 };
+        return s;
+    }
+    function same(ref, got, k, tag) {
+        var ok = got.marks.length === ref.marks.length && ref.marks.length > 0;
+        for (var i = 0; ok && i < ref.marks.length; i++) {
+            var a = ref.marks[i], b = got.marks[i];
+            ok = near(b.x, a.x / k, 1e-9) && near(b.y, a.y / k, 1e-9) && near(b.size, a.size / k, 1e-9) &&
+                near(b.opts.regWeight, a.opts.regWeight / k, 1e-9) && near(b.opts.haloWeight, a.opts.haloWeight / k, 1e-9);
+        }
+        assert(ok, tag + " (" + ref.marks.length + " marks at 1:1, " + got.marks.length + " drawn)");
+    }
+
+    var ref = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    alerts = [];
+    GM.Main.process(lengths(), { drawingScale: 1 });
+    assert(ref.marks.length >= 20, "precheck: spacing mode and zones give a layout of its own (" + ref.marks.length + " marks)");
+    assert(ref.marks[0].size === 4 * MM && ref.marks[0].opts.regWeight === 1.5, "1:1: the mark is 4 mm, the stroke 1.5 pt");
+
+    var ks = [10, 2.5, 100];
+    for (var q = 0; q < ks.length; q++) {
+        var k = ks[q];
+        var rec = fakeDoc({ artboards: [[0, 300 * MM / k, 300 * MM / k, 0]] });
+        alerts = [];
+        GM.Main.process(lengths(), { drawingScale: k });
+        same(ref, rec, k, "1:" + k + ": positions, size and both strokes are the 1:1 values / " + k);
+        assert(alerts.length === 0, "1:" + k + ": no alert (" + alerts.join(" | ") + ")");
+    }
+
+    // 1:1 is today's result, however the scale is (not) given
+    var plain = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    GM.Main.process(lengths());
+    var plainJson = JSON.stringify(plain.marks);
+    var variants = [undefined, {}, { drawingScale: 1 }, { drawingScale: NaN }, { drawingScale: 0 }];
+    for (var v = 0; v < variants.length; v++) {
+        var again = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+        GM.Main.process(lengths(), variants[v]);
+        assert(JSON.stringify(again.marks) === plainJson, "no scale / 1 / unusable (" + JSON.stringify(variants[v]) + "): the 1:1 result");
+    }
+    assert(JSON.stringify(ref.marks) === plainJson, "{drawingScale: 1} is the same as no options");
+
+    // Large Canvas (scaleFactor 10) and 1:10 together: / 100
+    var big = fakeDoc({ artboards: [[0, 3 * MM, 3 * MM, 0]], scaleFactor: 10 });
+    GM.Main.process(lengths(), { drawingScale: 10 });
+    same(ref, big, 100, "Large Canvas x 1:10: / 100");
+
+    // Counts are not lengths: the same number of marks on every edge row
+    var count = fakeDoc({ artboards: [[0, 30 * MM, 30 * MM, 0]] });
+    GM.Main.process(settings({}), { drawingScale: 10 });
+    assert(count.marks.length === 36, "count mode: 36 marks at 1:10 as at 1:1 (got " + count.marks.length + ")");
+
+    // Units: 5 cm real is 50 mm real
+    var cmRef = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    GM.Main.process(settings({ units: "cm", offsetX: 0.7, offsetY: 0.7, markSize: 0.3 }), { drawingScale: 1 });
+    var cm10 = fakeDoc({ artboards: [[0, 30 * MM, 30 * MM, 0]] });
+    GM.Main.process(settings({ units: "cm", offsetX: 0.7, offsetY: 0.7, markSize: 0.3 }), { drawingScale: 10 });
+    same(cmRef, cm10, 10, "centimetres: the same division");
+})();
+
+console.log("--- process: path mode at 1:N — the offset is divided, the tolerance is not (spec 4.1) ---");
+(function () {
+    function squareRun(side, k, scaleFactor, extra, seen) {
+        var rec = fakeDoc({ artboards: [[0, side, side, 0]], scaleFactor: scaleFactor, pathInfo: squarePathInfo(side),
+            offsetPath: function (info, D) {
+                if (seen) seen.D = D;
+                return { ok: true, loops: 1, segments: squareSegs(D + extra, side - D - extra) };
+            } });
+        alerts = [];
+        var out = GM.Main.process(pathCfg({ pathOffset: 20 }), { drawingScale: k });
+        return { rec: rec, out: out };
+    }
+    var s1 = {}, s10 = {}, s100 = {};
+    var ref = squareRun(300 * MM, 1, 1, 0, s1);
+    var tenth = squareRun(30 * MM, 10, 1, 0, s10);
+    assert(near(s1.D, 20 * MM) && near(s10.D, 2 * MM, 1e-9),
+        "offsetPath gets D = offset / N in document units (20 mm -> " + s10.D / MM + " mm at 1:10)");
+    assert(tenth.rec.marks.length === ref.rec.marks.length && ref.rec.marks.length > 0,
+        "path mode: the same number of marks (" + ref.rec.marks.length + " / " + tenth.rec.marks.length + ")");
+    var ok = true;
+    for (var i = 0; i < ref.rec.marks.length; i++) {
+        var tm = tenth.rec.marks[i];
+        if (!tm || !near(tm.x, ref.rec.marks[i].x / 10, 1e-9) || !near(tm.y, ref.rec.marks[i].y / 10, 1e-9)) ok = false;
+    }
+    assert(ok, "path mode: every mark of 1:10 is the 1:1 mark / 10");
+
+    var both = squareRun(3 * MM, 10, 10, 0, s100);
+    assert(near(s100.D, 0.2 * MM, 1e-9), "Large Canvas x 1:10: D = 20 mm / 100 (got " + s100.D / MM + " mm)");
+    assert(both.rec.marks.length === ref.rec.marks.length, "...and the same number of marks");
+
+    // Review focus 5: the check's tolerance is OFFSET_TOL / scaleFactor — the
+    // Illustrator's precision in document units — and does not shrink with N.
+    var near1 = squareRun(30 * MM, 10, 1, 0.4, null);
+    assert(near1.rec.marks.length > 0 && alerts.length === 0, "1:10, 0.4 pt off (tolerance 0.5 pt): accepted (" + alerts.join(" | ") + ")");
+    var far1 = squareRun(30 * MM, 10, 1, 0.6, null);
+    assert(far1.rec.marks.length === 0 && far1.rec.layerCalls === 0 && alerts.length === 1, "1:10, 0.6 pt off: refused (" + alerts.join(" | ") + ")");
+    assert(far1.out === false, "...and process says it drew nothing");
+    var near2 = squareRun(3 * MM, 10, 10, 0.04, null);
+    assert(near2.rec.marks.length > 0 && alerts.length === 0, "Large Canvas x 1:10, 0.04 pt off (tolerance 0.05 pt): accepted (" + alerts.join(" | ") + ")");
+    var far2 = squareRun(3 * MM, 10, 10, 0.06, null);
+    assert(far2.rec.marks.length === 0 && alerts.length === 1, "Large Canvas x 1:10, 0.06 pt off: refused (" + alerts.join(" | ") + ")");
+
+    // The refusal names the offset as the operator typed it (real size), not divided
+    assert(alerts[0].indexOf("20 mm") > 0, "the refusal shows the typed 20 mm (" + alerts[0] + ")");
+
+    assert(ref.out === true && tenth.out === true, "process says it drew when it did");
+})();
+
+// ===== TEST: run saves the scale in the document, not in the settings (spec 4.2) =====
+// The dialog and the stores are fakes; process() is the real one. The scale
+// reaches the document only when it differs from what the document held and the
+// run really drew — a refusal leaves the document as the message promises.
+console.log("--- run: the document remembers the scale, [Last Settings] does not (spec 4.2) ---");
+(function () {
+    var keep = { Storage: GM.Storage, UI: GM.UI, DrawingScale: GM.DrawingScale, redraw: global.app.redraw };
+    var LAST = "[Last Settings]";
+    function restore(name) { if (keep[name] === undefined) delete GM[name]; else GM[name] = keep[name]; }
+    function runWith(o) {
+        var rec = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]], pathInfo: o.pathInfo, offsetPath: o.offsetPath });
+        var log = { saves: [], stored: null, docInfo: null, shown: 0 };
+        GM.Illustrator.init = function () { return true; };
+        GM.Illustrator.getDocInfo = function () {
+            return { artboards: 1, width: 300 * MM, height: 300 * MM, scale: 1, drawingScale: o.docScale };
+        };
+        global.app.redraw = function () {};
+        GM.Storage = { PRESET_KEY_LAST: LAST, load: function () { return null; },
+            save: function (d) { log.stored = JSON.parse(JSON.stringify(d)); return true; } };
+        GM.UI = { buildDialog: function (pData, pathInfo, docInfo) {
+            log.docInfo = docInfo;
+            return {
+                window: { show: function () { log.shown++; return o.cancel ? 2 : 1; } },
+                gatherAll: function () { return o.cfg || GM.Config.getDefaults(); },
+                getRunOptions: function () { return { pathPartial: false, drawingScale: o.dialogScale }; }
+            };
+        } };
+        GM.DrawingScale = { save: function (doc, n) { log.saves.push({ doc: doc, n: n }); return true; } };
+        alerts = [];
+        var realProcess = GM.Main.process, seen = null;
+        GM.Main.process = function (cfg, opts) { seen = { cfg: cfg, opts: opts }; return realProcess.call(GM.Main, cfg, opts); };
+        try { GM.Main.run(); }
+        finally {
+            GM.Main.process = realProcess;
+            restore("Storage"); restore("UI"); restore("DrawingScale");
+            if (keep.redraw === undefined) delete global.app.redraw; else global.app.redraw = keep.redraw;
+        }
+        return { rec: rec, log: log, seen: seen };
+    }
+
+    // The dialog already shows the document's scale; confirming it changes nothing in the document
+    var a = runWith({ docScale: 10, dialogScale: 10 });
+    assert(a.rec.marks.length === 36 && alerts.length === 0, "1:10 in the document, 1:10 in the dialog: the run draws (" + alerts.join(" | ") + ")");
+    assert(a.log.saves.length === 0, "...and the document is not written to (" + a.log.saves.length + " writes)");
+    assert(a.seen && a.seen.opts.drawingScale === 10, "...the run got the scale 10");
+    assert(near(a.rec.marks[0].size, 3 * MM / 10), "...and drew the 3 mm mark as 0.3 mm");
+
+    // The operator changed the scale: it goes into the document, as the number the field held
+    var b = runWith({ docScale: 10, dialogScale: 2.5 });
+    assert(b.log.saves.length === 1 && b.log.saves[0].n === 2.5 && b.log.saves[0].doc === GM.Illustrator.doc,
+        "10 in the document, 2,5 in the dialog: DrawingScale.save(doc, 2.5) once (" + b.log.saves.length + ")");
+    assert(near(b.rec.marks[0].size, 3 * MM / 2.5), "...the mark is 3 mm / 2.5");
+    assert(b.log.docInfo && b.log.docInfo.drawingScale === 10, "...the dialog was built with the document's scale");
+
+    // A document without a scale is 1:1: a run at 1:1 does not touch it...
+    var c = runWith({ docScale: 1, dialogScale: 1 });
+    assert(c.rec.marks.length === 36 && c.log.saves.length === 0, "no scale in the document, 1:1 in the dialog: the document stays untouched");
+    // ...and a run at another scale gives it one
+    var d = runWith({ docScale: 1, dialogScale: 10 });
+    assert(d.log.saves.length === 1 && d.log.saves[0].n === 10, "no scale in the document, 1:10 in the dialog: written");
+
+    // Not a setting: neither in [Last Settings] nor in what process() gets as the configuration
+    var keys = function (o) { var k = []; for (var p in o) if (o.hasOwnProperty(p)) k.push(p); return k.sort().join(","); };
+    var last = d.log.stored && d.log.stored.presets[LAST];
+    assert(!!last, "[Last Settings] was written");
+    assert(last && keys(last) === keys(GM.Config.getDefaults()), "[Last Settings] has the settings' keys and no scale (" + (last && keys(last)) + ")");
+    assert(JSON.stringify(d.log.stored).indexOf("rawingScale") < 0, "...no 'drawingScale' anywhere in the stored data");
+    assert(d.seen && keys(d.seen.cfg) === keys(GM.Config.getDefaults()), "process() gets the settings without the scale");
+
+    // A scale the dialog should never hand over (its Generate is grey) is refused again here
+    var bad = [NaN, 0.5, 0, 101];
+    for (var i = 0; i < bad.length; i++) {
+        var e = runWith({ docScale: 1, dialogScale: bad[i] });
+        assert(e.rec.marks.length === 0 && e.rec.layerCalls === 0 && e.log.saves.length === 0 && e.log.stored === null && e.seen === null,
+            "scale " + bad[i] + ": nothing drawn, nothing saved, no write");
+        assert(alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_PREFIX) === 0 && alerts[0].indexOf(GM.L.SCALE_FIELD) > 0 &&
+            alerts[0].indexOf(GM.L.DOC_UNCHANGED) > 0, "scale " + bad[i] + ": one error naming the field (" + alerts.join(" | ") + ")");
+    }
+
+    // Cancelling the dialog: nothing at all
+    var f = runWith({ docScale: 1, dialogScale: 10, cancel: true });
+    assert(f.log.shown === 1 && f.rec.marks.length === 0 && f.log.saves.length === 0 && f.log.stored === null, "cancel: no run, no write");
+
+    // A run that ends in a refusal leaves the document as the message says
+    var side = 300 * MM;
+    var g = runWith({ docScale: 1, dialogScale: 10, cfg: pathCfg({ pathOffset: 20 }), pathInfo: squarePathInfo(side),
+        offsetPath: function () { return { ok: true, loops: 1, segments: squareSegs(0, side) }; } });
+    assert(g.rec.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf(GM.L.DOC_UNCHANGED) > 0, "a collapsing offset is refused (" + alerts.join(" | ") + ")");
+    assert(g.log.saves.length === 0, "...and the scale is not written: 'the document was not changed' stays true");
+})();
+
 // ===== TEST: an unexpected error is the canon's template (spec 6.5, canon 12.2) =====
 // Both error boundaries (process and run) say the same: message and line, the
 // line in the language's own words; no more "Illustrator Grommet Marks: ...".
