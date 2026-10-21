@@ -54,8 +54,7 @@ GM.Main = {
 
             app.redraw();
         } catch (e) {
-            alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " +
-                  e.message + (e.line ? " (line " + e.line + ")" : ""));
+            alert(GM.L.format(GM.L.ERR_CRITICAL, e.message, String(e.line || "?")));
         }
     },
 
@@ -106,7 +105,7 @@ GM.Main = {
                 } else {
                     pathPlan = GM.Main.pathMarks(cfg, opts || {}, pathInfo, unitFactor, scale, zoneCfg);
                     if (!pathPlan.ok) {
-                        alert(pathPlan.message);
+                        GM.Utils.error(pathPlan.message);
                         return;
                     }
                 }
@@ -243,7 +242,7 @@ GM.Main = {
             if (sessionOpen) {
                 try { targetLayer.locked = prevLocked; } catch (eRst2) {}
             }
-            alert(GM.CONSTANTS.SCRIPT_NAME + ": " + GM.L.ERR_UNEXPECTED + " — " + e.message);
+            alert(GM.L.format(GM.L.ERR_CRITICAL, e.message, String(e.line || "?")));
         }
     },
 

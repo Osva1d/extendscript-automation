@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: GM.Utils — shared utility functions
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.Numbers (shared/lib/numbers.js, for presetEquals)
+// Depends on: GM.L (error prefix), GM.Numbers (shared/lib/numbers.js, for presetEquals)
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -15,11 +15,12 @@ GM.Utils = {
     },
 
     /**
-     * Displays a user-facing error alert prefixed with script name.
+     * Displays a blocking error alert: the family's error prefix
+     * (GM.L.ERR_PREFIX — "CHYBA: " / "ERROR: ") and the message.
      * @param {string} msg - Error message body.
      */
     error: function (msg) {
-        alert(GM.CONSTANTS.SCRIPT_NAME + ": " + msg);
+        alert(GM.L.ERR_PREFIX + msg);
     },
 
     /**

@@ -14,25 +14,23 @@ var GM = {};
 var lastAlert = null;
 global.alert = function (m) { lastAlert = m; };
 
-// Locale stub with the formatter + keys the validator references
-var L = {
-    format: function (t) {
-        var a = [], i;
-        for (i = 1; i < arguments.length; i++) a.push(arguments[i]);
-        var idx = 0;
-        return t.replace(/%s/g, function () { return idx < a.length ? a[idx++] : "%s"; });
-    },
-    ERR_MUST_BE_NUMBER:  "%s must be a number!",
-    ERR_MUST_BE_INTEGER: "%s must be a whole number!",
-    ERR_OUT_OF_RANGE:    "%s must be between %s and %s!",
-    ERR_NO_APPEARANCE:   "Marks must have at least one shape — circle and/or cross.",
-    ERR_NO_EDGE:         "At least one edge must be enabled.",
-    OFFSET_X: "Offset X", OFFSET_Y: "Offset Y", SIZE_LABEL: "Size",
-    WEIGHT: "Weight", COUNT: "Count", SPACING: "Spacing"
-};
+// The real locale: the texts the operator reads, in both languages. Alerts
+// go through GM.Utils.error, which reads GM.L, so the suite's GM.L is the
+// English table and the Czech one is swapped in where a test needs it.
+global.app = { locale: "en_US" };
+function tableFor(locale) {
+    var saved = global.app.locale;
+    global.app.locale = locale;
+    var table = new Function("GM", fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8") +
+        "\nreturn GM.L;")({});
+    global.app.locale = saved;
+    return table;
+}
 
 // ===== LOAD PRODUCTION CODE =====
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
+var L = GM.L;
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
@@ -101,7 +99,7 @@ console.log("--- Validation.validate: invalid ---");
     var noApp = validCfg({ markCircle: false, markCross: false });
     lastAlert = null;
     assert(GM.Validation.validate(noApp, L).valid === false, "no circle/cross → invalid");
-    assert(lastAlert === L.ERR_NO_APPEARANCE, "no-appearance alert shown");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_APPEARANCE, "no-appearance alert shown (got " + lastAlert + ")");
 
     // no edges (top+left off, both mirrored)
     var noEdge = validCfg({
@@ -111,7 +109,7 @@ console.log("--- Validation.validate: invalid ---");
     });
     lastAlert = null;
     assert(GM.Validation.validate(noEdge, L).valid === false, "no enabled edges → invalid");
-    assert(lastAlert === L.ERR_NO_EDGE, "no-edge alert shown");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_EDGE, "no-edge alert shown (got " + lastAlert + ")");
 
     // non-mirrored enabled edge with bad count
     var badCount = validCfg({
@@ -357,6 +355,69 @@ console.log("--- validate: an invalid path offset never reaches the stored setti
     pm.pathOffset = null;
     lastAlert = null;
     assert(GM.Validation.validate(pm, L).valid === false && lastAlert !== null, "path mode: a null offset is still rejected");
+})();
+
+// ===== TEST: a blocking alert is "CHYBA: ..." and never shouts (spec 6.5) =====
+// validate() refuses with an alert after which the run ends: the family's
+// prefix in front, no exclamation mark, the field's name in quotes without the
+// label's colon ("Odsazení X:" is a label, the message names the field).
+console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) ---");
+(function () {
+    var refusals = [
+        ["not a number",   function () { return validCfg({ offsetX: "abc" }); }],
+        ["not a whole number", function () { return validCfg({ top: { enabled: true, useNumber: true, number: 3.5, spacing: 105 } }); }],
+        ["out of range",   function () { return validCfg({ markSize: 0 }); }],
+        ["zone spacing",   function () { return validCfg({ cornerZone: { enabled: true, count: 5, pitch: 0 } }); }],
+        ["path spacing",   function () {
+            return validCfg({ placementMode: "path", pathDist: { useNumber: false, number: 24, spacing: 0 } });
+        }],
+        ["no shape",       function () { return validCfg({ markCircle: false, markCross: false }); }],
+        ["no edge",        function () {
+            return validCfg({
+                top:  { enabled: false, useNumber: true, number: 10, spacing: 105 },
+                left: { enabled: false, useNumber: true, number: 10, spacing: 105 },
+                bottomMirror: true, rightMirror: true });
+        }]
+    ];
+    var langs = [["cs_CZ", "CHYBA: "], ["en_US", "ERROR: "]];
+    var saved = GM.L;
+    for (var li = 0; li < langs.length; li++) {
+        GM.L = tableFor(langs[li][0]);
+        assert(GM.L.ERR_PREFIX === langs[li][1], langs[li][0] + ": ERR_PREFIX is '" + langs[li][1] + "'");
+        for (var ri = 0; ri < refusals.length; ri++) {
+            lastAlert = null;
+            var r = GM.Validation.validate(refusals[ri][1](), GM.L);
+            var tag = langs[li][0] + " / " + refusals[ri][0];
+            assert(r.valid === false && lastAlert !== null, tag + ": refused with an alert");
+            if (lastAlert === null) continue;
+            var prefix = String(GM.L.ERR_PREFIX);
+            assert(lastAlert.indexOf(prefix) === 0, tag + ": starts with '" + prefix + "' (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf("!") < 0, tag + ": no exclamation mark (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf("%s") < 0 && lastAlert.indexOf("undefined") < 0, tag + ": no unfilled placeholder (got '" + lastAlert + "')");
+            assert(lastAlert.substring(prefix.length).indexOf(":") < 0,
+                tag + ": the label's colon is not carried into the sentence (got '" + lastAlert + "')");
+        }
+    }
+
+    // The exact words, Czech and English
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být číslo.", "CS number: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být mezi 0 a 9999.", "CS range: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ top: { enabled: true, useNumber: true, number: 3.5, spacing: 105 } }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Počet ok“ musí být celé číslo.", "CS whole number: got '" + lastAlert + "'");
+    GM.L = tableFor("en_US");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Offset X" must be a number.', "EN number: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Offset X" must be between 0 and 9999.', "EN range: got '" + lastAlert + "'");
+
+    // The zone's spacing field is named by the glossary's word
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ cornerZone: { enabled: true, count: 5, pitch: 0 } }), GM.L);
+    assert(lastAlert.indexOf("Pole „Rozteč“") > 0, "CS zone pitch is named 'Rozteč' (got '" + lastAlert + "')");
+    GM.L = saved;
 })();
 
 // ===== SUMMARY =====

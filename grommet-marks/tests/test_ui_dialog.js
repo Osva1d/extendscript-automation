@@ -97,6 +97,9 @@ console.log("--- UI.buildDialog: builds ---");
     var w = SUI.lastWindow();
     assert(w && w.type === "window", "a window was created");
     assert(/v\d/.test(w.text), "title contains version");
+    assert(GM.CONSTANTS.SCRIPT_NAME === "Grommet Marks", "the tool's name is 'Grommet Marks' (no 'Illustrator' in front)");
+    assert(w.text === "Grommet Marks v" + GM.CONSTANTS.VERSION,
+        "title is '<name> v<version>' (canon 12.7), got '" + w.text + "'");
     done();
 })();
 
@@ -741,15 +744,26 @@ console.log("--- UI 1.4: a decimal comma stays a comma (spec 6.1) ---");
 })();
 
 // ===== TEST: both locales define the same keys =====
+// The table of one language, built the way the script builds it: locale.js run
+// with that app.locale (the suite's own GM.L stays the one loaded at the top).
+function tableFor(locale) {
+    var saved = global.app.locale;
+    global.app.locale = locale;
+    var fn = new Function("GM", src("locale.js") + "\nreturn GM.L;");
+    var table = fn({});
+    global.app.locale = saved;
+    return table;
+}
+function stringKeys(table) {
+    var keys = [];
+    for (var k in table) if (table.hasOwnProperty(k) && typeof table[k] === "string") keys.push(k);
+    return keys.sort();
+}
+
 console.log("--- Locale: CS and EN key sets are identical ---");
 (function () {
     function keysFor(locale) {
-        var saved = global.app.locale, NSx = {};
-        global.app.locale = locale;
-        var fn = new Function("GM", src("locale.js") + "\nreturn GM.L;");
-        var table = fn(NSx);
-        global.app.locale = saved;
-        var keys = [];
+        var table = tableFor(locale), keys = [];
         for (var k in table) if (table.hasOwnProperty(k) && k !== "format") keys.push(k);
         return keys.sort();
     }
@@ -758,6 +772,88 @@ console.log("--- Locale: CS and EN key sets are identical ---");
     var onlyEn = en.filter(function (k) { return cs.indexOf(k) < 0; });
     assert(onlyCs.length === 0 && onlyEn.length === 0,
         "same keys (only CS: " + onlyCs.join(",") + "; only EN: " + onlyEn.join(",") + ")");
+})();
+
+// ===== TEST: the family's words (spec 6.5, 6.7; canon 12.1, 12.2, 12.4) =====
+console.log("--- Locale: Rozteč / Spacing, no '!', Czech quotes (spec 6.5, 6.7) ---");
+(function () {
+    var cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    var csKeys = stringKeys(cs), enKeys = stringKeys(en);
+    var i, bad;
+
+    bad = [];
+    for (i = 0; i < csKeys.length; i++) if (/rozestup/i.test(cs[csKeys[i]])) bad.push(csKeys[i]);
+    assert(bad.length === 0, "CS: no 'Rozestup' anywhere, it is 'Rozteč' (found in: " + bad.join(", ") + ")");
+    assert(cs.SPACING === "Rozteč:", "CS SPACING is 'Rozteč:' (got '" + cs.SPACING + "')");
+    assert(cs.EDGE_SPACING_HDR === "Rozteč", "CS EDGE_SPACING_HDR is 'Rozteč' (got '" + cs.EDGE_SPACING_HDR + "')");
+    assert(cs.ZONES_PITCH === "Rozteč:", "CS ZONES_PITCH stays 'Rozteč:'");
+    assert(cs.TIP_ZONES_CORNERS_ONLY.indexOf("zvolte Rozteč.") > 0, "CS tip: 'zvolte Rozteč.' (feminine, got '" + cs.TIP_ZONES_CORNERS_ONLY + "')");
+    assert(cs.TIP_PATH_COUNT_PARTIAL.indexOf("řídí roztečí") > 0, "CS tip: 'řídí roztečí' (instrumental)");
+
+    bad = [];
+    for (i = 0; i < enKeys.length; i++) if (/pitch/i.test(en[enKeys[i]])) bad.push(enKeys[i]);
+    assert(bad.length === 0, "EN: no 'pitch', it is 'spacing' (found in: " + bad.join(", ") + ")");
+    assert(en.ZONES_PITCH === "Spacing:" && en.ZONES_MARKS_PITCH === "marks, spacing",
+        "EN zones: 'Spacing:' and 'marks, spacing'");
+
+    bad = [];
+    for (i = 0; i < csKeys.length; i++) if (cs[csKeys[i]].indexOf("!") >= 0) bad.push(csKeys[i]);
+    assert(bad.length === 0, "CS: no exclamation marks (found in: " + bad.join(", ") + ")");
+    bad = [];
+    for (i = 0; i < enKeys.length; i++) if (en[enKeys[i]].indexOf("!") >= 0) bad.push(enKeys[i]);
+    assert(bad.length === 0, "EN: no exclamation marks (found in: " + bad.join(", ") + ")");
+
+    bad = [];
+    for (i = 0; i < csKeys.length; i++) {
+        if (/["‘’]/.test(cs[csKeys[i]])) bad.push(csKeys[i]);
+    }
+    assert(bad.length === 0, "CS: names stand in „…“, never \"…\" or ‘’ (found in: " + bad.join(", ") + ")");
+    assert(cs.WARN_LAYER_UNHIDDEN.indexOf("vrstva „%s“ ") > 0, "CS: the layer name is in Czech quotes");
+    assert(en.WARN_LAYER_UNHIDDEN.indexOf('layer "%s" ') > 0, "EN keeps straight quotes");
+
+    // Prefixes: two only (canon 12.1)
+    assert(cs.ERR_PREFIX === "CHYBA: " && en.ERR_PREFIX === "ERROR: ", "ERR_PREFIX: 'CHYBA: ' / 'ERROR: '");
+    assert(cs.WARN_PREFIX === "UPOZORNĚNÍ: " && en.WARN_PREFIX === "WARNING: ", "WARN_PREFIX unchanged");
+})();
+
+console.log("--- Locale: the preset sentences are the canon's (12.4), the critical error is 12.2 ---");
+(function () {
+    var cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    var canon = {
+        PROMPT_SAVE_AS: [
+            "Název nové předvolby:", "Name of the new preset:"],
+        CONFIRM_OVERWRITE_PRESET: [
+            "Předvolba „%s“ už existuje. Přepsat?", "Preset \"%s\" already exists. Replace it?"],
+        CONFIRM_DELETE_PRESET: [
+            "Smazat předvolbu „%s“? Smazání nejde vrátit.", "Delete preset \"%s\"? This cannot be undone."],
+        ERR_ENTER_NAME: [
+            "Zadejte název předvolby.", "Enter a preset name."],
+        ERR_RESERVED_NAME: [
+            "Názvy v hranatých závorkách jsou vyhrazené. Zvolte jiný název.", "Names in square brackets are reserved. Choose another name."],
+        ERR_CANNOT_DELETE_DEFAULT: [
+            "Výchozí předvolbu nejde smazat.", "The default preset cannot be deleted."]
+    };
+    for (var k in canon) if (canon.hasOwnProperty(k)) {
+        assert(cs[k] === canon[k][0], "CS " + k + " is the canon's sentence (got '" + cs[k] + "')");
+        assert(en[k] === canon[k][1], "EN " + k + " is the canon's sentence (got '" + en[k] + "')");
+    }
+    assert(cs.PRESET_DEFAULT === "[Výchozí]" && en.PRESET_DEFAULT === "[Default]", "PRESET_DEFAULT");
+
+    // Settings not saved: the consequence (12.2)
+    assert(cs.ERR_WRITE_SETTINGS === "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj.",
+        "CS ERR_WRITE_SETTINGS says what follows (got '" + cs.ERR_WRITE_SETTINGS + "')");
+    assert(en.ERR_WRITE_SETTINGS === "The settings could not be saved — next time the dialog opens without them.",
+        "EN ERR_WRITE_SETTINGS says what follows (got '" + en.ERR_WRITE_SETTINGS + "')");
+
+    // Unexpected error: the one template (12.2), %s message, %s line
+    assert(cs.ERR_CRITICAL === "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu.",
+        "CS ERR_CRITICAL is the canon's template (got '" + cs.ERR_CRITICAL + "')");
+    assert(en.ERR_CRITICAL === "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer.",
+        "EN ERR_CRITICAL is the canon's template (got '" + en.ERR_CRITICAL + "')");
+    assert(cs.ERR_UNEXPECTED === undefined && en.ERR_UNEXPECTED === undefined,
+        "ERR_UNEXPECTED is gone: ERR_CRITICAL replaced it");
+    assert(cs.ERR_NO_DOC === "Před spuštěním skriptu otevřete dokument.", "ERR_NO_DOC is the canon's text, unchanged");
+    assert(cs.format(String(cs.ERR_CRITICAL), "boom", "42").indexOf("boom (řádek 42).") > 0, "the line number is in Czech: '(řádek 42)'");
 })();
 
 // ===== SUMMARY =====

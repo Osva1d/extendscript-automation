@@ -5,9 +5,9 @@
 // Pure validation logic decoupled from ScriptUI. Numeric checks use
 // a shared validateNumber helper. Can be tested in Node without Illustrator.
 //
-// Depends on: GM.L (error messages), GM.Numbers (shared/lib/numbers.js: reads
-// the field text — one converter for the dialog fields, live validation and
-// validate())
+// Depends on: GM.L (error messages), GM.Utils (error: the alert with its
+// prefix), GM.Numbers (shared/lib/numbers.js: reads the field text — one
+// converter for the dialog fields, live validation and validate())
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -31,22 +31,24 @@ GM.Validation = {
      * Validates a numeric value against a rule.
      * @param {string|number} val - Raw value.
      * @param {Object} rule - {min, max, integer}.
-     * @param {string} label - Display name for error messages.
+     * @param {string} label - The field's label ("Offset X:"); the message
+     *     names the field, so the label's colon is dropped.
      * @param {Object} L - Locale object (GM.L).
      * @returns {number|null} Parsed number or null if invalid.
      */
     validateNumber: function (val, rule, label, L) {
         var n = GM.Numbers.parse(val);
+        var name = String(label).replace(/\s*:\s*$/, "");
         if (isNaN(n)) {
-            alert(L.format(L.ERR_MUST_BE_NUMBER || "%s must be a number!", label));
+            GM.Utils.error(L.format(L.ERR_MUST_BE_NUMBER || "Field \"%s\" must be a number.", name));
             return null;
         }
         if (rule.integer && n !== Math.floor(n)) {
-            alert(L.format(L.ERR_MUST_BE_INTEGER || "%s must be a whole number!", label));
+            GM.Utils.error(L.format(L.ERR_MUST_BE_INTEGER || "Field \"%s\" must be a whole number.", name));
             return null;
         }
         if (n < rule.min || n > rule.max) {
-            alert(L.format(L.ERR_OUT_OF_RANGE || "%s must be between %s and %s!", label, rule.min, rule.max));
+            GM.Utils.error(L.format(L.ERR_OUT_OF_RANGE || "Field \"%s\" must be between %s and %s.", name, rule.min, rule.max));
             return null;
         }
         return n;
@@ -80,7 +82,7 @@ GM.Validation = {
         if (zone.enabled) {
             zoneCount = vn(zone.count, rules.cornerCount, L.ZONES_COUNT || "Count", L);
             if (zoneCount === null) return { valid: false, settings: null };
-            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Pitch", L);
+            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Spacing", L);
             if (zonePitch === null) return { valid: false, settings: null };
         }
 
@@ -90,7 +92,7 @@ GM.Validation = {
         var haloWeight = vn(cfg.haloWeight, rules.haloWeight, L.HALO_WEIGHT || "Halo", L);
         if (haloWeight === null) return { valid: false, settings: null };
         if (!cfg.markCircle && !cfg.markCross) {
-            alert(L.ERR_NO_APPEARANCE);
+            GM.Utils.error(L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
 
@@ -116,7 +118,7 @@ GM.Validation = {
             var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
             var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
             if (!topOn && !leftOn && !bottomOn && !rightOn) {
-                alert(L.ERR_NO_EDGE);
+                GM.Utils.error(L.ERR_NO_EDGE);
                 return { valid: false, settings: null };
             }
 

@@ -32,8 +32,10 @@ var alertCalls = [];
 global.alert = function (m) { alertCalls.push(m); };
 
 // ===== LOAD PRODUCTION CODE =====
-// constants.js first: error() reads GM.CONSTANTS.SCRIPT_NAME.
+// constants.js, then the locale: error() reads GM.L.ERR_PREFIX.
+global.app = { locale: "cs_CZ" };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 // presetEquals reads number fields through the shared GM.Numbers.
 require("./lib/load_shared.js")(GM, ["numbers"]);
@@ -119,15 +121,17 @@ console.log("--- Utils.log ---");
 })();
 
 // =====================================================
-// TEST 4: error — script-name-prefixed alert
+// TEST 4: error — an alert with the family's error prefix
 // =====================================================
 console.log("--- Utils.error ---");
 (function () {
     alertCalls = [];
     GM.Utils.error("something broke");
     assert(alertCalls.length === 1, "error calls alert exactly once");
-    assert(alertCalls[0] === "Illustrator Grommet Marks: something broke",
-        "error prefixes message with SCRIPT_NAME + ': '");
+    assert(GM.L.ERR_PREFIX === "CHYBA: ", "the Czech error prefix is 'CHYBA: '");
+    assert(alertCalls[0] === "CHYBA: something broke",
+        "error prefixes the message with GM.L.ERR_PREFIX (got '" + alertCalls[0] + "')");
+    assert(alertCalls[0].indexOf(GM.CONSTANTS.SCRIPT_NAME) < 0, "the tool's name is not in the alert");
 })();
 
 // =====================================================

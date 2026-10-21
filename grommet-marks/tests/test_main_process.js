@@ -260,7 +260,7 @@ console.log("--- process: path offset through Illustrator (spec §5, §6, §9) -
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20 }), {});
     assert(rec2.marks.length === 0 && rec2.layerCalls === 0, "collapsed offset: no mark, no mark layer");
-    assert(alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0 &&
+    assert(alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_PREFIX + GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0 &&
         alerts[0].indexOf("20 mm") > 0, "collapse reported with the offset (" + alerts.join(" | ") + ")");
 
     var rec3 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
@@ -268,7 +268,7 @@ console.log("--- process: path offset through Illustrator (spec §5, §6, §9) -
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20 }), {});
     assert(rec3.marks.length === 0 && rec3.layerCalls === 0 && alerts.length === 1 &&
-        alerts[0].indexOf(GM.L.ERR_OFFSET_SPLIT.split("%s")[0]) === 0, "split line reported, nothing drawn, no mark layer");
+        alerts[0].indexOf(GM.L.ERR_PREFIX + GM.L.ERR_OFFSET_SPLIT.split("%s")[0]) === 0, "split line reported, nothing drawn, no mark layer");
 
     var rec4 = fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side),
         offsetPath: function () { return { ok: false, message: "boom" }; } });
@@ -468,7 +468,7 @@ console.log("--- process: a smooth anchor is no inner corner (review 2026-10-17)
         offsetPath: function () { return { ok: true, loops: 1, segments: circle(r - 3 * d) }; } });
     alerts = [];
     GM.Main.process(pathCfg({ pathOffset: 20, pathDist: { useNumber: true, number: 4, spacing: 100 } }), {});
-    assert(rec.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0,
+    assert(rec.marks.length === 0 && alerts.length === 1 && alerts[0].indexOf(GM.L.ERR_PREFIX + GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0]) === 0,
         "circle, Count 4, eyelet line 3 D in: refused (got " + rec.marks.length + " marks, alerts " + alerts.join(" | ") + ")");
     var rec2 = fakeDoc({ artboards: [[-r, r, r, -r]], pathInfo: pathInfoOf(circle(r), true),
         offsetPath: function () { return { ok: true, loops: 1, segments: circle(r - d) }; } });
@@ -479,7 +479,7 @@ console.log("--- process: a smooth anchor is no inner corner (review 2026-10-17)
 
 console.log("--- process: Large Canvas offset, empty result, decimal separator (spec §6.1, §7, G1) ---");
 (function () {
-    var side = 30 * MM, seen = {}, collapse = GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0];
+    var side = 30 * MM, seen = {}, collapse = GM.L.ERR_PREFIX + GM.L.ERR_OFFSET_COLLAPSE.split("%s")[0];
     // Large Canvas: 300 mm is 30 mm in document units. The line Illustrator hands
     // back is `extra` doc pt further in than asked for.
     function canvas(extra) {
@@ -523,6 +523,77 @@ console.log("--- process: Large Canvas offset, empty result, decimal separator (
     GM.Main.process(pathCfg({ pathOffset: 2.5 }), {});
     assert(alerts.length === 1 && alerts[0].indexOf("2" + GM.L.DEC_SEP + "5 mm") > 0 &&
         alerts[0].indexOf("2.5 mm") > 0, "offset 2.5 shown as 2.5 mm (" + alerts.join(" | ") + ")");
+})();
+
+// ===== TEST: a blocking alert is an error (spec 6.5, ruling R2) =====
+// A refusal ends the run without drawing: it starts with the family's prefix.
+console.log("--- process: a refusal starts with the error prefix (spec 6.5) ---");
+(function () {
+    var side = 300 * MM;
+    function refusal(off) {
+        fakeDoc({ artboards: [[0, side, side, 0]], pathInfo: squarePathInfo(side), offsetPath: off });
+        alerts = [];
+        GM.Main.process(pathCfg({ pathOffset: 20 }), {});
+        return alerts.length === 1 ? alerts[0] : "(" + alerts.length + " alerts)";
+    }
+    var offsets = {
+        collapse: function () { return { ok: true, loops: 1, segments: squareSegs(0, side) }; },
+        split:    function () { return { ok: true, loops: 2, segments: [] }; },
+        failed:   function () { return { ok: false, message: "boom" }; }
+    };
+    var saved = GM.L;
+    var langs = [["en_US", "ERROR: "], ["cs_CZ", "CHYBA: "]];
+    for (var li = 0; li < langs.length; li++) {
+        var keep = global.app.locale;
+        global.app.locale = langs[li][0];
+        var table = new Function("GM", src("locale.js") + "\nreturn GM.L;")({});
+        global.app.locale = keep;
+        GM.L = table;
+        for (var name in offsets) if (offsets.hasOwnProperty(name)) {
+            var text = refusal(offsets[name]);
+            assert(table.ERR_PREFIX === langs[li][1] && text.indexOf(langs[li][1]) === 0,
+                langs[li][0] + " / " + name + ": starts with '" + langs[li][1] + "' (got '" + text + "')");
+            assert(text.indexOf("Illustrator Grommet Marks") < 0, langs[li][0] + " / " + name + ": the tool's name is not in front");
+        }
+    }
+    GM.L = saved;
+})();
+
+// ===== TEST: an unexpected error is the canon's template (spec 6.5, canon 12.2) =====
+// Both error boundaries (process and run) say the same: message and line, the
+// line in the language's own words; no more "Illustrator Grommet Marks: ...".
+console.log("--- process, run: an unexpected exception is ERR_CRITICAL ---");
+(function () {
+    var rec = fakeDoc({ artboards: [[0, 300 * MM, 300 * MM, 0]] });
+    var boom = new Error("boom"); boom.line = 42;
+    GM.Illustrator.placeMarkGroup = function () { throw boom; };
+    rec.layer.locked = true;
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(alerts.length === 1 && alerts[0] === GM.L.format(String(GM.L.ERR_CRITICAL), "boom", "42"),
+        "process: ERR_CRITICAL with the message and the line (got '" + alerts.join(" | ") + "')");
+    assert(rec.layer.locked === true, "process: the layer's lock is put back before the alert");
+
+    GM.Illustrator.placeMarkGroup = function () { throw new Error("no line"); };
+    alerts = [];
+    GM.Main.process(settings({}));
+    assert(alerts.length === 1 && alerts[0] === GM.L.format(String(GM.L.ERR_CRITICAL), "no line", "?"),
+        "process: no line number -> '?' (got '" + alerts.join(" | ") + "')");
+
+    var failing = new Error("no document"); failing.line = 7;
+    GM.Illustrator = { init: function () { throw failing; } };
+    alerts = [];
+    GM.Main.run();
+    assert(alerts.length === 1 && alerts[0] === GM.L.format(String(GM.L.ERR_CRITICAL), "no document", "7"),
+        "run: ERR_CRITICAL with the message and the line (got '" + alerts.join(" | ") + "')");
+    assert(alerts[0].indexOf("The script stopped on an unexpected error: no document (line 7).") === 0,
+        "run: the template's first sentence");
+
+    // The document-less case keeps its own text, with no prefix (R2)
+    GM.Illustrator = { init: function () { return false; } };
+    alerts = [];
+    GM.Main.run();
+    assert(alerts.length === 1 && alerts[0] === GM.L.ERR_NO_DOC, "no document: ERR_NO_DOC, unchanged and unprefixed");
 })();
 
 // ===== SUMMARY =====
