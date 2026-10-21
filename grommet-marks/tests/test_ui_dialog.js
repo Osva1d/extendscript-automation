@@ -992,7 +992,7 @@ console.log("--- UI 1.4 reason: blockReason(st) in the order of spec 5 ---");
     assert(blockReasonOf({ invalid: [], noShape: false, noEdge: false }) === "", "nothing blocks: an empty string");
     assert(blockReasonOf({ invalid: [{ label: "Velikost", rule: R.markSize, unit: " mm" }] }) === "Velikost: zadejte číslo od 0,01 do 9999 mm.",
         "one field: the label, the allowed range, the unit (got '" + blockReasonOf({ invalid: [{ label: "Velikost", rule: R.markSize, unit: " mm" }] }) + "')");
-    assert(blockReasonOf({ invalid: [{ label: "Reg. tah (pt)", rule: R.regWeight, unit: " pt" }] }) === "Reg. tah (pt): zadejte číslo od 0,1 do 50 pt.",
+    assert(blockReasonOf({ invalid: [{ label: "Reg. tah", rule: R.regWeight, unit: " pt" }] }) === "Reg. tah: zadejte číslo od 0,1 do 50 pt.",
         "a stroke weight: points");
     assert(blockReasonOf({ invalid: [{ label: "Horní — Počet ok", rule: R.edgeCount, unit: "" }] }) === "Horní — Počet ok: zadejte celé číslo od 1 do 9999.",
         "a count: a whole number, no unit (got '" + blockReasonOf({ invalid: [{ label: "Horní — Počet ok", rule: R.edgeCount, unit: "" }] }) + "')");
@@ -1062,8 +1062,8 @@ console.log("--- UI 1.4 reason: every field names itself ---");
     }
     expectReason(textField(w, "7,5"), "7,5", "Odsazení od kraje ↔: zadejte číslo od 0 do 9999 mm.", "offset ↔");
     expectReason(textField(w, "8,5"), "8,5", "Odsazení od kraje ↕: zadejte číslo od 0 do 9999 mm.", "offset ↕");
-    expectReason(textField(w, "1,25"), "1,25", "Reg. tah (pt): zadejte číslo od 0,1 do 50 pt.", "registration stroke");
-    expectReason(textField(w, "3,75"), "3,75", "Bílé halo (pt): zadejte číslo od 0,1 do 50 pt.", "white halo");
+    expectReason(textField(w, "1,25"), "1,25", "Reg. tah: zadejte číslo od 0,1 do 50 pt.", "registration stroke");
+    expectReason(textField(w, "3,75"), "3,75", "Bílé halo: zadejte číslo od 0,1 do 50 pt.", "white halo");
 
     // Edges: the row's name and the column's header
     ui.edgeUI.top.numIn.text = "2,5"; ui.edgeUI.top.numIn.onChange();
@@ -1120,10 +1120,97 @@ console.log("--- UI 1.4 reason: several invalid fields are counted ---");
     // Fix two, one is left: that one by name
     size.text = "3,5"; size.onChange();
     reg.text = "1,25"; reg.onChange();
-    assert(line.text === "✗ Bílé halo (pt): zadejte číslo od 0,1 do 50 pt.", "two fixed, the third is named (got '" + line.text + "')");
+    assert(line.text === "✗ Bílé halo: zadejte číslo od 0,1 do 50 pt.", "two fixed, the third is named (got '" + line.text + "')");
     halo.text = "3,75"; halo.onChange();
     assert(lineIsFinding(line) && winBtn(w, GM.L.OK).enabled === true, "all fixed: the finding, Generate on");
     done();
+})();
+
+console.log("--- UI 1.4 reason: the unit stands once, the label has no (pt) (ruling R8) ---");
+(function () {
+    var labels = GM.UI.reasonLabels();
+    assert(labels.regWeight === "Reg. tah" && labels.haloWeight === "Bílé halo",
+        "CS: the stroke labels have lost '(pt)' (got '" + labels.regWeight + "' / '" + labels.haloWeight + "')");
+    var all = [];
+    for (var k in labels) if (labels.hasOwnProperty(k)) all.push(labels[k]);
+    assert(all.join("|").indexOf("(pt)") < 0, "no label of a reason carries '(pt)'");
+    assert(GM.L.REG_WEIGHT === "Reg. tah (pt):", "the dialog's own label keeps its '(pt)': the field shows the unit");
+    // The same in English: the table's labels, through the same function
+    var saved = GM.L, en = tableFor("en_US");
+    GM.L = en;
+    try {
+        var enLabels = GM.UI.reasonLabels();
+        assert(enLabels.regWeight === "Reg. stroke" && enLabels.haloWeight === "White halo",
+            "EN: 'Reg. stroke', 'White halo' (got '" + enLabels.regWeight + "' / '" + enLabels.haloWeight + "')");
+    } finally { GM.L = saved; }
+
+    var ui = buildUI3(reasonPData(), null, DOC_1000x500);
+    var w = SUI.lastWindow();
+    var halo = textField(w, "3,75");
+    halo.text = "x"; halo.onChange();
+    assert(ui.modeUI.infoLbl.text === "✗ Bílé halo: zadejte číslo od 0,1 do 50 pt.", "in the dialog: one 'pt', at the end (got '" + ui.modeUI.infoLbl.text + "')");
+    done();
+})();
+
+console.log("--- UI 1.4 reason: a mirrored edge row is not checked, as validate() does not (ruling R7) ---");
+(function () {
+    withStubs({}, function () {
+        var ui = buildUI3(presetPData("A"), null, DOC_1000x500);
+        var w = SUI.lastWindow();
+        var line = ui.modeUI.infoLbl;
+        var ok = winBtn(w, GM.L.OK), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS);
+        var mirrorTop = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MIRROR_TOP; });
+        var mirrorLeft = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MIRROR_LEFT; });
+        var bottom = ui.edgeUI.bottom, right = ui.edgeUI.right;
+        assert(mirrorTop.value === true && mirrorLeft.value === true, "precheck: both mirrors on");
+
+        // Reveal Dolní, switch it on and give it junk
+        mirrorTop.value = false; mirrorTop.onClick();
+        bottom.cb.value = true; bottom.cb.onClick();
+        bottom.spcRB.value = true; bottom.spcRB.onClick();
+        bottom.spcIn.text = "x"; bottom.spcIn.onChange();
+        assert(line.text === "✗ Dolní — Rozteč: zadejte číslo od 0,01 do 9999 mm.", "mirror off: the field is checked, the reason names it (got '" + line.text + "')");
+        assert(isRedPen(bottom.spcIn.graphics.foregroundColor), "...and the field is red");
+        assert(ok.enabled === false && saveAs.enabled === false, "...Generate and Save As are grey");
+
+        // Mirror on: the row is hidden and does not count
+        mirrorTop.value = true; mirrorTop.onClick();
+        assert(ok.enabled === true, "mirror on: Generate is on again, the hidden field does not block it");
+        assert(lineIsFinding(line) && line.text === "1 artboard · 1000 × 500 mm", "...the line shows the finding (got '" + line.text + "')");
+        assert(bottom.spcIn.graphics.foregroundColor === bottom.spcIn.graphics.ownPen, "...the hidden field is painted valid, its own pen");
+        assert(saveAs.enabled === true, "...Save As follows the other fields: on");
+        assert(GM.Validation.validate(ui.gatherAll(), GM.L).valid === true, "...and validate() agrees: the run would go");
+        var size = textField(w, "4");
+        size.text = "5"; size.onChange();
+        assert(save.enabled === true, "a valid change of a visible field: Save is on, the hidden junk is no obstacle");
+
+        // The check reads the mirror box as it is now: off, and the same junk counts again
+        // (the box alone is flipped, so un-mirroring does not seed the row from the top edge)
+        mirrorTop.value = false; ui.edgeUI.top.cb.onClick();
+        assert(line.text === "✗ Dolní — Rozteč: zadejte číslo od 0,01 do 9999 mm.", "mirror off: the same field is checked again (got '" + line.text + "')");
+        assert(isRedPen(bottom.spcIn.graphics.foregroundColor), "...red again");
+        assert(ok.enabled === false && save.enabled === false && saveAs.enabled === false, "...Generate, Save, Save As are grey");
+        mirrorTop.value = true; ui.edgeUI.top.cb.onClick();
+        assert(ok.enabled === true && lineIsFinding(line), "mirror on: not checked again");
+
+        // The right edge follows the left mirror the same way
+        mirrorLeft.value = false; mirrorLeft.onClick();
+        right.cb.value = true; right.cb.onClick();
+        right.numRB.value = true; right.numRB.onClick();
+        right.numIn.text = "2,5"; right.numIn.onChange();
+        assert(line.text === "✗ Pravá — Počet ok: zadejte celé číslo od 1 do 9999.", "right edge, mirror off: checked (got '" + line.text + "')");
+        mirrorLeft.value = true; mirrorLeft.onClick();
+        assert(ok.enabled === true && lineIsFinding(line), "right edge, mirror on: not checked (got '" + line.text + "')");
+
+        // Two hidden junk fields are not counted either
+        bottom.spcIn.text = "x"; bottom.spcIn.onChange();
+        assert(ok.enabled === true && line.text.indexOf("✗") < 0, "hidden junk in two rows: no reason, no count (got '" + line.text + "')");
+
+        // The mirror does not hide the top and left rows: they are always checked
+        ui.edgeUI.top.numIn.text = "x"; ui.edgeUI.top.numIn.onChange();
+        assert(line.text === "✗ Horní — Počet ok: zadejte celé číslo od 1 do 9999.", "the top row is always checked (got '" + line.text + "')");
+        done();
+    });
 })();
 
 console.log("--- UI 1.4 reason: no shape, no edge ---");

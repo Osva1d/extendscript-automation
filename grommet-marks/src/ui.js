@@ -252,9 +252,13 @@ GM.UI = {
         return parts.join(" · ");
     },
 
-    /** A field's label as a reason names it: without the colon (canon 12.1). */
+    /**
+     * A field's label as a reason names it: without the colon (canon 12.1) and
+     * without the unit in brackets ("Reg. tah (pt):" -> "Reg. tah"), because
+     * the reason ends with the unit and says it once.
+     */
     bareLabel: function (label) {
-        return String(label).replace(/\s*:\s*$/, "");
+        return String(label).replace(/\s*:\s*$/, "").replace(/\s*\(pt\)\s*$/, "");
     },
 
     /**
@@ -988,10 +992,15 @@ GM.UI = {
         // skipped while the other mode is active (its panel is hidden, and
         // GM.Validation.validate() ignores it on submit too). Untagged fields
         // (mark size, weights, corner zones) apply to both modes.
+        // `mirrored()` marks the fields of an edge row that its mirror box hides
+        // (Bottom follows Top, Right follows Left): validate() does not check
+        // them, so neither does this, and the reason never names a row that
+        // cannot be seen.
         // `label` names the field in the reason on the placement line; `unit` is
         // the dialog's length unit (LEN), " pt" for the strokes, "" for counts.
         var RL = GM.UI.reasonLabels();
         var LEN = "len", PT = " pt";
+        /** @type {Object[]} {et, rule, mode, label, unit, mirrored} */
         var validationTargets = [
             { et: offsetXIn,   rule: R.offsetX,     mode: "artboard", label: RL.offsetX,     unit: LEN },
             { et: offsetYIn,   rule: R.offsetY,     mode: "artboard", label: RL.offsetY,     unit: LEN },
@@ -1006,11 +1015,14 @@ GM.UI = {
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
         var edgeKeys = ["top", "left", "bottom", "right"];
+        var edgeMirrored = [null, null,
+            function () { return mirrorTopCB.value; },
+            function () { return mirrorLeftCB.value; }];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
             validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount, mode: "artboard",
-                label: RL[edgeKeys[vt] + "Count"], unit: "" });
+                label: RL[edgeKeys[vt] + "Count"], unit: "", mirrored: edgeMirrored[vt] });
             validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing, mode: "artboard",
-                label: RL[edgeKeys[vt] + "Spacing"], unit: LEN });
+                label: RL[edgeKeys[vt] + "Spacing"], unit: LEN, mirrored: edgeMirrored[vt] });
         }
 
         function fieldInRange(et, rule) {
@@ -1038,7 +1050,7 @@ GM.UI = {
                 var t = validationTargets[i];
                 if (!t.et) continue;
                 if (t.mode && t.mode !== mode) { GM.FieldPaint.field(t.et, true); continue; }
-                if (!t.et.enabled) { GM.FieldPaint.field(t.et, true); continue; }
+                if (!t.et.enabled || (t.mirrored && t.mirrored())) { GM.FieldPaint.field(t.et, true); continue; }
                 var ok = fieldInRange(t.et, t.rule);
                 GM.FieldPaint.field(t.et, ok);
                 if (!ok) {
