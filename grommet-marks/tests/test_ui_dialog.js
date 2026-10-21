@@ -539,10 +539,11 @@ console.log("--- UI 1.3: path offset enables Save, invalid offset in the summary
     var ui2 = buildUI3(null, mockPathInfo(4, true), null);
     ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
     ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
-    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy",
-        "invalid offset: no 'on the path' clause (got '" + ui2.modeUI.infoLbl.text + "')");
+    assert(ui2.modeUI.infoLbl.text.indexOf("Odsazení od kraje") > 0 && ui2.modeUI.infoLbl.text.indexOf("on the path") < 0 &&
+        ui2.modeUI.infoLbl.text.indexOf("leží na cestě") < 0,
+        "invalid offset: the line gives the reason, no 'on the path' clause (got '" + ui2.modeUI.infoLbl.text + "')");
     ui2.pathUI.offsetIn.text = ""; ui2.pathUI.offsetIn.onChanging();
-    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy", "empty offset: no clause either");
+    assert(ui2.modeUI.infoLbl.text.indexOf("Odsazení od kraje") > 0, "empty offset: the reason as well");
     ui2.pathUI.offsetIn.text = "0"; ui2.pathUI.offsetIn.onChanging();
     assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
     done();
@@ -969,6 +970,271 @@ console.log("--- UI 1.4 presets: the panel follows the canon's template (canon 9
     done();
 })();
 
+// ===== TESTS: the grey line says why Generate is grey (spec 5; canon 12.3, 12.6; audit P8) =====
+// The values below are distinct on purpose, so each field is found by its text.
+function reasonPData() {
+    var p = freshPData();
+    var s = p.presets["[Default]"];
+    s.offsetX = 7.5; s.offsetY = 8.5;
+    s.markSize = 3.5; s.regWeight = 1.25; s.haloWeight = 3.75;
+    return p;
+}
+var DOC_1000x500 = { artboards: 1, width: 1000 * 2.834645669291339, height: 500 * 2.834645669291339, scale: 1 };
+function blockReasonOf(st) {
+    return typeof GM.UI.blockReason === "function" ? GM.UI.blockReason(st) : "(GM.UI.blockReason is missing)";
+}
+function lineIsErr(line) { return line.enabled === true && isRedPen(line.graphics.foregroundColor); }
+function lineIsFinding(line) { return line.enabled === false && line.graphics.foregroundColor === line.graphics.ownPen; }
+
+console.log("--- UI 1.4 reason: blockReason(st) in the order of spec 5 ---");
+(function () {
+    var R = GM.Validation.rules;
+    assert(blockReasonOf({ invalid: [], noShape: false, noEdge: false }) === "", "nothing blocks: an empty string");
+    assert(blockReasonOf({ invalid: [{ label: "Velikost", rule: R.markSize, unit: " mm" }] }) === "Velikost: zadejte číslo od 0,01 do 9999 mm.",
+        "one field: the label, the allowed range, the unit (got '" + blockReasonOf({ invalid: [{ label: "Velikost", rule: R.markSize, unit: " mm" }] }) + "')");
+    assert(blockReasonOf({ invalid: [{ label: "Reg. tah (pt)", rule: R.regWeight, unit: " pt" }] }) === "Reg. tah (pt): zadejte číslo od 0,1 do 50 pt.",
+        "a stroke weight: points");
+    assert(blockReasonOf({ invalid: [{ label: "Horní — Počet ok", rule: R.edgeCount, unit: "" }] }) === "Horní — Počet ok: zadejte celé číslo od 1 do 9999.",
+        "a count: a whole number, no unit (got '" + blockReasonOf({ invalid: [{ label: "Horní — Počet ok", rule: R.edgeCount, unit: "" }] }) + "')");
+    var three = [{ label: "a", rule: R.markSize, unit: " mm" }, { label: "b", rule: R.regWeight, unit: " pt" }, { label: "c", rule: R.edgeCount, unit: "" }];
+    assert(blockReasonOf({ invalid: three }) === "Neplatná pole: 3 — opravte červená pole.",
+        "three fields: the count after the colon (got '" + blockReasonOf({ invalid: three }) + "')");
+    assert(blockReasonOf({ invalid: three, noShape: true, noEdge: true }) === "Neplatná pole: 3 — opravte červená pole.",
+        "fields come before the structure");
+    assert(blockReasonOf({ invalid: [{ label: "Velikost", rule: R.markSize, unit: " mm" }], noShape: true }) === "Velikost: zadejte číslo od 0,01 do 9999 mm.",
+        "one field also comes before the structure");
+    assert(blockReasonOf({ invalid: [], noShape: true, noEdge: true }) === "Značka nemá tvar — zapněte Kruh nebo Kříž.",
+        "no shape comes before no edge (got '" + blockReasonOf({ invalid: [], noShape: true, noEdge: true }) + "')");
+    assert(blockReasonOf({ invalid: [], noShape: false, noEdge: true }) === "Není zapnutá žádná hrana.",
+        "no edge (got '" + blockReasonOf({ invalid: [], noShape: false, noEdge: true }) + "')");
+    assert(GM.L.REASON_MARK === "✗ ", "the symbol is the canon's ✗ with a space (12.6)");
+})();
+
+console.log("--- UI 1.4 reason: one invalid field, then the finding comes back ---");
+(function () {
+    var ui = buildUI3(reasonPData(), null, DOC_1000x500);
+    var w = SUI.lastWindow();
+    var line = ui.modeUI.infoLbl;
+    var ok = winBtn(w, GM.L.OK);
+    assert(line.text === "1 artboard · 1000 × 500 mm", "opened valid: the finding (got '" + line.text + "')");
+    assert(lineIsFinding(line), "...grey: disabled, the control's own pen");
+    assert(ok.enabled === true, "...Generate is on");
+
+    var size = textField(w, "3,5");
+    size.text = "x"; size.onChange();
+    assert(line.text === "✗ Velikost: zadejte číslo od 0,01 do 9999 mm.", "Velikost 'x': the reason (got '" + line.text + "')");
+    assert(lineIsErr(line), "...in the error colour, enabled so the colour shows");
+    assert(ok.enabled === false, "...Generate is grey");
+
+    size.text = "3,5"; size.onChange();
+    assert(line.text === "1 artboard · 1000 × 500 mm", "fixed: the finding is back (got '" + line.text + "')");
+    assert(lineIsFinding(line), "...grey again, the control's own pen");
+    assert(ok.enabled === true, "...Generate is on again");
+
+    // The reason follows the dialog's unit
+    var units = w.findOne(function (c) { return c.type === "dropdownlist" && c.items.length === 3; });
+    units.selection = units.items[1]; units.onChange();
+    var sizeCm = textField(w, "0,35");
+    sizeCm.text = "x"; sizeCm.onChange();
+    assert(line.text === "✗ Velikost: zadejte číslo od 0,01 do 9999 cm.", "in cm the range says cm (got '" + line.text + "')");
+    sizeCm.text = "0,35"; sizeCm.onChange();
+
+    // A change that is not about validity does not wipe the reason (whichever runs last)
+    sizeCm.text = "x"; sizeCm.onChange();
+    units.selection = units.items[0]; units.onChange();
+    assert(line.text.indexOf("✗ Velikost:") === 0 && line.text.indexOf(" mm.") > 0,
+        "a unit change with a field still wrong: the reason, now in mm (got '" + line.text + "')");
+    ui.edgeUI.top.cb.value = true; ui.edgeUI.top.cb.onClick();
+    assert(lineIsErr(line), "another click in the dialog leaves the reason on the line");
+    done();
+})();
+
+console.log("--- UI 1.4 reason: every field names itself ---");
+(function () {
+    var ui = buildUI3(reasonPData(), mockPathInfo(0, true), DOC_1000x500);
+    var w = SUI.lastWindow();
+    var line = ui.modeUI.infoLbl;
+    function expectReason(field, restore, expected, what) {
+        field.text = "x"; field.onChange();
+        assert(line.text === "✗ " + expected, what + " (got '" + line.text + "')");
+        field.text = restore; field.onChange();
+        assert(lineIsFinding(line), what + ": fixed, the finding is back");
+    }
+    expectReason(textField(w, "7,5"), "7,5", "Odsazení od kraje ↔: zadejte číslo od 0 do 9999 mm.", "offset ↔");
+    expectReason(textField(w, "8,5"), "8,5", "Odsazení od kraje ↕: zadejte číslo od 0 do 9999 mm.", "offset ↕");
+    expectReason(textField(w, "1,25"), "1,25", "Reg. tah (pt): zadejte číslo od 0,1 do 50 pt.", "registration stroke");
+    expectReason(textField(w, "3,75"), "3,75", "Bílé halo (pt): zadejte číslo od 0,1 do 50 pt.", "white halo");
+
+    // Edges: the row's name and the column's header
+    ui.edgeUI.top.numIn.text = "2,5"; ui.edgeUI.top.numIn.onChange();
+    assert(line.text === "✗ Horní — Počet ok: zadejte celé číslo od 1 do 9999.", "top count, 2,5 is no whole number (got '" + line.text + "')");
+    ui.edgeUI.top.numIn.text = "10"; ui.edgeUI.top.numIn.onChange();
+    ui.edgeUI.left.spcRB.value = true; ui.edgeUI.left.spcRB.onClick();
+    ui.edgeUI.left.spcIn.text = "0"; ui.edgeUI.left.spcIn.onChange();
+    assert(line.text === "✗ Levá — Rozteč: zadejte číslo od 0,01 do 9999 mm.", "left spacing (got '" + line.text + "')");
+    ui.edgeUI.left.spcIn.text = "105"; ui.edgeUI.left.spcIn.onChange();
+
+    // Corner zones
+    ui.zonesUI.enableCB.value = true; ui.zonesUI.enableCB.onClick();
+    ui.zonesUI.countIn.text = "0"; ui.zonesUI.countIn.onChange();
+    assert(line.text === "✗ Rohové zóny — Počet: zadejte celé číslo od 1 do 999.", "zone count (got '" + line.text + "')");
+    ui.zonesUI.countIn.text = "5"; ui.zonesUI.countIn.onChange();
+    ui.zonesUI.pitchIn.text = "x"; ui.zonesUI.pitchIn.onChange();
+    assert(line.text === "✗ Rohové zóny — Rozteč: zadejte číslo od 0,01 do 9999 mm.", "zone spacing (got '" + line.text + "')");
+    ui.zonesUI.pitchIn.text = "100"; ui.zonesUI.pitchIn.onChange();
+    ui.zonesUI.enableCB.value = false; ui.zonesUI.enableCB.onClick();
+
+    // Path mode: its own fields, the hidden mode's do not count
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    ui.pathUI.spcIn.text = "x"; ui.pathUI.spcIn.onChange();
+    assert(line.text === "✗ Rozteč: zadejte číslo od 0,01 do 9999 mm.", "path spacing (got '" + line.text + "')");
+    ui.pathUI.spcIn.text = "105"; ui.pathUI.spcIn.onChange();
+    ui.pathUI.offsetIn.text = "-1"; ui.pathUI.offsetIn.onChange();
+    assert(line.text === "✗ Odsazení od kraje: zadejte číslo od 0 do 9999 mm.", "path offset (got '" + line.text + "')");
+    ui.pathUI.offsetIn.text = "0"; ui.pathUI.offsetIn.onChange();
+    ui.pathUI.numRB.value = true; ui.pathUI.numRB.onClick();
+    // a path with corners dictates the count; a smooth one lets the operator enter it
+    ui.pathUI.numIn.text = "x"; ui.pathUI.numIn.onChange();
+    assert(line.text === "✗ Počet ok: zadejte celé číslo od 1 do 9999.", "path count (got '" + line.text + "')");
+    done();
+})();
+
+console.log("--- UI 1.4 reason: several invalid fields are counted ---");
+(function () {
+    var ui = buildUI3(reasonPData(), null, DOC_1000x500);
+    var w = SUI.lastWindow();
+    var line = ui.modeUI.infoLbl;
+    var size = textField(w, "3,5"), reg = textField(w, "1,25"), halo = textField(w, "3,75");
+    size.text = "x"; size.onChange();
+    reg.text = "x"; reg.onChange();
+    assert(line.text === "✗ Neplatná pole: 2 — opravte červená pole.", "two fields (got '" + line.text + "')");
+    halo.text = "x"; halo.onChange();
+    assert(line.text === "✗ Neplatná pole: 3 — opravte červená pole.", "three fields (got '" + line.text + "')");
+    assert(lineIsErr(line), "...in the error colour");
+    assert(winBtn(w, GM.L.OK).enabled === false, "...Generate is grey");
+
+    // The fields of the hidden mode are not counted
+    ui.pathUI.spcIn.text = "x"; ui.pathUI.spcIn.onChange();
+    assert(line.text === "✗ Neplatná pole: 3 — opravte červená pole.", "a wrong field of the hidden mode is not counted (got '" + line.text + "')");
+
+    // Fix two, one is left: that one by name
+    size.text = "3,5"; size.onChange();
+    reg.text = "1,25"; reg.onChange();
+    assert(line.text === "✗ Bílé halo (pt): zadejte číslo od 0,1 do 50 pt.", "two fixed, the third is named (got '" + line.text + "')");
+    halo.text = "3,75"; halo.onChange();
+    assert(lineIsFinding(line) && winBtn(w, GM.L.OK).enabled === true, "all fixed: the finding, Generate on");
+    done();
+})();
+
+console.log("--- UI 1.4 reason: no shape, no edge ---");
+(function () {
+    var ui = buildUI3(reasonPData(), null, DOC_1000x500);
+    var w = SUI.lastWindow();
+    var line = ui.modeUI.infoLbl, ok = winBtn(w, GM.L.OK);
+    var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
+
+    circle.value = false; circle.onClick();
+    assert(line.text === "✗ Značka nemá tvar — zapněte Kruh nebo Kříž.", "no shape (got '" + line.text + "')");
+    assert(lineIsErr(line) && ok.enabled === false, "...in the error colour, Generate is grey");
+    circle.value = true; circle.onClick();
+    assert(lineIsFinding(line) && ok.enabled === true, "a shape again: the finding, Generate on");
+
+    // No edge: top and left off, bottom and right mirror them
+    ui.edgeUI.top.cb.value = false; ui.edgeUI.top.cb.onClick();
+    assert(line.text === "1 artboard · 1000 × 500 mm" && ok.enabled === true, "only the left edge on: the finding");
+    ui.edgeUI.left.cb.value = false; ui.edgeUI.left.cb.onClick();
+    assert(line.text === "✗ Není zapnutá žádná hrana.", "no edge on (got '" + line.text + "')");
+    assert(lineIsErr(line) && ok.enabled === false, "...in the error colour, Generate is grey");
+
+    // Both: the shape comes first
+    circle.value = false; circle.onClick();
+    assert(line.text === "✗ Značka nemá tvar — zapněte Kruh nebo Kříž.", "no shape and no edge: the shape is said first");
+
+    // A wrong number is said before the structure
+    var size = textField(w, "3,5");
+    size.text = "x"; size.onChange();
+    assert(line.text === "✗ Velikost: zadejte číslo od 0,01 do 9999 mm.", "a wrong number before the structure (got '" + line.text + "')");
+    size.text = "3,5"; size.onChange();
+    circle.value = true; circle.onClick();
+
+    // The mirrors count: the bottom edge follows the top, so the top alone is an edge
+    ui.edgeUI.top.cb.value = true; ui.edgeUI.top.cb.onClick();
+    assert(lineIsFinding(line) && ok.enabled === true, "top on again: the finding");
+    done();
+
+    // In path mode there is no edge to switch on
+    var ui2 = buildUI3(reasonPData(), mockPathInfo(0, true), DOC_1000x500);
+    var w2 = SUI.lastWindow();
+    ui2.edgeUI.top.cb.value = false; ui2.edgeUI.top.cb.onClick();
+    ui2.edgeUI.left.cb.value = false; ui2.edgeUI.left.cb.onClick();
+    ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
+    assert(ui2.modeUI.infoLbl.text.indexOf("✗") < 0 && winBtn(w2, GM.L.OK).enabled === true,
+        "path mode: the edges do not block, the line has the finding (got '" + ui2.modeUI.infoLbl.text + "')");
+    done();
+})();
+
+console.log("--- UI 1.4 reason: the finding keeps its clause for a wrong offset (placementInfoText) ---");
+(function () {
+    var pi = mockPathInfo(4, true);
+    function info(offset) { return GM.UI.placementInfoText({ pathMode: true, pathInfo: pi, docInfo: null, fallback: false, offset: offset, unit: "mm" }); }
+    assert(info(NaN) === "Uzavřená cesta · 4 rohy", "a wrong offset is not 'on the path' (got '" + info(NaN) + "')");
+    assert(info(0) === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    assert(info(20) === "Uzavřená cesta · 4 rohy", "offset 20: no clause");
+})();
+
+console.log("--- UI 1.4 reason: the line is wide enough for the longest reason ---");
+(function () {
+    var longest = GM.UI.longestInfoText();
+    var widest = "", n = 0;
+    function note(text) { n++; if (text.length > widest.length) widest = text; }
+
+    var ui = buildUI3(reasonPData(), mockPathInfo(0, true), DOC_1000x500);
+    var w = SUI.lastWindow();
+    var line = ui.modeUI.infoLbl;
+    var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
+    var fields = [textField(w, "7,5"), textField(w, "8,5"), textField(w, "3,5"), textField(w, "1,25"), textField(w, "3,75"),
+        ui.edgeUI.top.numIn, ui.edgeUI.left.numIn, ui.zonesUI.countIn, ui.zonesUI.pitchIn];
+    ui.zonesUI.enableCB.value = true; ui.zonesUI.enableCB.onClick();
+    ui.edgeUI.top.spcRB.value = true; ui.edgeUI.top.spcRB.onClick();
+    ui.edgeUI.left.spcRB.value = true; ui.edgeUI.left.spcRB.onClick();
+    ui.edgeUI.top.cb.value = true; ui.edgeUI.top.cb.onClick();
+    fields.push(ui.edgeUI.top.spcIn, ui.edgeUI.left.spcIn);
+    for (var i = 0; i < fields.length; i++) {
+        var keep = fields[i].text;
+        fields[i].text = "x"; fields[i].onChange(); note(line.text);
+        fields[i].text = keep; fields[i].onChange();
+    }
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    var pfields = [ui.pathUI.spcIn, ui.pathUI.offsetIn];
+    for (var j = 0; j < pfields.length; j++) {
+        var keep2 = pfields[j].text;
+        pfields[j].text = "x"; pfields[j].onChange(); note(line.text);
+        pfields[j].text = keep2; pfields[j].onChange();
+    }
+    ui.modeUI.artboardRB.value = true; ui.modeUI.artboardRB.onClick();
+    // the bottom and right rows, shown by switching their mirrors off, are named too
+    var mirrors = w.find(function (c) { return c.type === "checkbox" && (c.text === GM.L.MIRROR_TOP || c.text === GM.L.MIRROR_LEFT); });
+    for (var m = 0; m < mirrors.length; m++) { mirrors[m].value = false; mirrors[m].onClick(); }
+    var rows = [ui.edgeUI.bottom, ui.edgeUI.right];
+    for (var r = 0; r < rows.length; r++) {
+        rows[r].cb.value = true; rows[r].cb.onClick();
+        rows[r].numRB.value = true; rows[r].numRB.onClick();
+        rows[r].numIn.text = "x"; rows[r].numIn.onChange(); note(line.text);
+        rows[r].numIn.text = "10"; rows[r].numIn.onChange();
+        rows[r].spcRB.value = true; rows[r].spcRB.onClick();
+        rows[r].spcIn.text = "x"; rows[r].spcIn.onChange(); note(line.text);
+        rows[r].spcIn.text = "105"; rows[r].spcIn.onChange();
+    }
+    note(GM.L.REASON_MARK + GM.L.format(GM.L.REASON_MANY, 99));
+    note(GM.L.REASON_MARK + GM.L.REASON_NO_SHAPE);
+    note(GM.L.REASON_MARK + GM.L.REASON_NO_EDGE);
+    assert(n >= 20, "precheck: " + n + " reasons collected");
+    assert(widest.indexOf("✗") === 0, "precheck: the widest is a reason, not a finding (got '" + widest + "')");
+    assert(longest.length >= widest.length,
+        "longestInfoText (" + longest.length + ") holds the longest reason (" + widest.length + "): '" + widest + "'");
+    done();
+})();
+
 // ===== TEST: both locales define the same keys =====
 // The table of one language, built the way the script builds it: locale.js run
 // with that app.locale (the suite's own GM.L stays the one loaded at the top).
@@ -1083,6 +1349,26 @@ console.log("--- Locale: the preset sentences are the canon's (12.4), the critic
         "ERR_UNEXPECTED is gone: ERR_CRITICAL replaced it");
     assert(cs.ERR_NO_DOC === "Před spuštěním skriptu otevřete dokument.", "ERR_NO_DOC is the canon's text, unchanged");
     assert(cs.format(String(cs.ERR_CRITICAL), "boom", "42").indexOf("boom (řádek 42).") > 0, "the line number is in Czech: '(řádek 42)'");
+})();
+
+console.log("--- Locale: the reasons for a grey Generate (spec 5; canon 12.1, 12.6) ---");
+(function () {
+    var cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    var exp = {
+        REASON_MARK:      ["✗ ", "✗ "],
+        REASON_FIELD:     ["%s: zadejte číslo od %s do %s%s.", "%s: enter a number from %s to %s%s."],
+        REASON_FIELD_INT: ["%s: zadejte celé číslo od %s do %s.", "%s: enter a whole number from %s to %s."],
+        REASON_MANY:      ["Neplatná pole: %s — opravte červená pole.", "Invalid fields: %s — fix the red fields."],
+        REASON_NO_SHAPE:  ["Značka nemá tvar — zapněte Kruh nebo Kříž.", "The mark has no shape — turn on Circle or Cross."],
+        REASON_NO_EDGE:   ["Není zapnutá žádná hrana.", "No edge is turned on."]
+    };
+    for (var k in exp) if (exp.hasOwnProperty(k)) {
+        assert(cs[k] === exp[k][0], "CS " + k + " (got '" + cs[k] + "')");
+        assert(en[k] === exp[k][1], "EN " + k + " (got '" + en[k] + "')");
+    }
+    // The count stands after the colon, never before the noun (canon 12.1)
+    assert(/Neplatná pole: %s/.test(cs.REASON_MANY), "CS: the count of fields stands after the colon");
+    assert(/Invalid fields: %s/.test(en.REASON_MANY), "EN: the count of fields stands after the colon");
 })();
 
 // ===== SUMMARY =====

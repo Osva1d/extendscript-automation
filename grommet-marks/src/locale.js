@@ -171,6 +171,16 @@ GM.L = (function () {
             ERR_OFFSET_SPLIT: "The eyelet line breaks into several parts (%s) at a narrow point. Reduce the offset. The document was not changed.",
             ERR_OFFSET_FAILED: "Illustrator could not offset the path (%s). No marks were made.",
 
+            // Why Generate is grey — the placement line says it in the error colour
+            // (canon 12.3, 12.6). %s: a field's label without the colon, its limits,
+            // the unit with its space ("" for counts); the count of invalid fields.
+            REASON_MARK: "✗ ",
+            REASON_FIELD: "%s: enter a number from %s to %s%s.",
+            REASON_FIELD_INT: "%s: enter a whole number from %s to %s.",
+            REASON_MANY: "Invalid fields: %s — fix the red fields.",
+            REASON_NO_SHAPE: "The mark has no shape — turn on Circle or Cross.",
+            REASON_NO_EDGE: "No edge is turned on.",
+
             // Confirmations
             CONFIRM_DELETE_PRESET: "Delete preset \"%s\"? This cannot be undone.",
             CONFIRM_OVERWRITE_PRESET: "Preset \"%s\" already exists. Replace it?"
@@ -333,6 +343,16 @@ GM.L = (function () {
             ERR_OFFSET_COLLAPSE: "Odsazení %s je na tento tvar moc velké — linka ok by se v nejužším místě zhroutila. Zmenšete odsazení. Dokument nebyl změněn.",
             ERR_OFFSET_SPLIT: "Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení. Dokument nebyl změněn.",
             ERR_OFFSET_FAILED: "Illustrator nedokázal cestu odsadit (%s). Žádná značka nevznikla.",
+
+            // Proč je Generovat šedé — řádek v panelu Umístění to říká barvou chyby
+            // (kánon 12.3, 12.6). %s: popisek pole bez dvojtečky, meze, jednotka
+            // s mezerou ("" u počtů); počet neplatných polí.
+            REASON_MARK: "✗ ",
+            REASON_FIELD: "%s: zadejte číslo od %s do %s%s.",
+            REASON_FIELD_INT: "%s: zadejte celé číslo od %s do %s.",
+            REASON_MANY: "Neplatná pole: %s — opravte červená pole.",
+            REASON_NO_SHAPE: "Značka nemá tvar — zapněte Kruh nebo Kříž.",
+            REASON_NO_EDGE: "Není zapnutá žádná hrana.",
 
             // Confirmations
             CONFIRM_DELETE_PRESET: "Smazat předvolbu „%s“? Smazání nejde vrátit.",
