@@ -698,7 +698,7 @@ console.log("--- run: the document remembers the scale, [Last Settings] does not
         };
         global.app.redraw = function () {};
         GM.Storage = { PRESET_KEY_LAST: LAST, load: function () { return null; },
-            save: function (d) { log.stored = JSON.parse(JSON.stringify(d)); return true; } };
+            save: function (d, runContinues) { log.stored = JSON.parse(JSON.stringify(d)); log.runContinues = runContinues; return true; } };
         GM.UI = { buildDialog: function (pData, pathInfo, docInfo) {
             log.docInfo = docInfo;
             return {
@@ -724,6 +724,7 @@ console.log("--- run: the document remembers the scale, [Last Settings] does not
     var a = runWith({ docScale: 10, dialogScale: 10 });
     assert(a.rec.marks.length === 36 && alerts.length === 0, "1:10 in the document, 1:10 in the dialog: the run draws (" + alerts.join(" | ") + ")");
     assert(a.log.saves.length === 0, "...and the document is not written to (" + a.log.saves.length + " writes)");
+    assert(a.log.runContinues === true, "[Last Settings] is saved as a write the run continues after: a failed write says so (canon 12.2, review M8)");
     assert(a.seen && a.seen.opts.drawingScale === 10, "...the run got the scale 10");
     assert(near(a.rec.marks[0].size, 3 * MM / 10), "...and drew the 3 mm mark as 0.3 mm");
 

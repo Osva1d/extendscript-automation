@@ -224,6 +224,19 @@ GM.UI = {
     },
 
     /**
+     * The notice that the preset wants a path and none is selected, with the
+     * line's ending after it. The notice is a sentence with a full stop; when
+     * the ending follows, the stop gives way to the bullet ("… značí se artboard
+     * · 1:10", not "… artboard. · 1:10").
+     * @param {string} tail - The line's ending (" · 1:10") or "".
+     * @returns {string}
+     */
+    fallbackInfo: function (tail) {
+        var text = GM.L.INFO_FALLBACK;
+        return tail ? text.replace(/\.\s*$/, "") + tail : text;
+    },
+
+    /**
      * The summary line under Placement (spec §8.1): what the run will mark.
      * With a drawing scale other than 1:1 the line ends with it (spec 5), and
      * the artboard is shown at real size — the dialog's values are real size,
@@ -241,7 +254,7 @@ GM.UI = {
         // only — the field, the run and the document keep the exact value.
         var tail = (n === 1) ? "" : L.format(L.INFO_SCALE, GM.Numbers.format(Math.round(n * 10) / 10));
         if (!st.pathMode) {
-            if (st.fallback) return L.INFO_FALLBACK + tail;
+            if (st.fallback) return GM.UI.fallbackInfo(tail);
             var di = st.docInfo;
             if (!di) return "";
             if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS + tail;
@@ -337,7 +350,7 @@ GM.UI = {
         var L = GM.L;
         var tail = L.format(L.INFO_SCALE, GM.Numbers.format(99.9));
         var samples = [
-            L.INFO_FALLBACK + tail,
+            GM.UI.fallbackInfo(tail),
             [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · ") + tail,
             [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · ") + tail,
             L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm") + tail,
@@ -1135,7 +1148,9 @@ GM.UI = {
             var noShape = !circleCB.value && !crossCB.value;
 
             numbersOk = fieldsOk;
-            try { okBtn.enabled = fieldsOk && !noEdge && !noShape; } catch (e) {}
+            try { okBtn.enabled = fieldsOk && !noEdge && !noShape; } catch (e) {
+                GM.Utils.log("liveValidateAll: Generate: " + e.message);
+            }
             blockedBy = { invalid: invalid, noShape: noShape, noEdge: noEdge };
             refreshInfo();   // last: the line follows the button
             return numbersOk;
@@ -1182,10 +1197,19 @@ GM.UI = {
                 var now = currentValues();
                 modified = GM.UIState.isModified(pData, now);
                 entries = GM.UIState.formatPresetList(pData, now, GM.L);
-            } catch (e) { modified = false; }
-            try { revertBtn.enabled = modified; } catch (e) {}
-            try { saveBtn.enabled = modified && numbersOk; } catch (e) {}
-            try { saveAsBtn.enabled = numbersOk; } catch (e) {}
+            } catch (e) {
+                modified = false;
+                GM.Utils.log("refreshModifiedIndicator: comparison failed: " + e.message);
+            }
+            try { revertBtn.enabled = modified; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Revert: " + e.message);
+            }
+            try { saveBtn.enabled = modified && numbersOk; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Save: " + e.message);
+            }
+            try { saveAsBtn.enabled = numbersOk; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Save As: " + e.message);
+            }
 
             // The list holds the same keys in the same order as the entries
             // (updatePresetList builds both from formatPresetList).
@@ -1266,8 +1290,9 @@ GM.UI = {
 
         deleteBtn.onClick = function () {
             if (!loadDDL.selection) return;
-            var displayName = loadDDL.selection.text;
-            if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, displayName))) return;
+            // The preset's name, not its list entry: a changed preset reads "A *" there.
+            var name = sortedKeys[loadDDL.selection.index];
+            if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, name))) return;
             var r = GM.UIState.deleteActive(pData);
             if (!r.ok) {
                 if (r.reason === "reserved") alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);

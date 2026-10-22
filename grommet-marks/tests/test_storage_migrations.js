@@ -326,6 +326,33 @@ console.log("--- Storage.save: a failed write alerts ERR_WRITE_SETTINGS and noth
         assert(r2 === false, tag + "write throws: save returns false");
         assert(alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS,
             tag + "write throws: exactly ERR_WRITE_SETTINGS (got '" + alerts.join(" | ") + "')");
+
+        // Before a run (the second argument): the same, and it says the run goes on (canon 12.2, review M8)
+        setup();
+        alerts = [];
+        failOpenForWrite = true;
+        var r3 = GM.Storage.save(data, true);
+        failOpenForWrite = false;
+        assert(r3 === false && alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS_RUN,
+            tag + "before a run, open('w') refused: exactly ERR_WRITE_SETTINGS_RUN (got '" + alerts.join(" | ") + "')");
+        assert(alerts[0] !== GM.L.ERR_WRITE_SETTINGS && alerts[0].indexOf(GM.L.ERR_WRITE_SETTINGS) === 0 && alerts[0].indexOf(GM.L.ERR_PREFIX) < 0,
+            tag + "...the plain sentence first, then the run, no error prefix");
+        setup();
+        alerts = [];
+        failWrite = true;
+        var r4 = GM.Storage.save(data, true);
+        failWrite = false;
+        assert(r4 === false && alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS_RUN,
+            tag + "before a run, write throws: exactly ERR_WRITE_SETTINGS_RUN (got '" + alerts.join(" | ") + "')");
+        setup();
+        alerts = [];
+        assert(GM.Storage.save(data, true) === true && alerts.length === 0, tag + "before a run, a good write: true, no alert");
+        setup();
+        alerts = [];
+        failOpenForWrite = true;
+        GM.Storage.save(data, false);
+        failOpenForWrite = false;
+        assert(alerts.length === 1 && alerts[0] === GM.L.ERR_WRITE_SETTINGS, tag + "an explicit false is the dialog's sentence");
     }
     GM.L = kept;
 })();

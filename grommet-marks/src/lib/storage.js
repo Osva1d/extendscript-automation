@@ -28,16 +28,20 @@ GM.Storage = {
      * all call-sites) — a stale on-disk state that "resurrects" a deleted
      * preset after restart is a data-integrity bug, never swallow it. The
      * alert is the bare consequence sentence, with no error prefix: the run
-     * goes on (or the dialog stays open) without the settings.
+     * goes on (or the dialog stays open) without the settings. Where the run
+     * does go on (canon 12.2), the sentence says so: ERR_WRITE_SETTINGS_RUN.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
+     * @param {boolean} [runContinues] - True when called before a run that
+     *     goes on after a failed write; the dialog's preset buttons leave it out.
      * @returns {boolean} True if the file was written.
      */
-    save: function (data) {
+    save: function (data, runContinues) {
+        var msg = runContinues ? GM.L.ERR_WRITE_SETTINGS_RUN : GM.L.ERR_WRITE_SETTINGS;
         try {
             var f = GM.Storage.getFile();
             f.encoding = "UTF-8";
             if (!f.open("w")) {
-                alert(GM.L.ERR_WRITE_SETTINGS);
+                alert(msg);
                 return false;
             }
             f.write(JSON.stringify(data));
@@ -45,7 +49,7 @@ GM.Storage = {
             return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
-            alert(GM.L.ERR_WRITE_SETTINGS);
+            alert(msg);
             return false;
         }
     },

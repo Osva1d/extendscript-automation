@@ -800,6 +800,81 @@ console.log("--- UI 1.4 presets: the star is on the active preset only, every it
     done();
 })();
 
+console.log("--- UI 1.4 presets: Delete asks about the preset by its name, not by its list entry (review M1) ---");
+(function () {
+    withStubs({}, function (saved) {
+        var asked = [];
+        global.confirm = function (m) { asked.push(m); return false; };
+        var pd = presetPData("A");
+        buildUI3(pd, null, null);
+        var w = SUI.lastWindow();
+        var del = winBtn(w, GM.L.DELETE);
+        // Real ScriptUI turns `selection = <index>` into the item; the mock keeps the number
+        presetList(w).selection = presetList(w).items[1];
+
+        // Unchanged: the entry and the name are the same
+        del.onClick();
+        assert(asked.length === 1 && asked[0] === "Smazat předvolbu „A“? Smazání nejde vrátit.",
+            "A unchanged: the question names A (got '" + asked[0] + "')");
+
+        // Edited: the list says 'A *', the question must not
+        var f = textField(w, "4");
+        f.text = "4,5"; f.onChange();
+        assert(listTexts(presetList(w))[1] === "A *", "precheck: the list entry of the edited preset is 'A *'");
+        del.onClick();
+        assert(asked.length === 2 && asked[1] === "Smazat předvolbu „A“? Smazání nejde vrátit.",
+            "A edited: the question still names A, without the star (got '" + asked[1] + "')");
+        assert(pd.presets["A"] !== undefined && saved.length === 0, "...and answering No deletes nothing");
+
+        // Yes: the active preset goes
+        global.confirm = function (m) { asked.push(m); return true; };
+        del.onClick();
+        assert(pd.presets["A"] === undefined && pd.activePreset === GM.Config.PRESET_KEY_DEFAULT, "Yes: A is deleted and [Default] is active");
+        assert(saved.length === 1, "...and the file is written once");
+    });
+    done();
+})();
+
+console.log("--- UI 1.4 presets: a button the host refuses is logged, not swallowed (review M7) ---");
+(function () {
+    var logs = [];
+    global.$ = { writeln: function (m) { logs.push(String(m)); } };
+    var origList = GM.UIState.formatPresetList;
+    try {
+        buildUI3(presetPData("A"), null, null);
+        var w = SUI.lastWindow();
+        var f = textField(w, "4");
+        function refuse(btn, tag) {
+            Object.defineProperty(btn, "enabled", { get: function () { return true; }, set: function () { throw new Error(tag); }, configurable: true });
+        }
+        refuse(winBtn(w, GM.L.BTN_SAVE_AS), "SaveAs refused");
+        refuse(winBtn(w, GM.L.SAVE), "Save refused");
+        refuse(winBtn(w, GM.L.OK), "Generate refused");
+        refuse(winBtn(w, "↺"), "Revert refused");
+        logs.length = 0;
+        var threw = false;
+        try { f.text = "5"; f.onChange(); } catch (e) { threw = true; }
+        assert(!threw, "a button that refuses 'enabled' does not break the dialog");
+        function logged(tag) { for (var i = 0; i < logs.length; i++) if (logs[i].indexOf(tag) >= 0) return true; return false; }
+        assert(logged("SaveAs refused"), "Save As: the refusal is logged (got " + JSON.stringify(logs) + ")");
+        assert(logged("Save refused"), "Save: the refusal is logged");
+        assert(logged("Generate refused"), "Generate: the refusal is logged");
+        assert(logged("Revert refused"), "↺: the refusal is logged");
+
+        // The comparison itself failing: the dialog goes on as 'not modified', and says why
+        logs.length = 0;
+        GM.UIState.formatPresetList = function () { throw new Error("no list"); };
+        threw = false;
+        try { f.text = "6"; f.onChange(); } catch (e2) { threw = true; }
+        assert(!threw, "a failing comparison does not break the dialog");
+        assert(logged("no list"), "...and is logged (got " + JSON.stringify(logs) + ")");
+    } finally {
+        GM.UIState.formatPresetList = origList;
+        done();
+        delete global.$;
+    }
+})();
+
 console.log("--- UI 1.4 presets: Save and Save As stay grey while a checked field is invalid ---");
 (function () {
     withStubs({}, function (saved) {
@@ -1317,6 +1392,27 @@ console.log("--- UI 1.4 reason: a mirrored edge row is not checked, as validate(
     });
 })();
 
+console.log("--- UI 1.4 reason: Offset X / Y are hidden in path mode, neither the dialog nor validate() checks them (ruling R16) ---");
+(function () {
+    var ui = buildUI3(reasonPData(), mockPathInfo(4, true), DOC_1000x500);
+    var w = SUI.lastWindow();
+    var ok = winBtn(w, GM.L.OK), line = lineOf(ui);
+    var offX = textField(w, "7,5");
+    offX.text = "abc"; offX.onChange();
+    assert(ok.enabled === false && line.which === "reason" && line.text.indexOf("Odsazení od kraje ↔") > 0,
+        "Edges mode: 'abc' in Offset X greys Generate and the reason names it (got '" + line.text + "')");
+    ui.modeUI.pathRB.value = true; ui.modeUI.pathRB.onClick();
+    assert(ok.enabled === true && line.which === "finding", "Path mode: the field is hidden, Generate is on, the finding is back (got '" + line.text + "')");
+    var alerts = [];
+    global.alert = function (m) { alerts.push(String(m)); };
+    var r;
+    try { r = GM.Validation.validate(ui.gatherAll(), GM.L); } finally { delete global.alert; }
+    assert(r.valid === true && alerts.length === 0, "...and validate() agrees: the click would not end in a CHYBA about a field nobody sees (alerts: " + alerts.join(" | ") + ")");
+    ui.modeUI.artboardRB.value = true; ui.modeUI.artboardRB.onClick();
+    assert(ok.enabled === false && line.which === "reason", "back to Edges: refused again");
+    done();
+})();
+
 console.log("--- UI 1.4 reason: no shape, no edge ---");
 (function () {
     var ui = buildUI3(reasonPData(), null, DOC_1000x500);
@@ -1644,8 +1740,27 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     var pd = freshPData();
     pd.presets["[Default]"].placementMode = "path";
     var fb = buildUI3(pd, null, docAt(100, 100, 10));
-    assert(lineOf(fb).text === GM.L.INFO_FALLBACK + " · 1:10", "the notice that no path is selected also ends with the scale (got '" + lineOf(fb).text + "')");
+    assert(lineOf(fb).text === "Předvolba chce cestu, žádná není vybraná — značí se artboard · 1:10",
+        "the notice that no path is selected also ends with the scale, its full stop gives way to the bullet (got '" + lineOf(fb).text + "')");
+    assert(lineOf(fb).text.indexOf(". ·") < 0 && lineOf(fb).text.indexOf(".") < 0, "...no 'full stop, bullet' anywhere in the line (review M5)");
     done();
+
+    // The same in English, and the notice alone keeps its full stop
+    var savedL = GM.L, enL = tableFor("en_US");
+    GM.L = enL;
+    try {
+        var stFb = { pathMode: false, pathInfo: null, docInfo: null, fallback: true, offset: 0, unit: "mm" };
+        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard.",
+            "EN, 1:1: the notice as it is, with its full stop (got '" + GM.UI.placementInfoText(stFb) + "')");
+        stFb.drawingScale = 10;
+        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard · 1:10",
+            "EN, 1:10: the full stop gives way to the bullet (got '" + GM.UI.placementInfoText(stFb) + "')");
+        stFb.drawingScale = 2.5;
+        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard · 1:2.5",
+            "EN, 1:2.5: the decimal point (got '" + GM.UI.placementInfoText(stFb) + "')");
+    } finally { GM.L = savedL; }
+    var stCs = { pathMode: false, pathInfo: null, docInfo: null, fallback: true, offset: 0, unit: "mm" };
+    assert(GM.UI.placementInfoText(stCs) === GM.L.INFO_FALLBACK, "CS, 1:1: the notice as it is, with its full stop (got '" + GM.UI.placementInfoText(stCs) + "')");
 
     // Path mode: the same ending, after the clause
     var p = buildUI3(null, mockPathInfo(5, true), docAt(100, 100, 10));
@@ -1825,6 +1940,14 @@ console.log("--- Locale: the preset sentences are the canon's (12.4), the critic
         "CS ERR_WRITE_SETTINGS says what follows (got '" + cs.ERR_WRITE_SETTINGS + "')");
     assert(en.ERR_WRITE_SETTINGS === "The settings could not be saved — next time the dialog opens without them.",
         "EN ERR_WRITE_SETTINGS says what follows (got '" + en.ERR_WRITE_SETTINGS + "')");
+
+    // ...and where the run goes on, the canon adds that it does (12.2; review M8): a key of its own
+    assert(cs.ERR_WRITE_SETTINGS_RUN === cs.ERR_WRITE_SETTINGS + " Běh pokračuje.",
+        "CS ERR_WRITE_SETTINGS_RUN is the sentence plus ' Běh pokračuje.' (got '" + cs.ERR_WRITE_SETTINGS_RUN + "')");
+    assert(en.ERR_WRITE_SETTINGS_RUN === en.ERR_WRITE_SETTINGS + " The run continues.",
+        "EN ERR_WRITE_SETTINGS_RUN is the sentence plus ' The run continues.' (got '" + en.ERR_WRITE_SETTINGS_RUN + "')");
+    assert(cs.ERR_WRITE_SETTINGS.indexOf("Běh pokračuje") < 0 && en.ERR_WRITE_SETTINGS.indexOf("continues") < 0,
+        "the preset buttons' sentence stays as it was: the dialog stays open, no run to continue");
 
     // Unexpected error: the one template (12.2), %s message, %s line
     assert(cs.ERR_CRITICAL === "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu.",

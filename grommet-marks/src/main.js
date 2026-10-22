@@ -58,7 +58,7 @@ GM.Main = {
 
             // Auto-save [Last Settings]
             pData.presets[GM.Storage.PRESET_KEY_LAST] = result.settings;
-            GM.Storage.save(pData);
+            GM.Storage.save(pData, true);   // if the write fails the run goes on, and the alert says so
 
             var drew = GM.Main.process(result.settings, runOpts);
 

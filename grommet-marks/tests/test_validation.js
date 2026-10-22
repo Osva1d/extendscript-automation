@@ -328,6 +328,53 @@ console.log("--- validate: path offset ---");
     assert(GM.Validation.validate(cfg, L).valid === true, "artboard mode ignores the path offset");
 })();
 
+// Ruling R16 (final review, M3). Offset X / Y belong to the Edges panel: in path
+// mode the dialog hides them, live validation does not look at them, and the run
+// does not use them (the only artboard run in path mode is the defensive fallback
+// when the selection is gone, which uses what storable() made of them). validate()
+// must not refuse the run for a field the operator cannot see.
+console.log("--- validate: Offset X / Y are checked in Edges mode only (ruling R16) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    var bad = ["abc", "", "-1", "99999", "1e3", null, NaN];
+    for (var i = 0; i < bad.length; i++) {
+        var pm = validCfg({ offsetX: bad[i], offsetY: bad[i] });
+        pm.placementMode = "path";
+        lastAlert = null;
+        var r = GM.Validation.validate(pm, L);
+        assert(r.valid === true && lastAlert === null,
+            "path mode, Offset X/Y " + String(bad[i]) + ": the run is not refused (alert: " + lastAlert + ")");
+        assert(r.valid && r.settings.offsetX === D.offsetX && r.settings.offsetY === D.offsetY,
+            "...and it is stored as the default (got " + (r.settings && r.settings.offsetX) + ", " + (r.settings && r.settings.offsetY) + ")");
+
+        var ab = validCfg({ offsetX: bad[i], offsetY: 7 });
+        ab.placementMode = "artboard";
+        lastAlert = null;
+        assert(GM.Validation.validate(ab, L).valid === false && lastAlert !== null,
+            "Edges mode, Offset X " + String(bad[i]) + ": refused as before");
+        var ab2 = validCfg({ offsetX: 7, offsetY: bad[i] });
+        ab2.placementMode = "artboard";
+        lastAlert = null;
+        assert(GM.Validation.validate(ab2, L).valid === false && lastAlert !== null,
+            "Edges mode, Offset Y " + String(bad[i]) + ": refused as before");
+    }
+    // Good values in path mode are still read (storable), the field is simply not a reason to refuse
+    var good = validCfg({ offsetX: "12,5", offsetY: " 8 " });
+    good.placementMode = "path";
+    var rg = GM.Validation.validate(good, L);
+    assert(rg.valid === true && rg.settings.offsetX === 12.5 && rg.settings.offsetY === 8, "path mode: good Offset X/Y are stored parsed");
+    // The order of the refusals in Edges mode is unchanged: Offset X before Offset Y before Mark size
+    var both = validCfg({ offsetX: "abc", offsetY: "abc", markSize: "abc" });
+    lastAlert = null;
+    GM.Validation.validate(both, L);
+    assert(lastAlert !== null && lastAlert.indexOf(L.OFFSET_X.replace(/\s*:\s*$/, "")) >= 0, "Edges mode: the first refusal names Offset X (got '" + lastAlert + "')");
+    // A cm preset with junk in a hidden Offset X stores the default in cm
+    var cm = validCfg({ units: "cm", offsetX: "abc", offsetY: "abc", markSize: "0,3" });
+    cm.placementMode = "path";
+    var rc = GM.Validation.validate(cm, L);
+    assert(rc.valid === true && Math.abs(rc.settings.offsetX - 0.7) < 1e-9, "path mode, cm: the hidden junk is stored as 0.7 cm, not 7 (got " + (rc.settings && rc.settings.offsetX) + ")");
+})();
+
 console.log("--- validate: an invalid path offset never reaches the stored settings (final review I2) ---");
 (function () {
     // Outside path mode the field is not checked, so a typo (or NaN, which JSON

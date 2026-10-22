@@ -147,11 +147,22 @@ GM.Validation = {
         var rules = GM.Validation.rules;
         var vn = GM.Validation.validateNumber;
 
-        var offsetX = vn(cfg.offsetX, rules.offsetX, L.OFFSET_X || "Offset X", L);
-        if (offsetX === null) return { valid: false, settings: null };
+        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
 
-        var offsetY = vn(cfg.offsetY, rules.offsetY, L.OFFSET_Y || "Offset Y", L);
-        if (offsetY === null) return { valid: false, settings: null };
+        // Offset X / Y are the Edges panel's: in path mode the dialog hides
+        // them, the live check skips them and the run does not use them (only
+        // its fallback to Edges, when the selection is gone, reads what
+        // storable() made of them), so a refusal would name a field nobody can
+        // see (ruling R16). What is left in them is stored as storable() makes
+        // it, like any other hidden field.
+        var offsetX, offsetY;
+        if (!isPathMode) {
+            offsetX = vn(cfg.offsetX, rules.offsetX, L.OFFSET_X || "Offset X", L);
+            if (offsetX === null) return { valid: false, settings: null };
+
+            offsetY = vn(cfg.offsetY, rules.offsetY, L.OFFSET_Y || "Offset Y", L);
+            if (offsetY === null) return { valid: false, settings: null };
+        }
 
         var markSize = vn(cfg.markSize, rules.markSize, L.SIZE_LABEL || "Mark size", L);
         if (markSize === null) return { valid: false, settings: null };
@@ -176,7 +187,6 @@ GM.Validation = {
             return { valid: false, settings: null };
         }
 
-        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
         var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
         var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
         if (isPathMode) {
@@ -225,8 +235,10 @@ GM.Validation = {
         // Build clean settings: storable() makes every number usable (the
         // fields not checked above included), then the validated values.
         var settings = GM.Validation.storable(cfg);
-        settings.offsetX = offsetX;
-        settings.offsetY = offsetY;
+        if (!isPathMode) {
+            settings.offsetX = offsetX;
+            settings.offsetY = offsetY;
+        }
         settings.markSize = markSize;
         settings.regWeight = regWeight;
         settings.haloWeight = haloWeight;
