@@ -8,8 +8,9 @@
 // Depends on: GM.L (error messages), GM.Utils (error: the alert with its
 // prefix; deepCopy), GM.Config (getDefaults: what storable() falls back to),
 // GM.CONSTANTS (the units), GM.Core (convertVal, round: the fallback lengths
-// in the preset's unit), GM.Numbers (shared/lib/numbers.js: reads the field text — one converter for
-// the dialog fields, live validation, validate() and storable())
+// in the preset's unit), GM.Numbers (shared/lib/numbers.js: reads the
+// field text — one converter for the dialog fields, live validation,
+// validate() and storable())
 // ------------------------------------------------------------------------
 var GM = GM || {};
 

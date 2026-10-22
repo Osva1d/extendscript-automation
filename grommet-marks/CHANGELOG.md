@@ -71,7 +71,8 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   předvolba se může při prvním otevření ukázat jako změněná (hvězdička `*`
   u názvu, svítí Uložit): verze 1.4.0 by ten překlep uložila jako výchozí
   hodnotu pole a ta se od uloženého textu liší. Nic se neztrácí; jedno Uložit
-  hvězdičku odstraní a předvolba se už neukáže jako změněná.- **Hlášky jako v ostatních nástrojích.** Blokující chyba začíná `CHYBA:`,
+  hvězdičku odstraní a předvolba se už neukáže jako změněná.
+- **Hlášky jako v ostatních nástrojích.** Blokující chyba začíná `CHYBA:`,
   upozornění po běhu `UPOZORNĚNÍ:`; názvy stojí v „…“ a žádná hláška nekončí
   vykřičníkem (místo „Velikost musí být číslo!“ je teď Pole „Velikost“ musí
   být číslo.). Odmítnutí, po kterém se dokument nezměnil, to řekne větou
