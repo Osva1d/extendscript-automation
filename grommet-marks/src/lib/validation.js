@@ -7,7 +7,8 @@
 //
 // Depends on: GM.L (error messages), GM.Utils (error: the alert with its
 // prefix; deepCopy), GM.Config (getDefaults: what storable() falls back to),
-// GM.Numbers (shared/lib/numbers.js: reads the field text — one converter for
+// GM.CONSTANTS (the units), GM.Core (convertVal, round: the fallback lengths
+// in the preset's unit), GM.Numbers (shared/lib/numbers.js: reads the field text — one converter for
 // the dialog fields, live validation, validate() and storable())
 // ------------------------------------------------------------------------
 var GM = GM || {};
@@ -80,6 +81,11 @@ GM.Validation = {
      * does not check (the other placement mode, a disabled edge, zones off).
      * Values that are already numbers are not read as text: String(1e-7) is
      * "1e-7", which the field grammar refuses.
+     * The defaults are written in millimetres, a preset in its own unit
+     * (cfg.units): a length that falls back is converted to that unit, rounded
+     * the way the dialog's unit switch rounds, so 105 mm is stored as 10,5 in a
+     * cm preset and not as 105 cm. Strokes are points and counts are no length:
+     * not converted. A missing or unknown unit counts as millimetres.
      * @param {Object} cfg - Raw config from gatherAll(); not changed.
      * @returns {Object} A copy of cfg with usable numbers.
      */
@@ -88,6 +94,14 @@ GM.Validation = {
         var dflt = GM.Config.getDefaults();
         var out = GM.Utils.deepCopy(cfg);
 
+        var UNIT = GM.CONSTANTS.UNIT;
+        var unit = (typeof cfg.units === "string" && GM.CONSTANTS.UNIT_FACTORS.hasOwnProperty(cfg.units))
+            ? cfg.units : UNIT.MM;
+        /** A default length (millimetres in the code) in the preset's unit. */
+        function dfltLen(mm) {
+            return GM.Core.round(GM.Core.convertVal(mm, UNIT.MM, unit));
+        }
+
         function usable(val, rule, fallback) {
             var n = (typeof val === "number") ? val : GM.Numbers.parse(val);
             if (!isFinite(n)) return fallback;
@@ -95,27 +109,27 @@ GM.Validation = {
             return (n >= rule.min && n <= rule.max) ? n : fallback;
         }
 
-        out.offsetX = usable(cfg.offsetX, rules.offsetX, dflt.offsetX);
-        out.offsetY = usable(cfg.offsetY, rules.offsetY, dflt.offsetY);
-        out.markSize = usable(cfg.markSize, rules.markSize, dflt.markSize);
+        out.offsetX = usable(cfg.offsetX, rules.offsetX, dfltLen(dflt.offsetX));
+        out.offsetY = usable(cfg.offsetY, rules.offsetY, dfltLen(dflt.offsetY));
+        out.markSize = usable(cfg.markSize, rules.markSize, dfltLen(dflt.markSize));
         out.regWeight = usable(cfg.regWeight, rules.regWeight, dflt.regWeight);
         out.haloWeight = usable(cfg.haloWeight, rules.haloWeight, dflt.haloWeight);
-        out.pathOffset = usable(cfg.pathOffset, rules.pathOffset, dflt.pathOffset);
+        out.pathOffset = usable(cfg.pathOffset, rules.pathOffset, dfltLen(dflt.pathOffset));
 
         var edgeKeys = ["top", "left", "bottom", "right"];
         for (var i = 0; i < edgeKeys.length; i++) {
             var k = edgeKeys[i];
             if (!cfg[k]) continue;
             out[k].number = usable(cfg[k].number, rules.edgeCount, dflt[k].number);
-            out[k].spacing = usable(cfg[k].spacing, rules.edgeSpacing, dflt[k].spacing);
+            out[k].spacing = usable(cfg[k].spacing, rules.edgeSpacing, dfltLen(dflt[k].spacing));
         }
         if (cfg.cornerZone) {
             out.cornerZone.count = usable(cfg.cornerZone.count, rules.cornerCount, dflt.cornerZone.count);
-            out.cornerZone.pitch = usable(cfg.cornerZone.pitch, rules.cornerPitch, dflt.cornerZone.pitch);
+            out.cornerZone.pitch = usable(cfg.cornerZone.pitch, rules.cornerPitch, dfltLen(dflt.cornerZone.pitch));
         }
         if (cfg.pathDist) {
             out.pathDist.number = usable(cfg.pathDist.number, rules.pathNumber, dflt.pathDist.number);
-            out.pathDist.spacing = usable(cfg.pathDist.spacing, rules.pathSpacing, dflt.pathDist.spacing);
+            out.pathDist.spacing = usable(cfg.pathDist.spacing, rules.pathSpacing, dfltLen(dflt.pathDist.spacing));
         }
         return out;
     },

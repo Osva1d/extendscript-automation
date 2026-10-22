@@ -29,6 +29,7 @@ function tableFor(locale) {
 
 // ===== LOAD PRODUCTION CODE =====
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "core.js"), "utf8"));   // storable() converts its fallbacks (GM.Core.convertVal)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
 var L = GM.L;
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
@@ -431,6 +432,95 @@ console.log("--- Validation.storable: every number field is read, the unusable o
     try { rt = GM.Validation.storable(thin); } catch (e) { threw = true; }
     assert(!threw && rt.offsetX === 5 && rt.markSize === D.markSize && rt.regWeight === D.regWeight,
         "a thin cfg is read too: missing fields take the defaults");
+})();
+
+// The fallbacks are factory defaults, written in mm. A preset in cm or in is
+// stored in its own unit, so a length that falls back must be converted: 105
+// stored as 105 cm would be 1050 mm on the next opening (review 2026-10-21, I1).
+console.log("--- Validation.storable: a length falls back in the preset's unit (review I1) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    var MM_PER = { cm: 10, "in": 25.4 };
+    // Every length field with junk in it; the strokes and the counts stay as they are
+    function junk(units) {
+        var c = validCfg({ units: units });
+        c.offsetX = "x"; c.offsetY = "x"; c.markSize = "x"; c.pathOffset = "x";
+        c.regWeight = "x"; c.haloWeight = "x";
+        c.top = { enabled: true, useNumber: true, number: "x", spacing: "x" };
+        c.left = { enabled: true, useNumber: true, number: "x", spacing: "x" };
+        c.bottom = { enabled: false, useNumber: true, number: "x", spacing: "x" };
+        c.right = { enabled: false, useNumber: true, number: "x", spacing: "x" };
+        c.cornerZone = { enabled: false, count: "x", pitch: "x" };
+        c.pathDist = { useNumber: false, number: "x", spacing: "x" };
+        return c;
+    }
+    function near(a, b) { return Math.abs(a - b) < 1e-6; }   // GM.Core.round keeps six decimals
+    function lengths(s) {
+        return [["offsetX", s.offsetX, D.offsetX], ["offsetY", s.offsetY, D.offsetY], ["markSize", s.markSize, D.markSize],
+            ["pathOffset", s.pathOffset, D.pathOffset], ["top.spacing", s.top.spacing, D.top.spacing],
+            ["left.spacing", s.left.spacing, D.left.spacing], ["bottom.spacing", s.bottom.spacing, D.bottom.spacing],
+            ["right.spacing", s.right.spacing, D.right.spacing], ["cornerZone.pitch", s.cornerZone.pitch, D.cornerZone.pitch],
+            ["pathDist.spacing", s.pathDist.spacing, D.pathDist.spacing]];
+    }
+    for (var u in MM_PER) {
+        if (!MM_PER.hasOwnProperty(u)) continue;
+        var s = GM.Validation.storable(junk(u));
+        var rows = lengths(s);
+        for (var i = 0; i < rows.length; i++) {
+            assert(near(rows[i][1], rows[i][2] / MM_PER[u]),
+                u + ": " + rows[i][0] + " falls back to the default in " + u + " (" + (rows[i][2] / MM_PER[u]) + "), got " + rows[i][1]);
+        }
+        assert(s.regWeight === D.regWeight && s.haloWeight === D.haloWeight,
+            u + ": the strokes are points, not converted (got " + s.regWeight + ", " + s.haloWeight + ")");
+        assert(s.top.number === D.top.number && s.cornerZone.count === D.cornerZone.count && s.pathDist.number === D.pathDist.number,
+            u + ": the counts are not lengths, not converted");
+        assert(s.units === u, u + ": the unit itself is untouched");
+    }
+    // The case that was found: 105 mm is 10,5 cm (not 105 cm) and 4,133858 in
+    var cm = GM.Validation.storable(junk("cm"));
+    assert(cm.pathDist.spacing === 10.5 && cm.top.spacing === 10.5, "cm: 105 mm is stored as 10.5 (got " + cm.pathDist.spacing + ")");
+    assert(cm.cornerZone.pitch === 10, "cm: the zone pitch 100 mm is 10 (got " + cm.cornerZone.pitch + ")");
+    var inch = GM.Validation.storable(junk("in"));
+    assert(inch.pathDist.spacing === GM.Core.round(105 / 25.4), "in: 105 mm is rounded the way the unit switch rounds (got " + inch.pathDist.spacing + ")");
+    // A converted fallback is itself something the rules accept (it is read back on the next opening)
+    var rulesOf = { offsetX: R.offsetX, offsetY: R.offsetY, markSize: R.markSize, pathOffset: R.pathOffset };
+    for (var key in rulesOf) {
+        if (!rulesOf.hasOwnProperty(key)) continue;
+        assert(cm[key] >= rulesOf[key].min && cm[key] <= rulesOf[key].max && inch[key] >= rulesOf[key].min && inch[key] <= rulesOf[key].max,
+            key + ": the converted fallback is inside the rule (cm " + cm[key] + ", in " + inch[key] + ")");
+    }
+    // A good value is kept as it is, whatever the unit
+    var good = validCfg({ units: "cm" });
+    good.pathDist = { useNumber: false, number: 24, spacing: "8,5" };
+    assert(GM.Validation.storable(good).pathDist.spacing === 8.5, "cm: a good value is kept, not converted");
+
+    // mm, a missing unit and an unknown one behave as before (the defaults as they are)
+    var mm = GM.Validation.storable(junk("mm"));
+    var lm = lengths(mm);
+    for (var j = 0; j < lm.length; j++) assert(lm[j][1] === lm[j][2], "mm: " + lm[j][0] + " falls back unchanged (got " + lm[j][1] + ")");
+    var bare = junk("mm"); delete bare.units;
+    var sb = GM.Validation.storable(bare);
+    assert(sb.pathDist.spacing === D.pathDist.spacing && sb.offsetX === D.offsetX, "no unit: millimetres, as before");
+    var odd = GM.Validation.storable(junk("furlong"));
+    assert(odd.pathDist.spacing === D.pathDist.spacing && odd.markSize === D.markSize && odd.units === "furlong",
+        "an unknown unit: millimetres, the text is copied as it is");
+    var tough = GM.Validation.storable(junk("constructor"));
+    assert(tough.pathDist.spacing === D.pathDist.spacing, "a unit that is only an Object.prototype name is no unit either");
+
+    // validate() stores the same: a cm preset with junk in a hidden field
+    var cfg = validCfg({ units: "cm" });
+    cfg.placementMode = "artboard";
+    cfg.pathDist = { useNumber: false, number: 24, spacing: "x" };
+    cfg.pathOffset = "x";
+    cfg.cornerZone = { enabled: false, count: 5, pitch: "x" };
+    cfg.offsetX = "0,7"; cfg.offsetY = "0,7"; cfg.markSize = "0,3";
+    cfg.top = { enabled: true, useNumber: true, number: 10, spacing: "x" };
+    cfg.left = { enabled: true, useNumber: true, number: 10, spacing: "x" };
+    lastAlert = null;
+    var r = GM.Validation.validate(cfg, L);
+    assert(r.valid === true && r.settings.pathDist.spacing === 10.5 && r.settings.cornerZone.pitch === 10 && r.settings.pathOffset === 0 &&
+        r.settings.top.spacing === 10.5 && r.settings.left.spacing === 10.5,
+        "validate() on a cm preset stores the converted fallbacks (got " + (r.settings && r.settings.pathDist.spacing) + ")");
 })();
 
 console.log("--- validate: the stored settings come from storable (spec 6.4, review focus 2) ---");
