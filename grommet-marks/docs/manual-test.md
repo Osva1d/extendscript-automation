@@ -699,7 +699,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > opravě vrátí šedá. Projdi stavy dvakrát: s **tmavým** a se **světlým**
 > uživatelským rozhraním Illustratoru (v jeho nastavení, část Uživatelské
 > rozhraní, jas; název položky se liší podle verze; po přepnutí skript spusť
-> znovu).
+> znovu); čtyři úrovně jasu jsou v posledním bodě tohoto testu.
 
 | # | stav | jak ho vyvolat | text v řádku |
 |---|---|---|---|
@@ -721,6 +721,14 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 - [ ] Je-li neplatné pole **i** chybí tvar, řádek jmenuje pole (pole mají
   přednost před tvarem, tvar před hranou).
 - [ ] Nic se v řádku neuřízne a dialog při změnách neposkakuje na šířku.
+- [ ] **Čtyři úrovně jasu.** Illustrator › Nastavení › Uživatelské rozhraní ›
+  Jas (Settings › User Interface › Brightness): **Dark, Medium Dark, Medium
+  Light, Light**; na každé skript spusť znovu. Stavy 1 a 2 (nález) i 3–5
+  (důvod) jsou čitelné na všech čtyřech a **nález vypadá jako v 1.3.0**:
+  nativní zašedlý text, ne zvlášť světle šedý a ne vybledlý do pozadí
+  (zejména na Medium Light). Nález je zakázaný popisek, který skript nikdy
+  nemaluje; důvod je druhý popisek, červený, ve stejném místě. Mezi stavy
+  se viditelný text vždy vymění celý (nezůstane vidět starý přes nový).
 
 ### K5 — Předvolby: hvězdička, [Výchozí], Uložit
 1. **[Výchozí] z kódu.** Zazálohuj nastavení (úvod K). Spusť skript,
@@ -821,6 +829,9 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   včetně tří teček) a žádné tlačítko neroste se šířkou seznamu.
 - [ ] Panel Umístění: druhý řádek „Jednotky: [Milimetry ▾] Měřítko kresby 1:
   [__]“ je na jednom řádku a nic se neřeže.
+- [ ] Šedý řádek jsou od posledního měření dva popisky ve stohu (jeden
+  viditelný): rozměry dialogu v tabulce se tím **nezměnily** (tolerance pár
+  pixelů) a pod řádkem není nová mezera. Kdyby se změnily, zapiš nové hodnoty.
 2. Spusť skript s vybraným štítem a v poli Měřítko kresby 1: napiš `99,9`;
    potom přepni Jednotky a režimy (Hrany artboardu ⇄ Vybraná cesta).
 - [ ] Šedý řádek se vejde i s koncem „· 1:99,9“ v obou režimech

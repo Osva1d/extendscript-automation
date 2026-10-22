@@ -68,7 +68,7 @@ Namespace-neutrální továrny `buildX(NS)`: soubor se vloží do dist, `tools/b
 | Modul | Namespace | Co dělá | Kdo ho v GM volá |
 |---|---|---|---|
 | `numbers.js` | `GM.Numbers` | `parse(text)` — gramatika rodiny: desetinná čárka nebo tečka, mezery okolo; `1e3`, `.5`, `0x10`, `1 000`, `20 mm` dávají NaN. `format(v, sep)` — zápis do pole s `GM.L.DEC_SEP`, bez zaokrouhlení (`2,5` zůstane `2,5`) | `ui.js` (`gatherAll`, `applyAll`, převod jednotek, živá kontrola), `validation.js`, `utils.js` (`presetEquals`), `main.js` (měřítko) |
-| `field_paint.js` | `GM.FieldPaint` | `field(et, valid)` — červený text neplatného pole, platnému vrací jeho původní pero (na tmavém UI nesmí zůstat černé) | `ui.js` (`liveValidateAll`, `refreshInfo`) |
+| `field_paint.js` | `GM.FieldPaint` | `field(et, valid)` — červený text neplatného pole, platnému vrací jeho původní pero (na tmavém UI nesmí zůstat černé); `text(ctrl, kind)` — jednou obarví stavový text (`ERR`, `WARN`, `OK`) | `ui.js` (`field`: `liveValidateAll`; `text`: popisek důvodu v šedém řádku) |
 | `registration.js` | `GM.Registration` | `swatch` / `name` / `color(doc)` — registrační vzorek podle **typu** v celém vzorníku, ne podle názvu ani pořadí; dokument bez něj → 100 % K | `illustrator.js` → `registrationColor()` |
 | `drawing_scale.js` | `GM.DrawingScale` | `load(doc)` / `save(doc, n)` — měřítko kresby v XMP dokumentu, klíč, který zapisuje Tile Export | `illustrator.js` → `getDocInfo()`, `main.js` → `run()` |
 
@@ -189,9 +189,9 @@ Návrh a zdůvodnění: [`../../docs/specs/2026-10-20-grommet-marks-1.4.0-design
 
 ## Šedý řádek pod Umístěním: nález, nebo důvod
 
-- Řádek je jeden `statictext` (`placeInfo`) a jeho text určuje **jediná** funkce, `refreshInfo()` v `buildDialog`. `liveValidateAll()` ji volá jako **poslední**, takže žádný pozdější krok nepřebije důvod nálezem.
-- **Důvod** (dokud je Generovat šedé): `GM.L.REASON_MARK + GM.UI.blockReason(blockedBy)`, ovládací prvek povolený a barva chyby přes `GM.FieldPaint.field(placeInfo, false)`. Pořadí: jedno neplatné pole se jménem a rozsahem (`REASON_FIELD`, `REASON_FIELD_INT`), víc polí počtem (`REASON_MANY`), pak `REASON_NO_SHAPE`, nakonec `REASON_NO_EDGE`.
-- **Nález** (jinak): `GM.UI.placementInfoText(st)` — artboardy nebo tvar cesty, na konci měřítko jiné než 1:1 — s `GM.FieldPaint.field(placeInfo, true)` a `enabled = false` (zašedlý vzhled).
+- Řádek jsou **dva** `statictext` ve skupině `stack` (ruling R15), z nichž je viditelný vždy právě jeden: nález (`placeInfo`, zakázaný, **nikdy nemalovaný**) a důvod (`placeReason`, povolený, jednou obarvený). Co se ukáže, určuje **jediná** funkce, `refreshInfo()` v `buildDialog`: nastaví text zobrazovaného popisku a přepne `visible`. `liveValidateAll()` ji volá jako **poslední**, takže žádný pozdější krok nepřebije důvod nálezem. Oba popisky se zakládají s textem `longestInfoText()`, takže stack drží stopu jednoho popisku jako v 1.3.0.
+- **Důvod** (dokud je Generovat šedé): `GM.L.REASON_MARK + GM.UI.blockReason(blockedBy)` v popisku `placeReason`, který je povolený (barva se na zakázaném statictextu neukáže) a při založení jednou obarvený `GM.FieldPaint.text(placeReason, "ERR")`; vracet pero není co, ukazuje jen důvody. Pořadí: jedno neplatné pole se jménem a rozsahem (`REASON_FIELD`, `REASON_FIELD_INT`), víc polí počtem (`REASON_MANY`), pak `REASON_NO_SHAPE`, nakonec `REASON_NO_EDGE`.
+- **Nález** (jinak): `GM.UI.placementInfoText(st)` — artboardy nebo tvar cesty, na konci měřítko jiné než 1:1 — v popisku `placeInfo`, zakázaném (`enabled = false`) a **bez jediného zápisu pera**: nativní zašedlý vzhled jako v 1.3.0. Malovat ho by znamenalo `FALLBACK` (šedá 0,75), protože Illustrator vlastní pero čte před `show()` jako `null`, a jak ScriptUI kreslí vlastní pero na zakázaném statictextu, není změřeno (`../../docs/extendscript-engine-facts.md`).
 - `blockedBy = {invalid: [{label, rule, unit}], noShape, noEdge}` plní `liveValidateAll()` z tabulky `validationTargets` (`{et, rule, mode, label, unit, mirrored}`); jména polí dává `GM.UI.reasonLabels()`. Kontroluje jen pole aktivního režimu, povolená a nezrcadlená — řádek zrcadlené hrany je skrytý a `validate()` ho nečte, takže ani živá kontrola.
 - `liveValidateAll()` vrací `numbersOk` (čísla kontrolovaných polí jsou v pořádku). **Generovat** = `numbersOk` a zároveň není `noEdge` ani `noShape`. **Uložit jako…** = `numbersOk`, **Uložit** = `numbersOk` a neuložená změna.
 - Šířku řádku drží `GM.UI.longestInfoText()`: statictext si pamatuje šířku prvního textu, proto začíná nejdelším možným (nález s koncem měřítka i nejdelší důvod).
@@ -366,7 +366,7 @@ Window("dialog")
  │                              ř.2: Uložit / Uložit jako… / Smazat (vpravo, nativní šířky)
  ├─ Panel: Umístění             ř.1: radio Hrany artboardu | Vybraná cesta  (path disabled bez výběru)
  │                              ř.2: Jednotky [dropdown]   Měřítko kresby 1: [__]
- │                              ř.3: šedý řádek: nález (artboardy / rohy, zaoblené rohy, bez rohů; na konci měřítko)
+ │                              ř.3: šedý řádek (stack ze dvou popisků): nález (artboardy / rohy, zaoblené rohy, bez rohů; na konci měřítko), nebo důvod
  │                                   nebo, dokud je Generovat šedé, důvod červeně se symbolem ✗
  ├─ Panel: Hrany                (visible pouze v artboard módu)
  │                              offsety X/Y + 4 kompaktní edge řádky;

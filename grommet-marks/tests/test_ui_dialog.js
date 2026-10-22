@@ -443,37 +443,37 @@ console.log("--- Locale: Czech plural forms ---");
 console.log("--- UI 1.3: summary line (spec §8.1) ---");
 (function () {
     var ui = buildUI3(null, null, { artboards: 1, width: 1000 * 2.834645669291339, height: 500 * 2.834645669291339, scale: 1 });
-    assert(ui.modeUI.infoLbl.text === "1 artboard · 1000 × 500 mm", "one artboard (got '" + ui.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui).text === "1 artboard · 1000 × 500 mm", "one artboard (got '" + lineOf(ui).text + "')");
     done();
     var ui2 = buildUI3(null, null, { artboards: 3, width: 1, height: 1, scale: 1 });
-    assert(ui2.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny", "three artboards");
+    assert(lineOf(ui2).text === "3 artboardy · značky dostanou všechny", "three artboards");
     done();
 
     var p = freshPData();
     p.presets["[Default]"].placementMode = "path";
     var ui3 = buildUI3(p, null, { artboards: 1, width: 100, height: 100, scale: 1 });
-    assert(ui3.modeUI.infoLbl.text === GM.L.INFO_FALLBACK, "preset wants a path, none selected: said so");
+    assert(lineOf(ui3).text === GM.L.INFO_FALLBACK, "preset wants a path, none selected: said so");
     ui3.modeUI.artboardRB.value = true; ui3.modeUI.artboardRB.onClick();
-    assert(ui3.modeUI.infoLbl.text.indexOf("1 artboard") === 0, "choosing the artboard clears the notice");
+    assert(lineOf(ui3).text.indexOf("1 artboard") === 0, "choosing the artboard clears the notice");
     done();
 
     var ui4 = buildUI3(null, mockPathInfo(5, true), null);
     ui4.modeUI.pathRB.value = true; ui4.modeUI.pathRB.onClick();
-    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě", "house, offset 0 (got '" + ui4.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui4).text === "Uzavřená cesta · 5 rohů · značky leží na cestě", "house, offset 0 (got '" + lineOf(ui4).text + "')");
     ui4.pathUI.offsetIn.text = "20"; ui4.pathUI.offsetIn.onChanging();
-    assert(ui4.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "offset 20: no 'on the path'");
+    assert(lineOf(ui4).text === "Uzavřená cesta · 5 rohů", "offset 20: no 'on the path'");
     done();
 
     var ui5 = buildUI3(null, mockPathInfo(0, true), null);
     ui5.modeUI.pathRB.value = true; ui5.modeUI.pathRB.onClick();
     ui5.pathUI.offsetIn.text = "20"; ui5.pathUI.offsetIn.onChanging();
-    assert(ui5.modeUI.infoLbl.text === "Uzavřená cesta · bez rohů · první značka nahoře", "circle");
+    assert(lineOf(ui5).text === "Uzavřená cesta · bez rohů · první značka nahoře", "circle");
     done();
 
     var ui6 = buildUI3(null, mockPathInfo(5, true, 1000, { sharpCount: 3, roundCount: 2 }), null);
     ui6.modeUI.pathRB.value = true; ui6.modeUI.pathRB.onClick();
     ui6.pathUI.offsetIn.text = "20"; ui6.pathUI.offsetIn.onChanging();
-    assert(ui6.modeUI.infoLbl.text === "Uzavřená cesta · 3 rohy, 2 zaoblené", "mixed corners");
+    assert(lineOf(ui6).text === "Uzavřená cesta · 3 rohy, 2 zaoblené", "mixed corners");
     done();
 })();
 
@@ -540,13 +540,13 @@ console.log("--- UI 1.3: path offset enables Save, invalid offset in the summary
     var ui2 = buildUI3(null, mockPathInfo(4, true), null);
     ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
     ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
-    assert(ui2.modeUI.infoLbl.text.indexOf("Odsazení od kraje") > 0 && ui2.modeUI.infoLbl.text.indexOf("on the path") < 0 &&
-        ui2.modeUI.infoLbl.text.indexOf("leží na cestě") < 0,
-        "invalid offset: the line gives the reason, no 'on the path' clause (got '" + ui2.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui2).text.indexOf("Odsazení od kraje") > 0 && lineOf(ui2).text.indexOf("on the path") < 0 &&
+        lineOf(ui2).text.indexOf("leží na cestě") < 0,
+        "invalid offset: the line gives the reason, no 'on the path' clause (got '" + lineOf(ui2).text + "')");
     ui2.pathUI.offsetIn.text = ""; ui2.pathUI.offsetIn.onChanging();
-    assert(ui2.modeUI.infoLbl.text.indexOf("Odsazení od kraje") > 0, "empty offset: the reason as well");
+    assert(lineOf(ui2).text.indexOf("Odsazení od kraje") > 0, "empty offset: the reason as well");
     ui2.pathUI.offsetIn.text = "0"; ui2.pathUI.offsetIn.onChanging();
-    assert(ui2.modeUI.infoLbl.text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    assert(lineOf(ui2).text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
     done();
 })();
 
@@ -984,8 +984,34 @@ var DOC_1000x500 = { artboards: 1, width: 1000 * 2.834645669291339, height: 500 
 function blockReasonOf(st) {
     return typeof GM.UI.blockReason === "function" ? GM.UI.blockReason(st) : "(GM.UI.blockReason is missing)";
 }
-function lineIsErr(line) { return line.enabled === true && isRedPen(line.graphics.foregroundColor); }
-function lineIsFinding(line) { return line.enabled === false && line.graphics.foregroundColor === line.graphics.ownPen; }
+// The grey line is a stack of two labels (ruling R15): the finding (disabled,
+// never painted) and the reason (enabled, painted ERR once), and exactly one of
+// them is visible. lineOf(ui) is the line as the operator sees it: its text,
+// state and pen are those of the visible label; `which` says which one that is
+// ("finding", "reason", or "none"/"both" when the stack is broken, so any
+// assertion on the text or the pen fails loudly).
+function lineOf(ui) {
+    var m = ui.modeUI;
+    function shown() {
+        if (m.infoLbl.visible === m.reasonLbl.visible) return null;
+        return m.reasonLbl.visible ? m.reasonLbl : m.infoLbl;
+    }
+    return {
+        get which() {
+            var s = shown();
+            if (!s) return m.infoLbl.visible ? "both" : "none";
+            return s === m.reasonLbl ? "reason" : "finding";
+        },
+        get text() { var s = shown(); return s ? s.text : "(the line shows " + this.which + " labels)"; },
+        get enabled() { var s = shown(); return s ? s.enabled : undefined; },
+        get graphics() { var s = shown(); return s ? s.graphics : { foregroundColor: undefined, ownPen: undefined, assignments: -1 }; }
+    };
+}
+function lineIsErr(line) { return line.which === "reason" && line.enabled === true && isRedPen(line.graphics.foregroundColor); }
+function lineIsFinding(line) {
+    return line.which === "finding" && line.enabled === false &&
+        line.graphics.foregroundColor === line.graphics.ownPen && line.graphics.assignments === 0;
+}
 
 console.log("--- UI 1.4 reason: blockReason(st) in the order of spec 5 ---");
 (function () {
@@ -1015,7 +1041,7 @@ console.log("--- UI 1.4 reason: one invalid field, then the finding comes back -
 (function () {
     var ui = buildUI3(reasonPData(), null, DOC_1000x500);
     var w = SUI.lastWindow();
-    var line = ui.modeUI.infoLbl;
+    var line = lineOf(ui);
     var ok = winBtn(w, GM.L.OK);
     assert(line.text === "1 artboard · 1000 × 500 mm", "opened valid: the finding (got '" + line.text + "')");
     assert(lineIsFinding(line), "...grey: disabled, the control's own pen");
@@ -1050,11 +1076,88 @@ console.log("--- UI 1.4 reason: one invalid field, then the finding comes back -
     done();
 })();
 
+// Ruling R15 (final review, I2). In 1.3.0 the finding was a disabled statictext
+// that nobody painted: the native greyed look. Painting it on every refresh
+// would give it FALLBACK grey 0.75 (Illustrator reads the own pen back as null
+// before show()), and how ScriptUI draws a custom pen on a disabled statictext
+// is not measured. So two labels sit in one stack: the finding is never touched,
+// the reason is painted ERR once. The mock reads the own pen back (the opposite
+// of the measurement), so these tests pin what only the code can do: which label
+// is painted, how often, and that exactly one is visible.
+console.log("--- UI 1.4 line: two labels in a stack, the finding is never painted, the reason is ERR once (ruling R15) ---");
+(function () {
+    var ui = buildUI3(reasonPData(), null, DOC_1000x500);
+    var w = SUI.lastWindow();
+    var finding = ui.modeUI.infoLbl, reason = ui.modeUI.reasonLbl, line = lineOf(ui);
+    var ok = winBtn(w, GM.L.OK);
+    var gF = finding.graphics, gR = reason.graphics;
+
+    // The structure: one stack group in the third row of the Placement panel, two statictexts in it
+    assert(!!reason && finding !== reason && finding.type === "statictext" && reason.type === "statictext", "two statictexts: the finding and the reason");
+    assert(finding.parent === reason.parent && finding.parent.orientation === "stack" && finding.parent.children.length === 2,
+        "they sit in one group with orientation 'stack' (got " + finding.parent.orientation + ")");
+    assert(finding.parent.parent.children.length === 3 && finding.parent.parent.children[2] === finding.parent,
+        "...and that group is the third row of the panel, where the one label was");
+    assert(reason.text === GM.UI.longestInfoText(), "the reason label keeps the longest text it was made with: the stack keeps today's footprint");
+
+    // Opened valid: the finding is shown, as in 1.3.0 (disabled, no pen written)
+    assert(line.which === "finding" && finding.visible === true && reason.visible === false, "opened valid: the finding is visible, the reason is not");
+    assert(finding.enabled === false, "the finding is disabled: the native greyed look");
+    assert(gF.assignments === 0 && gF.foregroundColor === gF.ownPen, "...and its pen was never written (the 1.3.0 look, not FALLBACK)");
+    assert(reason.enabled === true && gR.assignments === 1 && isRedPen(gR.foregroundColor), "the reason label is enabled and ERR-painted once, at creation (writes: " + gR.assignments + ")");
+    var errPen = gR.foregroundColor;
+
+    // Red -> valid -> red: each time exactly one is visible, the finding is still unpainted, the reason pen is the same one
+    var size = textField(w, "3,5");
+    size.text = "x"; size.onChange();
+    assert(line.which === "reason" && reason.visible === true && finding.visible === false, "red: the reason is visible, the finding is hidden");
+    assert(reason.text === "✗ Velikost: zadejte číslo od 0,01 do 9999 mm.", "...the reason label carries the reason (got '" + reason.text + "')");
+    assert(lineIsErr(line) && gR.foregroundColor === errPen && gR.assignments === 1, "...in ERR, the pen from creation, not painted again");
+    assert(ok.enabled === false, "...Generate is grey");
+    assert(gF.assignments === 0, "the finding was not painted by the reason");
+
+    size.text = "3,5"; size.onChange();
+    assert(line.which === "finding" && finding.visible === true && reason.visible === false, "valid again: the finding is visible, the reason is hidden");
+    assert(finding.text === "1 artboard · 1000 × 500 mm", "...the finding says what it found (got '" + finding.text + "')");
+    assert(lineIsFinding(line) && gF.assignments === 0, "...still never painted");
+    assert(gR.foregroundColor === errPen && gR.assignments === 1, "the reason label keeps its pen while hidden");
+    assert(ok.enabled === true, "...Generate is on");
+
+    size.text = "x"; size.onChange();
+    assert(line.which === "reason" && lineIsErr(line) && gR.assignments === 1 && gF.assignments === 0, "red again: the same");
+
+    // Other reasons use the same label: the scale, the structure
+    size.text = "3,5"; size.onChange();
+    ui.modeUI.scaleIn.text = "0"; ui.modeUI.scaleIn.onChanging();
+    assert(line.which === "reason" && reason.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "a wrong scale: the reason label (got '" + reason.text + "')");
+    ui.modeUI.scaleIn.text = "10"; ui.modeUI.scaleIn.onChanging();
+    assert(line.which === "finding" && finding.text === "1 artboard · 10000 × 5000 mm · 1:10" && gF.assignments === 0,
+        "the scale fixed: the finding with its ending, unpainted (got '" + finding.text + "')");
+    var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
+    circle.value = false; circle.onClick();
+    assert(line.which === "reason" && reason.text === "✗ " + GM.L.REASON_NO_SHAPE, "no shape: the reason label (got '" + reason.text + "')");
+    circle.value = true; circle.onClick();
+    assert(line.which === "finding" && gF.assignments === 0 && gR.assignments === 1 && gR.foregroundColor === errPen,
+        "after all of it: the finding never written, the reason written once");
+    done();
+
+    // Opened with a reason already on: the same, and the finding is still unpainted
+    var p = reasonPData();
+    p.presets["[Default]"].markCircle = false; p.presets["[Default]"].markCross = false;
+    var ui2 = buildUI3(p, null, DOC_1000x500);
+    var l2 = lineOf(ui2);
+    assert(l2.which === "reason" && lineIsErr(l2) && ui2.modeUI.reasonLbl.text === "✗ " + GM.L.REASON_NO_SHAPE,
+        "opened with a reason (no shape): the reason label is shown in ERR (got '" + l2.text + "')");
+    assert(ui2.modeUI.infoLbl.graphics.assignments === 0 && ui2.modeUI.infoLbl.enabled === false && ui2.modeUI.reasonLbl.graphics.assignments === 1,
+        "...and the finding label is still untouched");
+    done();
+})();
+
 console.log("--- UI 1.4 reason: every field names itself ---");
 (function () {
     var ui = buildUI3(reasonPData(), mockPathInfo(0, true), DOC_1000x500);
     var w = SUI.lastWindow();
-    var line = ui.modeUI.infoLbl;
+    var line = lineOf(ui);
     function expectReason(field, restore, expected, what) {
         field.text = "x"; field.onChange();
         assert(line.text === "✗ " + expected, what + " (got '" + line.text + "')");
@@ -1104,7 +1207,7 @@ console.log("--- UI 1.4 reason: several invalid fields are counted ---");
 (function () {
     var ui = buildUI3(reasonPData(), null, DOC_1000x500);
     var w = SUI.lastWindow();
-    var line = ui.modeUI.infoLbl;
+    var line = lineOf(ui);
     var size = textField(w, "3,5"), reg = textField(w, "1,25"), halo = textField(w, "3,75");
     size.text = "x"; size.onChange();
     reg.text = "x"; reg.onChange();
@@ -1149,7 +1252,7 @@ console.log("--- UI 1.4 reason: the unit stands once, the label has no (pt) (rul
     var w = SUI.lastWindow();
     var halo = textField(w, "3,75");
     halo.text = "x"; halo.onChange();
-    assert(ui.modeUI.infoLbl.text === "✗ Bílé halo: zadejte číslo od 0,1 do 50 pt.", "in the dialog: one 'pt', at the end (got '" + ui.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui).text === "✗ Bílé halo: zadejte číslo od 0,1 do 50 pt.", "in the dialog: one 'pt', at the end (got '" + lineOf(ui).text + "')");
     done();
 })();
 
@@ -1158,7 +1261,7 @@ console.log("--- UI 1.4 reason: a mirrored edge row is not checked, as validate(
     withStubs({}, function () {
         var ui = buildUI3(presetPData("A"), null, DOC_1000x500);
         var w = SUI.lastWindow();
-        var line = ui.modeUI.infoLbl;
+        var line = lineOf(ui);
         var ok = winBtn(w, GM.L.OK), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS);
         var mirrorTop = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MIRROR_TOP; });
         var mirrorLeft = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MIRROR_LEFT; });
@@ -1218,7 +1321,7 @@ console.log("--- UI 1.4 reason: no shape, no edge ---");
 (function () {
     var ui = buildUI3(reasonPData(), null, DOC_1000x500);
     var w = SUI.lastWindow();
-    var line = ui.modeUI.infoLbl, ok = winBtn(w, GM.L.OK);
+    var line = lineOf(ui), ok = winBtn(w, GM.L.OK);
     var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
 
     circle.value = false; circle.onClick();
@@ -1256,8 +1359,8 @@ console.log("--- UI 1.4 reason: no shape, no edge ---");
     ui2.edgeUI.top.cb.value = false; ui2.edgeUI.top.cb.onClick();
     ui2.edgeUI.left.cb.value = false; ui2.edgeUI.left.cb.onClick();
     ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
-    assert(ui2.modeUI.infoLbl.text.indexOf("✗") < 0 && winBtn(w2, GM.L.OK).enabled === true,
-        "path mode: the edges do not block, the line has the finding (got '" + ui2.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui2).text.indexOf("✗") < 0 && winBtn(w2, GM.L.OK).enabled === true,
+        "path mode: the edges do not block, the line has the finding (got '" + lineOf(ui2).text + "')");
     done();
 })();
 
@@ -1278,7 +1381,7 @@ console.log("--- UI 1.4 reason: the line is wide enough for the longest reason -
 
     var ui = buildUI3(reasonPData(), mockPathInfo(0, true), DOC_1000x500);
     var w = SUI.lastWindow();
-    var line = ui.modeUI.infoLbl;
+    var line = lineOf(ui);
     var circle = w.findOne(function (c) { return c.type === "checkbox" && c.text === GM.L.MARK_CIRCLE; });
     var fields = [textField(w, "7,5"), textField(w, "8,5"), textField(w, "3,5"), textField(w, "1,25"), textField(w, "3,75"),
         ui.edgeUI.top.numIn, ui.edgeUI.left.numIn, ui.zonesUI.countIn, ui.zonesUI.pitchIn];
@@ -1354,8 +1457,8 @@ console.log("--- UI 1.4 scale: Units and Drawing scale share the second row of P
     var scale = ui.modeUI.scaleIn;
     assert(!!scale && scale.type === "edittext", "modeUI.scaleIn is an edittext");
     if (!scale) { done(); return; }
-    var panel = ui.modeUI.infoLbl.parent;
-    assert(panel.children.length === 3 && panel.children[2] === ui.modeUI.infoLbl,
+    var stack = ui.modeUI.infoLbl.parent, panel = stack.parent;
+    assert(panel.children.length === 3 && panel.children[2] === stack,
         "the panel has three rows: the modes, units + scale, the grey line (got " + panel.children.length + ")");
     var modes = panel.children[0], row = leaves(panel.children[1]);
     assert(types(modes) === "radiobutton,radiobutton" && modes.children[0].text === GM.L.MODE_ARTBOARD && modes.children[1].text === GM.L.MODE_PATH,
@@ -1385,7 +1488,7 @@ console.log("--- UI 1.4 scale: the field starts with the document's scale (spec 
     var ui = buildUI3(null, null, docAt(1000, 500, 250));
     assert(isRedPen(ui.modeUI.scaleIn.graphics.foregroundColor), "...and it is red at once");
     assert(winBtn(SUI.lastWindow(), GM.L.OK).enabled === false, "...Generate is grey");
-    assert(ui.modeUI.infoLbl.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "...and the line says why (got '" + ui.modeUI.infoLbl.text + "')");
+    assert(lineOf(ui).text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "...and the line says why (got '" + lineOf(ui).text + "')");
     done();
 })();
 
@@ -1394,7 +1497,7 @@ console.log("--- UI 1.4 scale: a wrong scale greys Generate, Save, Save As and s
     withStubs({}, function () {
         var ui = buildUI3(presetPData("A"), null, docAt(1000, 500, 1));
         var w = SUI.lastWindow();
-        var scale = ui.modeUI.scaleIn, line = ui.modeUI.infoLbl;
+        var scale = ui.modeUI.scaleIn, line = lineOf(ui);
         var ok = winBtn(w, GM.L.OK), save = winBtn(w, GM.L.SAVE), saveAs = winBtn(w, GM.L.BTN_SAVE_AS);
         var size = textField(w, "4");
         size.text = "5"; size.onChange();
@@ -1440,7 +1543,7 @@ console.log("--- UI 1.4 scale: a wrong scale greys Generate, Save, Save As and s
         assert(ok2.enabled === false, "artboard mode: Generate is grey");
         ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
         assert(ok2.enabled === false && isRedPen(ui2.modeUI.scaleIn.graphics.foregroundColor) &&
-            ui2.modeUI.infoLbl.text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "path mode: still grey, red, the reason (got '" + ui2.modeUI.infoLbl.text + "')");
+            lineOf(ui2).text === "✗ Měřítko kresby: zadejte číslo od 1 do 100.", "path mode: still grey, red, the reason (got '" + lineOf(ui2).text + "')");
         done();
     });
 })();
@@ -1504,7 +1607,7 @@ console.log("--- UI 1.4 scale: getRunOptions hands the scale over (spec 4.2) ---
 console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is the real one (spec 4.6, 5; ruling R3) ---");
 (function () {
     var ui = buildUI3(null, null, docAt(800, 600, 10));
-    var line = ui.modeUI.infoLbl;
+    var line = lineOf(ui);
     var expected = "1 artboard · " + GM.UI.formatLen(800 * 10) + " × " + GM.UI.formatLen(600 * 10) + " mm · 1:10";
     assert(line.text === expected, "artboard 800 x 600 mm at 1:10: real size x 10 (got '" + line.text + "')");
     assert(line.text === "1 artboard · 8000 × 6000 mm · 1:10", "...in formatLen's format: '8000 × 6000 mm'");
@@ -1518,7 +1621,7 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     ui.modeUI.scaleIn.text = "1,0"; ui.modeUI.scaleIn.onChanging();
     assert(line.text === "1 artboard · 800 × 600 mm", "typed '1,0' is 1:1: no suffix (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "0"; ui.modeUI.scaleIn.onChanging();
-    assert(lineIsErr(ui.modeUI.infoLbl) && line.text.indexOf(" · 1:") < 0, "typed '0': the reason, no suffix (got '" + line.text + "')");
+    assert(lineIsErr(lineOf(ui)) && line.text.indexOf(" · 1:") < 0, "typed '0': the reason, no suffix (got '" + line.text + "')");
     ui.modeUI.scaleIn.text = "10"; ui.modeUI.scaleIn.onChanging();
     assert(line.text === expected && lineIsFinding(line), "back to '10': the finding with the suffix again");
 
@@ -1530,30 +1633,30 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
 
     // Large Canvas: the document's own factor and the drawing scale multiply
     var big = buildUI3(null, null, docAt(30, 20, 10, { scale: 10 }));
-    assert(big.modeUI.infoLbl.text === "1 artboard · 3000 × 2000 mm · 1:10",
-        "Large Canvas x 1:10: 30 x 20 mm in the file is 3000 x 2000 mm (got '" + big.modeUI.infoLbl.text + "')");
+    assert(lineOf(big).text === "1 artboard · 3000 × 2000 mm · 1:10",
+        "Large Canvas x 1:10: 30 x 20 mm in the file is 3000 x 2000 mm (got '" + lineOf(big).text + "')");
     done();
 
     var three = buildUI3(null, null, docAt(1, 1, 10, { artboards: 3 }));
-    assert(three.modeUI.infoLbl.text === "3 artboardy · značky dostanou všechny · 1:10", "several artboards: the suffix at the end (got '" + three.modeUI.infoLbl.text + "')");
+    assert(lineOf(three).text === "3 artboardy · značky dostanou všechny · 1:10", "several artboards: the suffix at the end (got '" + lineOf(three).text + "')");
     done();
 
     var pd = freshPData();
     pd.presets["[Default]"].placementMode = "path";
     var fb = buildUI3(pd, null, docAt(100, 100, 10));
-    assert(fb.modeUI.infoLbl.text === GM.L.INFO_FALLBACK + " · 1:10", "the notice that no path is selected also ends with the scale (got '" + fb.modeUI.infoLbl.text + "')");
+    assert(lineOf(fb).text === GM.L.INFO_FALLBACK + " · 1:10", "the notice that no path is selected also ends with the scale (got '" + lineOf(fb).text + "')");
     done();
 
     // Path mode: the same ending, after the clause
     var p = buildUI3(null, mockPathInfo(5, true), docAt(100, 100, 10));
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
-    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · značky leží na cestě · 1:10", "closed path, offset 0 (got '" + p.modeUI.infoLbl.text + "')");
+    assert(lineOf(p).text === "Uzavřená cesta · 5 rohů · značky leží na cestě · 1:10", "closed path, offset 0 (got '" + lineOf(p).text + "')");
     p.pathUI.offsetIn.text = "20"; p.pathUI.offsetIn.onChanging();
-    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů · 1:10", "closed path, offset 20 (got '" + p.modeUI.infoLbl.text + "')");
+    assert(lineOf(p).text === "Uzavřená cesta · 5 rohů · 1:10", "closed path, offset 20 (got '" + lineOf(p).text + "')");
     p.modeUI.scaleIn.text = "1"; p.modeUI.scaleIn.onChanging();
-    assert(p.modeUI.infoLbl.text === "Uzavřená cesta · 5 rohů", "...and at 1:1 the 1.3.0 text (got '" + p.modeUI.infoLbl.text + "')");
+    assert(lineOf(p).text === "Uzavřená cesta · 5 rohů", "...and at 1:1 the 1.3.0 text (got '" + lineOf(p).text + "')");
     p.modeUI.artboardRB.value = true; p.modeUI.artboardRB.onClick();
-    assert(p.modeUI.infoLbl.text === "1 artboard · 100 × 100 mm", "back to the artboard at 1:1: no suffix (got '" + p.modeUI.infoLbl.text + "')");
+    assert(lineOf(p).text === "1 artboard · 100 × 100 mm", "back to the artboard at 1:1: no suffix (got '" + lineOf(p).text + "')");
     done();
 
     // The function itself: no scale, 1 and unusable ones add nothing
@@ -1580,7 +1683,7 @@ console.log("--- UI 1.4 scale: the line rounds the scale to one decimal, the fie
     var p = buildUI3(null, mockPathInfo(0, true, 1000), docAt(100, 100, 1));
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
     p.modeUI.scaleIn.text = "33,3333"; p.modeUI.scaleIn.onChanging();
-    var line = p.modeUI.infoLbl.text;
+    var line = lineOf(p).text;
     assert(line === "Uzavřená cesta · bez rohů · první značka nahoře · značky leží na cestě · 1:33,3",
         "circle at offset 0, scale 33,3333: the line ends ' · 1:33,3' (got '" + line + "')");
     assert(p.modeUI.scaleIn.text === "33,3333", "the field still holds '33,3333' (got '" + p.modeUI.scaleIn.text + "')");

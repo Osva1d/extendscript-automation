@@ -333,7 +333,17 @@ Co se při stavbě změnilo proti textu výš; čísla jsou z měření v Illust
   dialog nabídne měřítko vráceného běhu. Přijato a popsáno v README a v ručním
   testu K3.
 - **`field_paint` nepřečte vlastní pero pole** (§6.2). Před zobrazením dialogu
-  vrací `graphics.foregroundColor` prázdnou hodnotu u všech polí i u šedého
-  řádku, takže platné pole dostane záložní světle šedou (0,75), stejně jako
-  `paintField` v 1.3.0. Jestli jde pero přečíst po `show()`, neměřeno; barvy na
-  světlém a tmavém UI ověřuje ruční test K4.
+  vrací `graphics.foregroundColor` prázdnou hodnotu u všech polí, takže platné
+  pole dostane záložní světle šedou (0,75), stejně jako `paintField` v 1.3.0.
+  Jestli jde pero přečíst po `show()`, neměřeno; barvy na světlém a tmavém UI
+  ověřuje ruční test K4. Šedého řádku (nálezu) se to netýká, viz další bod.
+- **Šedý řádek jsou dva popisky ve stohu** (§5, R15). Nález, který dostal
+  `field(…, true)` při každém obnovení, by měl záložní šedou 0,75 i bez
+  měřítka, a jak ScriptUI kreslí vlastní pero na zakázaném statictextu, není
+  změřeno; v 1.3.0 se řádek nemaloval a měl nativní zašedlý vzhled. Proto: nález
+  je zakázaný statictext, který se **nikdy nemaluje**, a důvod je druhý,
+  povolený statictext ve stejné skupině `stack`, jednou obarvený
+  `FieldPaint.text(lbl, "ERR")`. Viditelný je vždy právě jeden;
+  `refreshInfo()` zůstává jediným místem rozhodnutí. Oba se zakládají
+  s nejdelším možným textem, takže stopa řádku je jako dřív. Čitelnost obou
+  stavů na čtyřech jasech UI a vzhled nálezu jako v 1.3.0 ověřuje K4.

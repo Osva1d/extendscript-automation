@@ -376,8 +376,8 @@ GM.UI = {
      *     value of the drawing scale field (missing: 1).
      * @returns {Object} Dialog object with window, gatherAll, getRunOptions
      *     (per-run choices not stored in presets: {pathPartial, drawingScale}),
-     *     modeUI (with infoLbl, scaleIn), edgeUI, pathUI (with offsetIn,
-     *     partialCB), zonesUI
+     *     modeUI (with infoLbl — the finding — reasonLbl — why Generate is grey —
+     *     and scaleIn), edgeUI, pathUI (with offsetIn, partialCB), zonesUI
      */
     buildDialog: function (pData, pathInfo, docInfo) {
         // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
@@ -489,11 +489,28 @@ GM.UI = {
         scaleIn.preferredSize.width = 50;
         scaleIn.helpTip = GM.L.TIP_SCALE;
 
-        // What the run will mark, in words (spec §8.1). The text changes while
-        // the dialog is open and a ScriptUI label keeps its first width, so it
-        // starts as the longest text it can hold (extendscript-ui-standards §4).
-        var placeInfo = modePanel.add("statictext", undefined, GM.UI.longestInfoText());
+        // What the run will mark, in words (spec §8.1), or why Generate is grey
+        // (canon 12.3): two statictexts in one stack, exactly one of them
+        // visible (ruling R15). The text changes while the dialog is open and a
+        // ScriptUI label keeps its first width, so both start as the longest text
+        // either can hold (extendscript-ui-standards §4) and the stack keeps the
+        // footprint of the one label it replaced.
+        //  - placeInfo, the finding: disabled and NEVER painted — the native greyed
+        //    look it had in 1.3.0. A custom pen on a disabled statictext is
+        //    unmeasured, and Illustrator reads a control's own pen back as null
+        //    before show(), so painting it would give it the FALLBACK grey.
+        //  - placeReason, the reason: enabled so the colour shows, painted ERR once,
+        //    here; it only ever shows reasons, so there is nothing to give back.
+        var infoStack = modePanel.add("group");
+        infoStack.orientation = "stack";
+        infoStack.alignChildren = ["fill", "top"];
+        infoStack.spacing = 0;
+        infoStack.margins = 0;
+        var placeInfo = infoStack.add("statictext", undefined, GM.UI.longestInfoText());
         placeInfo.enabled = false;
+        var placeReason = infoStack.add("statictext", undefined, GM.UI.longestInfoText());
+        GM.FieldPaint.text(placeReason, "ERR");
+        placeReason.visible = false;
 
         // =================================================================
         // Placement stack — Edges and Path are two modes of the SAME slot, so
@@ -747,15 +764,15 @@ GM.UI = {
 
         // The one place that decides the line under Placement (canon 12.3): why
         // Generate is grey, in the error colour, while it is; else what the
-        // script found, grey. The reason needs the control enabled for its
-        // colour to show; the finding is the disabled look. liveValidateAll()
+        // script found, grey. Exactly one of the two labels is visible; the
+        // finding is never painted (see where they are made). liveValidateAll()
         // calls this last, so no later step can put the finding over a reason.
         function refreshInfo() {
             var reason = GM.UI.blockReason(blockedBy);
             if (reason) {
-                placeInfo.text = GM.L.REASON_MARK + reason;
-                placeInfo.enabled = true;
-                GM.FieldPaint.field(placeInfo, false);
+                placeReason.text = GM.L.REASON_MARK + reason;
+                placeReason.visible = true;
+                placeInfo.visible = false;
                 return;
             }
             placeInfo.text = GM.UI.placementInfoText({
@@ -764,8 +781,8 @@ GM.UI = {
                 unit: currentUnit || GM.CONSTANTS.UNIT.MM,
                 drawingScale: GM.Numbers.parse(scaleIn.text)
             });
-            GM.FieldPaint.field(placeInfo, true);
-            placeInfo.enabled = false;
+            placeInfo.visible = true;
+            placeReason.visible = false;
         }
 
         // =================================================================
@@ -1295,7 +1312,7 @@ GM.UI = {
                 // Generate is grey then, and run() refuses it again).
                 return { pathPartial: partialApplies(), drawingScale: GM.Numbers.parse(scaleIn.text) };
             },
-            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo, scaleIn: scaleIn },
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo, reasonLbl: placeReason, scaleIn: scaleIn },
             edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
             pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn,
                       offsetIn: pathOffsetIn, partialCB: partialCB },

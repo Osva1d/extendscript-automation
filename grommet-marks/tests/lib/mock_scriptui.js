@@ -34,16 +34,33 @@
     // carries the colour it was made with, so a test can tell red from the
     // field's own pen; foregroundColor starts as that own pen, the way a real
     // control shows its theme colour, and ownPen is the test's handle to it.
+    // NOTE: the mock reads the own pen back, which Illustrator does not do
+    // before show() (measured: null). So a test cannot see a FALLBACK pen
+    // coming from a missing own pen; what it can see is whether the control was
+    // painted at all: `assignments` counts every write to foregroundColor.
     function makeGraphics() {
         var own = { own: true };
-        return {
+        var current = own;
+        var writes = 0;
+        var g = {
             newPen: function (type, color, width) { return { type: type, color: color, width: width }; },
             newBrush: function () { return {}; },
-            foregroundColor: own,
             ownPen: own,
             PenType: { SOLID_COLOR: 0 },
             BrushType: { SOLID_COLOR: 0 }
         };
+        Object.defineProperty(g, "foregroundColor", {
+            get: function () { return current; },
+            set: function (pen) { current = pen; writes++; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(g, "assignments", {
+            get: function () { return writes; },
+            enumerable: true,
+            configurable: true
+        });
+        return g;
     }
 
     function MockControl(type, parent, opts) {

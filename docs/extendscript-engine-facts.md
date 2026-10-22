@@ -692,7 +692,10 @@ výšku; strop 850 px drží i s `frameSize`.
 **Šířku dělá šedý řádek.** Popisek se založí s textem `longestInfoText()`
 a `buildDialog` mu ještě před prvním rozvržením přepíše text na skutečný
 nález; po `layout(true)` má přesto šířku nejdelšího textu (459 px proti
-162 px textu, který ukazuje). Šířka dialogu podle konce řádku (nejdelší
+162 px textu, který ukazuje). (Rozměry v tabulkách výš jsou z doby, kdy byl
+řádek jeden popisek; od ruling R15 jsou to dva popisky ve stohu, oba založené
+s `longestInfoText()`, takže stopa má zůstat stejná. Po změně neměřeno,
+ověřuje K7.) Šířka dialogu podle konce řádku (nejdelší
 vzorek je v obou jazycích nález kruhu s Odsazením 0 a konec s 99,9):
 
 | konec řádku | CS | EN |
@@ -721,11 +724,22 @@ a Uložit zhasne.
 
 **Vlastní pero pole se před zobrazením přečíst nedá.** Po `buildDialog`
 (první `liveValidateAll` proběhne ještě v něm) mají všech 19 edittextů
-i šedý řádek zapamatované pero `null`: `graphics.foregroundColor` se před
-zobrazením čte jako prázdná hodnota. `FieldPaint.field(…, true)` jim proto
-nastaví `FALLBACK` (šedá 0,75), už při prvním průchodu, ne až po opravě
-pole — stejně jako `paintField` v 1.3.0. Jestli se pero dá přečíst po
-`show()`, neměřeno.
+zapamatované pero `null`: `graphics.foregroundColor` se před zobrazením čte
+jako prázdná hodnota. `FieldPaint.field(…, true)` jim proto nastaví
+`FALLBACK` (šedá 0,75), už při prvním průchodu, ne až po opravě pole —
+stejně jako `paintField` v 1.3.0. Totéž platilo pro dřívější
+jednopopiskový šedý řádek (pero `null`). Jestli se pero dá přečíst
+po `show()`, neměřeno.
+
+**Šedý řádek tohle pero nedostává (ruling R15).** Nález je zakázaný
+statictext, do jehož `graphics.foregroundColor` se nikdy nezapisuje: má
+nativní zašedlý vzhled jako v 1.3.0, ne `FALLBACK` 0,75. Jak ScriptUI kreslí
+vlastní pero na zakázaném statictextu, **neměřeno**; na Medium Light UI může
+být 0,75 téměř neviditelná, proto se nález nemaluje vůbec. Důvod je druhý
+statictext ve stejném stohu (`orientation = "stack"`), povolený a při
+založení jednou obarvený `FieldPaint.text(lbl, "ERR")` (zobrazuje jen důvody,
+pero se nevrací). Viditelný je vždy právě jeden z nich (`visible`). Čitelnost
+obou na čtyřech jasech uživatelského rozhraní Illustratoru ověřuje K4.
 
 **Neměřeno:** zobrazený dialog na displeji 13" (ruční test K7), barva polí
 a řádku na světlém a tmavém UI (K4), zalomení hlášky `ERR_CRITICAL`, jak
