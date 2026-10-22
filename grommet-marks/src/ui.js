@@ -236,7 +236,10 @@ GM.UI = {
     placementInfoText: function (st) {
         var L = GM.L;
         var n = (st.drawingScale > 0 && isFinite(st.drawingScale)) ? st.drawingScale : 1;
-        var tail = (n === 1) ? "" : L.format(L.INFO_SCALE, GM.Numbers.format(n));
+        // Shown to one decimal: the line's width is fixed by the sample with
+        // 99,9 (longestInfoText), so more decimals would clip its ending. Display
+        // only — the field, the run and the document keep the exact value.
+        var tail = (n === 1) ? "" : L.format(L.INFO_SCALE, GM.Numbers.format(Math.round(n * 10) / 10));
         if (!st.pathMode) {
             if (st.fallback) return L.INFO_FALLBACK + tail;
             var di = st.docInfo;

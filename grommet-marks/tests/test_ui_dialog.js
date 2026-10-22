@@ -1573,6 +1573,33 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     assert(GM.UI.placementInfoText(st) === "", "no docInfo: the empty line stays empty, no dangling suffix");
 })();
 
+console.log("--- UI 1.4 scale: the line rounds the scale to one decimal, the field and the run keep it (ruling R14) ---");
+(function () {
+    // The line's width is fixed by its widest sample, "… · 1:99,9" (measured
+    // 459 px in Illustrator 30.8.2): more decimals would clip its ending.
+    var p = buildUI3(null, mockPathInfo(0, true, 1000), docAt(100, 100, 1));
+    p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
+    p.modeUI.scaleIn.text = "33,3333"; p.modeUI.scaleIn.onChanging();
+    var line = p.modeUI.infoLbl.text;
+    assert(line === "Uzavřená cesta · bez rohů · první značka nahoře · značky leží na cestě · 1:33,3",
+        "circle at offset 0, scale 33,3333: the line ends ' · 1:33,3' (got '" + line + "')");
+    assert(p.modeUI.scaleIn.text === "33,3333", "the field still holds '33,3333' (got '" + p.modeUI.scaleIn.text + "')");
+    assert(p.getRunOptions().drawingScale === 33.3333, "the run still gets 33.3333 (got " + p.getRunOptions().drawingScale + ")");
+    done();
+
+    var st = { pathMode: false, pathInfo: null, docInfo: docAt(1000, 500, 1), fallback: false, offset: 0, unit: "mm" };
+    var cases = [[10, " · 1:10"], [2.5, " · 1:2,5"], [33.3333, " · 1:33,3"], [12.55, " · 1:" + GM.Numbers.format(Math.round(12.55 * 10) / 10)]];
+    for (var i = 0; i < cases.length; i++) {
+        st.drawingScale = cases[i][0];
+        var t = GM.UI.placementInfoText(st);
+        assert(t.slice(-cases[i][1].length) === cases[i][1], "scale " + cases[i][0] + ": the line ends '" + cases[i][1] + "' (got '" + t + "')");
+    }
+    assert(GM.Numbers.format(Math.round(12.55 * 10) / 10) === "12,6", "12,55 is shown as 12,6 (Math.round(n * 10) / 10)");
+    st.drawingScale = 33.3333;
+    assert(GM.UI.placementInfoText(st).indexOf("33333,3 × 16666,7 mm") > 0,
+        "the artboard size still uses the exact scale (got '" + GM.UI.placementInfoText(st) + "')");
+})();
+
 console.log("--- UI 1.4 scale: the line is wide enough for the finding with the scale (spec 5) ---");
 (function () {
     var longest = GM.UI.longestInfoText();

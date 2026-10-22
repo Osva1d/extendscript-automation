@@ -706,6 +706,9 @@ Nejdelší text podle počtu znaků je i nejširší v pixelech (CS 459 px, EN
 458 px); nejširší skutečný důvod „✗ Rohové zóny — Rozteč: zadejte číslo od
 0,01 do 9999 mm.“ má 357 px (EN „✗ Corner zones — Spacing: …“ 393 px).
 Měřítko přepsané v otevřeném dialogu na 99,9 dá nález 459 px — vejde se.
+Řádek ukazuje měřítko zaokrouhlené na jedno desetinné místo (33,3333 jako
+1:33,3; pole, běh i dokument drží přesnou hodnotu), takže mez šířky je
+naměřený vzorek s 99,9.
 
 **Ostatní prvky.** Tlačítka předvoleb v přirozené šířce: ↺ 30 px, Uložit
 80, Uložit jako… 103 (text 75 px), Smazat 80; EN Save 80, Save As… 85,
