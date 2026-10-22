@@ -595,10 +595,12 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 > (dělení délek, texty řádku, předvolby, slovník, parita CS/EN) hlídají Node
 > testy; tady je to, co Node nevidí: zápis měřítka do dokumentu, barvy řádku
 > na světlém i tmavém UI, vzhled předvoleb v seznamu a rozměry dialogu. Rozměry
-> v K7 jsou změřené v Illustratoru (úkol 7), nejsou odhad.
+> v K7 jsou změřené v Illustratoru
+> (`docs/extendscript-engine-facts.md`), nejsou odhad.
 >
-> **Příprava:** dokument cca 800 × 600 mm s jedním artboardem (K1 si vyžádá
-> zakázku Tile Exportu, viz tam), jednotky mm, výchozí hodnoty (`[Výchozí]`),
+> **Příprava:** dokument s jedním artboardem **přesně 800 × 600 mm** (K1, K2
+> a K4 čekají přesná čísla, ne přibližná; K1 si vyžádá zakázku Tile Exportu,
+> viz tam), jednotky mm, výchozí hodnoty (`[Výchozí]`),
 > Illustrator česky. Před každým testem smaž vrstvu „Grommet Marks“ (nebo dej
 > Zpět) — jinak skript ohlásí značky kryjící se s předchozím během.
 > **Měřítko si pamatuje dokument:** pokud test nepíše jinak, začíná na
@@ -704,7 +706,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 | # | stav | jak ho vyvolat | text v řádku |
 |---|---|---|---|
 | 1 | normální | Hrany artboardu, dokument bez měřítka | `1 artboard · 800 × 600 mm` (šedě) |
-| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · 1:10`; s vybraným štítem v režimu Vybraná cesta `Uzavřená cesta · 5 rohů · 1:10` (šedě) |
+| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · 1:10`; s vybraným štítem v režimu Vybraná cesta a **Odsazením od kraje 20** `Uzavřená cesta · 5 rohů · 1:10` (šedě); s výchozím Odsazením 0 řádek před koncem dodá `· značky leží na cestě` |
 | 3 | jedno neplatné pole | Velikost `abc` | `✗ Velikost: zadejte číslo od 0,01 do 9999 mm.` (červeně) |
 | 4 | víc neplatných polí | `abc` do Velikosti, Reg. tahu a Bílého hala | `✗ Neplatná pole: 3 — opravte červená pole.` (červeně) |
 | 5 | bez tvaru, bez hrany | odškrtni Kruh i Kříž; v jiném běhu vypni Horní i Levou hranu | `✗ Značka nemá tvar — zapněte Kruh nebo Kříž.`; `✗ Není zapnutá žádná hrana.` (červeně) |
@@ -792,24 +794,32 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 5. Smaž značky z vrstvy „Grommet Marks“, vrstvu skryj (oko) a Generovat.
 - [ ] „UPOZORNĚNÍ: Skrytá vrstva „Grommet Marks“ byla zviditelněna, aby byly
   nové značky vidět a vytiskly se.“ Název vrstvy je v „…“.
-6. Předvolby: **Uložit jako…** existujícím názvem (`Test A`), **Smazat**
-   neupravenou předvolbu (`Test B`), prázdný název, název `[x]`.
+6. Předvolby `Test A` a `Test B` vznikly v **K5** — bez K5 je nejdřív vyrob
+   (**Uložit jako…**, dvě různé hodnoty Velikosti). **Uložit jako…**
+   existujícím názvem (`Test A`), **Smazat** neupravenou předvolbu (`Test B`;
+   na otázku odpověz Ne, předvolbu ještě potřebuješ), prázdný název, název
+   `[x]`.
 - [ ] `Předvolba „Test A“ už existuje. Přepsat?`
-- [ ] `Smazat předvolbu „Test B“? Smazání nejde vrátit.`
+- [ ] `Smazat předvolbu „Test B“? Smazání nejde vrátit.` Změň u `Test B`
+  Velikost (v seznamu je `Test B *`) a dej Smazat znovu: otázka je stejná
+  a jméno je bez hvězdičky; odpověz Ne.
 - [ ] `Zadejte název předvolby.`
 - [ ] `Názvy v hranatých závorkách jsou vyhrazené. Zvolte jiný název.`
 7. *(volitelné)* Zavři všechny dokumenty a spusť skript.
 - [ ] `Před spuštěním skriptu otevřete dokument.` (beze změny, bez předpony.)
 8. *(volitelné, jako B5)* Selhání zápisu nastavení.
-- [ ] `Nastavení se nepodařilo uložit — příště se dialog otevře bez něj.`
-  Běh kvůli tomu nekončí a hláška nemá předponu `CHYBA:`.
+- [ ] Při Generovat: `Nastavení se nepodařilo uložit — příště se dialog
+  otevře bez něj. Běh pokračuje.` Běh opravdu pokračuje a hláška nemá
+  předponu `CHYBA:`. Z tlačítek předvoleb (Uložit, Uložit jako…, Smazat)
+  stejná hláška končí po „bez něj.“ — dialog zůstává otevřený, není co
+  pokračovat.
 - [ ] Žádná z hlášek, které jsi viděl, nekončí vykřičníkem. Záhlaví dialogu je
   **Grommet Marks v…** (bez slova Illustrator na začátku).
 
 ### K7 — Dialog na 13" displeji: tlačítka celá
 > Cíl z návrhu (§8): dialog nejvýš cca 850 px na výšku (strop jako u Tile
 > Exportu), bez uřízlých tlačítek. Displej uživatele je 1512 × 982 s Dockem.
-> Rozměry změřil úkol 7 headless v Illustratoru 30.8.2 (2026-10-21,
+> Rozměry jsou změřené headless v Illustratoru 30.8.2 (2026-10-21,
 > `window.size` bez záhlaví okna; nejvyšší stav i se záhlavím 832 px,
 > podrobnosti v `docs/extendscript-engine-facts.md`); tady se ověřuje, že na
 > skutečném displeji nic nepřesahuje.
@@ -838,8 +848,9 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   a **dialog při tom nemění šířku**.
 - [ ] Nejdelší důvody se vejdou taky: zapni Rohové zóny a do Rozteče napiš
   `x` → `✗ Rohové zóny — Rozteč: zadejte číslo od 0,01 do 9999 mm.`
-3. *(má-li uživatel anglický Illustrator; jinak anglickou variantu změřil
-   úkol 7)* Spusť skript v angličtině.
+3. *(má-li uživatel anglický Illustrator; jinak je anglická varianta
+   změřená, viz `docs/extendscript-engine-facts.md`)* Spusť skript
+   v angličtině.
 - [ ] Panel Corner zones: „Densify at corners ☐ — first [5] marks, spacing
   [100]“ je v jednom řádku, nic se nepřekrývá ani neřeže (dřív „marks,
   pitch“). Záhlaví sloupce hran je „Spacing“, popisek v panelu Cesta

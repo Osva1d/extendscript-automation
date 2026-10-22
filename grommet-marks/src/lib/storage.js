@@ -168,7 +168,7 @@ GM.Storage = {
                 }
             }
 
-            // [Default] is built from the code on every load: what the file
+            // MIGRATION 3: [Default] is built from the code on every load: what the file
             // holds under that name (an older version's, a hand edit) does not
             // change what "default" means. The other presets and the active
             // key are left as they are.
@@ -179,7 +179,7 @@ GM.Storage = {
                 data.activePreset = DEF;
             }
 
-            // MIGRATION 3: per-preset value migrations + forward-fill
+            // MIGRATION 4 + 5: per-preset value migrations + forward-fill
             var dflt = GM.Config.getDefaults();
             for (var pk in data.presets) {
                 if (!data.presets.hasOwnProperty(pk)) continue;

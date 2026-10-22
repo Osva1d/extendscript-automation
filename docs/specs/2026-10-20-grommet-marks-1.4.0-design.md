@@ -347,3 +347,14 @@ Co se při stavbě změnilo proti textu výš; čísla jsou z měření v Illust
   `refreshInfo()` zůstává jediným místem rozhodnutí. Oba se zakládají
   s nejdelším možným textem, takže stopa řádku je jako dřív. Čitelnost obou
   stavů na čtyřech jasech UI a vzhled nálezu jako v 1.3.0 ověřuje K4.
+- **Výchozí hodnota ze skrytého pole je v jednotce předvolby** (§6.4). Výchozí
+  hodnoty jsou v kódu v mm; délka, která spadne na výchozí hodnotu, se převede
+  do jednotky předvolby (105 mm je v cm 10,5), jinak by předvolba v cm uložila
+  105 cm. Pera a počty se nepřevádějí.
+- **`validate()` nekontroluje Odsazení X/Y v režimu Vybraná cesta** (R16). Pole
+  je v panelu Hrany, v režimu cesty skryté, živá kontrola je přeskakuje a běh je
+  nepoužije; odmítnutí by jmenovalo pole, které operátor nevidí. Uloží se tak,
+  jak je `storable()` upraví.
+- **Hláška o neuloženém nastavení před během říká „Běh pokračuje.“** (R18,
+  kánon §12.2). Má vlastní klíč `ERR_WRITE_SETTINGS_RUN`; tlačítka předvoleb
+  v dialogu zůstávají u věty bez něj, protože dialog zůstává otevřený.

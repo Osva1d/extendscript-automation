@@ -23,8 +23,11 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   zašedne. Do předvoleb ani do `[Last Settings]` se měřítko neukládá
   a přepnutí jednotek ani předvolby ho nemění. Do dokumentu se zapíše až po
   úspěšném běhu a jen když se liší od přečteného: odmítnutý běh nechá dokument
-  beze změny a dokument bez měřítka s během v 1:1 také. V měřítku 1:1
-  vycházejí stejné polohy i velikosti jako v 1.3.0.
+  beze změny a dokument bez měřítka s během v 1:1 také. Zápis měřítka není
+  v kroku Zpět: Zpět (Cmd+Z) po běhu odstraní značky, ale měřítko v dokumentu
+  zůstane, takže další dialog nabídne měřítko vráceného běhu (přepište pole;
+  dokument bez měřítka dostanete zpět zadáním 1 a jedním Generovat). V měřítku
+  1:1 vycházejí stejné polohy i velikosti jako v 1.3.0.
 - **Měřítko v šedém řádku.** Je-li jiné než 1:1, řádek pod Umístěním je
   uvede na konci („1 artboard · 8000 × 6000 mm · 1:10“, „Uzavřená cesta ·
   5 rohů · 1:10“) — bez slova „měřítko“, které by dialog rozšířilo.
@@ -58,19 +61,25 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   nastavení. Uložit i Uložit jako… jsou šedé, dokud je některé pole neplatné
   (důvod je v šedém řádku), a po uložení Uložit zhasne (dřív zůstal
   aktivní). Překlep ve skrytém poli — v druhém režimu, v nezapnuté hraně —
-  se do předvolby uloží jako výchozí hodnota toho pole: předvolba nikdy
-  neuloží hodnotu, kterou další otevření nepřečte. Panel je podle šablony
+  se do předvolby uloží jako výchozí hodnota toho pole (u délky v jednotce
+  předvolby: 105 mm je v cm 10,5): předvolba nikdy neuloží hodnotu, kterou
+  další otevření nepřečte. Panel je podle šablony
   rodiny: ↺ ve vlastní skupině vedle seznamu a tlačítka Uložit / Uložit
   jako… / Smazat v nativní šířce (dřív 92 px, na „Uložit jako…“ nestačilo).
   Řekne se předvolba, ne nastavení.
-- **Hlášky jako v ostatních nástrojích.** Blokující chyba začíná `CHYBA:`,
+- **Předvolba uložená verzí 1.3.0 s překlepem ve skrytém poli.** Taková
+  předvolba se může při prvním otevření ukázat jako změněná (hvězdička `*`
+  u názvu, svítí Uložit): verze 1.4.0 by ten překlep uložila jako výchozí
+  hodnotu pole a ta se od uloženého textu liší. Nic se neztrácí; jedno Uložit
+  hvězdičku odstraní a předvolba se už neukáže jako změněná.- **Hlášky jako v ostatních nástrojích.** Blokující chyba začíná `CHYBA:`,
   upozornění po běhu `UPOZORNĚNÍ:`; názvy stojí v „…“ a žádná hláška nekončí
   vykřičníkem (místo „Velikost musí být číslo!“ je teď Pole „Velikost“ musí
   být číslo.). Odmítnutí, po kterém se dokument nezměnil, to řekne větou
   „Dokument nebyl změněn.“ Neočekávaná chyba má pevnou šablonu: co se stalo,
   v jakém stavu je dokument a komu hlášku poslat. Neuložené nastavení říká
   následek („příště se dialog otevře bez něj“) a běh kvůli němu nekončí, proto
-  nemá předponu `CHYBA:`. Meze v hláškách mají desetinnou čárku („0,01“).
+  nemá předponu `CHYBA:`; před během, který pokračuje, hláška dodává „Běh
+  pokračuje.“ Meze v hláškách mají desetinnou čárku („0,01“).
 - **Titulek dialogu je „Grommet Marks v…“** (dřív „Illustrator Grommet Marks
   v…“), jako u ostatních nástrojů.
 - **Registrační barva se hledá podle typu.** Značky se kreslí registrační
@@ -94,7 +103,11 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
 - **Zrcadlená (skrytá) hrana už nešedí Generovat.** Dolní nebo Pravá hrana,
   která jen zrcadlí Horní nebo Levou, měla v poli nesmysl, který operátor
   neviděl, a Generovat zůstalo šedé bez viditelné příčiny — i když běh ta pole
-  ignoruje. Živá kontrola je teď přeskočí taky.
+  ignoruje. Živá kontrola je teď přeskočí taky. Totéž platí pro Odsazení X
+  a Y v režimu Vybraná cesta: skryté pole už po kliknutí na Generovat
+  neohlásí chybu.
+- **Smazat se ptá na jméno předvolby, ne na položku seznamu.** U změněné
+  předvolby se dřív ptalo „Smazat předvolbu „Test A *“?“, teď „Test A“.
 
 ## [1.3.0] — 2026-10-17
 
