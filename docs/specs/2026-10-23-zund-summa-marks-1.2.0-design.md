@@ -244,9 +244,18 @@ Dnes: v klidu „ZUND · 1:10 · vrstvy: 1" výchozím perem; při neplatném po
   popiskem nejde (`FieldPaint` na zakázaném statictextu, pero před `show()`),
   stavitel převezme řešení GM 1.4.0 §13: dva popisky ve stohu, nález
   a důvod, viditelný vždy jeden.
-- Text klidu „vrstvy: N" počítá řádky mapování, ne vrstvy v dokumentu;
-  **moje volba:** „řádky: N" (EN „rows: N"), aby se nečetl jako nález
-  v dokumentu.
+- **Klid říká, co skript v dokumentu našel** (kánon §12.3: šedý řádek
+  s nálezem, na stejném místě důvod šedého tlačítka). Dnes klid opakuje jen
+  nastavení dialogu a „vrstvy: N" počítá řádky mapování, ne vrstvy
+  v dokumentu (prověrka 2026-10-17). Nově, **moje volba** (návrh textu):
+  `ZUND · artboard 1 560 × 3 050 mm · řez „Cut" · 1:10` — režim, rozměr
+  ve skutečné velikosti (× N, jako GM 1.4.0 §4.6), řezová barva, kterou
+  skript v dokumentu našel (`detectCutColor`, už dnes v `docData`), nebo
+  `řez nenalezen`, a měřítko jen když není 1:1. V režimu Dle grafiky
+  rozměr grafiky místo artboardu, **pokud** je změření hranic před dialogem
+  levné (`ZSM.Bounds.get` prochází všechny objekty — stavitel změří na
+  velkém dokumentu; když ne, v Dle grafiky rozměr vynechá). Pouze značky
+  dál řekne „pouze značky". Nejdelší možný text určí šířku řádku.
 - Šířka řádku je dnes literál 340 px v kódu; přesune se do `ZSM.UI.M`
   s důvodem „živý text" (kánon §4.1) a změří se pro nejdelší text.
 
@@ -310,6 +319,10 @@ vzdálenost středů — nápověda TE „od rohu" je nepřesná, nepřebírat).
   validace), ji dostanou.
 - Alert z validace bez dvojtečky popisku uprostřed věty („Mezera od okraje:
   musí být číslo!" → „Mezera od okraje: zadejte číslo od 0 do 1000 mm.").
+- Počty v nových textech (cizí objekty v Regmarks, §4.3) přes `ZSM.L.count`
+  s tvary `_1`, `_2`, `_5`, nebo ve tvaru „objektů: 4" (kánon §12.1).
+- „artboard" malým písmenem i v češtině, jako ve slovníku kánonu §12.8
+  („Dle artboardu (Fixed)", nápověda zdroje, hláška prázdného dokumentu).
 
 ### 9.4 „Dokument nebyl změněn."
 
@@ -393,3 +406,45 @@ tlačítka vidět celá. Strop výšky jako GM a TE (~850 px).
 - Jestli stavový řádek zvládne jeden popisek, nebo dva ve stohu (§7).
 - Přesun `rulerOrigin` za preflight, nebo zmírnění věty (§9.4).
 - Rozdělení práce do commitů a testů.
+
+## 16. Pokrytí kánonu a sdílených modulů
+
+Kontrolní tabulka: každé pravidlo kánonu (`extendscript-ui-standards` §9,
+§12, checklist §10) a každý modul ze `shared/lib`, a kde ho tento návrh řeší.
+✓ ZSM splňuje už dnes · → řeší tento návrh · — netýká se.
+
+| kánon / modul | stav | kde |
+|---|---|---|
+| §12.1 vykání, dvojtečka za popiskem | ✓ | — |
+| §12.1 „…", bez „!", dvě předpony, počty | → | §9.3 |
+| §12.2 co, proč, co dělat; stav dokumentu | → | §9.4 |
+| §12.2 bez dokumentu, `ERR_CRITICAL`, neuložené nastavení | → | §9.2 |
+| §12.3 jedno čtení čísel | → | §6.1 |
+| §12.3 zápis s `DEC_SEP`, bez zaokrouhlení | → | §6.2 |
+| §12.3 červené pole, šedé hlavní tlačítko | ✓ (vlastní kód) → modul | §6.3 |
+| §12.3 jedno místo říká, proč je tlačítko šedé | ✓ | §7 (symbol a barva) |
+| §12.3 šedý řádek s tím, co skript našel | → | §7 |
+| §12.3 „(chybí)" u uložené hodnoty | ✓ | — |
+| §12.3 cesty a složky v dialogu | — | ZSM nevybírá soubory |
+| §12.4 hvězdička u všech položek | → | §8 |
+| §12.4 Uložit a Uložit jako… šedé s neplatným polem | → | §6.3 |
+| §12.4 Uložit na [Výchozí] → Uložit jako…, [Výchozí] z kódu | ✓ | §8 ([Výchozí] v SUMMA) |
+| §12.4 věty a klíče předvoleb | → | §8 |
+| §12.5 průběh, souhrn, otevřít složku | — | viz `progress.js` níže |
+| §12.6 symboly a barvy | → | §7 |
+| §12.7 titulek, §9 patička | ✓ | — |
+| §12.8 slovník | → | §9.1, §9.3 |
+| §12.9 měřítko kresby | → | §5 |
+| §12.10 čárky, konce a spoje nové cesty | → | §4.1 |
+| §9 panel předvoleb (↺ ve skupině, nativní šířky) | → | §8 |
+| §4.1 pixelové šířky jen v `M` s důvodem | → | §7, §8 |
+| `json2.js`, `ui_state.js`, `cut_marks.js` | ✓ | už v buildu |
+| `numbers.js` | → | §6.1, §6.2 |
+| `field_paint.js` | → | §6.3, §7 |
+| `registration.js` (+ oprava v modulu) | → | §4.2 |
+| `drawing_scale.js` | → | §5 |
+| `progress.js`, `summary.js` | — | **moje volba:** běh ZSM nezapisuje soubory a nemá dávku položek, na konci ukáže upozornění v jednom okně (kánon §12.1). Kdyby měření na velkém dokumentu ukázalo běh delší než pár sekund, je to kandidát na další verzi. |
+
+Moduly přibudou do `tools/build.sh` za `buildUIState(ZSM);` po dvojicích
+`cat` + `build…(ZSM);`, jako v GM (`grommet-marks/tools/build.sh`);
+sahají na `ZSM.L` a `ZSM.Utils.log` až při volání.
