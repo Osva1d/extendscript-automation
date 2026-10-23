@@ -660,7 +660,10 @@ ZSM.UI = {
 
             return {
                 mode:              mode,
-                gapInner:          isZ ? parseNum(rGapGZ.inp) : prev.gapInner,
+                // A greyed gapInner (Fixed source) carries the previous value, as
+                // the OK handler does: the live check skips it, so a typo left
+                // there would be saved as NaN (null) otherwise.
+                gapInner:          (isZ && rGapGZ.inp.enabled) ? parseNum(rGapGZ.inp) : prev.gapInner,
                 gapOuter:          parseNum(rGapZO.inp),
                 maxDist:           parseNum(rMaxD.inp),
                 feedTop:           isS ? parseNum(rFT.inp)    : prev.feedTop,
@@ -816,12 +819,22 @@ ZSM.UI = {
         var numbersOk = true;
 
         /**
+         * The one place that decides Save and Save As: Save needs an unsaved
+         * change and valid numbers, Save As only valid numbers.
+         * @param {boolean} modified - Whether the UI differs from the active preset.
+         */
+        function applySaveGate(modified) {
+            try { btnSave.enabled   = modified && numbersOk; } catch (e) {}
+            try { btnSaveAs.enabled = numbersOk; } catch (e) {}
+        }
+
+        /**
          * Refresh the active dropdown item's text + Save button state.
          * Lighter than updatePresetList(); call from input onChange handlers.
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
-            try { btnSave.enabled   = modified && numbersOk; } catch (e) {}
+            applySaveGate(modified);
             try { btnRevert.enabled = modified; } catch (e) {}
 
             if (!ddPreset.selection) return;
@@ -1228,8 +1241,7 @@ ZSM.UI = {
             // here, not only in refreshModifiedIndicator: the handlers call that
             // BEFORE this check, so Save would trail the field by one keystroke.
             numbersOk = numbersAllOk;
-            try { btnSaveAs.enabled = numbersOk; } catch (e) {}
-            try { btnSave.enabled   = numbersOk && isModified(); } catch (e) {}
+            applySaveGate(isModified());
 
             // Status line. When everything is valid it no longer sits empty (N1) —
             // it shows a subtle, default-coloured context summary (mode · scale ·

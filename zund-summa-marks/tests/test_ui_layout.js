@@ -889,6 +889,59 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
     assert(okBtn(wF).enabled === true && !isErrPen(gapG.graphics.foregroundColor),
         "Fixed source: a typo in the greyed gap field neither paints it nor blocks Generate");
 
+    // --- A greyed field keeps the preset's value: a typo left in it is never saved (spec 6.1) ---
+    // Auto-fit, "5mm" in the gap-from-graphics field (red, Save grey), then Fixed:
+    // the field greys and the live check skips it. Save and the mode-switch
+    // snapshot must then carry the preset's gapInner (7), not NaN / null.
+    function fixedWithTypo(win) {
+        var gap = fieldCtl(win, ZSM.L.GAP_GZ), maxD = fieldCtl(win, ZSM.L.MAX_DIST);
+        var rbAutoCtl = win.findOne(function (c) { return c.type === "radiobutton" && c.text === ZSM.L.SRC_AUTO; });
+        var rbFixedCtl = win.findOne(function (c) { return c.type === "radiobutton" && c.text === ZSM.L.SRC_FIXED; });
+        maxD.text = "450"; maxD.onChanging();      // a valid edit, so Save has something to save
+        gap.text = "5mm"; gap.onChanging();
+        var redBefore = isErrPen(gap.graphics.foregroundColor), saveBefore = btnText(win, ZSM.L.BTN_SAVE).enabled;
+        rbFixedCtl.value = true; rbAutoCtl.value = false; rbFixedCtl.onClick();
+        return { redBefore: redBefore, saveBefore: saveBefore, gap: gap };
+    }
+    var origStorage = ZSM.Storage;
+    ZSM.Storage = { save: function () { return true; } };
+    try {
+        var pGrey = mineData({ gapInner: 7 });
+        var greyState = null, greySave = null;
+        runDialogs(pGrey, [function (win) {
+            greyState = fixedWithTypo(win);
+            greySave = btnText(win, ZSM.L.BTN_SAVE);
+            greyState.saveAfter = greySave.enabled;
+            if (greySave.enabled) greySave.onClick();
+        }]);
+        assert(greyState.redBefore === true && greyState.saveBefore === false,
+            "greyed typo: precondition, '5mm' is red and Save is grey while the field is live");
+        assertEq(greyState.saveAfter, true, "greyed typo: after Fixed the field is skipped and Save is live (maxDist changed)");
+        var savedMine = pGrey.presets["Mine"];
+        assertEq(savedMine.gapInner, 7, "greyed typo: Save stores the preset's gapInner, not NaN (got " + savedMine.gapInner + ")");
+        assertEq(savedMine.useArtboardBounds, true, "greyed typo: ...with the Fixed source and the maxDist edit");
+        assertEq(savedMine.maxDist, 450, "greyed typo: ...and the valid edit made before");
+
+        var pGrey2 = mineData({ gapInner: 7 });
+        runDialogs(pGrey2, [function (win) { fixedWithTypo(win); clickRadio(win, ZSM.L.MODE_SUMMA); }, function () {}]);
+        var greySnap = pGrey2.presets["[Last Settings]"];
+        assertEq(greySnap.gapInner, 7, "greyed typo: the mode-switch snapshot carries the preset's gapInner (got " + greySnap.gapInner + ")");
+
+        // A valid edit made before the switch is not kept either: the greyed field carries the previous run's value.
+        var pGrey3 = mineData({ gapInner: 7 });
+        runDialogs(pGrey3, [function (win) {
+            var gap = fieldCtl(win, ZSM.L.GAP_GZ);
+            gap.text = "9"; gap.onChanging();
+            var rbF = win.findOne(function (c) { return c.type === "radiobutton" && c.text === ZSM.L.SRC_FIXED; });
+            rbF.value = true; rbF.onClick();
+            clickRadio(win, ZSM.L.MODE_SUMMA);
+        }, function () {}]);
+        assertEq(pGrey3.presets["[Last Settings]"].gapInner, 7, "greyed field: an earlier valid edit (9) is not saved either, the preset's 7 stays");
+    } finally {
+        ZSM.Storage = origStorage;
+        if (origStorage === undefined) delete ZSM.Storage;
+    }
+
     // --- Writing numbers: the locale's separator, no rounding ---
     var fractions = { gapInner: 5.5, gapOuter: 2.5, maxDist: 500.5, markSizeZ: 0.25, orientDist: 100.5 };
     var pFmt = mineData(fractions);
