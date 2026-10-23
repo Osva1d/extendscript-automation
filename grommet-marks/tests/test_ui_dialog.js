@@ -392,6 +392,37 @@ console.log("--- UI: invalid field turns red, valid gives its own pen back (spec
     done();
 })();
 
+// ===== TEST: fields keep Illustrator's own colour; after red, Adobe's text colour =====
+// Illustrator reads a field's own pen back as undefined before show(), so the
+// pen 1.3.0 gave back was light grey 0.75 — on the Medium Light and Light UI the
+// values of every field looked greyed out (user screenshots 2026-10-23). A field
+// that was never red is now never painted; after red it takes the theme pen
+// "foreground", the text colour of the current UI brightness.
+console.log("--- UI: fields keep Illustrator's own colour; after red, the theme text colour ---");
+(function () {
+    function isErr(pen) {
+        var c = pen && pen.color;
+        return !!c && c[0] === GM.FieldPaint.COLORS.ERR[0] && c[1] === GM.FieldPaint.COLORS.ERR[1] &&
+            c[2] === GM.FieldPaint.COLORS.ERR[2];
+    }
+    SUI.install({ ownPenUnreadable: true });
+    var ui = GM.UI.buildDialog(freshPData(), mockPathInfo(4, true));
+    var eds = ui.window.find(function (c) { return c.type === "edittext"; }), i, painted = [];
+    for (i = 0; i < eds.length; i++) if (eds[i].graphics.assignments !== 0) painted.push(eds[i]);
+    assert(eds.length > 10 && painted.length === 0, "opened with valid values: no field painted (" + painted.length + " of " + eds.length + " painted)");
+    var size = ui.window.findOne(function (c) { return c.type === "edittext" && c.helpTip === GM.L.TIP_SIZE; });
+    var g = size.graphics;
+    size.text = "abc"; size.onChange();
+    assert(isErr(g.foregroundColor), "a typo paints the field red");
+    size.text = "4"; size.onChange();
+    assert(g.foregroundColor && g.foregroundColor.type === 1 && g.foregroundColor.theme === "foreground",
+        "fixed: the theme text colour \"foreground\", not light grey");
+    var others = 0;
+    for (i = 0; i < eds.length; i++) if (eds[i] !== size && eds[i].graphics.assignments !== 0) others++;
+    assert(others === 0, "the other fields are still not painted (" + others + ")");
+    done();
+})();
+
 // ===== TEST: a typo turns the field invalid instead of being read as a prefix (audit A9) =====
 console.log("--- UI: typos in number fields block Generate (audit A9) ---");
 (function () {

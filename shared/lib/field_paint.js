@@ -16,6 +16,13 @@
 // Three copies of one fix is the "fix once, holds there too" criterion
 // docs/decisions.md asks for. The colours are the canon's (§12.6), from
 // tile-export's TE.UI.COLORS.
+//
+// Illustrator reads a control's own pen back as undefined before show(), so
+// the pen given back used to be FALLBACK light grey — on the Medium Light and
+// Light UI every field then looked greyed out (2026-10-23). A field that was
+// never red is therefore left alone, and one that was red takes the theme pen
+// "foreground": Adobe's text colour for the current UI brightness (measured in
+// Illustrator 30.8.2: 0.28 on Light, 0.60 on Dark).
 // ------------------------------------------------------------------------
 function buildFieldPaint(NS) {
     function log(msg) {
@@ -30,16 +37,21 @@ function buildFieldPaint(NS) {
             OK:   [0.36, 0.60, 0.34]
         },
 
-        // The pen a field shows when its own cannot be read back: a light grey
-        // that stays legible on both the light and the dark UI.
+        // The pen a field gets back after red when neither its own pen nor the
+        // theme's text colour is available: a light grey. Legible on the dark
+        // UI only — near invisible on the light one, hence the last resort.
         FALLBACK: [0.75, 0.75, 0.75],
 
         /**
          * Paints a field's text red while its value is invalid, and gives it
-         * back the pen it had before once it is valid. The first call
-         * remembers that pen on the control. Never throws: a host build that
-         * refuses the pen leaves the field as it is, and the primary button,
-         * greyed by the caller, still protects the run.
+         * back its own colour once it is valid. A field that was never red is
+         * never written: the host draws it in its own colour for the current
+         * UI brightness. The first red remembers the own pen on the control;
+         * when it cannot be read (Illustrator), the field gets the theme pen
+         * "foreground" back, and FALLBACK only when the host has no theme pen.
+         * Never throws: a host build that refuses the pen leaves the field as
+         * it is, and the primary button, greyed by the caller, still protects
+         * the run.
          * @param {Object} et - The edittext.
          * @param {boolean} valid - False paints it red.
          */
@@ -47,12 +59,31 @@ function buildFieldPaint(NS) {
             var g = et && et.graphics;
             if (!g || !g.newPen) { return; }
             try {
-                if (et.sharedDefaultPen === undefined) { et.sharedDefaultPen = g.foregroundColor || null; }
-                g.foregroundColor = valid
-                    ? (et.sharedDefaultPen || g.newPen(g.PenType.SOLID_COLOR, this.FALLBACK.concat([1]), 1))
-                    : g.newPen(g.PenType.SOLID_COLOR, this.COLORS.ERR.concat([1]), 1);
+                if (!valid) {
+                    if (et.sharedDefaultPen === undefined) { et.sharedDefaultPen = g.foregroundColor || null; }
+                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, this.COLORS.ERR.concat([1]), 1);
+                    return;
+                }
+                if (et.sharedDefaultPen === undefined) { return; }   // never red: leave the host's colour
+                g.foregroundColor = et.sharedDefaultPen || this.themeText(g) ||
+                    g.newPen(g.PenType.SOLID_COLOR, this.FALLBACK.concat([1]), 1);
             } catch (e) {
                 log("FieldPaint.field: " + e.message);
+            }
+        },
+
+        /**
+         * The theme's text colour of the current UI brightness, as a pen.
+         * @param {Object} g - A control's ScriptUIGraphics.
+         * @returns {Object|null} The pen, or null when the host has none.
+         */
+        themeText: function (g) {
+            if (!g.PenType || g.PenType.THEME_COLOR === undefined) { return null; }
+            try {
+                return g.newPen(g.PenType.THEME_COLOR, "foreground", 1);
+            } catch (e) {
+                log("FieldPaint.themeText: " + e.message);
+                return null;
             }
         },
 

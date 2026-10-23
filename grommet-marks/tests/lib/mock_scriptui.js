@@ -34,23 +34,31 @@
     // carries the colour it was made with, so a test can tell red from the
     // field's own pen; foregroundColor starts as that own pen, the way a real
     // control shows its theme colour, and ownPen is the test's handle to it.
-    // NOTE: the mock reads the own pen back, which Illustrator does not do
-    // before show() (measured: null). So a test cannot see a FALLBACK pen
-    // coming from a missing own pen; what it can see is whether the control was
-    // painted at all: `assignments` counts every write to foregroundColor.
+    // NOTE: by default the mock reads the own pen back, which Illustrator does
+    // not do before show() (measured: undefined). install({ownPenUnreadable:
+    // true}) builds controls the Illustrator way — foregroundColor reads
+    // undefined until something is written — so a test can see which pen a
+    // field gets when its own cannot be read. Either way `assignments` counts
+    // every write to foregroundColor. A THEME_COLOR pen carries its theme name,
+    // as Illustrator's does (measured 2026-10-23).
+    var ownPenReadable = true;
     function makeGraphics() {
         var own = { own: true };
         var current = own;
         var writes = 0;
+        var readable = ownPenReadable;
         var g = {
-            newPen: function (type, color, width) { return { type: type, color: color, width: width }; },
+            newPen: function (type, color, width) {
+                if (type === 1) { return { type: type, theme: color, width: width }; }
+                return { type: type, color: color, width: width };
+            },
             newBrush: function () { return {}; },
             ownPen: own,
-            PenType: { SOLID_COLOR: 0 },
+            PenType: { SOLID_COLOR: 0, THEME_COLOR: 1 },
             BrushType: { SOLID_COLOR: 0 }
         };
         Object.defineProperty(g, "foregroundColor", {
-            get: function () { return current; },
+            get: function () { return (writes === 0 && !readable) ? undefined : current; },
             set: function (pen) { current = pen; writes++; },
             enumerable: true,
             configurable: true
@@ -263,7 +271,8 @@
     }
     MockWindow.prototype = Object.create(MockControl.prototype);
 
-    function install() {
+    function install(opts) {
+        ownPenReadable = !(opts && opts.ownPenUnreadable);
         var keys = ["Window", "ScriptUI", "$", "alert", "prompt", "confirm"];
         for (var i = 0; i < keys.length; i++) origGlobals[keys[i]] = global[keys[i]];
         global.Window = MockWindow;
