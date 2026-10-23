@@ -80,7 +80,7 @@ ZSM.Config = {
 global.alert = function () {};
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
-require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
+require("./lib/load_shared.js")(ZSM, ["numbers", "registration"]);   // shared: ZSM.Numbers, ZSM.Registration, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
 buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 // Load bounds before draw — draw.getBounds delegates to ZSM.Bounds.get
@@ -1306,6 +1306,36 @@ var circles36 = findSublayer(findLayer(docZ36, "Regmarks"), "Zünd")._items;
 assertEq(circles36.length, 5, "ZUND: five circle marks");
 for (var c36 = 0; c36 < circles36.length; c36++) {
     assert(circles36[c36].stroked === false, "circle mark " + c36 + " stays unstroked");
+}
+
+
+// =====================================================
+// TEST 37: an unreadable swatch in front of registration does not turn the marks black
+// =====================================================
+// getRegistrationName had one try around the whole swatch loop, so a swatch
+// whose colour cannot be read, placed before the registration swatch, ended
+// the search: the name fell back to the English default, which names nothing
+// on a Czech install, and the marks came out 100 % K without a word. The
+// search now lives in shared/lib/registration.js, which skips such a swatch.
+console.log("\n=== TEST 37: registration found behind an unreadable swatch ===");
+var REG37 = { typename: "SpotColor", tint: 100,
+    spot: { name: "[Registrační]", colorType: ColorModel.REGISTRATION } };
+var broken37 = { name: "Broken" };
+Object.defineProperty(broken37, "color", { get: function () { throw new Error("colour unreadable"); } });
+var doc37 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+doc37.swatches = swatchList([{ name: "[Žádná]" }, broken37, { name: "[Registrační]", color: REG37 },
+                             { name: "Bílá", color: WHITE35 }]);
+assertEq(ZSM.Draw.getRegistrationName(), "[Registrační]",
+    "the unreadable swatch does not end the search");
+assert(ZSM.Draw.registrationColor() === REG37, "registrationColor is the registration colour, not 100 % K");
+assert(ZSM.Draw.getCol("[Registration]") === REG37,
+    "the canonical token resolves to the registration colour on a Czech install");
+var s37 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(s37, ZSM.Draw.getBounds(s37)), s37);
+var circles37 = findSublayer(findLayer(doc37, "Regmarks"), "Zünd")._items;
+assertEq(circles37.length, 5, "ZUND: five circle marks");
+for (var c37 = 0; c37 < circles37.length; c37++) {
+    assert(circles37[c37].fillColor === REG37, "circle mark " + c37 + " is painted in the registration colour");
 }
 
 

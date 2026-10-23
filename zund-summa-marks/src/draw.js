@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: ZSM.Draw — DOM mutations: render(), beginSession(), movePaths()
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Bounds, ZSM.Config, ZSM.Core, ZSM.Utils
+// Depends on: ZSM.Bounds, ZSM.Config, ZSM.Core, ZSM.Registration, ZSM.Utils
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -993,19 +993,14 @@ ZSM.Draw = {
 
     /**
      * Returns the document's [Registration] swatch colour, or 100% K CMYK as a
-     * last-resort fallback if it cannot be read. Used wherever a missing or
-     * empty colour must degrade to a safe, universally valid mark colour.
+     * last-resort fallback if the document has none. Used wherever a missing or
+     * empty colour must degrade to a safe, universally valid mark colour. The
+     * lookup is ZSM.Registration.color (shared/lib/registration.js).
      *
      * @returns {Color} Registration (or black) Color object.
      */
     registrationColor: function () {
-        try {
-            return app.activeDocument.swatches.getByName(this.getRegistrationName()).color;
-        } catch (e) {
-            var k = new CMYKColor();
-            k.black = 100;
-            return k;
-        }
+        return ZSM.Registration.color(app.activeDocument);
     },
 
     /**
@@ -1028,25 +1023,14 @@ ZSM.Draw = {
      * without registration there, swatches[1] is White and the marks would be
      * drawn invisible to the cutter's camera. With no registration swatch the
      * English default comes back; it names nothing on a Czech install, so
-     * getCol / registrationColor fall through to 100 % K. Same check as
+     * getCol / registrationColor fall through to 100 % K. The lookup is
+     * ZSM.Registration.name (shared/lib/registration.js), the same for
      * grommet-marks and tile-export.
      *
      * @returns {string} Localized Registration swatch name.
      */
     getRegistrationName: function () {
-        try {
-            var sw = app.activeDocument.swatches;
-            for (var i = 0; i < sw.length; i++) {
-                var c = sw[i].color;
-                if (c && c.typename === "SpotColor" && c.spot &&
-                        c.spot.colorType === ColorModel.REGISTRATION) {
-                    return sw[i].name;
-                }
-            }
-        } catch (e) {
-            ZSM.Utils.log("getRegistrationName: swatches unreadable — " + e.message);
-        }
-        return "[Registration]";
+        return ZSM.Registration.name(app.activeDocument);
     },
 
     /**
