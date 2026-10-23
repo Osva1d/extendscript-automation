@@ -4,6 +4,124 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.4.0] — 2026-10-23
+
+Měřítko kresby 1:N a jazyk společný všem nástrojům
+([návrh](../docs/specs/2026-10-20-grommet-marks-1.4.0-design.md)).
+
+### Přidáno
+
+- **Měřítko kresby 1:N.** Druhý řádek panelu Umístění má vedle Jednotek pole
+  Měřítko kresby 1:. Hodnoty v dialogu se zadávají ve skutečné velikosti
+  a skript je při kreslení vydělí N — velikost značky a tloušťky tahů
+  (Reg. tah, Bílé halo) také; počty se nedělí a v dokumentu Large Canvas se
+  oba přepočty násobí. Dřív bylo potřeba každou hodnotu vydělit deseti
+  v hlavě, když se banner kreslil v 1:10. Měřítko patří dokumentu: pamatuje si
+  ho ve stejném klíči XMP jako Tile Export, takže dokument s měřítkem od Tile
+  Exportu otevře Grommet Marks s tímto měřítkem a obráceně. Platí číslo od 1
+  do 100, i desetinné (1:2,5); cokoli jiného pole zčervená a Generovat
+  zašedne. Do předvoleb ani do `[Last Settings]` se měřítko neukládá
+  a přepnutí jednotek ani předvolby ho nemění. Do dokumentu se zapíše až po
+  úspěšném běhu a jen když se liší od přečteného: odmítnutý běh nechá dokument
+  beze změny a dokument bez měřítka s během v 1:1 také. Zápis měřítka není
+  v kroku Zpět: Zpět (Cmd+Z) po běhu odstraní značky, ale měřítko v dokumentu
+  zůstane, takže další dialog nabídne měřítko vráceného běhu (přepište pole;
+  dokument bez měřítka dostanete zpět zadáním 1 a jedním Generovat). V měřítku
+  1:1 vycházejí stejné polohy i velikosti jako v 1.3.0.
+- **Měřítko v šedém řádku.** Je-li jiné než 1:1, řádek pod Umístěním je
+  uvede na konci („1 artboard · 8000 × 6000 mm · 1:10“, „Uzavřená cesta ·
+  5 rohů · 1:10“) — bez slova „měřítko“, které by dialog rozšířilo.
+  Velikost artboardu v režimu Hrany ukáže ve skutečné velikosti
+  (artboard × N), protože všechny hodnoty v dialogu
+  jsou ve skutečné velikosti — takže měřítko, které přišlo z dokumentu, je
+  vidět v poli i v řádku, ne jen v poli.
+- **Šedý řádek říká, proč je Generovat šedé.** Dokud Generovat nejde
+  stisknout, řádek místo nálezu ukáže důvod, červeně a se symbolem ✗:
+  u jednoho neplatného pole jeho jméno a povolený rozsah („✗ Velikost:
+  zadejte číslo od 0,01 do 9999 mm.“), u víc polí jejich počet („✗ Neplatná
+  pole: 3 — opravte červená pole.“) a když jsou čísla v pořádku, ale nic by
+  nevzniklo, „✗ Značka nemá tvar — zapněte Kruh nebo Kříž.“ nebo „✗ Není
+  zapnutá žádná hrana.“ Po odstranění důvodu se nález vrátí. Dřív Generovat
+  zešedlo a dialog neřekl proč.
+
+### Změněno
+
+- **Rozteč místo Rozestupu.** Vzdálenost středů značek se česky jmenuje
+  všude Rozteč (popisky, záhlaví sloupce, nápovědy, hlášky), jako už v rohových
+  zónách. Anglicky je všude Spacing, i v zónách (dřív pitch).
+- **Čísla v polích se čtou jedním způsobem** — pro pole, živou kontrolu
+  i odeslání dohromady, stejně jako v Tile Exportu. Platí desetinná čárka
+  i tečka a mezery okolo; `1e3`, `.5`, `0x10`, `1O5`, `1 000` i `20 mm` jsou
+  neplatné pole (dřív se `1e3`, `.5` a `0x10` přečetla jako čísla). Desetinná
+  čárka zůstane čárkou: zapsaných `2,5` se při dalším otevření ukáže zase
+  jako `2,5`, ne `2.5`.
+- **Předvolby se chovají jako v ostatních nástrojích.** Hvězdička stojí jen
+  u aktivní předvolby a po přepnutí zmizí u té předchozí (dřív u ní
+  zůstala). `[Výchozí]` se při každém otevření sestaví z kódu, ne ze souboru
+  nastavení. Uložit i Uložit jako… jsou šedé, dokud je některé pole neplatné
+  (důvod je v šedém řádku), a po uložení Uložit zhasne (dřív zůstal
+  aktivní). Překlep ve skrytém poli — v druhém režimu, v nezapnuté hraně —
+  se do předvolby uloží jako výchozí hodnota toho pole (u délky v jednotce
+  předvolby: 105 mm je v cm 10,5): předvolba nikdy neuloží hodnotu, kterou
+  další otevření nepřečte. Panel je podle šablony
+  rodiny: ↺ ve vlastní skupině vedle seznamu a tlačítka Uložit / Uložit
+  jako… / Smazat v nativní šířce (dřív 92 px, na „Uložit jako…“ nestačilo).
+  Řekne se předvolba, ne nastavení.
+- **Předvolba uložená verzí 1.3.0 s překlepem ve skrytém poli.** Taková
+  předvolba se může při prvním otevření ukázat jako změněná (hvězdička `*`
+  u názvu, svítí Uložit): verze 1.4.0 by ten překlep uložila jako výchozí
+  hodnotu pole a ta se od uloženého textu liší. Nic se neztrácí; jedno Uložit
+  hvězdičku odstraní a předvolba se už neukáže jako změněná.
+- **Hlášky jako v ostatních nástrojích.** Blokující chyba začíná `CHYBA:`,
+  upozornění po běhu `UPOZORNĚNÍ:`; názvy stojí v „…“ a žádná hláška nekončí
+  vykřičníkem (místo „Velikost musí být číslo!“ je teď Pole „Velikost“ musí
+  být číslo.). Odmítnutí, po kterém se dokument nezměnil, to řekne větou
+  „Dokument nebyl změněn.“ Neočekávaná chyba má pevnou šablonu: co se stalo,
+  v jakém stavu je dokument a komu hlášku poslat. Neuložené nastavení říká
+  následek („příště se dialog otevře bez něj“) a běh kvůli němu nekončí, proto
+  nemá předponu `CHYBA:`; před během, který pokračuje, hláška dodává „Běh
+  pokračuje.“ Meze v hláškách mají desetinnou čárku („0,01“).
+- **Titulek dialogu je „Grommet Marks v…“** (dřív „Illustrator Grommet Marks
+  v…“), jako u ostatních nástrojů.
+- **Registrační barva se hledá podle typu.** Značky se kreslí registrační
+  barvou dokumentu, ať je ve vzorníku kdekoli a jak se jmenuje
+  (`[Registrační]`, `[Registration]`). Dřív ji skript bral jen z druhého
+  políčka vzorníku; stál-li tam jiný vzorek (třeba Bílá), vyšly značky ve
+  100 % K. Dokument bez registrační barvy kreslí 100 % K jako dřív.
+- **Dialog je o jeden řádek vyšší.** Jednotky se přesunuly do druhého řádku
+  Umístění k Měřítku kresby. Nejvyšší stav (Hrany artboardu bez zrcadlení)
+  měří 804 px místo 777 px.
+- **Dialog je užší: 465 px místo 521 px.** Tři texty šedého řádku pod
+  Umístěním jsou kratší („bez odsazení“, „začátek nahoře“, „Cesta není
+  vybraná — značí se artboard.“) a místo pro řádek se počítá podle skutečné
+  šířky textu, ne podle počtu znaků. Dřív si řádek rezervoval šířku
+  nejdelšího možného textu, který se skoro nikdy neukáže, a vpravo
+  v panelech zůstávala třetina prázdná.
+
+### Opraveno
+
+- **Hodnoty v polích jsou čitelné i na světlém uživatelském rozhraní.** Na
+  jasu Medium Light a Light vypadala čísla ve všech aktivních polích jako
+  zašedlá: skript jim dával vlastní světle šedou, protože barvu, kterou pole
+  mělo, si Illustrator před otevřením dialogu přečíst nenechá. Pole, které
+  nebylo červené, teď skript nebarví vůbec a kreslí ho Illustrator sám. Po
+  opravě překlepu dostane na světlém jasu barvu textu z motivu Adobe, na
+  tmavém světle šedou, která tam vypadá jako text ostatních polí.
+- **Odsazení od kraje uložené v předvolbě se mimo režim cesty kontroluje
+  i proti horní mezi 9999.** Dřív stačilo, aby nebylo záporné, a předvolba
+  mohla držet hodnotu, kterou pole v režimu cesty odmítne.
+- **Uložit ukládá jen platné hodnoty.** Z neplatného pole (`abc`) se dřív do
+  souboru zapsalo `null`, které další otevření nepřečetlo; teď je Uložit
+  s neplatným polem šedé.
+- **Zrcadlená (skrytá) hrana už nešedí Generovat.** Dolní nebo Pravá hrana,
+  která jen zrcadlí Horní nebo Levou, měla v poli nesmysl, který operátor
+  neviděl, a Generovat zůstalo šedé bez viditelné příčiny — i když běh ta pole
+  ignoruje. Živá kontrola je teď přeskočí taky. Totéž platí pro Odsazení X
+  a Y v režimu Vybraná cesta: skryté pole už po kliknutí na Generovat
+  neohlásí chybu.
+- **Smazat se ptá na jméno předvolby, ne na položku seznamu.** U změněné
+  předvolby se dřív ptalo „Smazat předvolbu „Test A *“?“, teď „Test A“.
+
 ## [1.3.0] — 2026-10-17
 
 Tvary v režimu Vybraná cesta: odsazení od kraje, zaoblené rohy a část obvodu

@@ -68,6 +68,12 @@ GM.L = (function () {
             MODE_ARTBOARD: "Artboard edges",
             MODE_PATH: "Selected path",
 
+            // Drawing scale 1:N (spec 4) — dialog values are real-world size; the
+            // document remembers the scale. SCALE_FIELD names the field in a reason.
+            SCALE_LABEL: "Drawing scale 1:",
+            TIP_SCALE: "The scale the document is drawn at: 1:10 means the artwork is ten times smaller than the real thing. The document remembers it. Every value in the dialog is entered at real-world size, mark size and stroke weights included.",
+            SCALE_FIELD: "Drawing scale",
+
             // Path panel
             PATH_PANEL: "Path",
             PATH_INFO_CLOSED: "Closed path",
@@ -81,10 +87,10 @@ GM.L = (function () {
             ZONES_PANEL: "Corner zones",
             ZONES_ENABLE: "Densify at corners",
             ZONES_COUNT: "Count:",
-            ZONES_PITCH: "Pitch:",
+            ZONES_PITCH: "Spacing:",
             ZONES_FIRST: "— first",
-            ZONES_MARKS_PITCH: "marks, pitch",
-            TIP_ZONES: "First N marks from every corner use this pitch; the rest uses the edge/path spacing.",
+            ZONES_MARKS_PITCH: "marks, spacing",
+            TIP_ZONES: "First N marks from every corner use this spacing; the rest uses the edge/path spacing.",
             TIP_ZONES_NO_CORNERS: "The selected path has no corners — marks are distributed evenly along the whole perimeter.",
             TIP_ZONES_CORNERS_ONLY: "With Count selected on a path with corners, marks sit on the corners only and zones have nothing to densify. Choose Spacing to use zones.",
             TIP_COUNT_ZONES: "With corner zones on, the edge is filled by spacing and Count is not used.",
@@ -98,7 +104,7 @@ GM.L = (function () {
             TIP_SAVE_AS: "Save current settings as a new preset.",
             TIP_DELETE: "Delete the selected preset.",
             TIP_REVERT: "Discard unsaved changes and reload the selected preset.",
-            PROMPT_SAVE_AS: "Save current settings as new preset:",
+            PROMPT_SAVE_AS: "Name of the new preset:",
 
             // Buttons
             OK: "Generate",
@@ -117,22 +123,25 @@ GM.L = (function () {
             TIP_SAVE: "Save settings to the active preset.",
 
             // Errors
+            ERR_PREFIX: "ERROR: ",
+            DOC_UNCHANGED: "The document was not changed.",
             ERR_NO_DOC: "Open a document before running the script.",
             ERR_NO_EDGE: "At least one edge must be enabled.",
             ERR_NO_APPEARANCE: "Marks must have at least one shape — circle and/or cross.",
-            ERR_UNEXPECTED: "Unexpected error",
-            ERR_WRITE_SETTINGS: "Cannot write settings file.",
+            ERR_CRITICAL: "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer.",
+            ERR_WRITE_SETTINGS: "The settings could not be saved — next time the dialog opens without them.",
+            ERR_WRITE_SETTINGS_RUN: "The settings could not be saved — next time the dialog opens without them. The run continues.",
             WARN_MARKS_FAILED: "%s mark(s) could not be placed — check the target layer.",
             WARN_LAYER_UNHIDDEN: "The hidden layer \"%s\" was made visible so the new marks can be seen and printed.",
             WARN_DUPLICATE_MARKS: "New marks overlap marks already on the layer (count: %s) — probably a repeated run. Undo (Cmd+Z) reverts this run; for a new layout, delete the old marks and run the script again.",
             WARN_ALL_ARTBOARDS: "Marks were placed on every artboard in the document (count: %s).",
             WARN_PREFIX: "WARNING: ",
-            ERR_CANNOT_DELETE_DEFAULT: "Default preset cannot be deleted.",
-            ERR_ENTER_NAME: "Enter a name.",
-            ERR_RESERVED_NAME: "This name is reserved. Choose a different name.",
-            ERR_MUST_BE_NUMBER: "%s must be a number!",
-            ERR_MUST_BE_INTEGER: "%s must be a whole number!",
-            ERR_OUT_OF_RANGE: "%s must be between %s and %s!",
+            ERR_CANNOT_DELETE_DEFAULT: "The default preset cannot be deleted.",
+            ERR_ENTER_NAME: "Enter a preset name.",
+            ERR_RESERVED_NAME: "Names in square brackets are reserved. Choose another name.",
+            ERR_MUST_BE_NUMBER: "Field \"%s\" must be a number.",
+            ERR_MUST_BE_INTEGER: "Field \"%s\" must be a whole number.",
+            ERR_OUT_OF_RANGE: "Field \"%s\" must be between %s and %s.",
             ERR_PATH_NO_SELECTION: "Nothing is selected. Select one path and run the script again.",
             ERR_PATH_NOT_A_PATH: "The selection is not a single simple path. Pick a path inside a group with the Direct Selection tool (A), release a compound path (Object ▸ Compound Path ▸ Release), or keep one object selected.",
             ERR_PATH_TOO_SHORT: "The selected path has fewer than 2 points.",
@@ -145,7 +154,10 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboards",
             INFO_ALL_ARTBOARDS: "marks go on every one",
             INFO_SIZE: "%s × %s %s",
-            INFO_FALLBACK: "The preset wants a path, none is selected — marking the artboard.",
+            // Short on purpose: " · scale 1:N" widened the dialog by 32 px
+            // (docs/extendscript-engine-facts.md, measured 2026-10-21).
+            INFO_SCALE: " · 1:%s",
+            INFO_FALLBACK: "No path selected — marking the artboard.",
             INFO_CORNERS_1: "%s corner",
             INFO_CORNERS_2: "%s corners",
             INFO_CORNERS_5: "%s corners",
@@ -155,9 +167,9 @@ GM.L = (function () {
             INFO_ROUND_SHORT_1: "%s rounded",
             INFO_ROUND_SHORT_2: "%s rounded",
             INFO_ROUND_SHORT_5: "%s rounded",
-            INFO_TOP_START: "first mark at the top",
-            INFO_ON_PATH: "marks sit on the path",
-            DECIMAL_SEP: ".",
+            INFO_TOP_START: "starts at the top",
+            INFO_ON_PATH: "no offset",
+            DEC_SEP: ".",
             PATH_PARTIAL: "Selected part of the outline only",
             PATH_PARTIAL_COUNT: " (%s of %s segments)",
             TIP_PATH_OFFSET: "Distance of the mark centers from the cut line, inside the shape. 0 = marks sit on the path.",
@@ -169,9 +181,19 @@ GM.L = (function () {
             ERR_OFFSET_SPLIT: "The eyelet line breaks into several parts (%s) at a narrow point. Reduce the offset. The document was not changed.",
             ERR_OFFSET_FAILED: "Illustrator could not offset the path (%s). No marks were made.",
 
+            // Why Generate is grey — the placement line says it in the error colour
+            // (canon 12.3, 12.6). %s: a field's label without the colon, its limits,
+            // the unit with its space ("" for counts); the count of invalid fields.
+            REASON_MARK: "✗ ",
+            REASON_FIELD: "%s: enter a number from %s to %s%s.",
+            REASON_FIELD_INT: "%s: enter a whole number from %s to %s.",
+            REASON_MANY: "Invalid fields: %s — fix the red fields.",
+            REASON_NO_SHAPE: "The mark has no shape — turn on Circle or Cross.",
+            REASON_NO_EDGE: "No edge is turned on.",
+
             // Confirmations
-            CONFIRM_DELETE_PRESET: "Permanently delete preset \"%s\"?",
-            CONFIRM_OVERWRITE_PRESET: "Preset \"%s\" already exists. Replace?"
+            CONFIRM_DELETE_PRESET: "Delete preset \"%s\"? This cannot be undone.",
+            CONFIRM_OVERWRITE_PRESET: "Preset \"%s\" already exists. Replace it?"
         },
 
         cs: {
@@ -200,9 +222,9 @@ GM.L = (function () {
 
             // Edge fields
             COUNT: "Počet ok:",
-            SPACING: "Rozestup:",
+            SPACING: "Rozteč:",
             EDGE_COUNT_HDR: "Počet ok",
-            EDGE_SPACING_HDR: "Rozestup",
+            EDGE_SPACING_HDR: "Rozteč",
             OFFSET_LABEL: "Odsazení od kraje:",
             MIRROR_GROUP_LABEL: "Zrcadlit:",
             MIRROR_TOP: "horní ↓ dolní",
@@ -213,7 +235,7 @@ GM.L = (function () {
             // Mark panel
             MARK_PANEL: "Značka",
             UNIT_LABEL: "Jednotky:",
-            TIP_UNITS: "Jednotky pro odsazení, rozestupy a velikost značky. Tloušťky tahů jsou vždy v bodech.",
+            TIP_UNITS: "Jednotky pro odsazení, rozteče a velikost značky. Tloušťky tahů jsou vždy v bodech.",
             SIZE_LABEL: "Velikost:",
             MARK_SHAPE_LABEL: "Tvar:",
             MARK_CIRCLE: "Kruh",
@@ -229,6 +251,12 @@ GM.L = (function () {
             MODE_ARTBOARD: "Hrany artboardu",
             MODE_PATH: "Vybraná cesta",
 
+            // Měřítko kresby 1:N (spec 4) — hodnoty v dialogu jsou ve skutečné velikosti;
+            // dokument si měřítko pamatuje. SCALE_FIELD je název pole v důvodu.
+            SCALE_LABEL: "Měřítko kresby 1:",
+            TIP_SCALE: "V jakém měřítku je dokument nakreslený: 1:10 znamená, že grafika je desetkrát menší než ve skutečnosti. Dokument si ho zapamatuje. Hodnoty v dialogu se zadávají ve skutečné velikosti, včetně velikosti značky a tloušťky tahů.",
+            SCALE_FIELD: "Měřítko kresby",
+
             // Path panel
             PATH_PANEL: "Cesta",
             PATH_INFO_CLOSED: "Uzavřená cesta",
@@ -236,7 +264,7 @@ GM.L = (function () {
             PATH_INFO_NO_CORNERS: "bez rohů",
             PATH_INFO_LENGTH: "obvod ≈ %s %s",
             TIP_PATH_COUNT_DISABLED: "Na cestě s rohy je počet dán rohy — značky padnou jen na rohy.",
-            TIP_PATH_COUNT_PARTIAL: "U vybrané části obvodu se značky řídí rozestupem — počet by dal jen konce a rohy.",
+            TIP_PATH_COUNT_PARTIAL: "U vybrané části obvodu se značky řídí roztečí — počet by dal jen konce a rohy.",
 
             // Corner zones panel
             ZONES_PANEL: "Rohové zóny",
@@ -245,10 +273,10 @@ GM.L = (function () {
             ZONES_PITCH: "Rozteč:",
             ZONES_FIRST: "— prvních",
             ZONES_MARKS_PITCH: "značek, rozteč",
-            TIP_ZONES: "Prvních N značek od každého rohu dostane tuto rozteč; zbytek hrany nebo cesty se rozmístí podle rozestupu.",
+            TIP_ZONES: "Prvních N značek od každého rohu dostane tuto rozteč; zbytek hrany nebo cesty se rozmístí podle rozteče.",
             TIP_ZONES_NO_CORNERS: "Vybraná cesta nemá rohy — značky se rozmístí rovnoměrně po obvodu.",
-            TIP_ZONES_CORNERS_ONLY: "Když je na cestě s rohy zvolený Počet ok, leží značky jen v rozích a zóny nemají co zhustit. Pro zóny zvolte Rozestup.",
-            TIP_COUNT_ZONES: "Se zapnutými rohovými zónami se hrana plní podle rozestupu a Počet ok se nepoužije.",
+            TIP_ZONES_CORNERS_ONLY: "Když je na cestě s rohy zvolený Počet ok, leží značky jen v rozích a zóny nemají co zhustit. Pro zóny zvolte Rozteč.",
+            TIP_COUNT_ZONES: "Se zapnutými rohovými zónami se hrana plní podle rozteče a Počet ok se nepoužije.",
 
             // Settings panel
             SETTINGS_PANEL: "Předvolby",
@@ -259,7 +287,7 @@ GM.L = (function () {
             TIP_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu.",
             TIP_DELETE: "Smazat vybranou předvolbu.",
             TIP_REVERT: "Zahodit neuložené změny a znovu načíst předvolbu.",
-            PROMPT_SAVE_AS: "Uložit aktuální nastavení jako novou předvolbu:",
+            PROMPT_SAVE_AS: "Název nové předvolby:",
 
             // Buttons
             OK: "Generovat",
@@ -268,32 +296,35 @@ GM.L = (function () {
             // Tooltips
             TIP_OFFSET_X: "Vzdálenost středu značek od levého a pravého okraje artboardu",
             TIP_OFFSET_Y: "Vzdálenost středu značek od horního a dolního okraje artboardu",
-            TIP_COUNT: "Pevný počet značek na hraně (rozestup se dopočítá)",
+            TIP_COUNT: "Pevný počet značek na hraně (rozteč se dopočítá)",
             TIP_SPACING: "Preferovaná vzdálenost mezi středy značek (počet se dopočítá)",
             TIP_MIRROR_BOTTOM: "Použije stejné nastavení jako horní strana",
             TIP_MIRROR_RIGHT: "Použije stejné nastavení jako levá strana",
             TIP_SIZE: "Průměr kruhu a délka ramen kříže, v jednotkách nahoře.",
             TIP_EDGE_ENABLE: "Zapne/vypne umístění značek na tuto hranu",
-            TIP_PRESET_LOAD: "Vyberte uložené nastavení",
+            TIP_PRESET_LOAD: "Vyberte uloženou předvolbu",
             TIP_SAVE: "Uložit nastavení do aktivní předvolby.",
 
             // Errors
+            ERR_PREFIX: "CHYBA: ",
+            DOC_UNCHANGED: "Dokument nebyl změněn.",
             ERR_NO_DOC: "Před spuštěním skriptu otevřete dokument.",
             ERR_NO_EDGE: "Musí být zapnutá alespoň jedna hrana.",
             ERR_NO_APPEARANCE: "Značka musí mít aspoň jeden tvar — kruh a/nebo kříž.",
-            ERR_UNEXPECTED: "Neočekávaná chyba",
-            ERR_WRITE_SETTINGS: "Nelze zapsat soubor s nastavením.",
-            WARN_MARKS_FAILED: "%s značek se nepodařilo umístit — zkontrolujte cílovou vrstvu.",
-            WARN_LAYER_UNHIDDEN: "Skrytá vrstva \"%s\" byla zviditelněna, aby byly nové značky vidět a vytiskly se.",
+            ERR_CRITICAL: "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu.",
+            ERR_WRITE_SETTINGS: "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj.",
+            ERR_WRITE_SETTINGS_RUN: "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj. Běh pokračuje.",
+            WARN_MARKS_FAILED: "Značek, které se nepodařilo umístit: %s — zkontrolujte cílovou vrstvu.",
+            WARN_LAYER_UNHIDDEN: "Skrytá vrstva „%s“ byla zviditelněna, aby byly nové značky vidět a vytiskly se.",
             WARN_DUPLICATE_MARKS: "Nové značky se kryjí se značkami, které už ve vrstvě byly (počet: %s) — nejspíš opakovaný běh. Zpět (Cmd+Z) tento běh vrátí; pro nové rozmístění smažte staré značky a spusťte skript znovu.",
             WARN_ALL_ARTBOARDS: "Značky se vytvořily na všech artboardech dokumentu (počet: %s).",
             WARN_PREFIX: "UPOZORNĚNÍ: ",
-            ERR_CANNOT_DELETE_DEFAULT: "Výchozí nastavení nelze smazat.",
-            ERR_ENTER_NAME: "Zadejte název.",
-            ERR_RESERVED_NAME: "Tento název je rezervovaný. Vyberte jiný.",
-            ERR_MUST_BE_NUMBER: "%s musí být číslo!",
-            ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
-            ERR_OUT_OF_RANGE: "%s musí být mezi %s a %s!",
+            ERR_CANNOT_DELETE_DEFAULT: "Výchozí předvolbu nejde smazat.",
+            ERR_ENTER_NAME: "Zadejte název předvolby.",
+            ERR_RESERVED_NAME: "Názvy v hranatých závorkách jsou vyhrazené. Zvolte jiný název.",
+            ERR_MUST_BE_NUMBER: "Pole „%s“ musí být číslo.",
+            ERR_MUST_BE_INTEGER: "Pole „%s“ musí být celé číslo.",
+            ERR_OUT_OF_RANGE: "Pole „%s“ musí být mezi %s a %s.",
             ERR_PATH_NO_SELECTION: "Nic není vybráno. Vyberte jednu cestu a spusťte skript znovu.",
             ERR_PATH_NOT_A_PATH: "Výběr není jedna jednoduchá cesta. Cestu ze skupiny vyberte nástrojem Přímý výběr (A), složenou cestu rozdělte (Objekt ▸ Složená cesta ▸ Uvolnit), z více objektů nechte vybraný jeden.",
             ERR_PATH_TOO_SHORT: "Vybraná cesta má méně než 2 body.",
@@ -306,7 +337,10 @@ GM.L = (function () {
             INFO_ARTBOARDS_5: "%s artboardů",
             INFO_ALL_ARTBOARDS: "značky dostanou všechny",
             INFO_SIZE: "%s × %s %s",
-            INFO_FALLBACK: "Předvolba chce cestu, žádná není vybraná — značí se artboard.",
+            // Schválně krátké: „ · měřítko 1:N“ rozšířilo dialog o 48 px
+            // (docs/extendscript-engine-facts.md, naměřeno 2026-10-21).
+            INFO_SCALE: " · 1:%s",
+            INFO_FALLBACK: "Cesta není vybraná — značí se artboard.",
             INFO_CORNERS_1: "%s roh",
             INFO_CORNERS_2: "%s rohy",
             INFO_CORNERS_5: "%s rohů",
@@ -316,9 +350,9 @@ GM.L = (function () {
             INFO_ROUND_SHORT_1: "%s zaoblený",
             INFO_ROUND_SHORT_2: "%s zaoblené",
             INFO_ROUND_SHORT_5: "%s zaoblených",
-            INFO_TOP_START: "první značka nahoře",
-            INFO_ON_PATH: "značky leží na cestě",
-            DECIMAL_SEP: ",",
+            INFO_TOP_START: "začátek nahoře",
+            INFO_ON_PATH: "bez odsazení",
+            DEC_SEP: ",",
             PATH_PARTIAL: "Jen vybraná část obvodu",
             PATH_PARTIAL_COUNT: " (%s z %s úseků)",
             TIP_PATH_OFFSET: "Vzdálenost středu značek od řezové linky, dovnitř tvaru. 0 = značky leží přímo na cestě.",
@@ -330,9 +364,19 @@ GM.L = (function () {
             ERR_OFFSET_SPLIT: "Linka ok se v úzkém místě rozpadá na víc částí (%s). Zmenšete odsazení. Dokument nebyl změněn.",
             ERR_OFFSET_FAILED: "Illustrator nedokázal cestu odsadit (%s). Žádná značka nevznikla.",
 
+            // Proč je Generovat šedé — řádek v panelu Umístění to říká barvou chyby
+            // (kánon 12.3, 12.6). %s: popisek pole bez dvojtečky, meze, jednotka
+            // s mezerou ("" u počtů); počet neplatných polí.
+            REASON_MARK: "✗ ",
+            REASON_FIELD: "%s: zadejte číslo od %s do %s%s.",
+            REASON_FIELD_INT: "%s: zadejte celé číslo od %s do %s.",
+            REASON_MANY: "Neplatná pole: %s — opravte červená pole.",
+            REASON_NO_SHAPE: "Značka nemá tvar — zapněte Kruh nebo Kříž.",
+            REASON_NO_EDGE: "Není zapnutá žádná hrana.",
+
             // Confirmations
-            CONFIRM_DELETE_PRESET: "Trvale smazat nastavení \"%s\"?",
-            CONFIRM_OVERWRITE_PRESET: "Nastavení \"%s\" již existuje. Nahradit?"
+            CONFIRM_DELETE_PRESET: "Smazat předvolbu „%s“? Smazání nejde vrátit.",
+            CONFIRM_OVERWRITE_PRESET: "Předvolba „%s“ už existuje. Přepsat?"
         }
     };
 

@@ -5,7 +5,12 @@
 // Pure validation logic decoupled from ScriptUI. Numeric checks use
 // a shared validateNumber helper. Can be tested in Node without Illustrator.
 //
-// Depends on: GM.L (error messages)
+// Depends on: GM.L (error messages), GM.Utils (error: the alert with its
+// prefix; deepCopy), GM.Config (getDefaults: what storable() falls back to),
+// GM.CONSTANTS (the units), GM.Core (convertVal, round: the fallback lengths
+// in the preset's unit), GM.Numbers (shared/lib/numbers.js: reads the
+// field text — one converter for the dialog fields, live validation,
+// validate() and storable())
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -22,46 +27,112 @@ GM.Validation = {
         cornerPitch:  { min: 0.01, max: 9999, integer: false },
         pathNumber:   { min: 1,    max: 9999, integer: true  },
         pathSpacing:  { min: 0.01, max: 9999, integer: false },
-        pathOffset:   { min: 0,    max: 9999, integer: false }
+        pathOffset:   { min: 0,    max: 9999, integer: false },
+        // The drawing scale 1:N is the document's, not a setting: it is no part
+        // of the configuration, so validate() does not see it — the dialog
+        // checks it live and GM.Main.run() checks it once more (spec 4.3).
+        drawingScale: { min: 1,    max: 100,  integer: false }
     },
 
     /**
-     * Reads a number the way the operator typed it: surrounding spaces are
-     * ignored, the decimal separator may be a comma or a dot. Anything else
-     * ("1O5", "1 000", "10.5.2", an empty field) is NaN — never the number
-     * its first digits spell, which parseFloat would silently return.
-     * Shared by the dialog fields, live validation and validate().
-     * @param {string|number} val - Raw field value.
-     * @returns {number} The number, or NaN.
+     * A refusal of validate(): the error alert and, at its end, what happened
+     * to the document — nothing, the values are checked before anything is
+     * drawn (canon 12.2). The one place that sentence is added.
+     * @param {Object} L - Locale object (GM.L).
+     * @param {string} msg - What is wrong.
      */
-    parseNumber: function (val) {
-        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
-        return (str === "") ? NaN : Number(str);
+    refuse: function (L, msg) {
+        GM.Utils.error(msg + " " + (L.DOC_UNCHANGED || "The document was not changed."));
     },
 
     /**
      * Validates a numeric value against a rule.
      * @param {string|number} val - Raw value.
      * @param {Object} rule - {min, max, integer}.
-     * @param {string} label - Display name for error messages.
+     * @param {string} label - The field's label ("Offset X:"); the message
+     *     names the field, so the label's colon is dropped.
      * @param {Object} L - Locale object (GM.L).
      * @returns {number|null} Parsed number or null if invalid.
      */
     validateNumber: function (val, rule, label, L) {
-        var n = GM.Validation.parseNumber(val);
+        var n = GM.Numbers.parse(val);
+        var name = String(label).replace(/\s*:\s*$/, "");
         if (isNaN(n)) {
-            alert(L.format(L.ERR_MUST_BE_NUMBER || "%s must be a number!", label));
+            GM.Validation.refuse(L, L.format(L.ERR_MUST_BE_NUMBER || "Field \"%s\" must be a number.", name));
             return null;
         }
         if (rule.integer && n !== Math.floor(n)) {
-            alert(L.format(L.ERR_MUST_BE_INTEGER || "%s must be a whole number!", label));
+            GM.Validation.refuse(L, L.format(L.ERR_MUST_BE_INTEGER || "Field \"%s\" must be a whole number.", name));
             return null;
         }
         if (n < rule.min || n > rule.max) {
-            alert(L.format(L.ERR_OUT_OF_RANGE || "%s must be between %s and %s!", label, rule.min, rule.max));
+            // The limits are written the way the fields are (Czech: "0,01").
+            GM.Validation.refuse(L, L.format(L.ERR_OUT_OF_RANGE || "Field \"%s\" must be between %s and %s.", name,
+                GM.Numbers.format(rule.min, L.DEC_SEP), GM.Numbers.format(rule.max, L.DEC_SEP)));
             return null;
         }
         return n;
+    },
+
+    /**
+     * The configuration as a preset may hold it: every numeric field is a
+     * number its rule accepts, or that field's default from the code. A preset
+     * never stores what the next opening cannot read — a typo, NaN (null after
+     * JSON) or a value outside the rule — and that includes the fields a run
+     * does not check (the other placement mode, a disabled edge, zones off).
+     * Values that are already numbers are not read as text: String(1e-7) is
+     * "1e-7", which the field grammar refuses.
+     * The defaults are written in millimetres, a preset in its own unit
+     * (cfg.units): a length that falls back is converted to that unit, rounded
+     * the way the dialog's unit switch rounds, so 105 mm is stored as 10,5 in a
+     * cm preset and not as 105 cm. Strokes are points and counts are no length:
+     * not converted. A missing or unknown unit counts as millimetres.
+     * @param {Object} cfg - Raw config from gatherAll(); not changed.
+     * @returns {Object} A copy of cfg with usable numbers.
+     */
+    storable: function (cfg) {
+        var rules = GM.Validation.rules;
+        var dflt = GM.Config.getDefaults();
+        var out = GM.Utils.deepCopy(cfg);
+
+        var UNIT = GM.CONSTANTS.UNIT;
+        var unit = (typeof cfg.units === "string" && GM.CONSTANTS.UNIT_FACTORS.hasOwnProperty(cfg.units))
+            ? cfg.units : UNIT.MM;
+        /** A default length (millimetres in the code) in the preset's unit. */
+        function dfltLen(mm) {
+            return GM.Core.round(GM.Core.convertVal(mm, UNIT.MM, unit));
+        }
+
+        function usable(val, rule, fallback) {
+            var n = (typeof val === "number") ? val : GM.Numbers.parse(val);
+            if (!isFinite(n)) return fallback;
+            if (rule.integer && n !== Math.floor(n)) return fallback;
+            return (n >= rule.min && n <= rule.max) ? n : fallback;
+        }
+
+        out.offsetX = usable(cfg.offsetX, rules.offsetX, dfltLen(dflt.offsetX));
+        out.offsetY = usable(cfg.offsetY, rules.offsetY, dfltLen(dflt.offsetY));
+        out.markSize = usable(cfg.markSize, rules.markSize, dfltLen(dflt.markSize));
+        out.regWeight = usable(cfg.regWeight, rules.regWeight, dflt.regWeight);
+        out.haloWeight = usable(cfg.haloWeight, rules.haloWeight, dflt.haloWeight);
+        out.pathOffset = usable(cfg.pathOffset, rules.pathOffset, dfltLen(dflt.pathOffset));
+
+        var edgeKeys = ["top", "left", "bottom", "right"];
+        for (var i = 0; i < edgeKeys.length; i++) {
+            var k = edgeKeys[i];
+            if (!cfg[k]) continue;
+            out[k].number = usable(cfg[k].number, rules.edgeCount, dflt[k].number);
+            out[k].spacing = usable(cfg[k].spacing, rules.edgeSpacing, dfltLen(dflt[k].spacing));
+        }
+        if (cfg.cornerZone) {
+            out.cornerZone.count = usable(cfg.cornerZone.count, rules.cornerCount, dflt.cornerZone.count);
+            out.cornerZone.pitch = usable(cfg.cornerZone.pitch, rules.cornerPitch, dfltLen(dflt.cornerZone.pitch));
+        }
+        if (cfg.pathDist) {
+            out.pathDist.number = usable(cfg.pathDist.number, rules.pathNumber, dflt.pathDist.number);
+            out.pathDist.spacing = usable(cfg.pathDist.spacing, rules.pathSpacing, dfltLen(dflt.pathDist.spacing));
+        }
+        return out;
     },
 
     /**
@@ -77,11 +148,22 @@ GM.Validation = {
         var rules = GM.Validation.rules;
         var vn = GM.Validation.validateNumber;
 
-        var offsetX = vn(cfg.offsetX, rules.offsetX, L.OFFSET_X || "Offset X", L);
-        if (offsetX === null) return { valid: false, settings: null };
+        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
 
-        var offsetY = vn(cfg.offsetY, rules.offsetY, L.OFFSET_Y || "Offset Y", L);
-        if (offsetY === null) return { valid: false, settings: null };
+        // Offset X / Y are the Edges panel's: in path mode the dialog hides
+        // them, the live check skips them and the run does not use them (only
+        // its fallback to Edges, when the selection is gone, reads what
+        // storable() made of them), so a refusal would name a field nobody can
+        // see (ruling R16). What is left in them is stored as storable() makes
+        // it, like any other hidden field.
+        var offsetX, offsetY;
+        if (!isPathMode) {
+            offsetX = vn(cfg.offsetX, rules.offsetX, L.OFFSET_X || "Offset X", L);
+            if (offsetX === null) return { valid: false, settings: null };
+
+            offsetY = vn(cfg.offsetY, rules.offsetY, L.OFFSET_Y || "Offset Y", L);
+            if (offsetY === null) return { valid: false, settings: null };
+        }
 
         var markSize = vn(cfg.markSize, rules.markSize, L.SIZE_LABEL || "Mark size", L);
         if (markSize === null) return { valid: false, settings: null };
@@ -92,7 +174,7 @@ GM.Validation = {
         if (zone.enabled) {
             zoneCount = vn(zone.count, rules.cornerCount, L.ZONES_COUNT || "Count", L);
             if (zoneCount === null) return { valid: false, settings: null };
-            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Pitch", L);
+            zonePitch = vn(zone.pitch, rules.cornerPitch, L.ZONES_PITCH || "Spacing", L);
             if (zonePitch === null) return { valid: false, settings: null };
         }
 
@@ -102,11 +184,10 @@ GM.Validation = {
         var haloWeight = vn(cfg.haloWeight, rules.haloWeight, L.HALO_WEIGHT || "Halo", L);
         if (haloWeight === null) return { valid: false, settings: null };
         if (!cfg.markCircle && !cfg.markCross) {
-            alert(L.ERR_NO_APPEARANCE);
+            GM.Validation.refuse(L, L.ERR_NO_APPEARANCE);
             return { valid: false, settings: null };
         }
 
-        var isPathMode = (cfg.placementMode === GM.CONSTANTS.MODE_PATH);
         var pathNumber = cfg.pathDist ? cfg.pathDist.number : 0;
         var pathSpacing = cfg.pathDist ? cfg.pathDist.spacing : 0;
         if (isPathMode) {
@@ -128,7 +209,7 @@ GM.Validation = {
             var bottomOn = cfg.bottomMirror ? topOn : cfg.bottom.enabled;
             var rightOn = cfg.rightMirror ? leftOn : cfg.right.enabled;
             if (!topOn && !leftOn && !bottomOn && !rightOn) {
-                alert(L.ERR_NO_EDGE);
+                GM.Validation.refuse(L, L.ERR_NO_EDGE);
                 return { valid: false, settings: null };
             }
 
@@ -152,10 +233,13 @@ GM.Validation = {
             }
         }
 
-        // Build clean settings (parsed numbers replace raw strings)
-        var settings = GM.Utils.deepCopy(cfg);
-        settings.offsetX = offsetX;
-        settings.offsetY = offsetY;
+        // Build clean settings: storable() makes every number usable (the
+        // fields not checked above included), then the validated values.
+        var settings = GM.Validation.storable(cfg);
+        if (!isPathMode) {
+            settings.offsetX = offsetX;
+            settings.offsetY = offsetY;
+        }
         settings.markSize = markSize;
         settings.regWeight = regWeight;
         settings.haloWeight = haloWeight;
@@ -167,12 +251,6 @@ GM.Validation = {
             if (cfg.pathDist.useNumber) settings.pathDist.number = pathNumber;
             else settings.pathDist.spacing = pathSpacing;
             settings.pathOffset = pathOffset;
-        } else {
-            // Not checked outside path mode, but it is stored with the preset:
-            // a typo or NaN (null after JSON) there must not come back as a
-            // field that cannot be fixed. Anything unusable is stored as 0.
-            var storedOffset = GM.Validation.parseNumber(cfg.pathOffset);
-            settings.pathOffset = (isFinite(storedOffset) && storedOffset >= 0) ? storedOffset : 0;
         }
 
         return { valid: true, settings: settings };

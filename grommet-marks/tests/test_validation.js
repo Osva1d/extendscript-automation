@@ -14,28 +14,29 @@ var GM = {};
 var lastAlert = null;
 global.alert = function (m) { lastAlert = m; };
 
-// Locale stub with the formatter + keys the validator references
-var L = {
-    format: function (t) {
-        var a = [], i;
-        for (i = 1; i < arguments.length; i++) a.push(arguments[i]);
-        var idx = 0;
-        return t.replace(/%s/g, function () { return idx < a.length ? a[idx++] : "%s"; });
-    },
-    ERR_MUST_BE_NUMBER:  "%s must be a number!",
-    ERR_MUST_BE_INTEGER: "%s must be a whole number!",
-    ERR_OUT_OF_RANGE:    "%s must be between %s and %s!",
-    ERR_NO_APPEARANCE:   "Marks must have at least one shape — circle and/or cross.",
-    ERR_NO_EDGE:         "At least one edge must be enabled.",
-    OFFSET_X: "Offset X", OFFSET_Y: "Offset Y", SIZE_LABEL: "Size",
-    WEIGHT: "Weight", COUNT: "Count", SPACING: "Spacing"
-};
+// The real locale: the texts the operator reads, in both languages. Alerts
+// go through GM.Utils.error, which reads GM.L, so the suite's GM.L is the
+// English table and the Czech one is swapped in where a test needs it.
+global.app = { locale: "en_US" };
+function tableFor(locale) {
+    var saved = global.app.locale;
+    global.app.locale = locale;
+    var table = new Function("GM", fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8") +
+        "\nreturn GM.L;")({});
+    global.app.locale = saved;
+    return table;
+}
 
 // ===== LOAD PRODUCTION CODE =====
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "core.js"), "utf8"));   // storable() converts its fallbacks (GM.Core.convertVal)
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
+var L = GM.L;
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
+// Field text is read by the shared GM.Numbers (the family grammar).
+require("./lib/load_shared.js")(GM, ["numbers"]);
 
 // ===== TEST FRAMEWORK =====
 var pass = 0, fail = 0, total = 0;
@@ -99,7 +100,7 @@ console.log("--- Validation.validate: invalid ---");
     var noApp = validCfg({ markCircle: false, markCross: false });
     lastAlert = null;
     assert(GM.Validation.validate(noApp, L).valid === false, "no circle/cross → invalid");
-    assert(lastAlert === L.ERR_NO_APPEARANCE, "no-appearance alert shown");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_APPEARANCE + " " + L.DOC_UNCHANGED, "no-appearance alert shown (got " + lastAlert + ")");
 
     // no edges (top+left off, both mirrored)
     var noEdge = validCfg({
@@ -109,7 +110,7 @@ console.log("--- Validation.validate: invalid ---");
     });
     lastAlert = null;
     assert(GM.Validation.validate(noEdge, L).valid === false, "no enabled edges → invalid");
-    assert(lastAlert === L.ERR_NO_EDGE, "no-edge alert shown");
+    assert(lastAlert === L.ERR_PREFIX + L.ERR_NO_EDGE + " " + L.DOC_UNCHANGED, "no-edge alert shown (got " + lastAlert + ")");
 
     // non-mirrored enabled edge with bad count
     var badCount = validCfg({
@@ -257,23 +258,43 @@ console.log("--- Validation v6: shape requirement + weights ---");
     assert(ok.valid === true && ok.settings.regWeight === 1.0, "defaults valid, regWeight parsed");
 })();
 
-// ===== TEST: strict number parsing (audit A9) =====
+// ===== TEST: strict number parsing (audit A9, spec 6.1) =====
 // parseFloat read the digits at the start and dropped the rest: "1O5" became
-// 1, "1 000" became 1, and the field looked valid. A typo must be NaN.
-console.log("--- Validation.parseNumber: typos are not numbers (audit A9) ---");
+// 1, "1 000" became 1, and the field looked valid. A typo must be invalid.
+// Since 1.4.0 the grammar is the shared GM.Numbers.parse (the family's): a
+// comma or a dot, spaces around — and "1e3", ".5", "0x10", which Number()
+// used to read as numbers, are typos as well.
+console.log("--- Validation: typos are not numbers (audit A9, spec 6.1) ---");
 (function () {
-    var P = GM.Validation.parseNumber;
-    assert(typeof P === "function", "parseNumber exists");
-    if (typeof P !== "function") return;
-    var bad = ["1O5", "1 000", "10.5.2", "5o", "", "   ", "abc", "null"];
-    for (var i = 0; i < bad.length; i++) {
-        assert(isNaN(P(bad[i])), "'" + bad[i] + "' is not a number (got " + P(bad[i]) + ")");
+    assert(GM.Validation.parseNumber === undefined,
+        "GM.Validation.parseNumber is gone: one converter, GM.Numbers.parse");
+
+    var bad = ["1O5", "1 000", "10.5.2", "5o", "", "   ", "abc", "null",
+               "1e3", ".5", "0x10", "20 mm"];
+    var i, r;
+    for (i = 0; i < bad.length; i++) {
+        lastAlert = null;
+        assert(GM.Validation.validateNumber(bad[i], R.markSize, "S", L) === null,
+            "validateNumber: '" + bad[i] + "' is not a number");
+        assert(lastAlert !== null, "validateNumber: '" + bad[i] + "' raises the alert");
+        r = GM.Validation.validate(validCfg({ markSize: bad[i] }), L);
+        assert(r.valid === false && r.settings === null,
+            "validate: markSize '" + bad[i] + "' is invalid (was " + (r.valid ? "accepted" : "refused") + ")");
     }
-    assert(P("12,5") === 12.5, "decimal comma");
-    assert(P("12.5") === 12.5, "decimal dot");
-    assert(P(" 7 ") === 7, "surrounding spaces ignored");
-    assert(P(7) === 7, "numbers pass through");
-    assert(P("0") === 0, "zero is a number (range rules decide)");
+    var fields = ["offsetX", "offsetY", "regWeight", "haloWeight"];
+    for (i = 0; i < fields.length; i++) {
+        var over = {}; over[fields[i]] = "1e3";
+        assert(GM.Validation.validate(validCfg(over), L).valid === false, fields[i] + " '1e3' is invalid");
+    }
+
+    var good = [["2,5", 2.5], [" 3 ", 3], ["2.5", 2.5], ["12,5", 12.5], ["7", 7], [7, 7]];
+    for (i = 0; i < good.length; i++) {
+        r = GM.Validation.validate(validCfg({ markSize: good[i][0] }), L);
+        assert(r.valid === true && r.settings.markSize === good[i][1],
+            "validate: markSize " + JSON.stringify(good[i][0]) + " is " + good[i][1]);
+    }
+    assert(GM.Validation.validateNumber("0", { min: 0, max: 10, integer: false }, "X", L) === 0,
+        "zero is a number (range rules decide)");
 })();
 
 // ===== TEST: corner zones fill edges by spacing (review G3) =====
@@ -307,6 +328,53 @@ console.log("--- validate: path offset ---");
     assert(GM.Validation.validate(cfg, L).valid === true, "artboard mode ignores the path offset");
 })();
 
+// Ruling R16 (final review, M3). Offset X / Y belong to the Edges panel: in path
+// mode the dialog hides them, live validation does not look at them, and the run
+// does not use them (the only artboard run in path mode is the defensive fallback
+// when the selection is gone, which uses what storable() made of them). validate()
+// must not refuse the run for a field the operator cannot see.
+console.log("--- validate: Offset X / Y are checked in Edges mode only (ruling R16) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    var bad = ["abc", "", "-1", "99999", "1e3", null, NaN];
+    for (var i = 0; i < bad.length; i++) {
+        var pm = validCfg({ offsetX: bad[i], offsetY: bad[i] });
+        pm.placementMode = "path";
+        lastAlert = null;
+        var r = GM.Validation.validate(pm, L);
+        assert(r.valid === true && lastAlert === null,
+            "path mode, Offset X/Y " + String(bad[i]) + ": the run is not refused (alert: " + lastAlert + ")");
+        assert(r.valid && r.settings.offsetX === D.offsetX && r.settings.offsetY === D.offsetY,
+            "...and it is stored as the default (got " + (r.settings && r.settings.offsetX) + ", " + (r.settings && r.settings.offsetY) + ")");
+
+        var ab = validCfg({ offsetX: bad[i], offsetY: 7 });
+        ab.placementMode = "artboard";
+        lastAlert = null;
+        assert(GM.Validation.validate(ab, L).valid === false && lastAlert !== null,
+            "Edges mode, Offset X " + String(bad[i]) + ": refused as before");
+        var ab2 = validCfg({ offsetX: 7, offsetY: bad[i] });
+        ab2.placementMode = "artboard";
+        lastAlert = null;
+        assert(GM.Validation.validate(ab2, L).valid === false && lastAlert !== null,
+            "Edges mode, Offset Y " + String(bad[i]) + ": refused as before");
+    }
+    // Good values in path mode are still read (storable), the field is simply not a reason to refuse
+    var good = validCfg({ offsetX: "12,5", offsetY: " 8 " });
+    good.placementMode = "path";
+    var rg = GM.Validation.validate(good, L);
+    assert(rg.valid === true && rg.settings.offsetX === 12.5 && rg.settings.offsetY === 8, "path mode: good Offset X/Y are stored parsed");
+    // The order of the refusals in Edges mode is unchanged: Offset X before Offset Y before Mark size
+    var both = validCfg({ offsetX: "abc", offsetY: "abc", markSize: "abc" });
+    lastAlert = null;
+    GM.Validation.validate(both, L);
+    assert(lastAlert !== null && lastAlert.indexOf(L.OFFSET_X.replace(/\s*:\s*$/, "")) >= 0, "Edges mode: the first refusal names Offset X (got '" + lastAlert + "')");
+    // A cm preset with junk in a hidden Offset X stores the default in cm
+    var cm = validCfg({ units: "cm", offsetX: "abc", offsetY: "abc", markSize: "0,3" });
+    cm.placementMode = "path";
+    var rc = GM.Validation.validate(cm, L);
+    assert(rc.valid === true && Math.abs(rc.settings.offsetX - 0.7) < 1e-9, "path mode, cm: the hidden junk is stored as 0.7 cm, not 7 (got " + (rc.settings && rc.settings.offsetX) + ")");
+})();
+
 console.log("--- validate: an invalid path offset never reaches the stored settings (final review I2) ---");
 (function () {
     // Outside path mode the field is not checked, so a typo (or NaN, which JSON
@@ -335,6 +403,334 @@ console.log("--- validate: an invalid path offset never reaches the stored setti
     pm.pathOffset = null;
     lastAlert = null;
     assert(GM.Validation.validate(pm, L).valid === false && lastAlert !== null, "path mode: a null offset is still rejected");
+})();
+
+// ===== TEST: storable — what a preset may hold (spec 6.4, 7) =====
+// Every numeric field is a number the rules accept, or the field's default from
+// the code: a preset never stores what the next opening cannot read. Fields
+// the run does not check (the other mode, a disabled edge) are covered too.
+console.log("--- Validation.storable: every number field is read, the unusable ones become defaults (spec 6.4) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+
+    // Good values: parsed (comma, spaces, strings), numbers kept
+    var cfg = validCfg();
+    cfg.offsetX = "12,5"; cfg.offsetY = " 8 "; cfg.markSize = 2.5;
+    cfg.regWeight = "0.5"; cfg.haloWeight = "4";
+    cfg.top = { enabled: true, useNumber: true, number: "12", spacing: "99,5" };
+    cfg.cornerZone = { enabled: false, count: "7", pitch: "50" };
+    cfg.pathDist = { useNumber: false, number: "30", spacing: "88,5" };
+    cfg.pathOffset = "3,5";
+    var s = GM.Validation.storable(cfg);
+    assert(s.offsetX === 12.5 && s.offsetY === 8 && s.markSize === 2.5, "offsets and size parsed (got " + s.offsetX + ", " + s.offsetY + ", " + s.markSize + ")");
+    assert(s.regWeight === 0.5 && s.haloWeight === 4, "weights parsed");
+    assert(s.top.number === 12 && s.top.spacing === 99.5, "edge count and spacing parsed");
+    assert(s.cornerZone.count === 7 && s.cornerZone.pitch === 50, "zone count and pitch parsed");
+    assert(s.pathDist.number === 30 && s.pathDist.spacing === 88.5, "path count and spacing parsed");
+    assert(s.pathOffset === 3.5, "path offset parsed");
+    assert(typeof cfg.offsetX === "string" && cfg.top.number === "12", "the argument is not touched");
+
+    // Each rule falls back to its own default: unreadable, out of range, fractional count
+    var cases = [
+        ["offsetX",   function (c, v) { c.offsetX = v; },               function (r) { return r.offsetX; },            D.offsetX,        ["abc", "", -1, 10000, NaN, null, undefined, Infinity]],
+        ["offsetY",   function (c, v) { c.offsetY = v; },               function (r) { return r.offsetY; },            D.offsetY,        ["1O5", 99999]],
+        ["markSize",  function (c, v) { c.markSize = v; },              function (r) { return r.markSize; },           D.markSize,       ["abc", 0, 0.001, 10000]],
+        ["regWeight", function (c, v) { c.regWeight = v; },             function (r) { return r.regWeight; },          D.regWeight,      ["abc", 0, 51]],
+        ["haloWeight", function (c, v) { c.haloWeight = v; },           function (r) { return r.haloWeight; },         D.haloWeight,     ["abc", 0.05, 51]],
+        ["top.number", function (c, v) { c.top.number = v; },           function (r) { return r.top.number; },         D.top.number,     ["abc", 0, 10000, 10.5]],
+        ["left.spacing", function (c, v) { c.left.spacing = v; },       function (r) { return r.left.spacing; },       D.left.spacing,   ["abc", 0, 10000]],
+        ["bottom.number", function (c, v) { c.bottom.number = v; },     function (r) { return r.bottom.number; },      D.bottom.number,  ["1 000"]],
+        ["right.spacing", function (c, v) { c.right.spacing = v; },     function (r) { return r.right.spacing; },      D.right.spacing,  ["1e3"]],
+        ["cornerZone.count", function (c, v) { c.cornerZone.count = v; }, function (r) { return r.cornerZone.count; }, D.cornerZone.count, ["abc", 0, 1000, 2.5]],
+        ["cornerZone.pitch", function (c, v) { c.cornerZone.pitch = v; }, function (r) { return r.cornerZone.pitch; }, D.cornerZone.pitch, ["abc", 0]],
+        ["pathDist.number", function (c, v) { c.pathDist.number = v; }, function (r) { return r.pathDist.number; },     D.pathDist.number, ["abc", 0, 3.5]],
+        ["pathDist.spacing", function (c, v) { c.pathDist.spacing = v; }, function (r) { return r.pathDist.spacing; }, D.pathDist.spacing, ["abc", 0]],
+        ["pathOffset", function (c, v) { c.pathOffset = v; },           function (r) { return r.pathOffset; },         D.pathOffset,     ["abc", -1, 99999, NaN, null]]
+    ];
+    for (var i = 0; i < cases.length; i++) {
+        var name = cases[i][0], set = cases[i][1], get = cases[i][2], dflt = cases[i][3], bad = cases[i][4];
+        for (var j = 0; j < bad.length; j++) {
+            var c = validCfg();
+            set(c, bad[j]);
+            var got = get(GM.Validation.storable(c));
+            assert(got === dflt, name + " " + String(bad[j]) + " -> the default " + dflt + " (got " + got + ")");
+        }
+    }
+
+    // A value that is already a number is not read as text: String(1e-7) is "1e-7",
+    // which the field grammar refuses, but 1e-7 is a good Offset X (min 0).
+    var tiny = validCfg({ offsetX: 1e-7, pathOffset: 1e-7 });
+    var st = GM.Validation.storable(tiny);
+    assert(st.offsetX === 1e-7 && st.pathOffset === 1e-7, "a tiny number stays (got " + st.offsetX + ", " + st.pathOffset + ")");
+
+    // Nothing but numbers changes; the result survives JSON
+    var cfg2 = validCfg({ units: "cm", markSize: "abc" });
+    cfg2.markLayerName = "L"; cfg2.placementMode = "path";
+    var s2 = GM.Validation.storable(cfg2);
+    assert(s2.units === "cm" && s2.markLayerName === "L" && s2.placementMode === "path" &&
+           s2.markCircle === true && s2.bottomMirror === true && s2.top.enabled === true && s2.top.useNumber === true,
+           "text, flags and edge switches are copied unchanged");
+    assert(JSON.stringify(GM.Validation.storable(validCfg({ offsetX: NaN, markSize: NaN }))).indexOf("null") < 0,
+        "no null after JSON (NaN is what JSON turns into null)");
+
+    // A cfg without the sub-objects does not throw
+    var thin = { offsetX: "5", markSize: "abc" };
+    var rt = null, threw = false;
+    try { rt = GM.Validation.storable(thin); } catch (e) { threw = true; }
+    assert(!threw && rt.offsetX === 5 && rt.markSize === D.markSize && rt.regWeight === D.regWeight,
+        "a thin cfg is read too: missing fields take the defaults");
+})();
+
+// The fallbacks are factory defaults, written in mm. A preset in cm or in is
+// stored in its own unit, so a length that falls back must be converted: 105
+// stored as 105 cm would be 1050 mm on the next opening (review 2026-10-21, I1).
+console.log("--- Validation.storable: a length falls back in the preset's unit (review I1) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    var MM_PER = { cm: 10, "in": 25.4 };
+    // Every length field with junk in it; the strokes and the counts stay as they are
+    function junk(units) {
+        var c = validCfg({ units: units });
+        c.offsetX = "x"; c.offsetY = "x"; c.markSize = "x"; c.pathOffset = "x";
+        c.regWeight = "x"; c.haloWeight = "x";
+        c.top = { enabled: true, useNumber: true, number: "x", spacing: "x" };
+        c.left = { enabled: true, useNumber: true, number: "x", spacing: "x" };
+        c.bottom = { enabled: false, useNumber: true, number: "x", spacing: "x" };
+        c.right = { enabled: false, useNumber: true, number: "x", spacing: "x" };
+        c.cornerZone = { enabled: false, count: "x", pitch: "x" };
+        c.pathDist = { useNumber: false, number: "x", spacing: "x" };
+        return c;
+    }
+    function near(a, b) { return Math.abs(a - b) < 1e-6; }   // GM.Core.round keeps six decimals
+    function lengths(s) {
+        return [["offsetX", s.offsetX, D.offsetX], ["offsetY", s.offsetY, D.offsetY], ["markSize", s.markSize, D.markSize],
+            ["pathOffset", s.pathOffset, D.pathOffset], ["top.spacing", s.top.spacing, D.top.spacing],
+            ["left.spacing", s.left.spacing, D.left.spacing], ["bottom.spacing", s.bottom.spacing, D.bottom.spacing],
+            ["right.spacing", s.right.spacing, D.right.spacing], ["cornerZone.pitch", s.cornerZone.pitch, D.cornerZone.pitch],
+            ["pathDist.spacing", s.pathDist.spacing, D.pathDist.spacing]];
+    }
+    for (var u in MM_PER) {
+        if (!MM_PER.hasOwnProperty(u)) continue;
+        var s = GM.Validation.storable(junk(u));
+        var rows = lengths(s);
+        for (var i = 0; i < rows.length; i++) {
+            assert(near(rows[i][1], rows[i][2] / MM_PER[u]),
+                u + ": " + rows[i][0] + " falls back to the default in " + u + " (" + (rows[i][2] / MM_PER[u]) + "), got " + rows[i][1]);
+        }
+        assert(s.regWeight === D.regWeight && s.haloWeight === D.haloWeight,
+            u + ": the strokes are points, not converted (got " + s.regWeight + ", " + s.haloWeight + ")");
+        assert(s.top.number === D.top.number && s.cornerZone.count === D.cornerZone.count && s.pathDist.number === D.pathDist.number,
+            u + ": the counts are not lengths, not converted");
+        assert(s.units === u, u + ": the unit itself is untouched");
+    }
+    // The case that was found: 105 mm is 10,5 cm (not 105 cm) and 4,133858 in
+    var cm = GM.Validation.storable(junk("cm"));
+    assert(cm.pathDist.spacing === 10.5 && cm.top.spacing === 10.5, "cm: 105 mm is stored as 10.5 (got " + cm.pathDist.spacing + ")");
+    assert(cm.cornerZone.pitch === 10, "cm: the zone pitch 100 mm is 10 (got " + cm.cornerZone.pitch + ")");
+    var inch = GM.Validation.storable(junk("in"));
+    assert(inch.pathDist.spacing === GM.Core.round(105 / 25.4), "in: 105 mm is rounded the way the unit switch rounds (got " + inch.pathDist.spacing + ")");
+    // A converted fallback is itself something the rules accept (it is read back on the next opening)
+    var rulesOf = { offsetX: R.offsetX, offsetY: R.offsetY, markSize: R.markSize, pathOffset: R.pathOffset };
+    for (var key in rulesOf) {
+        if (!rulesOf.hasOwnProperty(key)) continue;
+        assert(cm[key] >= rulesOf[key].min && cm[key] <= rulesOf[key].max && inch[key] >= rulesOf[key].min && inch[key] <= rulesOf[key].max,
+            key + ": the converted fallback is inside the rule (cm " + cm[key] + ", in " + inch[key] + ")");
+    }
+    // A good value is kept as it is, whatever the unit
+    var good = validCfg({ units: "cm" });
+    good.pathDist = { useNumber: false, number: 24, spacing: "8,5" };
+    assert(GM.Validation.storable(good).pathDist.spacing === 8.5, "cm: a good value is kept, not converted");
+
+    // mm, a missing unit and an unknown one behave as before (the defaults as they are)
+    var mm = GM.Validation.storable(junk("mm"));
+    var lm = lengths(mm);
+    for (var j = 0; j < lm.length; j++) assert(lm[j][1] === lm[j][2], "mm: " + lm[j][0] + " falls back unchanged (got " + lm[j][1] + ")");
+    var bare = junk("mm"); delete bare.units;
+    var sb = GM.Validation.storable(bare);
+    assert(sb.pathDist.spacing === D.pathDist.spacing && sb.offsetX === D.offsetX, "no unit: millimetres, as before");
+    var odd = GM.Validation.storable(junk("furlong"));
+    assert(odd.pathDist.spacing === D.pathDist.spacing && odd.markSize === D.markSize && odd.units === "furlong",
+        "an unknown unit: millimetres, the text is copied as it is");
+    var tough = GM.Validation.storable(junk("constructor"));
+    assert(tough.pathDist.spacing === D.pathDist.spacing, "a unit that is only an Object.prototype name is no unit either");
+
+    // validate() stores the same: a cm preset with junk in a hidden field
+    var cfg = validCfg({ units: "cm" });
+    cfg.placementMode = "artboard";
+    cfg.pathDist = { useNumber: false, number: 24, spacing: "x" };
+    cfg.pathOffset = "x";
+    cfg.cornerZone = { enabled: false, count: 5, pitch: "x" };
+    cfg.offsetX = "0,7"; cfg.offsetY = "0,7"; cfg.markSize = "0,3";
+    cfg.top = { enabled: true, useNumber: true, number: 10, spacing: "x" };
+    cfg.left = { enabled: true, useNumber: true, number: 10, spacing: "x" };
+    lastAlert = null;
+    var r = GM.Validation.validate(cfg, L);
+    assert(r.valid === true && r.settings.pathDist.spacing === 10.5 && r.settings.cornerZone.pitch === 10 && r.settings.pathOffset === 0 &&
+        r.settings.top.spacing === 10.5 && r.settings.left.spacing === 10.5,
+        "validate() on a cm preset stores the converted fallbacks (got " + (r.settings && r.settings.pathDist.spacing) + ")");
+})();
+
+console.log("--- validate: the stored settings come from storable (spec 6.4, review focus 2) ---");
+(function () {
+    var D = GM.Config.getDefaults();
+    // Artboard mode: the path fields are hidden, so a typo there is not checked...
+    var cfg = validCfg();
+    cfg.placementMode = "artboard";
+    cfg.pathDist = { useNumber: false, number: "abc", spacing: "abc" };
+    cfg.pathOffset = "99999";
+    cfg.cornerZone = { enabled: false, count: "x", pitch: "y" };
+    cfg.bottom.number = "x"; cfg.bottom.spacing = "y";   // mirrored: not checked
+    cfg.left.spacing = "y";                              // a Count edge: its spacing is not used
+    lastAlert = null;
+    var r = GM.Validation.validate(cfg, L);
+    assert(r.valid === true && lastAlert === null, "hidden or unused typos do not refuse the run");
+    assert(r.settings.pathDist.number === D.pathDist.number && r.settings.pathDist.spacing === D.pathDist.spacing,
+        "...and are stored as the path defaults (got " + r.settings.pathDist.number + ", " + r.settings.pathDist.spacing + ")");
+    assert(r.settings.pathOffset === 0, "...pathOffset 99999 as 0 (the upper bound 9999 holds there too)");
+    assert(r.settings.cornerZone.count === D.cornerZone.count && r.settings.cornerZone.pitch === D.cornerZone.pitch,
+        "...the unused zone fields as the zone defaults");
+    assert(r.settings.bottom.number === D.bottom.number && r.settings.bottom.spacing === D.bottom.spacing &&
+           r.settings.left.spacing === D.left.spacing && r.settings.left.number === 10,
+        "...the unused edge fields as the edge defaults");
+    var back = JSON.parse(JSON.stringify(r.settings));
+    var gate = GM.Validation.validate(back, L);
+    assert(gate.valid === true, "what is stored passes validate() when it comes back");
+
+    // Path mode: the edges are hidden
+    var pm = validCfg();
+    pm.placementMode = "path";
+    pm.pathDist = { useNumber: false, number: 24, spacing: "88,5" };
+    pm.pathOffset = "2";
+    pm.top.number = "x"; pm.top.spacing = "y";
+    var rp = GM.Validation.validate(pm, L);
+    assert(rp.valid === true && rp.settings.pathDist.spacing === 88.5 && rp.settings.pathOffset === 2,
+        "path mode: the checked values are the parsed ones");
+    assert(rp.settings.top.number === D.top.number && rp.settings.top.spacing === D.top.spacing,
+        "path mode: hidden edge typos are stored as the edge defaults");
+
+    // The checked fields still refuse (nothing is swallowed into a default)
+    lastAlert = null;
+    assert(GM.Validation.validate(validCfg({ markSize: "abc" }), L).valid === false && lastAlert !== null,
+        "a typo in a checked field is still refused, not turned into a default");
+})();
+
+// ===== TEST: a blocking alert is "CHYBA: ..." and never shouts (spec 6.5) =====
+// validate() refuses with an alert after which the run ends: the family's
+// prefix in front, no exclamation mark, the field's name in quotes without the
+// label's colon ("Odsazení X:" is a label, the message names the field), and
+// at the end what happened to the document (canon 12.2, ruling R5): nothing,
+// the dialog's values are checked before anything is drawn.
+console.log("--- Validation: alerts carry the error prefix, no '!' (spec 6.5) ---");
+(function () {
+    var refusals = [
+        ["not a number",   function () { return validCfg({ offsetX: "abc" }); }],
+        ["not a whole number", function () { return validCfg({ top: { enabled: true, useNumber: true, number: 3.5, spacing: 105 } }); }],
+        ["out of range",   function () { return validCfg({ markSize: 0 }); }],
+        ["zone spacing",   function () { return validCfg({ cornerZone: { enabled: true, count: 5, pitch: 0 } }); }],
+        ["path spacing",   function () {
+            return validCfg({ placementMode: "path", pathDist: { useNumber: false, number: 24, spacing: 0 } });
+        }],
+        ["no shape",       function () { return validCfg({ markCircle: false, markCross: false }); }],
+        ["no edge",        function () {
+            return validCfg({
+                top:  { enabled: false, useNumber: true, number: 10, spacing: 105 },
+                left: { enabled: false, useNumber: true, number: 10, spacing: 105 },
+                bottomMirror: true, rightMirror: true });
+        }]
+    ];
+    var langs = [["cs_CZ", "CHYBA: "], ["en_US", "ERROR: "]];
+    var saved = GM.L;
+    for (var li = 0; li < langs.length; li++) {
+        GM.L = tableFor(langs[li][0]);
+        assert(GM.L.ERR_PREFIX === langs[li][1], langs[li][0] + ": ERR_PREFIX is '" + langs[li][1] + "'");
+        for (var ri = 0; ri < refusals.length; ri++) {
+            lastAlert = null;
+            var r = GM.Validation.validate(refusals[ri][1](), GM.L);
+            var tag = langs[li][0] + " / " + refusals[ri][0];
+            assert(r.valid === false && lastAlert !== null, tag + ": refused with an alert");
+            if (lastAlert === null) continue;
+            var prefix = String(GM.L.ERR_PREFIX);
+            assert(lastAlert.indexOf(prefix) === 0, tag + ": starts with '" + prefix + "' (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf("!") < 0, tag + ": no exclamation mark (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf("%s") < 0 && lastAlert.indexOf("undefined") < 0, tag + ": no unfilled placeholder (got '" + lastAlert + "')");
+            var sentence = String(GM.L.DOC_UNCHANGED), tail = " " + sentence;
+            assert(lastAlert.length > tail.length && lastAlert.substring(lastAlert.length - tail.length) === tail,
+                tag + ": ends with '" + tail + "' (got '" + lastAlert + "')");
+            assert(lastAlert.indexOf(sentence) === lastAlert.lastIndexOf(sentence),
+                tag + ": the sentence stands once");
+            assert(lastAlert.substring(prefix.length).indexOf(":") < 0,
+                tag + ": the label's colon is not carried into the sentence (got '" + lastAlert + "')");
+        }
+    }
+
+    // The exact words, Czech and English
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být číslo. Dokument nebyl změněn.", "CS number: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Odsazení X“ musí být mezi 0 a 9999. Dokument nebyl změněn.", "CS range: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ top: { enabled: true, useNumber: true, number: 3.5, spacing: 105 } }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Počet ok“ musí být celé číslo. Dokument nebyl změněn.", "CS whole number: got '" + lastAlert + "'");
+    GM.L = tableFor("en_US");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: "abc" }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Offset X" must be a number. The document was not changed.', "EN number: got '" + lastAlert + "'");
+    lastAlert = null; GM.Validation.validate(validCfg({ offsetX: -5 }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Offset X" must be between 0 and 9999. The document was not changed.', "EN range: got '" + lastAlert + "'");
+
+    // The limits in a range message are written the way the fields are: the
+    // Czech comma, not a dot (ruling R5b); the dot stays in English.
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ markSize: 0 }), GM.L);
+    assert(lastAlert === "CHYBA: Pole „Velikost“ musí být mezi 0,01 a 9999. Dokument nebyl změněn.",
+        "CS markSize range shows '0,01' (got '" + lastAlert + "')");
+    lastAlert = null; GM.Validation.validate(validCfg({ regWeight: 0 }), GM.L);
+    assert(lastAlert.indexOf("mezi 0,1 a 50.") > 0, "CS weight range shows '0,1' (got '" + lastAlert + "')");
+    GM.L = tableFor("en_US");
+    lastAlert = null; GM.Validation.validate(validCfg({ markSize: 0 }), GM.L);
+    assert(lastAlert === 'ERROR: Field "Size" must be between 0.01 and 9999. The document was not changed.',
+        "EN markSize range keeps '0.01' (got '" + lastAlert + "')");
+
+    // The zone's spacing field is named by the glossary's word
+    GM.L = tableFor("cs_CZ");
+    lastAlert = null; GM.Validation.validate(validCfg({ cornerZone: { enabled: true, count: 5, pitch: 0 } }), GM.L);
+    assert(lastAlert.indexOf("Pole „Rozteč“") > 0, "CS zone pitch is named 'Rozteč' (got '" + lastAlert + "')");
+    GM.L = saved;
+})();
+
+// ===== TEST: the drawing scale 1:N is a number from 1 to 100 (spec 4.3) =====
+// The scale is not part of the configuration (it is the document's, not the
+// preset's), so validate() does not see it; the dialog checks it live and run()
+// checks it once more with this rule, so the rule is tested by itself.
+console.log("--- Validation 1.4: the drawingScale rule (spec 4.3) ---");
+(function () {
+    var rule = GM.Validation.rules.drawingScale;
+    assert(!!rule && rule.min === 1 && rule.max === 100 && rule.integer === false,
+        "drawingScale: 1 to 100, decimal (got " + JSON.stringify(rule) + ")");
+    if (!rule) return;
+    var vn = GM.Validation.validateNumber;
+    assert(vn("1", rule, "Drawing scale", L) === 1, "1 is the lowest scale: 1:1");
+    assert(vn("100", rule, "Drawing scale", L) === 100, "100 is the highest");
+    assert(vn("2,5", rule, "Drawing scale", L) === 2.5, "a decimal comma: 1:2,5");
+    assert(vn(2.5, rule, "Drawing scale", L) === 2.5, "a number as well (what getRunOptions hands over)");
+    var bad = ["0,5", "0", "-2", "101", "1000", "abc", "", "1e2"];
+    for (var i = 0; i < bad.length; i++) {
+        lastAlert = null;
+        assert(vn(bad[i], rule, "Drawing scale", L) === null && lastAlert !== null,
+            "'" + bad[i] + "' is refused with an alert");
+    }
+
+    // The words: the field is named like the dialog names it (SCALE_FIELD, no colon)
+    // (GM.Utils.error reads the prefix from GM.L, so GM.L is swapped with the table)
+    var keep = GM.L, cs = tableFor("cs_CZ"), en = tableFor("en_US");
+    GM.L = cs;
+    lastAlert = null; vn("101", rule, cs.SCALE_FIELD, cs);
+    assert(lastAlert === "CHYBA: Pole „Měřítko kresby“ musí být mezi 1 a 100. Dokument nebyl změněn.", "CS range: got '" + lastAlert + "'");
+    lastAlert = null; vn("abc", rule, cs.SCALE_FIELD, cs);
+    assert(lastAlert === "CHYBA: Pole „Měřítko kresby“ musí být číslo. Dokument nebyl změněn.", "CS number: got '" + lastAlert + "'");
+    GM.L = en;
+    lastAlert = null; vn("0,5", rule, en.SCALE_FIELD, en);
+    assert(lastAlert === 'ERROR: Field "Drawing scale" must be between 1 and 100. The document was not changed.', "EN range: got '" + lastAlert + "'");
+    GM.L = keep;
 })();
 
 // ===== SUMMARY =====

@@ -32,9 +32,13 @@ var alertCalls = [];
 global.alert = function (m) { alertCalls.push(m); };
 
 // ===== LOAD PRODUCTION CODE =====
-// constants.js first: error() reads GM.CONSTANTS.SCRIPT_NAME.
+// constants.js, then the locale: error() reads GM.L.ERR_PREFIX.
+global.app = { locale: "cs_CZ" };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "constants.js"), "utf8"));
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+// presetEquals reads number fields through the shared GM.Numbers.
+require("./lib/load_shared.js")(GM, ["numbers"]);
 
 // ===== TEST FRAMEWORK =====
 var pass = 0, fail = 0, total = 0;
@@ -117,15 +121,17 @@ console.log("--- Utils.log ---");
 })();
 
 // =====================================================
-// TEST 4: error — script-name-prefixed alert
+// TEST 4: error — an alert with the family's error prefix
 // =====================================================
 console.log("--- Utils.error ---");
 (function () {
     alertCalls = [];
     GM.Utils.error("something broke");
     assert(alertCalls.length === 1, "error calls alert exactly once");
-    assert(alertCalls[0] === "Illustrator Grommet Marks: something broke",
-        "error prefixes message with SCRIPT_NAME + ': '");
+    assert(GM.L.ERR_PREFIX === "CHYBA: ", "the Czech error prefix is 'CHYBA: '");
+    assert(alertCalls[0] === "CHYBA: something broke",
+        "error prefixes the message with GM.L.ERR_PREFIX (got '" + alertCalls[0] + "')");
+    assert(alertCalls[0].indexOf(GM.CONSTANTS.SCRIPT_NAME) < 0, "the tool's name is not in the alert");
 })();
 
 // =====================================================
@@ -150,6 +156,91 @@ console.log("--- Utils.presetEquals: pathOffset ---");
         "...in either direction");
     assert(GM.Utils.presetEquals(preset({ pathOffset: "20" }), preset({ pathOffset: 20 })) === true,
         "'20' and 20 compare equal (string compare, like the other fields)");
+})();
+
+// =====================================================
+// TEST 6: presetEquals — a number is the same in every spelling (spec 6.1)
+// =====================================================
+// The dialog writes 2,5 into the field in Czech; the stored preset holds 2.5.
+// Unlike text, a number compared as String() would call these two different
+// and mark every freshly opened preset as changed (review focus 1).
+console.log("--- Utils.presetEquals: '2,5' and 2.5 are one number ---");
+(function () {
+    function full(over) {
+        var p = {
+            offsetX: 7, offsetY: 7, bottomMirror: true, rightMirror: true, units: "mm", markSize: 3,
+            top:    { enabled: true,  useNumber: true, number: 10, spacing: 105 },
+            left:   { enabled: true,  useNumber: true, number: 10, spacing: 105 },
+            bottom: { enabled: false, useNumber: true, number: 10, spacing: 105 },
+            right:  { enabled: false, useNumber: true, number: 10, spacing: 105 },
+            placementMode: "artboard",
+            cornerZone: { enabled: false, count: 5, pitch: 100 },
+            pathDist: { useNumber: false, number: 24, spacing: 105 },
+            markCircle: true, markCross: false, regWeight: 1, haloWeight: 3,
+            pathOffset: 0
+        };
+        for (var k in over) if (over.hasOwnProperty(k)) p[k] = over[k];
+        return p;
+    }
+    var eq = GM.Utils.presetEquals;
+    assert(eq({ markSize: "2,5", top: {}, units: "mm" }, { markSize: 2.5, top: {}, units: "mm" }) === true,
+        "markSize '2,5' equals 2.5");
+    assert(eq({ markSize: "abc" }, { markSize: 5 }) === false, "markSize 'abc' does not equal 5");
+    assert(eq({ markSize: 5 }, { markSize: "abc" }) === false, "...in either direction");
+    assert(eq({ markSize: "abc" }, { markSize: "abd" }) === false, "two different typos are different");
+    assert(eq({ markSize: "1e3" }, { markSize: 1000 }) === false, "'1e3' is no number, so it is not 1000");
+
+    // Every numeric field, both separators
+    var cases = [
+        ["offsetX",           { offsetX: "7,5" },    { offsetX: 7.5 }],
+        ["offsetY",           { offsetY: " 7.5 " },  { offsetY: 7.5 }],
+        ["markSize",          { markSize: "2,5" },   { markSize: 2.5 }],
+        ["regWeight",         { regWeight: "0,25" }, { regWeight: 0.25 }],
+        ["haloWeight",        { haloWeight: "3,5" }, { haloWeight: 3.5 }],
+        ["pathOffset",        { pathOffset: "12,5" }, { pathOffset: 12.5 }],
+        ["top.number",        { top: { enabled: true, useNumber: true, number: "10", spacing: 105 } },
+                              { top: { enabled: true, useNumber: true, number: 10, spacing: 105 } }],
+        ["top.spacing",       { top: { enabled: true, useNumber: true, number: 10, spacing: "105,5" } },
+                              { top: { enabled: true, useNumber: true, number: 10, spacing: 105.5 } }],
+        ["right.spacing",     { right: { enabled: false, useNumber: true, number: 10, spacing: "99,5" } },
+                              { right: { enabled: false, useNumber: true, number: 10, spacing: 99.5 } }],
+        ["cornerZone.count",  { cornerZone: { enabled: false, count: "5", pitch: 100 } },
+                              { cornerZone: { enabled: false, count: 5, pitch: 100 } }],
+        ["cornerZone.pitch",  { cornerZone: { enabled: false, count: 5, pitch: "12,5" } },
+                              { cornerZone: { enabled: false, count: 5, pitch: 12.5 } }],
+        ["pathDist.number",   { pathDist: { useNumber: false, number: "24", spacing: 105 } },
+                              { pathDist: { useNumber: false, number: 24, spacing: 105 } }],
+        ["pathDist.spacing",  { pathDist: { useNumber: false, number: 24, spacing: "105,5" } },
+                              { pathDist: { useNumber: false, number: 24, spacing: 105.5 } }]
+    ];
+    for (var i = 0; i < cases.length; i++) {
+        assert(eq(full(cases[i][1]), full(cases[i][2])) === true, cases[i][0] + ": text and number are equal");
+        assert(eq(full(cases[i][2]), full(cases[i][1])) === true, cases[i][0] + ": ...in either direction");
+    }
+
+    // The same fields: a typo is never equal to a stored number
+    var typos = [
+        ["offsetX",          { offsetX: "abc" },    { offsetX: 7 }],
+        ["markSize",         { markSize: "" },      { markSize: 3 }],
+        ["top.spacing",      { top: { enabled: true, useNumber: true, number: 10, spacing: "1O5" } },
+                             { top: { enabled: true, useNumber: true, number: 10, spacing: 105 } }],
+        ["cornerZone.pitch", { cornerZone: { enabled: false, count: 5, pitch: "x" } },
+                             { cornerZone: { enabled: false, count: 5, pitch: 100 } }],
+        ["pathDist.spacing", { pathDist: { useNumber: false, number: 24, spacing: "1 000" } },
+                             { pathDist: { useNumber: false, number: 24, spacing: 1000 } }],
+        ["pathOffset",       { pathOffset: "12 mm" }, { pathOffset: 12 }]
+    ];
+    for (var j = 0; j < typos.length; j++) {
+        assert(eq(full(typos[j][1]), full(typos[j][2])) === false, typos[j][0] + ": a typo differs from a number");
+        assert(eq(full(typos[j][2]), full(typos[j][1])) === false, typos[j][0] + ": ...in either direction");
+    }
+
+    // Different numbers stay different, and text fields still compare as text
+    assert(eq(full({ markSize: "2,5" }), full({ markSize: 2.6 })) === false, "'2,5' differs from 2.6");
+    assert(eq(full({ units: "mm" }), full({ units: "cm" })) === false, "units still compare as text");
+    assert(eq(full({ top: { enabled: true, useNumber: true, number: 10, spacing: 105 } }),
+              full({ top: { enabled: false, useNumber: true, number: 10, spacing: 105 } })) === false,
+        "enabled still compares as text");
 })();
 
 // ===== SUMMARY =====

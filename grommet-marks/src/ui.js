@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: GM.UI — ScriptUI dialog builder
 // Part of: Illustrator Grommet Marks
-// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage
+// Depends on: GM.CONSTANTS, GM.L, GM.Config, GM.Core, GM.UIState, GM.Storage,
+//             GM.Validation (the rules the reasons quote), GM.Numbers, GM.FieldPaint
 // ------------------------------------------------------------------------
 var GM = GM || {};
 
@@ -159,18 +160,18 @@ GM.UI = {
             return {
                 enabled: cb.value,
                 useNumber: numRB.value,
-                // parseNumber keeps "10.5" as 10.5, so the edgeCount integer
+                // Numbers.parse keeps "10.5" as 10.5, so the edgeCount integer
                 // rule sees it, and makes a typo like "1O5" NaN instead of 1.
-                number: GM.Validation.parseNumber(numIn.text),
-                spacing: GM.Validation.parseNumber(spcIn.text)
+                number: GM.Numbers.parse(numIn.text),
+                spacing: GM.Numbers.parse(spcIn.text)
             };
         };
         api.apply = function (e) {
             cb.value = e.enabled;
             numRB.value = e.useNumber;
             spcRB.value = !e.useNumber;
-            numIn.text = e.number;
-            spcIn.text = e.spacing;
+            numIn.text = GM.Numbers.format(e.number);
+            spcIn.text = GM.Numbers.format(e.spacing);
             forcedSpacing = false;
             if (!countAllowed) forceSpacing();
             refresh();
@@ -219,24 +220,47 @@ GM.UI = {
 
     /** A length for the summary line: one decimal, locale separator. */
     formatLen: function (v) {
-        return String(Math.round(v * 10) / 10).replace(".", GM.L.DECIMAL_SEP);
+        return String(Math.round(v * 10) / 10).replace(".", GM.L.DEC_SEP);
+    },
+
+    /**
+     * The notice that the preset wants a path and none is selected, with the
+     * line's ending after it. The notice is a sentence with a full stop; when
+     * the ending follows, the stop gives way to the bullet ("… značí se artboard
+     * · 1:10", not "… artboard. · 1:10").
+     * @param {string} tail - The line's ending (" · 1:10") or "".
+     * @returns {string}
+     */
+    fallbackInfo: function (tail) {
+        var text = GM.L.INFO_FALLBACK;
+        return tail ? text.replace(/\.\s*$/, "") + tail : text;
     },
 
     /**
      * The summary line under Placement (spec §8.1): what the run will mark.
-     * @param {Object} st - {pathMode, pathInfo, docInfo, fallback, offset, unit}
+     * With a drawing scale other than 1:1 the line ends with it (spec 5), and
+     * the artboard is shown at real size — the dialog's values are real size,
+     * so the artboard is N times what the file holds (spec 4.6).
+     * @param {Object} st - {pathMode, pathInfo, docInfo, fallback, offset, unit,
+     *     drawingScale}; a missing or unusable drawingScale counts as 1 (an
+     *     unusable one is shown as the reason instead of this line).
      * @returns {string}
      */
     placementInfoText: function (st) {
         var L = GM.L;
+        var n = (st.drawingScale > 0 && isFinite(st.drawingScale)) ? st.drawingScale : 1;
+        // Shown to one decimal: the line's width is fixed by the sample with
+        // 99,9 (longestInfoText), so more decimals would clip its ending. Display
+        // only — the field, the run and the document keep the exact value.
+        var tail = (n === 1) ? "" : L.format(L.INFO_SCALE, GM.Numbers.format(Math.round(n * 10) / 10));
         if (!st.pathMode) {
-            if (st.fallback) return L.INFO_FALLBACK;
+            if (st.fallback) return GM.UI.fallbackInfo(tail);
             var di = st.docInfo;
             if (!di) return "";
-            if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS;
+            if (di.artboards > 1) return L.count("INFO_ARTBOARDS", di.artboards) + " · " + L.INFO_ALL_ARTBOARDS + tail;
             var f = GM.CONSTANTS.UNIT_FACTORS[st.unit] / (di.scale || 1);
             return L.count("INFO_ARTBOARDS", 1) + " · " +
-                L.format(L.INFO_SIZE, GM.UI.formatLen(di.width / f), GM.UI.formatLen(di.height / f), st.unit);
+                L.format(L.INFO_SIZE, GM.UI.formatLen(di.width * n / f), GM.UI.formatLen(di.height * n / f), st.unit) + tail;
         }
         var pi = st.pathInfo;
         var sharp = pi.sharpCount !== undefined ? pi.sharpCount : pi.cornerCount;
@@ -248,19 +272,117 @@ GM.UI = {
         else parts.push(L.count("INFO_CORNERS", sharp));
         if (pi.closed && !sharp && !round) parts.push(L.INFO_TOP_START);
         if (!pi.closed || st.offset === 0) parts.push(L.INFO_ON_PATH);
-        return parts.join(" · ");
+        return parts.join(" · ") + tail;
     },
 
-    /** The longest summary the line can show — its width is fixed by the first text. */
-    longestInfoText: function () {
+    /**
+     * A field's label as a reason names it: without the colon (canon 12.1) and
+     * without the unit in brackets ("Reg. tah (pt):" -> "Reg. tah"), because
+     * the reason ends with the unit and says it once.
+     */
+    bareLabel: function (label) {
+        return String(label).replace(/\s*:\s*$/, "").replace(/\s*\(pt\)\s*$/, "");
+    },
+
+    /**
+     * What the reason line calls each field: the label the dialog shows, without
+     * the colon. A field that shares its label says where it sits — the edge's
+     * row name over the column's header, the panel's title, the arrow of the
+     * offset. One list for the dialog's checks and for the width of the line.
+     * @returns {Object} Name by key: scale, offsetX, offsetY, markSize, regWeight,
+     *     haloWeight, zoneCount, zonePitch, pathNumber, pathSpacing, pathOffset,
+     *     and <edge>Count, <edge>Spacing for top, left, bottom, right.
+     */
+    reasonLabels: function () {
+        var L = GM.L, bare = GM.UI.bareLabel;
+        var offset = bare(L.OFFSET_LABEL);
+        var out = {
+            scale: L.SCALE_FIELD,   // the label ends in "1:", so the field has a name of its own
+            offsetX: offset + " ↔",
+            offsetY: offset + " ↕",
+            markSize: bare(L.SIZE_LABEL),
+            regWeight: bare(L.REG_WEIGHT),
+            haloWeight: bare(L.HALO_WEIGHT),
+            zoneCount: L.ZONES_PANEL + " — " + bare(L.ZONES_COUNT),
+            zonePitch: L.ZONES_PANEL + " — " + bare(L.ZONES_PITCH),
+            pathNumber: bare(L.COUNT),
+            pathSpacing: bare(L.SPACING),
+            pathOffset: offset
+        };
+        var edges = { top: L.EDGE_TOP, left: L.EDGE_LEFT, bottom: L.EDGE_BOTTOM, right: L.EDGE_RIGHT };
+        for (var k in edges) {
+            if (!edges.hasOwnProperty(k)) continue;
+            out[k + "Count"] = edges[k] + " — " + L.EDGE_COUNT_HDR;
+            out[k + "Spacing"] = edges[k] + " — " + L.EDGE_SPACING_HDR;
+        }
+        return out;
+    },
+
+    /**
+     * Why Generate is grey, in words (spec 5; canon 12.3), without the symbol.
+     * The order: one wrong field by name, several by count, then the two
+     * structural reasons — the numbers are fine but nothing would be made.
+     * @param {Object} st - {invalid: [{label, rule, unit}], noShape, noEdge};
+     *     the unit comes with its space (" mm", " pt"), "" for counts.
+     * @returns {string} The reason, or "" when nothing blocks.
+     */
+    blockReason: function (st) {
+        var L = GM.L, bad = st.invalid || [];
+        if (bad.length === 1) {
+            var f = bad[0], lo = GM.Numbers.format(f.rule.min), hi = GM.Numbers.format(f.rule.max);
+            return f.rule.integer
+                ? L.format(L.REASON_FIELD_INT, f.label, lo, hi)
+                : L.format(L.REASON_FIELD, f.label, lo, hi, f.unit);
+        }
+        if (bad.length > 1) return L.format(L.REASON_MANY, bad.length);
+        if (st.noShape) return L.REASON_NO_SHAPE;
+        if (st.noEdge) return L.REASON_NO_EDGE;
+        return "";
+    },
+
+    /**
+     * Every text the line can show at its widest: the findings with the
+     * drawing scale at their end (spec 5), and the reasons (spec 5) at their
+     * worst — every label with the widest limits of the rules, in the longest
+     * unit.
+     * @returns {Array} The sample strings.
+     */
+    infoSamples: function () {
         var L = GM.L;
+        var tail = L.format(L.INFO_SCALE, GM.Numbers.format(99.9));
         var samples = [
-            L.INFO_FALLBACK,
-            [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · "),
-            [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · "),
-            L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm")
+            GM.UI.fallbackInfo(tail),
+            [L.PATH_INFO_CLOSED, L.count("INFO_CORNERS", 99) + ", " + L.count("INFO_ROUND_SHORT", 99), L.INFO_ON_PATH].join(" · ") + tail,
+            [L.PATH_INFO_CLOSED, L.PATH_INFO_NO_CORNERS, L.INFO_TOP_START, L.INFO_ON_PATH].join(" · ") + tail,
+            L.count("INFO_ARTBOARDS", 1) + " · " + L.format(L.INFO_SIZE, "99999,9", "99999,9", "mm") + tail,
+            L.count("INFO_ARTBOARDS", 99) + " · " + L.INFO_ALL_ARTBOARDS + tail,
+            L.REASON_MARK + L.format(L.REASON_MANY, 99),
+            L.REASON_MARK + L.REASON_NO_SHAPE,
+            L.REASON_MARK + L.REASON_NO_EDGE
         ];
-        var longest = "";
+        var rules = GM.Validation.rules, lo = "", hi = "";
+        for (var r in rules) {
+            if (!rules.hasOwnProperty(r)) continue;
+            var rmin = GM.Numbers.format(rules[r].min), rmax = GM.Numbers.format(rules[r].max);
+            if (rmin.length > lo.length) lo = rmin;
+            if (rmax.length > hi.length) hi = rmax;
+        }
+        var labels = GM.UI.reasonLabels();
+        for (var key in labels) {
+            if (!labels.hasOwnProperty(key)) continue;
+            samples.push(L.REASON_MARK + L.format(L.REASON_FIELD, labels[key], lo, hi, " mm"));
+            samples.push(L.REASON_MARK + L.format(L.REASON_FIELD_INT, labels[key], lo, hi));
+        }
+        return samples;
+    },
+
+    /**
+     * The longest sample by characters — the text both labels of the line are
+     * made with, so the line is wide enough where text cannot be measured.
+     * @returns {string}
+     */
+    longestInfoText: function () {
+        var samples = GM.UI.infoSamples(), longest = "";
         for (var i = 0; i < samples.length; i++) {
             if (samples[i].length > longest.length) longest = samples[i];
         }
@@ -268,15 +390,37 @@ GM.UI = {
     },
 
     /**
+     * The pixel width of the widest sample. Characters are not pixels: the
+     * longest English sample by count is narrower than the zones reason
+     * (361 against 393 px, measured 2026-10-23). measureString works before
+     * the dialog is laid out.
+     * @param {Object} g - A statictext's ScriptUIGraphics.
+     * @returns {number} Whole pixels, or 0 when the host cannot measure.
+     */
+    widestInfoWidth: function (g) {
+        if (!g || !g.measureString) return 0;
+        var samples = GM.UI.infoSamples(), widest = 0;
+        try {
+            for (var i = 0; i < samples.length; i++) widest = Math.max(widest, g.measureString(samples[i])[0]);
+        } catch (e) {
+            GM.Utils.log("widestInfoWidth: " + e.message);
+            return 0;
+        }
+        return Math.ceil(widest);
+    },
+
+    /**
      * Builds the main ScriptUI dialog (canonical single column).
      * @param {Object} pData - Preset wrapper {activePreset, presets}
      * @param {Object} pathInfo - getSelectedPathInfo() result: {ok, closed, cornerCount,
      *     sharpCount, roundCount, partial, ...} or {ok:false, reason}
-     * @param {Object} [docInfo] - getDocInfo() result {artboards, width, height, scale};
-     *     feeds the summary line in artboard mode.
+     * @param {Object} [docInfo] - getDocInfo() result {artboards, width, height, scale,
+     *     drawingScale}; feeds the summary line in artboard mode and the starting
+     *     value of the drawing scale field (missing: 1).
      * @returns {Object} Dialog object with window, gatherAll, getRunOptions
-     *     (per-run choices not stored in presets: {pathPartial}), modeUI (with
-     *     infoLbl), edgeUI, pathUI (with offsetIn, partialCB), zonesUI
+     *     (per-run choices not stored in presets: {pathPartial, drawingScale}),
+     *     modeUI (with infoLbl — the finding — reasonLbl — why Generate is grey —
+     *     and scaleIn), edgeUI, pathUI (with offsetIn, partialCB), zonesUI
      */
     buildDialog: function (pData, pathInfo, docInfo) {
         // Spacing scale — single source in GM.CONSTANTS.LAYOUT (no ad-hoc numbers).
@@ -301,7 +445,10 @@ GM.UI = {
         setPanel.margins = LO.MARGIN;
         setPanel.spacing = LO.GROUP;
 
-        // Row 1: label + dropdown (fills) + revert (↺), ZSM layout.
+        // Row 1: label + dropdown (fills) + revert (↺), canon 9. ↺ is in a group
+        // of its own: ScriptUI shares a row's slack among ALL its controls, so a
+        // bare button would grow with the list. 30 px is the canon's one
+        // allowed deviation (a single glyph; the native width dwarfs the row).
         var presetTop = setPanel.add("group");
         presetTop.alignment = ["fill", "top"];
         presetTop.spacing = LO.GROUP;
@@ -309,25 +456,23 @@ GM.UI = {
         var loadDDL = presetTop.add("dropdownlist", undefined, []);
         loadDDL.alignment = ["fill", "center"];
         loadDDL.helpTip = GM.L.TIP_PRESET_LOAD;
-        var revertBtn = presetTop.add("button", undefined, "↺");
+        var revertGrp = presetTop.add("group");
+        revertGrp.alignment = ["right", "center"];
+        var revertBtn = revertGrp.add("button", undefined, "↺");
         revertBtn.preferredSize = [30, 24];
-        revertBtn.alignment = ["right", "center"];
         revertBtn.helpTip = GM.L.TIP_REVERT;
         revertBtn.enabled = false;
 
-        // Row 2: Save / Save As / Delete, right-aligned, equal width (ZSM layout).
-        var PRESET_BTN_W = 92;
+        // Row 2: Save / Save As / Delete, right-aligned, at native widths
+        // (the 92 px of 1.3.0 was too narrow for "Uložit jako…").
         var presetBtns = setPanel.add("group");
         presetBtns.alignment = ["right", "top"];
         presetBtns.spacing = LO.GROUP;
         var saveBtn = presetBtns.add("button", undefined, GM.L.SAVE);
-        saveBtn.preferredSize.width = PRESET_BTN_W;
         saveBtn.helpTip = GM.L.TIP_SAVE || "";
         var saveAsBtn = presetBtns.add("button", undefined, GM.L.BTN_SAVE_AS);
-        saveAsBtn.preferredSize.width = PRESET_BTN_W;
         saveAsBtn.helpTip = GM.L.TIP_SAVE_AS;
         var deleteBtn = presetBtns.add("button", undefined, GM.L.DELETE);
-        deleteBtn.preferredSize.width = PRESET_BTN_W;
         deleteBtn.helpTip = GM.L.TIP_DELETE;
         deleteBtn.enabled = false;
 
@@ -357,20 +502,64 @@ GM.UI = {
         };
         pathRB.helpTip = pathOk ? "" : (pathReasonTips[pathInfo && pathInfo.reason] || GM.L.ERR_PATH_NOT_A_PATH);
 
-        // Units — global switch lives at the top. Fill spacer pushes it right.
-        var modeSpacer = modeRow.add("group");
-        modeSpacer.alignment = ["fill", "center"];
-        modeRow.add("statictext", undefined, GM.L.UNIT_LABEL);
-        var unitsDDL = modeRow.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
+        // Row 2 (spec 4.4): Units — the global switch — and the drawing scale
+        // 1:N. Each pair is a group of its own (label -> control is GROUP), the
+        // pairs are SECTION apart. The scale starts as the document remembers it
+        // (1 for a document without one); it is the document's, not a setting:
+        // no preset holds it, switching units or presets leaves it alone, and it
+        // is not among the fields unitsDDL.onChange converts.
+        var unitRow = modePanel.add("group");
+        unitRow.orientation = "row";
+        unitRow.alignChildren = ["left", "center"];
+        unitRow.spacing = LO.SECTION;
+        var unitGrp = unitRow.add("group");
+        unitGrp.orientation = "row";
+        unitGrp.alignChildren = ["left", "center"];
+        unitGrp.spacing = LO.GROUP;
+        unitGrp.add("statictext", undefined, GM.L.UNIT_LABEL);
+        var unitsDDL = unitGrp.add("dropdownlist", undefined, GM.UI.getUnitDisplayNames());
         unitsDDL.preferredSize.width = 110;
         unitsDDL.selection = 0;
         unitsDDL.helpTip = GM.L.TIP_UNITS;
+        var scaleGrp = unitRow.add("group");
+        scaleGrp.orientation = "row";
+        scaleGrp.alignChildren = ["left", "center"];
+        scaleGrp.spacing = LO.GROUP;
+        var scaleLbl = scaleGrp.add("statictext", undefined, GM.L.SCALE_LABEL);
+        scaleLbl.helpTip = GM.L.TIP_SCALE;
+        var startScale = (docInfo && docInfo.drawingScale > 0) ? docInfo.drawingScale : 1;
+        var scaleIn = scaleGrp.add("edittext", undefined, GM.Numbers.format(startScale));
+        scaleIn.preferredSize.width = 50;
+        scaleIn.helpTip = GM.L.TIP_SCALE;
 
-        // What the run will mark, in words (spec §8.1). The text changes while
-        // the dialog is open and a ScriptUI label keeps its first width, so it
-        // starts as the longest text it can hold (extendscript-ui-standards §4).
-        var placeInfo = modePanel.add("statictext", undefined, GM.UI.longestInfoText());
+        // What the run will mark, in words (spec §8.1), or why Generate is grey
+        // (canon 12.3): two statictexts in one stack, exactly one of them
+        // visible (ruling R15). The text changes while the dialog is open and a
+        // ScriptUI label keeps its first width, so both start as the longest text
+        // either can hold (extendscript-ui-standards §4) and the stack keeps the
+        // footprint of the one label it replaced.
+        //  - placeInfo, the finding: disabled and NEVER painted — the native greyed
+        //    look it had in 1.3.0. A custom pen on a disabled statictext is
+        //    unmeasured, and Illustrator reads a control's own pen back as null
+        //    before show(), so painting it would give it the FALLBACK grey.
+        //  - placeReason, the reason: enabled so the colour shows, painted ERR once,
+        //    here; it only ever shows reasons, so there is nothing to give back.
+        var infoStack = modePanel.add("group");
+        infoStack.orientation = "stack";
+        infoStack.alignChildren = ["fill", "top"];
+        infoStack.spacing = 0;
+        infoStack.margins = 0;
+        var placeInfo = infoStack.add("statictext", undefined, GM.UI.longestInfoText());
         placeInfo.enabled = false;
+        var placeReason = infoStack.add("statictext", undefined, GM.UI.longestInfoText());
+        GM.FieldPaint.text(placeReason, "ERR");
+        placeReason.visible = false;
+        // Where text can be measured, both take the widest sample in pixels.
+        var infoWidth = GM.UI.widestInfoWidth(placeInfo.graphics);
+        if (infoWidth > 0) {
+            placeInfo.preferredSize.width = infoWidth;
+            placeReason.preferredSize.width = infoWidth;
+        }
 
         // =================================================================
         // Placement stack — Edges and Path are two modes of the SAME slot, so
@@ -617,12 +806,32 @@ GM.UI = {
         };
 
         var fallback = false;   // the preset asked for a path that is not there
+
+        // What keeps Generate grey, as liveValidateAll() last found it:
+        // {invalid: [{label, rule, unit}], noShape, noEdge}.
+        var blockedBy = { invalid: [], noShape: false, noEdge: false };
+
+        // The one place that decides the line under Placement (canon 12.3): why
+        // Generate is grey, in the error colour, while it is; else what the
+        // script found, grey. Exactly one of the two labels is visible; the
+        // finding is never painted (see where they are made). liveValidateAll()
+        // calls this last, so no later step can put the finding over a reason.
         function refreshInfo() {
+            var reason = GM.UI.blockReason(blockedBy);
+            if (reason) {
+                placeReason.text = GM.L.REASON_MARK + reason;
+                placeReason.visible = true;
+                placeInfo.visible = false;
+                return;
+            }
             placeInfo.text = GM.UI.placementInfoText({
                 pathMode: pathRB.value, pathInfo: pathInfo, docInfo: docInfo, fallback: fallback,
-                offset: GM.Validation.parseNumber(pathOffsetIn.text),
-                unit: currentUnit || GM.CONSTANTS.UNIT.MM
+                offset: GM.Numbers.parse(pathOffsetIn.text),
+                unit: currentUnit || GM.CONSTANTS.UNIT.MM,
+                drawingScale: GM.Numbers.parse(scaleIn.text)
             });
+            placeInfo.visible = true;
+            placeReason.visible = false;
         }
 
         // =================================================================
@@ -769,8 +978,8 @@ GM.UI = {
         // =================================================================
         function gatherAll() {
             return {
-                offsetX: GM.Validation.parseNumber(offsetXIn.text),
-                offsetY: GM.Validation.parseNumber(offsetYIn.text),
+                offsetX: GM.Numbers.parse(offsetXIn.text),
+                offsetY: GM.Numbers.parse(offsetYIn.text),
                 top: topUI.gather(),
                 left: leftUI.gather(),
                 bottom: bottomUI.gather(),
@@ -778,11 +987,11 @@ GM.UI = {
                 bottomMirror: mirrorTopCB.value,
                 rightMirror: mirrorLeftCB.value,
                 units: GM.UI.getUnitKey(unitsDDL),
-                markSize: GM.Validation.parseNumber(sizeInput.text),
+                markSize: GM.Numbers.parse(sizeInput.text),
                 markCircle: circleCB.value,
                 markCross: crossCB.value,
-                regWeight: GM.Validation.parseNumber(regWIn.text),
-                haloWeight: GM.Validation.parseNumber(haloWIn.text),
+                regWeight: GM.Numbers.parse(regWIn.text),
+                haloWeight: GM.Numbers.parse(haloWIn.text),
                 placementMode: pathRB.value ? GM.CONSTANTS.MODE_PATH : GM.CONSTANTS.MODE_ARTBOARD,
                 cornerZone: {
                     // Effective state: a checked-but-disabled box (zones are
@@ -790,15 +999,15 @@ GM.UI = {
                     // validate() would check count/pitch fields that live
                     // validation skipped as disabled — OK enabled, submit alerts.
                     enabled: zoneCB.value && zoneCB.enabled,
-                    count: GM.Validation.parseNumber(zoneCountIn.text),
-                    pitch: GM.Validation.parseNumber(zonePitchIn.text)
+                    count: GM.Numbers.parse(zoneCountIn.text),
+                    pitch: GM.Numbers.parse(zonePitchIn.text)
                 },
                 pathDist: {
                     useNumber: pathNumRB.value,
-                    number: GM.Validation.parseNumber(pathNumIn.text),
-                    spacing: GM.Validation.parseNumber(pathSpcIn.text)
+                    number: GM.Numbers.parse(pathNumIn.text),
+                    spacing: GM.Numbers.parse(pathSpcIn.text)
                 },
-                pathOffset: GM.Validation.parseNumber(pathOffsetIn.text)
+                pathOffset: GM.Numbers.parse(pathOffsetIn.text)
             };
         }
 
@@ -806,8 +1015,8 @@ GM.UI = {
             GM.UI.selectUnit(unitsDDL, s.units || GM.CONSTANTS.UNIT.MM);
             currentUnit = s.units || GM.CONSTANTS.UNIT.MM;
 
-            offsetXIn.text = s.offsetX;
-            offsetYIn.text = s.offsetY;
+            offsetXIn.text = GM.Numbers.format(s.offsetX);
+            offsetYIn.text = GM.Numbers.format(s.offsetY);
 
             topUI.apply(s.top);
             leftUI.apply(s.left);
@@ -818,11 +1027,11 @@ GM.UI = {
             mirrorLeftCB.value = !!s.rightMirror;
             refreshMirrorRows();
 
-            sizeInput.text = s.markSize;
+            sizeInput.text = GM.Numbers.format(s.markSize);
             circleCB.value = !!s.markCircle;
             crossCB.value = !!s.markCross;
-            regWIn.text = s.regWeight;
-            haloWIn.text = s.haloWeight;
+            regWIn.text = GM.Numbers.format(s.regWeight);
+            haloWIn.text = GM.Numbers.format(s.haloWeight);
 
             var wantPath = (s.placementMode === GM.CONSTANTS.MODE_PATH);
             fallback = wantPath && !pathOk;
@@ -831,8 +1040,8 @@ GM.UI = {
 
             var z = s.cornerZone || defCfg.cornerZone;
             zoneCB.value = !!z.enabled;
-            zoneCountIn.text = z.count;
-            zonePitchIn.text = z.pitch;
+            zoneCountIn.text = GM.Numbers.format(z.count);
+            zonePitchIn.text = GM.Numbers.format(z.pitch);
 
             var pd = s.pathDist || defCfg.pathDist;
             // Count mode is valid on a cornered path too (marks = corners); the
@@ -840,13 +1049,14 @@ GM.UI = {
             // recomputes it from the current path.
             var pdUseNum = !!pd.useNumber;
             pathNumRB.value = pdUseNum; pathSpcRB.value = !pdUseNum;
-            pathNumIn.text = pd.number; pathSpcIn.text = pd.spacing;
+            pathNumIn.text = GM.Numbers.format(pd.number);
+            pathSpcIn.text = GM.Numbers.format(pd.spacing);
             pathForcedSpacing = false;
             if (!pathCountAllowed) forcePathSpacing();
             // Only a finite number goes into the field: NaN reaches a stored
             // preset as null, and an empty greyed field cannot be fixed.
-            pathOffsetIn.text = (typeof s.pathOffset === "number" && isFinite(s.pathOffset))
-                ? s.pathOffset : defCfg.pathOffset;
+            pathOffsetIn.text = GM.Numbers.format((typeof s.pathOffset === "number" && isFinite(s.pathOffset))
+                ? s.pathOffset : defCfg.pathOffset);
             refreshPathDistUI();
 
             refreshModeUI();
@@ -866,9 +1076,9 @@ GM.UI = {
                 .concat(rightUI.getConvertFields());
 
             for (var i = 0; i < fields.length; i++) {
-                var v = GM.Validation.parseNumber(fields[i].text);
+                var v = GM.Numbers.parse(fields[i].text);
                 if (!isNaN(v)) {
-                    fields[i].text = GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit));
+                    fields[i].text = GM.Numbers.format(GM.Core.round(GM.Core.convertVal(v, currentUnit, newUnit)));
                 }
             }
             currentUnit = newUnit;
@@ -886,51 +1096,54 @@ GM.UI = {
         // skipped while the other mode is active (its panel is hidden, and
         // GM.Validation.validate() ignores it on submit too). Untagged fields
         // (mark size, weights, corner zones) apply to both modes.
+        // `mirrored()` marks the fields of an edge row that its mirror box hides
+        // (Bottom follows Top, Right follows Left): validate() does not check
+        // them, so neither does this, and the reason never names a row that
+        // cannot be seen.
+        // `label` names the field in the reason on the placement line; `unit` is
+        // the dialog's length unit (LEN), " pt" for the strokes, "" for counts.
+        var RL = GM.UI.reasonLabels();
+        var LEN = "len", PT = " pt";
+        /** @type {Object[]} {et, rule, mode, label, unit, mirrored} */
         var validationTargets = [
-            { et: offsetXIn,   rule: R.offsetX,     mode: "artboard" },
-            { et: offsetYIn,   rule: R.offsetY,     mode: "artboard" },
-            { et: sizeInput,   rule: R.markSize },
-            { et: regWIn,      rule: R.regWeight },
-            { et: haloWIn,     rule: R.haloWeight },
-            { et: zoneCountIn, rule: R.cornerCount },
-            { et: zonePitchIn, rule: R.cornerPitch },
-            { et: pathNumIn,   rule: R.pathNumber,  mode: "path" },
-            { et: pathSpcIn,   rule: R.pathSpacing, mode: "path" },
-            { et: pathOffsetIn, rule: R.pathOffset, mode: "path" }
+            // The drawing scale applies to both modes (no `mode`) and is always enabled.
+            { et: scaleIn,     rule: R.drawingScale,                  label: RL.scale,       unit: "" },
+            { et: offsetXIn,   rule: R.offsetX,     mode: "artboard", label: RL.offsetX,     unit: LEN },
+            { et: offsetYIn,   rule: R.offsetY,     mode: "artboard", label: RL.offsetY,     unit: LEN },
+            { et: sizeInput,   rule: R.markSize,                      label: RL.markSize,    unit: LEN },
+            { et: regWIn,      rule: R.regWeight,                     label: RL.regWeight,   unit: PT },
+            { et: haloWIn,     rule: R.haloWeight,                    label: RL.haloWeight,  unit: PT },
+            { et: zoneCountIn, rule: R.cornerCount,                   label: RL.zoneCount,   unit: "" },
+            { et: zonePitchIn, rule: R.cornerPitch,                   label: RL.zonePitch,   unit: LEN },
+            { et: pathNumIn,   rule: R.pathNumber,  mode: "path",     label: RL.pathNumber,  unit: "" },
+            { et: pathSpcIn,   rule: R.pathSpacing, mode: "path",     label: RL.pathSpacing, unit: LEN },
+            { et: pathOffsetIn, rule: R.pathOffset, mode: "path",     label: RL.pathOffset,  unit: LEN }
         ];
         var edgeUIs = [topUI, leftUI, bottomUI, rightUI];
+        var edgeKeys = ["top", "left", "bottom", "right"];
+        var edgeMirrored = [null, null,
+            function () { return mirrorTopCB.value; },
+            function () { return mirrorLeftCB.value; }];
         for (var vt = 0; vt < edgeUIs.length; vt++) {
-            validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount,   mode: "artboard" });
-            validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing, mode: "artboard" });
-        }
-
-        function paintField(et, valid) {
-            try {
-                var g = et.graphics;
-                if (!g || !g.newPen) return;
-                // Capture the field's DEFAULT foreground pen once (after the
-                // graphics object is realised). "Valid" restores that theme
-                // default — forcing black [0,0,0] makes the text invisible on
-                // the dark UI. Light-grey is a safe fallback if it can't be read.
-                if (et._gmDefPen === undefined) {
-                    et._gmDefPen = g.foregroundColor || null;
-                }
-                if (valid) {
-                    g.foregroundColor = et._gmDefPen
-                        ? et._gmDefPen
-                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                } else {
-                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
-                }
-            } catch (e) {}
+            validationTargets.push({ et: edgeUIs[vt].numIn, rule: R.edgeCount, mode: "artboard",
+                label: RL[edgeKeys[vt] + "Count"], unit: "", mirrored: edgeMirrored[vt] });
+            validationTargets.push({ et: edgeUIs[vt].spcIn, rule: R.edgeSpacing, mode: "artboard",
+                label: RL[edgeKeys[vt] + "Spacing"], unit: LEN, mirrored: edgeMirrored[vt] });
         }
 
         function fieldInRange(et, rule) {
-            var n = GM.Validation.parseNumber(et.text);
+            var n = GM.Numbers.parse(et.text);
             if (isNaN(n)) return false;
             if (rule.integer && n !== Math.floor(n)) return false;
             return n >= rule.min && n <= rule.max;
         }
+
+        // The numbers of the fields this check looks at are fine — the active
+        // mode's, the enabled ones. Save and Save As follow it (a preset never
+        // stores what the next opening cannot read, canon 12.4); Generate also
+        // needs the structure below (ruling R1). Set by liveValidateAll(), which
+        // runs before refreshModifiedIndicator() reads it.
+        var numbersOk = true;
 
         function liveValidateAll() {
             // Only the ACTIVE placement mode's fields gate OK. The inactive
@@ -938,42 +1151,53 @@ GM.UI = {
             // with the offending field off-screen — and validate() skips it on
             // submit anyway, making live validation stricter than the real one.
             var mode = pathRB.value ? "path" : "artboard";
-            var allValid = true;
+            var invalid = [];
             for (var i = 0; i < validationTargets.length; i++) {
                 var t = validationTargets[i];
                 if (!t.et) continue;
-                if (t.mode && t.mode !== mode) { paintField(t.et, true); continue; }
-                if (!t.et.enabled) { paintField(t.et, true); continue; }
+                if (t.mode && t.mode !== mode) { GM.FieldPaint.field(t.et, true); continue; }
+                if (!t.et.enabled || (t.mirrored && t.mirrored())) { GM.FieldPaint.field(t.et, true); continue; }
                 var ok = fieldInRange(t.et, t.rule);
-                paintField(t.et, ok);
-                if (!ok) allValid = false;
+                GM.FieldPaint.field(t.et, ok);
+                if (!ok) {
+                    invalid.push({
+                        label: t.label, rule: t.rule,
+                        unit: t.unit === LEN ? " " + (currentUnit || GM.CONSTANTS.UNIT.MM) : t.unit
+                    });
+                }
             }
+            var fieldsOk = invalid.length === 0;
 
             // Structural checks (mirror GM.Validation.validate) so OK greys out
             // for these too, not just numeric ranges. These have no single field
-            // to paint, so they only gate the button.
+            // to paint, so they gate the button and give the reason on the line.
             // 1) At least one effective edge enabled (artboard mode only).
+            var noEdge = false;
             if (!pathRB.value) {
                 var topOn = topUI.cb.value;
                 var leftOn = leftUI.cb.value;
                 var bottomOn = mirrorTopCB.value ? topOn : bottomUI.cb.value;
                 var rightOn = mirrorLeftCB.value ? leftOn : rightUI.cb.value;
-                if (!topOn && !leftOn && !bottomOn && !rightOn) allValid = false;
+                noEdge = !topOn && !leftOn && !bottomOn && !rightOn;
             }
             // 2) Marks must have at least one shape (circle and/or cross).
-            if (!circleCB.value && !crossCB.value) allValid = false;
+            var noShape = !circleCB.value && !crossCB.value;
 
-            try { okBtn.enabled = allValid; } catch (e) {}
-            return allValid;
+            numbersOk = fieldsOk;
+            try { okBtn.enabled = fieldsOk && !noEdge && !noShape; } catch (e) {
+                GM.Utils.log("liveValidateAll: Generate: " + e.message);
+            }
+            blockedBy = { invalid: invalid, noShape: noShape, noEdge: noEdge };
+            refreshInfo();   // last: the line follows the button
+            return numbersOk;
         }
 
         // =================================================================
         // Shared change hook — modified indicator + validation
         // =================================================================
         function onUserChange() {
-            refreshInfo();
+            liveValidateAll();               // sets numbersOk and the line under Placement
             refreshModifiedIndicator();
-            liveValidateAll();
         }
 
         // Edge panels notify on any internal change.
@@ -986,26 +1210,59 @@ GM.UI = {
         // =================================================================
         // Preset Handlers (delegating to GM.UIState)
         // =================================================================
-        function refreshModifiedIndicator() {
-            var modified;
-            try { modified = GM.UIState.isModified(pData, gatherAll()); } catch (e) { modified = false; }
-            try { saveBtn.enabled = modified; } catch (e) {}
-            try { revertBtn.enabled = modified; } catch (e) {}
+        // What the dialog holds, for comparing with the active preset. With the
+        // checked fields valid, a typo left in a field nobody checks (the other
+        // mode, a disabled edge) counts as the default it would be saved as:
+        // otherwise Save would store that default and the preset would still
+        // look changed. With a checked field invalid the raw values are
+        // compared, so the typo is a change and ↺ takes it back.
+        function currentValues() {
+            var raw = gatherAll();
+            return numbersOk ? GM.Validation.storable(raw) : raw;
+        }
 
-            if (!loadDDL.selection) return;
-            var idx = loadDDL.selection.index;
-            var key = sortedKeys[idx];
-            if (key !== pData.activePreset) return;
-            var displayText = (key === GM.Config.PRESET_KEY_DEFAULT) ? GM.L.PRESET_DEFAULT : key;
-            if (modified) displayText += " *";
-            try { loadDDL.items[idx].text = displayText; } catch (e) {
-                updatePresetList();
+        /**
+         * Asterisk and button states after any change. Relabels every item of
+         * the list, not only the active one: switching away from an edited
+         * preset would otherwise leave its asterisk behind (canon 12.4,
+         * tile-export refreshModifiedIndicator).
+         */
+        function refreshModifiedIndicator() {
+            var modified = false, entries = [];
+            try {
+                var now = currentValues();
+                modified = GM.UIState.isModified(pData, now);
+                entries = GM.UIState.formatPresetList(pData, now, GM.L);
+            } catch (e) {
+                modified = false;
+                GM.Utils.log("refreshModifiedIndicator: comparison failed: " + e.message);
+            }
+            try { revertBtn.enabled = modified; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Revert: " + e.message);
+            }
+            try { saveBtn.enabled = modified && numbersOk; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Save: " + e.message);
+            }
+            try { saveAsBtn.enabled = numbersOk; } catch (e) {
+                GM.Utils.log("refreshModifiedIndicator: Save As: " + e.message);
+            }
+
+            // The list holds the same keys in the same order as the entries
+            // (updatePresetList builds both from formatPresetList).
+            for (var j = 0; j < entries.length && j < loadDDL.items.length; j++) {
+                if (entries[j].key !== sortedKeys[j]) continue;
+                try {
+                    if (loadDDL.items[j].text !== entries[j].displayText) loadDDL.items[j].text = entries[j].displayText;
+                } catch (e) {
+                    updatePresetList();
+                    return;
+                }
             }
         }
 
         function updatePresetList() {
             loadDDL.removeAll();
-            var entries = GM.UIState.formatPresetList(pData, gatherAll(), GM.L);
+            var entries = GM.UIState.formatPresetList(pData, currentValues(), GM.L);
             sortedKeys = [];
             var selIdx = 0;
             for (var i = 0; i < entries.length; i++) {
@@ -1034,10 +1291,13 @@ GM.UI = {
             refreshModifiedIndicator();
         };
 
+        // A preset stores GM.Validation.storable(): numbers the next opening
+        // can read (Save and Save As are grey while a checked field is invalid;
+        // what is left over is in the fields nobody checks).
         saveBtn.onClick = function () {
-            var r = GM.UIState.save(pData, gatherAll());
+            var r = GM.UIState.save(pData, GM.Validation.storable(gatherAll()));
             if (r.ok) {
-                updatePresetList();
+                refreshModifiedIndicator();
                 GM.Storage.save(pData);   // reports failure itself
                 return;
             }
@@ -1055,7 +1315,7 @@ GM.UI = {
                 alert(isEmpty ? GM.L.ERR_ENTER_NAME : GM.L.ERR_RESERVED_NAME);
                 return;
             }
-            var r = GM.UIState.saveAs(pData, raw, gatherAll(), function (name) {
+            var r = GM.UIState.saveAs(pData, raw, GM.Validation.storable(gatherAll()), function (name) {
                 return confirm(GM.L.format(GM.L.CONFIRM_OVERWRITE_PRESET, name));
             });
             if (!r.ok) return;
@@ -1066,8 +1326,9 @@ GM.UI = {
 
         deleteBtn.onClick = function () {
             if (!loadDDL.selection) return;
-            var displayName = loadDDL.selection.text;
-            if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, displayName))) return;
+            // The preset's name, not its list entry: a changed preset reads "A *" there.
+            var name = sortedKeys[loadDDL.selection.index];
+            if (!confirm(GM.L.format(GM.L.CONFIRM_DELETE_PRESET, name))) return;
             var r = GM.UIState.deleteActive(pData);
             if (!r.ok) {
                 if (r.reason === "reserved") alert(GM.L.ERR_CANNOT_DELETE_DEFAULT);
@@ -1088,7 +1349,7 @@ GM.UI = {
         };
 
         // Wire numeric edits to the shared change hook.
-        var allEdits = [offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
+        var allEdits = [scaleIn, offsetXIn, offsetYIn, sizeInput, regWIn, haloWIn,
                         zoneCountIn, zonePitchIn, pathNumIn, pathSpcIn, pathOffsetIn];
         for (var ei = 0; ei < allEdits.length; ei++) {
             if (!allEdits[ei]) continue;
@@ -1098,18 +1359,21 @@ GM.UI = {
         circleCB.onClick = onUserChange;
         crossCB.onClick = onUserChange;
 
-        // Initial pass: modified indicator (Save disabled when UI matches the
-        // active preset) + live validation (paints fields, sets OK initial state).
-        refreshModifiedIndicator();
+        // Initial pass: live validation (paints fields, sets OK initial state,
+        // numbersOk and the line under Placement) + modified indicator (Save
+        // disabled when UI matches the active preset).
         liveValidateAll();
+        refreshModifiedIndicator();
 
         return {
             window: dlg,
             gatherAll: gatherAll,
             getRunOptions: function () {
-                return { pathPartial: partialApplies() };
+                // drawingScale: the field as a number (NaN while it is wrong —
+                // Generate is grey then, and run() refuses it again).
+                return { pathPartial: partialApplies(), drawingScale: GM.Numbers.parse(scaleIn.text) };
             },
-            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo },
+            modeUI: { artboardRB: artboardRB, pathRB: pathRB, infoLbl: placeInfo, reasonLbl: placeReason, scaleIn: scaleIn },
             edgeUI: { top: topUI, left: leftUI, bottom: bottomUI, right: rightUI },
             pathUI: { numRB: pathNumRB, numIn: pathNumIn, spcRB: pathSpcRB, spcIn: pathSpcIn,
                       offsetIn: pathOffsetIn, partialCB: partialCB },

@@ -26,16 +26,22 @@ GM.Storage = {
      * Serializes and saves the full preset wrapper to disk.
      * Reports write failures to the user itself (single source of truth for
      * all call-sites) — a stale on-disk state that "resurrects" a deleted
-     * preset after restart is a data-integrity bug, never swallow it.
+     * preset after restart is a data-integrity bug, never swallow it. The
+     * alert is the bare consequence sentence, with no error prefix: the run
+     * goes on (or the dialog stays open) without the settings. Where the run
+     * does go on (canon 12.2), the sentence says so: ERR_WRITE_SETTINGS_RUN.
      * @param {Object} data - Full preset wrapper {activePreset, presets}.
+     * @param {boolean} [runContinues] - True when called before a run that
+     *     goes on after a failed write; the dialog's preset buttons leave it out.
      * @returns {boolean} True if the file was written.
      */
-    save: function (data) {
+    save: function (data, runContinues) {
+        var msg = runContinues ? GM.L.ERR_WRITE_SETTINGS_RUN : GM.L.ERR_WRITE_SETTINGS;
         try {
             var f = GM.Storage.getFile();
             f.encoding = "UTF-8";
             if (!f.open("w")) {
-                GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+                alert(msg);
                 return false;
             }
             f.write(JSON.stringify(data));
@@ -43,7 +49,7 @@ GM.Storage = {
             return true;
         } catch (e) {
             GM.Utils.log("Storage.save failed: " + e.message);
-            GM.Utils.error(GM.L.ERR_WRITE_SETTINGS);
+            alert(msg);
             return false;
         }
     },
@@ -109,8 +115,9 @@ GM.Storage = {
      * Migration chain:
      *   1. Flat {presetName: settings} -> wrapper {activePreset, presets}
      *   2. __default__ -> [Default] key rename
-     *   3. Per-preset value migrations (v2->v3, v3.0->v3.1)
-     *   4. Forward-fill new default keys
+     *   3. [Default] is rebuilt from GM.Config.getDefaults() (always)
+     *   4. Per-preset value migrations (v2->v3, v3.0->v3.1)
+     *   5. Forward-fill new default keys
      * Returns null on failure; caller falls back to getDefaults().
      * @returns {Object|null} Full preset wrapper or null.
      */
@@ -161,17 +168,18 @@ GM.Storage = {
                 }
             }
 
-            // Ensure [Default] exists
-            if (!data.presets[DEF]) {
-                data.presets[DEF] = GM.Config.getDefaults();
-            }
+            // MIGRATION 3: [Default] is built from the code on every load: what the file
+            // holds under that name (an older version's, a hand edit) does not
+            // change what "default" means. The other presets and the active
+            // key are left as they are.
+            data.presets[DEF] = GM.Config.getDefaults();
 
             // Ensure activePreset is valid
             if (!data.presets[data.activePreset]) {
                 data.activePreset = DEF;
             }
 
-            // MIGRATION 3: per-preset value migrations + forward-fill
+            // MIGRATION 4 + 5: per-preset value migrations + forward-fill
             var dflt = GM.Config.getDefaults();
             for (var pk in data.presets) {
                 if (!data.presets.hasOwnProperty(pk)) continue;

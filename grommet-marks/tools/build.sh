@@ -7,9 +7,11 @@
 #
 # Description:
 #   Concatenates Grommet Marks source modules into production script.
-#   Build order: ../shared/lib/json2 -> constants -> locale -> lib/utils -> config ->
-#                lib/storage -> lib/validation -> ../shared/lib/ui_state ->
-#                core -> illustrator -> ui -> main
+#   Build order: ../shared/lib/json2 -> constants -> locale ->
+#                ../shared/lib/numbers -> ../shared/lib/field_paint ->
+#                ../shared/lib/registration -> ../shared/lib/drawing_scale ->
+#                lib/utils -> config -> lib/storage -> lib/validation ->
+#                ../shared/lib/ui_state -> core -> illustrator -> ui -> main
 # ===========================================================================
 
 set -euo pipefail
@@ -88,6 +90,14 @@ cat "../shared/lib/json2.js"         >> "$OUTPUT" && echo "" >> "$OUTPUT"   # sh
 echo "var GM = {};"                  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/constants.js"          >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/locale.js"             >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/numbers.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildNumbers(GM);"             >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/field_paint.js"   >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildFieldPaint(GM);"          >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/registration.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildRegistration(GM);"        >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/drawing_scale.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildDrawingScale(GM);"        >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/utils.js"          >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/config.js"             >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/storage.js"        >> "$OUTPUT" && echo "" >> "$OUTPUT"

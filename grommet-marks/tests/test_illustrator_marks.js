@@ -17,7 +17,7 @@ global.app = { locale: "en_US" };
 global.$ = { writeln: function () {} };
 global.StrokeCap = { BUTTENDCAP: "BUTT", ROUNDENDCAP: "ROUND", PROJECTINGENDCAP: "PROJECTING" };
 global.ColorModel = { REGISTRATION: "REGISTRATION", SPOT: "SPOT", PROCESS: "PROCESS" };
-global.CMYKColor = function () { this.typename = "CMYKColor"; };
+global.CMYKColor = function () { this.typename = "CMYKColor"; this.cyan = 0; this.magenta = 0; this.yellow = 0; this.black = 0; };
 global.PathPointSelection = { ANCHORPOINT: "ANCHOR", NOSELECTION: "NONE",
                               LEFTDIRECTION: "LEFT", RIGHTDIRECTION: "RIGHT" };
 
@@ -25,6 +25,7 @@ var GM = {};
 function src(rel) { return fs.readFileSync(path.join(__dirname, "..", "src", rel), "utf8"); }
 eval(src("constants.js"));
 eval(src("lib/utils.js"));
+require("./lib/load_shared.js")(GM, ["numbers", "registration", "drawing_scale"]);   // shared: GM.Numbers, GM.Registration, GM.DrawingScale
 eval(src("core.js"));
 eval(src("illustrator.js"));
 
@@ -51,8 +52,19 @@ function fakeLayer() {
     };
     return { layer: { groupItems: { add: function () { return grp; } } }, created: created };
 }
+// The registration swatch sits where a real document can put it: not at
+// index 1 (there is White) but behind other swatches (spec 6.3).
+function plainSwatch(name, typename) { return { name: name, color: { typename: typename, tag: name } }; }
+function spotSwatch(name, colorType) {
+    return { name: name, color: { typename: "SpotColor", spot: { colorType: colorType }, tag: name } };
+}
 GM.Illustrator.doc = {
-    swatches: [null, { color: { typename: "SpotColor", spot: { colorType: ColorModel.REGISTRATION } } }]
+    swatches: [
+        plainSwatch("[None]", "NoColor"),
+        plainSwatch("White", "CMYKColor"),
+        spotSwatch("CutContour", ColorModel.SPOT),
+        spotSwatch("[Registration]", ColorModel.REGISTRATION)
+    ]
 };
 
 // ===== TEST: marks do not inherit the document stroke style (review G2) =====
@@ -70,6 +82,40 @@ console.log("--- placeMarkGroup: explicit stroke style (G2) ---");
     }
     assert(solid, "every path has a solid stroke (no inherited dashes)");
     assert(butt, "every path has butt caps (no inherited round caps)");
+})();
+
+// ===== TEST: the registration colour is found by type, wherever it sits (spec 6.3) =====
+console.log("--- registrationColor: found by type, not by position (spec 6.3) ---");
+(function () {
+    var saved = GM.Illustrator.doc;
+    var reg = GM.Illustrator.registrationColor();
+    assert(reg === saved.swatches[3].color && reg.tag === "[Registration]",
+        "registration at index 3 is found (index 1 holds White)");
+
+    // The marks are drawn with it.
+    var f = fakeLayer();
+    GM.Illustrator.placeMarkGroup(f.layer, 100, 100, 10, { circle: true, cross: false, regWeight: 1, haloWeight: 3 });
+    assert(f.created.length === 2 && f.created[1].strokeColor === saved.swatches[3].color,
+        "the registration stroke of a mark carries the registration colour");
+
+    // Czech install: another name, the same type.
+    GM.Illustrator.doc = { swatches: [plainSwatch("[Žádná]", "NoColor"), plainSwatch("Bílá", "CMYKColor"),
+                                      spotSwatch("[Registrační]", ColorModel.REGISTRATION)] };
+    assert(GM.Illustrator.registrationColor().tag === "[Registrační]", "the localized swatch is found by its type");
+
+    // A document without a registration swatch: 100 % K, as before.
+    GM.Illustrator.doc = { swatches: [plainSwatch("[None]", "NoColor"), plainSwatch("White", "CMYKColor"),
+                                      spotSwatch("CutContour", ColorModel.SPOT)] };
+    var k = GM.Illustrator.registrationColor();
+    assert(k.typename === "CMYKColor" && k.cyan === 0 && k.magenta === 0 && k.yellow === 0 && k.black === 100,
+        "no registration swatch: CMYK 0/0/0/100");
+
+    // Swatches that cannot be read: the same fallback, no throw.
+    GM.Illustrator.doc = {};
+    var k2 = GM.Illustrator.registrationColor();
+    assert(k2.typename === "CMYKColor" && k2.black === 100, "unreadable swatch list: 100 % K");
+
+    GM.Illustrator.doc = saved;
 })();
 
 // ===== TEST: selected path with a duplicated closing anchor (review G6) =====
@@ -148,6 +194,44 @@ console.log("--- getDocInfo ---");
     assert(d.artboards === 2 && d.width === 1000 && d.height === 500 && d.scale === 10, "count, first artboard size, scale");
     delete GM.Illustrator.doc.scaleFactor;
     assert(GM.Illustrator.getDocInfo().scale === 1, "no scaleFactor -> 1");
+})();
+
+// ===== TEST: the drawing scale the document remembers (spec 4.2) =====
+// getDocInfo hands the dialog the scale GM.DrawingScale reads from the
+// document's XMP packet — the key Tile Export writes — or 1:1 when there is none.
+console.log("--- getDocInfo: drawingScale from the document's XMP (spec 4.2) ---");
+(function () {
+    var doc = GM.Illustrator.doc;
+    var saved = doc.XMPString, savedBoards = doc.artboards, ns = GM.DrawingScale.NAMESPACE;
+    function packet(inner) {
+        return '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+            inner + '</rdf:RDF></x:xmpmeta>';
+    }
+    function scaled(value) {
+        return packet('<rdf:Description rdf:about="" xmlns:te="' + ns + '"><te:drawingScale>' + value +
+            '</te:drawingScale></rdf:Description>');
+    }
+    doc.artboards = [{ artboardRect: [0, 500, 1000, 0] }];
+    doc.XMPString = scaled(10);
+    assert(GM.Illustrator.getDocInfo().drawingScale === 10, "a document with 1:10 -> 10");
+    doc.XMPString = scaled("2.5");
+    assert(GM.Illustrator.getDocInfo().drawingScale === 2.5, "1:2.5 -> 2.5 (decimal)");
+    // Illustrator renames the prefix when it re-serializes a packet (te -> te_1_)
+    doc.XMPString = packet('<rdf:Description rdf:about="" xmlns:te_1_="' + ns + '"><te_1_:drawingScale>4</te_1_:drawingScale></rdf:Description>');
+    assert(GM.Illustrator.getDocInfo().drawingScale === 4, "a renamed prefix is still found through the namespace");
+    doc.XMPString = packet("");
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "a packet without the key -> 1");
+    doc.XMPString = scaled(0);
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "a stored 0 is no scale -> 1");
+    delete doc.XMPString;
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "no XMP at all -> 1");
+    Object.defineProperty(doc, "XMPString", { configurable: true, get: function () { throw new Error("XMP unreadable"); } });
+    assert(GM.Illustrator.getDocInfo().drawingScale === 1, "an unreadable XMP -> 1, getDocInfo does not throw");
+    delete doc.XMPString;
+    if (saved !== undefined) doc.XMPString = saved;
+    var d = GM.Illustrator.getDocInfo();
+    assert(d.artboards === 1 && d.width === 1000 && d.height === 500, "the rest of docInfo is as before");
+    doc.artboards = savedBoards;
 })();
 
 // ===== TEST: what Task 5 delivers — rounded corners counted, selection aligned (review) =====

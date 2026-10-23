@@ -6,8 +6,8 @@
 var GM = GM || {};
 
 GM.CONSTANTS = {
-    SCRIPT_NAME: "Illustrator Grommet Marks",
-    VERSION: "1.3.0",
+    SCRIPT_NAME: "Grommet Marks",
+    VERSION: "1.4.0",
     SETTINGS_FILE_NAME: "GrommetMarksSettings.json",
 
     LAYER_NAME: "Grommet Marks",
