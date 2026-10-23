@@ -35,17 +35,26 @@ function buildRegistration(NS) {
          * @returns {Swatch|null} The swatch, or null when the document has none.
          */
         swatch: function (doc) {
+            var sw, n, i, c;
             try {
-                var sw = doc.swatches, i, c;
-                for (i = 0; i < sw.length; i++) {
+                sw = doc.swatches;
+                n = sw.length;
+            } catch (e) {
+                log("Registration.swatch: swatches unreadable: " + e.message);
+                return null;
+            }
+            for (i = 0; i < n; i++) {
+                // One swatch whose colour cannot be read must not end the
+                // search: the registration swatch may sit behind it.
+                try {
                     c = sw[i].color;
                     if (c && c.typename === "SpotColor" && c.spot &&
                             c.spot.colorType === ColorModel.REGISTRATION) {
                         return sw[i];
                     }
+                } catch (e2) {
+                    log("Registration.swatch: swatch " + i + " unreadable: " + e2.message);
                 }
-            } catch (e) {
-                log("Registration.swatch: swatches unreadable: " + e.message);
             }
             return null;
         },
