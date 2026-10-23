@@ -136,14 +136,21 @@ ZSM.L = (function () {
             STATUS_INVALID:    "Fix the highlighted fields.",
             STATUS_RANGE:      "%s — allowed range %s–%s.",
             STATUS_LAYER_NAME: "Enter a name for every layer row.",
-            STATUS_DUP_COLOR:  "Colour %s is mapped to more than one layer — remove the duplicate.",
+            STATUS_DUP_COLOR:  "Colour \"%s\" is on several layers — remove the duplicate.",
             STATUS_RANGE_MULTI: "%s issues — see the highlighted fields.",
-            STATUS_OK:         "%s · layers: %s",
-            STATUS_OK_MARKS:   "%s · marks only",
+            // The status line at rest: what the script found in the document,
+            // joined with " · " after the mode (spec 1.2.0 §7).
+            STATUS_FOUND_ARTBOARD: "artboard %s × %s mm",
+            STATUS_FOUND_ARTWORK:  "artwork %s × %s mm",
+            STATUS_FOUND_CUT:  "cut \"%s\"",
+            STATUS_NO_CUT:     "no cut colour",
+            STATUS_MARKS_ONLY: "marks only",
             PANEL_OUTPUT:      "Output Settings",
             BTN_RESET:         "Defaults",
             TIP_RESET:         "Load factory default settings into the dialog (does not overwrite any saved preset).",
-            DEC_SEP:           "."
+            DEC_SEP:           ".",
+            // Thousands in the status line's sizes; never in a field.
+            THOU_SEP:          ","
         },
 
         cs: {
@@ -265,14 +272,21 @@ ZSM.L = (function () {
             STATUS_INVALID:    "Opravte zvýrazněná pole.",
             STATUS_RANGE:      "%s — povolený rozsah %s–%s.",
             STATUS_LAYER_NAME: "Zadejte název u každého řádku vrstvy.",
-            STATUS_DUP_COLOR:  "Barva %s je přiřazena více vrstvám — odeberte duplicitu.",
+            STATUS_DUP_COLOR:  "Barva „%s“ je přiřazena více vrstvám — odeberte duplicitu.",
             STATUS_RANGE_MULTI: "Chyb ve formuláři: %s — viz zvýrazněná pole.",
-            STATUS_OK:         "%s · vrstvy: %s",
-            STATUS_OK_MARKS:   "%s · pouze značky",
+            // Stavový řádek v klidu: co skript našel v dokumentu, za režimem
+            // spojené „ · “ (spec 1.2.0 §7).
+            STATUS_FOUND_ARTBOARD: "artboard %s × %s mm",
+            STATUS_FOUND_ARTWORK:  "grafika %s × %s mm",
+            STATUS_FOUND_CUT:  "řez „%s“",
+            STATUS_NO_CUT:     "řez nenalezen",
+            STATUS_MARKS_ONLY: "pouze značky",
             PANEL_OUTPUT:      "Nastavení výstupu",
             BTN_RESET:         "Výchozí",
             TIP_RESET:         "Načte tovární výchozí nastavení do dialogu (uloženou předvolbu nepřepíše).",
-            DEC_SEP:           ","
+            DEC_SEP:           ",",
+            // Tisíce v rozměrech stavového řádku („1 560“); v poli nikdy.
+            THOU_SEP:          " "
         }
     };
 

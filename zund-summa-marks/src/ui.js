@@ -23,6 +23,15 @@ ZSM.UI = {
         SWATCH:       16,    // colour swatch square
         LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj)
         REVERT_BTN:   30,    // [deviation] ↺ is one glyph; the native 80 px would dwarf the preset row
+        // [deviation] live text (canon §4, reason 2): the status line's two
+        // labels change text while the dialog is open and keep their first
+        // width. Sized for the widest text either can hold, cs and en: the
+        // finding with 99 999,9 × 99 999,9 mm, „CutContour“ and 1:99,9 (408 px;
+        // 412 px with the artwork's size), every range reason, the duplicate
+        // reason with CutContour (402 px). Measured on a Lucida Grande 12 model
+        // that gives the 105 px the canon measured for "Mezera od grafiky"; a
+        // user's longer colour name or scale truncates at the end.
+        STATUS_W:     415,
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
         SP_GROUP:     8,     // group spacing (preset, mode, source, buttons …)
@@ -62,12 +71,19 @@ ZSM.UI = {
         // drawingScale: N of 1:N the document remembers (none stored = 1). A
         // mode switch writes the field back here, so the reopened dialog shows
         // what the user typed — the scale is the document's, not a preset's.
+        // artboard / artwork: what the status line reports at rest (spec 1.2.0
+        // §7). The artwork's size would take ZSM.Bounds.get, which clears the
+        // selection in Auto-fit — before the dialog that drops the user's
+        // selection even on Cancel — so it stays null and the line leaves the
+        // size out in Auto-fit and SUMMA.
         var docData = {
             swatches:      ZSM.Draw.getSwatchNames(),
             swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
             detectedColor: ZSM.Draw.detectCutColor(),
-            drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1
+            drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1,
+            artboard:      this.activeArtboardSize(),
+            artwork:       null
         };
 
         // [Default] holds factory values only: Save never writes it (it turns
@@ -103,9 +119,11 @@ ZSM.UI = {
      *
      * @param {string} mode    - "ZUND" or "SUMMA"
      * @param {Object} pData   - Preset wrapper (mutated in place on OK/Save)
-     * @param {Object} docData - {swatches, layers, detectedColor, drawingScale}
+     * @param {Object} docData - {swatches, layers, detectedColor, drawingScale,
+     *        artboard, artwork}
      *        drawingScale = the scale field's start value (number; NaN for a
-     *        typo carried through a mode switch, shown as an empty field)
+     *        typo carried through a mode switch, shown as an empty field);
+     *        artboard, artwork = {w, h} in document mm or null (see show())
      * @returns {Object|null}
      */
     buildDialog: function (mode, pData, docData) {
@@ -515,15 +533,35 @@ ZSM.UI = {
         // Copyright footer per extendscript-ui-standards §5: dynamic string
         // composed from constants (never hardcoded), enabled=false greys it
         // intentionally to visually distinguish from active controls.
-        // Status line (V2) — explains *why* Generate is disabled and names the
-        // offending field + its valid range. Sits directly above the footer so
-        // the cause and the greyed button are seen together. Updated by
-        // liveValidateAll; empty (reserved space) while everything is valid.
+        // Status line (spec 1.2.0 §7, canon 12.3) — at rest what the script
+        // found in the document, else why Generate is grey. Sits directly above
+        // the footer so the cause and the greyed button are seen together. Two
+        // statictexts in one stack, exactly one visible (grommet-marks 1.4.0
+        // §13); liveValidateAll() decides which:
+        //  - stFound, the finding: disabled and NEVER painted — the host's
+        //    greyed look. Illustrator reads a control's own pen back as null
+        //    before show(), so a pen given back after a reason would be a guess.
+        //  - stReason, the reason: enabled so its colour shows, painted ERR once,
+        //    here; it only ever shows reasons, so nothing is given back.
+        // Both keep their first width (canon §1), hence M.STATUS_W.
         var grpStatus = w.add("group");
-        grpStatus.alignment = ["fill", "top"];
-        var stStatus = grpStatus.add("statictext", undefined, "", { truncate: "end" });
-        stStatus.preferredSize.width = 340;
-        stStatus.alignment = ["fill", "center"];
+        grpStatus.orientation   = "stack";
+        grpStatus.alignment     = ["fill", "top"];
+        grpStatus.alignChildren = ["fill", "top"];
+        grpStatus.spacing       = 0;
+        grpStatus.margins       = 0;
+        var stFound = grpStatus.add("statictext", undefined, "", { truncate: "end" });
+        stFound.preferredSize.width = M.STATUS_W;   // [deviation] see M
+        stFound.enabled = false;
+        var stReason = grpStatus.add("statictext", undefined, "", { truncate: "end" });
+        stReason.preferredSize.width = M.STATUS_W;  // [deviation] see M
+        ZSM.FieldPaint.text(stReason, "ERR");
+        stReason.visible = false;
+
+        // The cut colour the script found in the document, "" for none:
+        // detectCutColor falls back to the registration swatch when no known
+        // cut spot exists, and registration cannot be a cut colour.
+        var docCut = (canonColor(docData.detectedColor) === "[Registration]") ? "" : (docData.detectedColor || "");
 
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
@@ -1178,49 +1216,29 @@ ZSM.UI = {
             numbersOk = numbersAllOk;
             applySaveGate(isModified());
 
-            // Status line. When everything is valid it no longer sits empty (N1) —
-            // it shows a subtle, default-coloured context summary (mode · scale ·
-            // layer count) so the reserved row carries meaning. When invalid it
-            // turns amber; with more than one bad field it aggregates the count
-            // (N3) instead of naming only the first. Graphics access is wrapped —
-            // Adobe's API can throw before the control is realised.
-            try {
-                var msg, amber;
-                if (allValid) {
-                    amber = false;
-                    var ctx = mode;
-                    var sN  = parseNum(etScale);   // valid here: allValid includes the field
-                    if (sN !== 1) ctx += " · 1:" + ZSM.Numbers.format(sN);
-                    var marksOnlyCtx = false;
-                    try { marksOnlyCtx = cbMarksOnly.value; } catch (emc) {}
-                    msg = marksOnlyCtx
-                        ? ZSM.L.format(l.STATUS_OK_MARKS, ctx)
-                        : ZSM.L.format(l.STATUS_OK, ctx, layRows.length);
-                } else {
-                    amber = true;
-                    msg = (invalidCount > 1)
-                        ? ("\u26A0 " + ZSM.L.format(l.STATUS_RANGE_MULTI, invalidCount))
-                        : ("\u26A0 " + (firstMsg || l.STATUS_INVALID));
-                }
-                stStatus.text = msg;
-                var sg = stStatus.graphics;
-                if (sg && sg.newPen) {
-                    // Capture the realised default pen once. It is often null on
-                    // first read, so the valid branch must NOT gate on it — it has
-                    // to set an explicit pen every time, otherwise the amber pen
-                    // from a previous error state is never overwritten and the
-                    // status text stays orange after the error clears (matches the
-                    // per-field fallback at the geometry rows).
-                    if (stStatus._zsmDefPen === undefined) stStatus._zsmDefPen = sg.foregroundColor || null;
-                    if (!amber) {
-                        sg.foregroundColor = stStatus._zsmDefPen
-                            ? stStatus._zsmDefPen
-                            : sg.newPen(sg.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                    } else {
-                        sg.foregroundColor = sg.newPen(sg.PenType.SOLID_COLOR, [0.96, 0.60, 0.38, 1.0], 1);
-                    }
-                }
-            } catch (e) {}
+            // Status line, last, so it follows the button: why Generate is grey
+            // while it is (✗, canon 12.6; with more than one problem the count,
+            // N3), else what the script found. Text and visibility only — the
+            // pens were set once where the two labels are made.
+            if (allValid) {
+                stFound.text = self.foundText({
+                    mode:      mode,
+                    fixed:     isZ && rbFixed.value,
+                    marksOnly: marksOnlyOn,
+                    artboard:  docData.artboard,
+                    artwork:   docData.artwork,
+                    cutColor:  docCut,
+                    scale:     parseNum(etScale)   // valid here: allValid includes the field
+                });
+                stFound.visible  = true;
+                stReason.visible = false;
+            } else {
+                stReason.text = "✗ " + ((invalidCount > 1)
+                    ? ZSM.L.format(l.STATUS_RANGE_MULTI, invalidCount)
+                    : (firstMsg || l.STATUS_INVALID));
+                stReason.visible = true;
+                stFound.visible  = false;
+            }
 
             return allValid;
         }
@@ -1350,6 +1368,69 @@ ZSM.UI = {
             d.layers[0].color = col;
         }
         return d;
+    },
+
+    /**
+     * The active artboard's size in document millimetres, Large Canvas
+     * included (ZSM.Utils.getSF), for the status line. The drawing scale is
+     * applied there, because its field can change while the dialog is open.
+     * Reads artboardRect only: the selection and the document stay as they are.
+     * @returns {Object|null} {w, h}, or null when the artboard cannot be read.
+     */
+    activeArtboardSize: function () {
+        try {
+            var abs = app.activeDocument.artboards;
+            var r = abs[abs.getActiveArtboardIndex()].artboardRect;
+            var sf = ZSM.Utils.getSF();
+            return { w: ZSM.Utils.pt2mm(r[2] - r[0]) * sf, h: ZSM.Utils.pt2mm(r[1] - r[3]) * sf };
+        } catch (e) {
+            ZSM.Utils.log("activeArtboardSize: " + e.message);
+            return null;
+        }
+    },
+
+    /**
+     * The status line at rest (spec 1.2.0 §7, canon 12.3): what the script
+     * found in the document. The mode; the artboard (Fixed) or the artwork
+     * (Auto-fit, SUMMA) at real size — × N, as every value in the dialog is
+     * real size — left out when unknown; the cut colour found, or that none
+     * was, or "marks only" when the mapping is off; the scale when not 1:1,
+     * written as the field writes it.
+     * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork,
+     *     cutColor, scale}; artboard / artwork {w, h} in document mm or null,
+     *     cutColor "" for none found, scale the valid N of 1:N.
+     * @returns {string}
+     */
+    foundText: function (st) {
+        var L = ZSM.L;
+        var n = st.scale || 1;
+        var parts = [st.mode === "SUMMA" ? L.MODE_SUMMA : L.MODE_ZUND];
+        var size = st.fixed ? st.artboard : st.artwork;
+        if (size) {
+            parts.push(L.format(st.fixed ? L.STATUS_FOUND_ARTBOARD : L.STATUS_FOUND_ARTWORK,
+                ZSM.UI.formatSize(size.w * n), ZSM.UI.formatSize(size.h * n)));
+        }
+        if (st.marksOnly) parts.push(L.STATUS_MARKS_ONLY);
+        else parts.push(st.cutColor ? L.format(L.STATUS_FOUND_CUT, st.cutColor) : L.STATUS_NO_CUT);
+        if (n !== 1) parts.push("1:" + ZSM.Numbers.format(n));
+        return parts.join(" · ");
+    },
+
+    /**
+     * A size for the status line, in mm: to a tenth, with the locale's
+     * decimal separator and the thousands grouped by THOU_SEP — "1 560" in
+     * Czech, as spec 1.2.0 §7 writes it, "1,560" in English. Display only: a
+     * field never shows a grouped number, which it would read as invalid
+     * (canon 12.3, "1 000").
+     * @param {number} mm - Length in millimetres.
+     * @returns {string}
+     */
+    formatSize: function (mm) {
+        var text = ZSM.Numbers.format(Math.round(mm * 10) / 10);
+        var cut = text.indexOf(ZSM.L.DEC_SEP || ".");
+        var whole = (cut < 0) ? text : text.substring(0, cut);
+        var rest = (cut < 0) ? "" : text.substring(cut);
+        return whole.replace(/\B(?=(\d{3})+$)/g, ZSM.L.THOU_SEP || "") + rest;
     },
 
     /**

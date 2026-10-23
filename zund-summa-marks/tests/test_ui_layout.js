@@ -81,8 +81,11 @@ ZSM.L = {
     BTN_REVERT: "↺",
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
     STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
-    STATUS_OK: "%s · layers: %s", STATUS_OK_MARKS: "%s · marks only",
     STATUS_DUP_COLOR: "dup %s",
+    // The status line at rest (spec 1.2.0 §7), Czech: the tests read the spec's text back.
+    STATUS_FOUND_ARTBOARD: "artboard %s × %s mm", STATUS_FOUND_ARTWORK: "grafika %s × %s mm",
+    STATUS_FOUND_CUT: "řez „%s“", STATUS_NO_CUT: "řez nenalezen", STATUS_MARKS_ONLY: "pouze značky",
+    THOU_SEP: " ",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
         var idx = 0;
@@ -776,9 +779,10 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         return win.findOne(function (c) { return c.type === "button" && c.text === text; });
     }
     function okBtn(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
-    // The status line is the only statictext that starts with the warning sign.
+    // The reason Generate is grey: the visible statictext that starts with ✗
+    // (the hidden reason label keeps its last text, spec 1.2.0 §7).
     function statusLine(win) {
-        return win.findOne(function (c) { return c.type === "statictext" && String(c.text).indexOf("⚠") === 0; });
+        return win.findOne(function (c) { return c.type === "statictext" && c.visible && String(c.text).indexOf("✗") === 0; });
     }
     function mineData(patch) {
         var mine = ZSM.Config.getDefaults();
@@ -1164,9 +1168,9 @@ console.log("\n=== TEST 21 (spec 1.2.0 §5): drawing scale from the document ===
             "'" + bad[bi] + "': Save turns grey (was " + before + ")");
         assertEq(btn(wB, ZSM.L.BTN_SAVE_AS).enabled, false, "'" + bad[bi] + "': Save As is grey");
         assertEq(wB.text, BASE_TITLE, "'" + bad[bi] + "': the title carries no scale");
-        var warn = wB.findOne(function (c) { return c.type === "statictext" && String(c.text).indexOf("⚠") === 0; });
+        var warn = wB.findOne(function (c) { return c.type === "statictext" && c.visible && String(c.text).indexOf("✗") === 0; });
         // The suite's STATUS_RANGE is "%s range %s–%s": the label without its ratio "1:".
-        assert(warn !== null && warn.text.indexOf("⚠ Drawing scale range 1–100") === 0,
+        assert(warn !== null && warn.text.indexOf("✗ Drawing scale range 1–100") === 0,
             "'" + bad[bi] + "': the status line names the field 'Drawing scale' (got '" + (warn && warn.text) + "')");
         typeScale(wB, "2,5");
         assert(okBtn(wB).enabled === true && !isErrPen(scaleCtl(wB).graphics.foregroundColor),
@@ -1461,6 +1465,219 @@ console.log("\n=== TEST 22 (spec 1.2.0 §8): presets as the family canon ===");
     var wR = buildAndCapture("ZUND");
     assert(btn(wR, "<R>") !== null, "the ↺ text is not a literal in the code");
     ZSM.L.BTN_REVERT = oldRevert;
+})();
+
+
+// =====================================================
+// TEST 23 (spec 1.2.0 §7): the status line says what the script found
+// =====================================================
+// At rest the line repeated the dialog's own settings ("ZUND · 1:10 · layers: 1",
+// the count being mapping rows, not layers); an invalid field turned it amber
+// with ⚠, and the pen it was given back was a guess. Now, as grommet-marks
+// 1.4.0: two statictexts in one stack, exactly one of them visible — the
+// finding (mode, artboard or artwork at real size, the cut colour found, the
+// scale when not 1:1), disabled and never painted, and the reason Generate is
+// grey, ✗ in the canon's error colour, painted once.
+console.log("\n=== TEST 23 (spec 1.2.0 §7): the status line says what the script found ===");
+(function () {
+    var COLORS = ZSM.FieldPaint.COLORS;
+    function sameRGB(pen, rgb) {
+        var c = pen && pen.color;
+        return !!c && c[0] === rgb[0] && c[1] === rgb[1] && c[2] === rgb[2];
+    }
+    // The status line: a stack of two statictexts (a layer row's stack holds a list and a field).
+    function statusStack(win) {
+        return win.findOne(function (c) {
+            return c.type === "group" && c.orientation === "stack" && c.children.length === 2 &&
+                   c.children[0].type === "statictext" && c.children[1].type === "statictext";
+        });
+    }
+    function found(win)  { var s = statusStack(win); return s ? s.children[0] : null; }
+    function reason(win) { var s = statusStack(win); return s ? s.children[1] : null; }
+    function fieldCtl(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    }
+    function ctl(win, type, text) {
+        return win.findOne(function (c) { return c.type === type && c.text === text; });
+    }
+    function okBtn(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
+    function presetData(patch) {
+        var mine = ZSM.Config.getDefaults();
+        for (var k in patch) { if (patch.hasOwnProperty(k)) mine[k] = patch[k]; }
+        return { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mine } };
+    }
+    // docData as show() builds it, with the document's findings patched in.
+    function buildWith(mode, patch, doc) {
+        var docData = {
+            swatches: ZSM.Draw.getSwatchNames(), swatchRGB: ZSM.Draw.getSwatchRGBMap(),
+            layers: ZSM.Draw.getLayerNames(), detectedColor: "Cut", drawingScale: 1,
+            artboard: null, artwork: null
+        };
+        for (var k in doc) { if (doc.hasOwnProperty(k)) docData[k] = doc[k]; }
+        ZSM.UI.buildDialog(mode, presetData(patch), docData);
+        return SUI.lastWindow();
+    }
+    var FIXED = { useArtboardBounds: true };
+    var AB = { artboard: { w: 1560, h: 3050 } };
+
+    // --- the stack: finding disabled and never painted, reason painted once, widths from M ---
+    var w0 = buildWith("ZUND", FIXED, AB);
+    var f0 = found(w0), r0 = reason(w0);
+    assert(f0 !== null && r0 !== null, "the status line is a stack of two statictexts");
+    assertEq(typeof ZSM.UI.M.STATUS_W, "number", "M.STATUS_W is a width");
+    assert(f0.preferredSize.width === ZSM.UI.M.STATUS_W && r0.preferredSize.width === ZSM.UI.M.STATUS_W,
+        "both labels take their width from M.STATUS_W (got " + f0.preferredSize.width + ", " + r0.preferredSize.width + ")");
+    assertEq(f0.enabled, false, "the finding is disabled (the canon's greyed line)");
+    assertEq(r0.enabled, true, "the reason is enabled, so its colour shows");
+    assert(sameRGB(r0.graphics.foregroundColor, COLORS.ERR), "the reason is painted in COLORS.ERR");
+    assertEq(f0.graphics.assignments, 0, "the finding is never painted");
+    assert(f0.visible === true && r0.visible === false, "valid values: the finding shows, the reason does not");
+
+    // --- Fixed, artboard 1560 × 3050 mm, cut colour "Cut", 1:1 ---
+    var t0 = f0.text;
+    assert(t0.indexOf("ZUND · ") === 0, "the finding starts with the mode (got '" + t0 + "')");
+    assert(t0.indexOf("artboard 1 560 × 3 050 mm") !== -1, "Fixed: the artboard at real size, thousands grouped (got '" + t0 + "')");
+    assert(t0.indexOf("řez „Cut“") !== -1, "the cut colour found, in „…“ (got '" + t0 + "')");
+    assertEq(t0.indexOf("1:"), -1, "1:1: no scale in the line (got '" + t0 + "')");
+    assertEq(t0.indexOf("layers"), -1, "no mapping-row count any more (got '" + t0 + "')");
+
+    // --- 1:10, artboard 156 × 305: the real size is × 10, the scale at the end ---
+    var t10 = found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text;
+    assert(t10.indexOf("artboard 1 560 × 3 050 mm") !== -1, "1:10: the artboard × 10 (got '" + t10 + "')");
+    assert(/ · 1:10$/.test(t10), "1:10: the line ends ' · 1:10' (got '" + t10 + "')");
+
+    // --- the scale typed while the dialog is open: size and ending follow the field ---
+    var wS = buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 } });
+    var etScale = fieldCtl(wS, ZSM.L.LBL_SCALE);
+    etScale.text = "10"; etScale.onChanging();
+    var tS = found(wS).text;
+    assert(tS.indexOf("artboard 1 560 × 3 050 mm") !== -1 && / · 1:10$/.test(tS),
+        "typing 10 into the scale: 1 560 × 3 050 mm and ' · 1:10' (got '" + tS + "')");
+
+    // --- no cut colour: detectCutColor's registration fallback is "not found" ---
+    var tReg = found(buildWith("ZUND", FIXED, { artboard: AB.artboard, detectedColor: "[Registration]" })).text;
+    assert(tReg.indexOf("řez nenalezen") !== -1 && tReg.indexOf("„") === -1,
+        "no cut colour ([Registration]): 'řez nenalezen' (got '" + tReg + "')");
+    ZSM.Draw.getRegistrationName = function () { return "[Registrace]"; };
+    try {
+        var tRegCs = found(buildWith("ZUND", FIXED, { artboard: AB.artboard, detectedColor: "[Registrace]" })).text;
+        assert(tRegCs.indexOf("řez nenalezen") !== -1, "no cut colour (Czech [Registrace]): 'řez nenalezen' (got '" + tRegCs + "')");
+    } finally { delete ZSM.Draw.getRegistrationName; }
+
+    // --- an invalid field: ✗ in the error colour; fixed, the finding and its own pen are back ---
+    var wE = buildWith("ZUND", FIXED, AB);
+    var fE = found(wE), rE = reason(wE), before = fE.text;
+    var maxD = fieldCtl(wE, ZSM.L.MAX_DIST);
+    maxD.text = "1O5"; maxD.onChanging();
+    assert(rE.visible === true && fE.visible === false, "'1O5': the reason shows instead of the finding");
+    assert(rE.text.indexOf("✗ ") === 0, "'1O5': the reason starts with ✗ (got '" + rE.text + "')");
+    assertEq(rE.text.indexOf("⚠"), -1, "'1O5': no ⚠ any more");
+    assert(sameRGB(rE.graphics.foregroundColor, COLORS.ERR), "'1O5': the reason's pen is COLORS.ERR");
+    assertEq(okBtn(wE).enabled, false, "'1O5': Generate is grey");
+    maxD.text = "450"; maxD.onChanging();
+    assert(fE.visible === true && rE.visible === false, "'450' after '1O5': the finding shows again");
+    assertEq(fE.text, before, "'450': the same finding as before the error");
+    assert(fE.graphics.foregroundColor === fE.graphics.ownPen && fE.graphics.assignments === 0,
+        "'450': the finding has the pen it had before the error (never written)");
+    assert(!sameRGB(fE.graphics.foregroundColor, COLORS.ERR) && !sameRGB(fE.graphics.foregroundColor, COLORS.WARN),
+        "'450': neither ERR nor WARN on the finding");
+    // Several invalid fields: the count, after ✗.
+    maxD.text = "x"; maxD.onChanging();
+    var gapO = fieldCtl(wE, ZSM.L.GAP_ZO);
+    gapO.text = "y"; gapO.onChanging();
+    assert(rE.visible === true && rE.text.indexOf("✗ 2 out of range") === 0,
+        "two invalid fields: '✗ ' and the count (got '" + rE.text + "')");
+
+    // --- Auto-fit: the artwork's size when known, never the artboard's ---
+    var tAuto = found(buildWith("ZUND", {}, AB)).text;
+    assert(tAuto.indexOf("artboard") === -1 && tAuto.indexOf("×") === -1,
+        "Auto-fit, artwork not measured: no size at all (got '" + tAuto + "')");
+    assertEq(tAuto, "ZUND · řez „Cut“", "Auto-fit, artwork not measured: mode and cut colour");
+    var tArt = found(buildWith("ZUND", {}, { artboard: AB.artboard, artwork: { w: 1200, h: 800 } })).text;
+    assert(tArt.indexOf("grafika 1 200 × 800 mm") !== -1 && tArt.indexOf("artboard") === -1,
+        "Auto-fit, artwork measured: 'grafika 1 200 × 800 mm' (got '" + tArt + "')");
+    // The source radios switch the line while the dialog is open.
+    var wR = buildWith("ZUND", {}, AB);
+    var rbFixedCtl = ctl(wR, "radiobutton", ZSM.L.SRC_FIXED), rbAutoCtl = ctl(wR, "radiobutton", ZSM.L.SRC_AUTO);
+    rbFixedCtl.value = true; rbAutoCtl.value = false; rbFixedCtl.onClick();
+    var tToFixed = found(wR).text;
+    rbAutoCtl.value = true; rbFixedCtl.value = false; rbAutoCtl.onClick();
+    var tToAuto = found(wR).text;
+    assert(tToFixed.indexOf("artboard 1 560 × 3 050 mm") !== -1, "Auto -> Fixed: the artboard appears (got '" + tToFixed + "')");
+    assertEq(tToAuto.indexOf("artboard"), -1, "Fixed -> Auto: the artboard goes (got '" + tToAuto + "')");
+
+    // --- SUMMA fits the artwork: no artboard size ---
+    var tSum = found(buildWith("SUMMA", { mode: "SUMMA" }, AB)).text;
+    assertEq(tSum, "SUMMA · řez „Cut“", "SUMMA, artwork not measured: mode and cut colour only (got '" + tSum + "')");
+    var tSumArt = found(buildWith("SUMMA", { mode: "SUMMA" }, { artwork: { w: 1200, h: 800 }, drawingScale: 2.5 })).text;
+    assert(tSumArt.indexOf("SUMMA · grafika 3 000 × 2 000 mm") === 0 && / · 1:2\.5$/.test(tSumArt),
+        "SUMMA, artwork measured at 1:2.5: real size and the scale (got '" + tSumArt + "')");
+
+    // --- marks only: "pouze značky" in place of the cut colour, live ---
+    var wM = buildWith("ZUND", { useArtboardBounds: true, marksOnly: true }, AB);
+    var tM = found(wM).text;
+    assert(tM.indexOf("pouze značky") !== -1 && tM.indexOf("řez") === -1,
+        "marks only: 'pouze značky', no cut colour (got '" + tM + "')");
+    var cbM = ctl(wM, "checkbox", ZSM.L.MARKS_ONLY);
+    cbM.value = false; cbM.onClick();
+    assert(found(wM).text.indexOf("řez „Cut“") !== -1, "marks only off: the cut colour is back (got '" + found(wM).text + "')");
+
+    // --- decimals: a tenth, the locale's separators ---
+    ZSM.L.DEC_SEP = ",";
+    var tDec = found(buildWith("ZUND", FIXED, { artboard: { w: 1234.56, h: 99.94 } })).text;
+    assert(tDec.indexOf("artboard 1 234,6 × 99,9 mm") !== -1, "cs: '1 234,6 × 99,9 mm' (got '" + tDec + "')");
+    ZSM.L.DEC_SEP = "."; ZSM.L.THOU_SEP = ",";
+    var tDecEn = found(buildWith("ZUND", FIXED, { artboard: { w: 1234.56, h: 99.94 } })).text;
+    assert(tDecEn.indexOf("artboard 1,234.6 × 99.9 mm") !== -1, "en: '1,234.6 × 99.9 mm' (got '" + tDecEn + "')");
+    ZSM.L.THOU_SEP = " ";
+    delete ZSM.L.DEC_SEP;
+
+    // --- the real tables: the spec's text in Czech, its English twin, the duplicate named in „…“ ---
+    var localeSrc = fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8");
+    function realL(locale) { return new Function("ZSM", "app", localeSrc + "; return ZSM.L;")({}, { locale: locale }); }
+    var mockL = ZSM.L;
+    try {
+        ZSM.L = realL("cs_CZ");
+        assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text,
+            "ZUND · artboard 1 560 × 3 050 mm · řez „Cut“ · 1:10", "cs: the spec's line, word for word");
+        var cs = ZSM.L;
+        assertEq(cs.STATUS_OK, undefined, "cs: STATUS_OK is gone");
+        assertEq(cs.STATUS_OK_MARKS, undefined, "cs: STATUS_OK_MARKS is gone");
+        var dupD = presetData(FIXED);
+        dupD.presets["Mine"].layers = [{ name: "Cut", color: "Cut" }, { name: "Kiss-cut", color: "Cut" }];
+        ZSM.UI.buildDialog("ZUND", dupD, { swatches: ZSM.Draw.getSwatchNames(), swatchRGB: ZSM.Draw.getSwatchRGBMap(),
+            layers: ZSM.Draw.getLayerNames(), detectedColor: "Cut", drawingScale: 1, artboard: null, artwork: null });
+        var rDup = reason(SUI.lastWindow());
+        assertEq(rDup.text, "✗ Barva „Cut“ je přiřazena více vrstvám — odeberte duplicitu.",
+            "cs: the duplicate colour is named in „…“");
+        ZSM.L = realL("en_US");
+        assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text,
+            "ZUND · artboard 1,560 × 3,050 mm · cut \"Cut\" · 1:10", "en: the same line in English");
+        assertEq(found(buildWith("ZUND", { useArtboardBounds: true, marksOnly: true }, { artboard: { w: 156, h: 305 },
+            detectedColor: "[Registration]" })).text, "ZUND · artboard 156 × 305 mm · marks only", "en: marks only");
+        assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, detectedColor: "[Registration]" })).text,
+            "ZUND · artboard 156 × 305 mm · no cut colour", "en: no cut colour");
+        assertEq(ZSM.L.STATUS_OK, undefined, "en: STATUS_OK is gone");
+    } finally { ZSM.L = mockL; }
+
+    // --- show() reads the active artboard, Large Canvas included, and leaves the selection alone ---
+    var origApp = global.app, selectionWrites = 0;
+    var abs = [{ artboardRect: [0, 100, 100, 0] }, { artboardRect: [0, 864.5669, 442.2047, 0] }];
+    abs.getActiveArtboardIndex = function () { return 1; };
+    var doc = { XMPString: XMP_PACKET, scaleFactor: 10, artboards: abs };
+    Object.defineProperty(doc, "selection", { get: function () { return []; }, set: function () { selectionWrites++; } });
+    global.app = { documents: { length: 1 }, activeDocument: doc };
+    var last = ZSM.Config.getDefaults();
+    last.useArtboardBounds = true;
+    var shownLine = null;
+    try {
+        runDialogs({ activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": last } },
+            [function (win) { shownLine = found(win).text; }]);
+    } finally { global.app = origApp; }
+    assert(shownLine !== null && shownLine.indexOf("artboard 1 560 × 3 050 mm") !== -1,
+        "show(): the active artboard (156 × 305 mm) × Large Canvas 10 (got '" + shownLine + "')");
+    assertEq(selectionWrites, 0, "show(): the selection is never written before the dialog");
 })();
 
 
