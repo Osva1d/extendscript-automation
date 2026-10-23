@@ -323,7 +323,10 @@ Co se při stavbě změnilo proti textu výš; čísla jsou z měření v Illust
   koncem měřil dialog 583 px (EN 566 px), s krátkým 535 px (EN 534 px);
   měřítko zůstává vidět v poli i v řádku.
 - **Dialog je česky 535 px široký, anglicky 534 px** (§4.4 slibovalo 521 px
-  jako v 1.3.0). Šířku určuje šedý řádek, jehož popisek má šířku nejdelšího
+  jako v 1.3.0). *Dodatek 2026-10-23:* po zkrácení tří textů nálezu
+  (uživatel: „bez odsazení“, „začátek nahoře“, „Cesta není vybraná — značí
+  se artboard.“) a s šířkou řádku podle pixelů (`measureString`) je dialog
+  **465 px** (EN 481 px), tedy užší než v 1.3.0; výšky beze změny. Šířku určuje šedý řádek, jehož popisek má šířku nejdelšího
   možného textu (nález s koncem ` · 1:99,9`). Nejvyšší stav (Hrany artboardu
   bez zrcadlení) měří 804 px (`window.size`; i se záhlavím okna 832 px),
   strop z §8 je cca 850 px; ostatní stavy 758 a 678 px.

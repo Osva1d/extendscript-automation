@@ -675,21 +675,26 @@ Rozteč 5000 mm) proti běžnému dokumentu 600 × 100 mm v 1:1 s hodnotami ÷ 1
    i vrstvy beze změny.
 
 **Rozměry dialogu** (px, `window.size` bez záhlaví okna; `frameSize`
-nejvyššího stavu 535 × 832):
+nejvyššího stavu 465 × 832; změřeno znovu 2026-10-23 po zkrácení textů
+šedého řádku a s šířkou řádku podle pixelů, viz níž — výšky se nezměnily):
 
 | stav | CS | EN |
 |---|---|---|
-| Hrany artboardu, zrcadlení zapnuté (výchozí) | 535 × 758 | 534 × 758 |
-| Hrany artboardu bez zrcadlení (nejvyšší) | 535 × 804 | 534 × 804 |
-| Vybraná cesta (štít, Odsazení od kraje 20) | 535 × 678 | 534 × 678 |
-| předvolba chce cestu, nic není vybráno | 535 × 758 | 534 × 758 |
-| nejširší důvod (Rohové zóny, Rozteč `x`) | 535 × 758 | 534 × 758 |
-| kruh, Odsazení 0, měřítko 10 (nejdelší nález) | 535 × 678 | 534 × 678 |
+| Hrany artboardu, zrcadlení zapnuté (výchozí) | 465 × 758 | 481 × 758 |
+| Hrany artboardu bez zrcadlení (nejvyšší) | 465 × 804 | 481 × 804 |
+| Vybraná cesta (štít, Odsazení od kraje 20) | 465 × 678 | 481 × 678 |
+| nejširší důvod (Rohové zóny, Rozteč `x`) | 465 × 758 | 481 × 758 |
+| měřítko 99,9, přepnutí režimu a jednotek | šířka beze změny | šířka beze změny |
+
+Panely mají 425 px (EN 441), oba popisky šedého řádku 389 × 15 (EN 405 × 15),
+tlačítka beze změny (Uložit jako… 103 px s textem 75 px). Do 2026-10-22 měl
+dialog 535 × 758 / 804 / 678 (EN 534), viz tabulka konců řádku níž.
 
 V 1.3.0 měřil dialog 521 × 731 / 777 / 651 (2026-10-13). Přibylo 27 px na
 výšku; strop 850 px drží i s `frameSize`.
 
-**Šířku dělá šedý řádek.** Popisek se založí s textem `longestInfoText()`
+**Šířku dělá šedý řádek** (odstavec a tabulka popisují stav do
+2026-10-22). Popisek se založí s textem `longestInfoText()`
 a `buildDialog` mu ještě před prvním rozvržením přepíše text na skutečný
 nález; po `layout(true)` má přesto šířku nejdelšího textu (459 px proti
 162 px textu, který ukazuje). (Rozměry v tabulkách výš jsou z doby, kdy byl
@@ -705,10 +710,22 @@ vzorek je v obou jazycích nález kruhu s Odsazením 0 a konec s 99,9):
 | ` · 1:%s` (v 1.4.0) | 535 | 534 |
 
 Bez konce by dialog měl 485 px; co v 1.3.0 drželo 521 px, tady neměřeno.
-Nejdelší text podle počtu znaků je i nejširší v pixelech (CS 459 px, EN
-458 px); nejširší skutečný důvod „✗ Rohové zóny — Rozteč: zadejte číslo od
+Tehdy byl nejdelší text podle počtu znaků i nejširší v pixelech (CS 459 px,
+EN 458 px); nejširší skutečný důvod „✗ Rohové zóny — Rozteč: zadejte číslo od
 0,01 do 9999 mm.“ má 357 px (EN „✗ Corner zones — Spacing: …“ 393 px).
 Měřítko přepsané v otevřeném dialogu na 99,9 dá nález 459 px — vejde se.
+
+**Znaky nejsou pixely (2026-10-23).** Po zkrácení tří textů nálezu („bez
+odsazení“, „začátek nahoře“, „Cesta není vybraná — značí se artboard.“; EN
+„no offset“, „starts at the top“, „No path selected — marking the
+artboard.“) byl anglický vzorek nejdelší podle počtu znaků („Closed path ·
+no corners · starts at the top · no offset · 1:99.9“, 65 znaků, 361 px)
+užší než důvod v zónách (62 znaků, 393 px) a popisek 379 px by ho uřízl.
+`graphics.measureString` měří i před rozvržením okna (statictext i panel
+dávají stejné číslo), takže `buildDialog` dá oběma popiskům
+`preferredSize.width` nejširšího vzorku v pixelech (`GM.UI.widestInfoWidth`):
+CS 389 px (nález kruhu s Odsazením 0 a 1:99,9), EN 405 px (syntetický důvod
+„✗ Corner zones — Spacing: enter a whole number from 0.01 to 9999.“).
 Řádek ukazuje měřítko zaokrouhlené na jedno desetinné místo (33,3333 jako
 1:33,3; pole, běh i dokument drží přesnou hodnotu), takže mez šířky je
 naměřený vzorek s 99,9.

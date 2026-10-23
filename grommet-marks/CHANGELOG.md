@@ -90,8 +90,13 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
   100 % K. Dokument bez registrační barvy kreslí 100 % K jako dřív.
 - **Dialog je o jeden řádek vyšší.** Jednotky se přesunuly do druhého řádku
   Umístění k Měřítku kresby. Nejvyšší stav (Hrany artboardu bez zrcadlení)
-  měří 804 px místo 777 px a dialog je 535 px široký místo 521 px, aby se do
-  šedého řádku vešel i konec s měřítkem.
+  měří 804 px místo 777 px.
+- **Dialog je užší: 465 px místo 521 px.** Tři texty šedého řádku pod
+  Umístěním jsou kratší („bez odsazení“, „začátek nahoře“, „Cesta není
+  vybraná — značí se artboard.“) a místo pro řádek se počítá podle skutečné
+  šířky textu, ne podle počtu znaků. Dřív si řádek rezervoval šířku
+  nejdelšího možného textu, který se skoro nikdy neukáže, a vpravo
+  v panelech zůstávala třetina prázdná.
 
 ### Opraveno
 

@@ -836,10 +836,10 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 
 | stav dialogu | výška (px) | šířka (px) |
 |---|---|---|
-| Hrany artboardu, obě zrcadlení zapnutá (výchozí) | 758 | 535 |
-| Hrany artboardu, obě zrcadlení vypnutá (nejvyšší) | 804 | 535 |
-| Vybraná cesta (štít) | 678 | 535 |
-| totéž anglicky | 758 / 804 / 678 | 534 |
+| Hrany artboardu, obě zrcadlení zapnutá (výchozí) | 758 | 465 |
+| Hrany artboardu, obě zrcadlení vypnutá (nejvyšší) | 804 | 465 |
+| Vybraná cesta (štít) | 678 | 465 |
+| totéž anglicky | 758 / 804 / 678 | 481 |
 
 1. Projdi stavy v tabulce; v každém se podívej na spodní okraj dialogu.
 - [ ] **Storno** a **Generovat** jsou vidět **celé** a dialog nezasahuje pod
