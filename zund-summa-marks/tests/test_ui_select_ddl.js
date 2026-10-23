@@ -41,6 +41,7 @@ function makeDDL(texts) {
 }
 
 // ===== LOAD PRODUCTION CODE =====
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8"));
 
 // ===== FRAMEWORK =====

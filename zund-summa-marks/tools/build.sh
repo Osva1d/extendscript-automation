@@ -9,7 +9,8 @@
 #   Concatenates Zund/Summa Marks source modules into a single production .jsx.
 #
 # Module load order (dependencies must come first):
-#   json2.js → locale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → cut_marks.js → bounds.js → draw.js → ui.js → main.js
+#   json2.js → locale.js → numbers.js → field_paint.js → registration.js → drawing_scale.js → utils.js → validation.js → ui_state.js → config.js → storage.js → cut_marks.js → bounds.js → draw.js → ui.js → main.js
+#   (the four shared modules follow locale.js: numbers reads ZSM.L.DEC_SEP; the rest only need the ZSM namespace)
 # ===========================================================================
 
 set -euo pipefail
@@ -89,6 +90,14 @@ EOF
 # Modules — order matters
 cat "../shared/lib/json2.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module (must stay FIRST — everything below may use JSON)
 cat "$SRC_DIR/locale.js"     >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/numbers.js"       >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildNumbers(ZSM);"            >> "$OUTPUT" && echo "" >> "$OUTPUT"   # bind shared module to ZSM namespace
+cat "../shared/lib/field_paint.js"   >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildFieldPaint(ZSM);"         >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/registration.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildRegistration(ZSM);"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/drawing_scale.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module
+echo "buildDrawingScale(ZSM);"       >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/utils.js"      >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/lib/validation.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "../shared/lib/ui_state.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"   # shared core module

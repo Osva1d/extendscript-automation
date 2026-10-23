@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: ZSM.Utils — mm/pt conversion, validateNumber, log(), error()
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Config, ZSM.L
+// Depends on: ZSM.Config, ZSM.L, ZSM.Numbers (shared; call time, in validateNumber)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -56,7 +56,8 @@ ZSM.Utils = {
 
     /**
      * Validates a numerical input within a range.
-     * Normalizes Czech decimal separator (comma → dot) before parsing.
+     * Reads the text with the shared ZSM.Numbers.parse: a decimal comma or dot,
+     * anything else ("1e2", "0x10", ".5", "1O5", empty) is not a number.
      * Returns null and shows alert if invalid; keeps dialog open.
      * @param {string|number} val - The value to validate.
      * @param {number} min - Minimum allowed value (inclusive).
@@ -65,18 +66,18 @@ ZSM.Utils = {
      * @returns {number|null} Validated number or null if invalid.
      */
     validateNumber: function (val, min, max, name) {
-        // Normalize: comma → dot (CZ locale), trim whitespace
-        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
-        // JS quirk: Number("") === 0 and Number("  ") === 0, NOT NaN.
-        // Treat empty/whitespace-only strings as invalid to prevent
-        // silent 0-substitution when user clears a UI field.
-        var n = (str === "") ? NaN : Number(str);
+        // One reading for the family (shared ZSM.Numbers.parse): a decimal
+        // comma or dot, spaces around ignored. "1e2", "0x10", ".5", "1O5",
+        // "20 mm" and an empty field are NaN — an empty field is invalid
+        // here, every ZSM field is required — never a different number.
+        var n = ZSM.Numbers.parse(val);
         if (isNaN(n)) {
             alert(ZSM.L.format(ZSM.L.ERR_MUST_BE_NUMBER, name));
             return null;
         }
         if (n < min || n > max) {
-            alert(ZSM.L.format(ZSM.L.ERR_OUT_OF_RANGE, name, min, max));
+            // Limits written the way the field is: the locale's decimal separator.
+            alert(ZSM.L.format(ZSM.L.ERR_OUT_OF_RANGE, name, ZSM.Numbers.format(min), ZSM.Numbers.format(max)));
             return null;
         }
         return n;

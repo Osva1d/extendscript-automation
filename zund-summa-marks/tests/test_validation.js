@@ -50,6 +50,7 @@ ZSM.L = L_EN;
 // ===== LOAD PRODUCTION CODE =====
 var utilsPath = path.join(__dirname, "..", "src", "lib", "utils.js");
 eval(fs.readFileSync(utilsPath, "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 var validationPath = path.join(__dirname, "..", "src", "lib", "validation.js");
 eval(fs.readFileSync(validationPath, "utf8"));
 

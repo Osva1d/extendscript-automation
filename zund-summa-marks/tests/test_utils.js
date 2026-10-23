@@ -5,7 +5,7 @@
  *
  * Coverage:
  *   - mm2pt / pt2mm conversions (roundtrip + edge cases)
- *   - validateNumber (range, decimals, comma decimal, NaN, infinity)
+ *   - validateNumber (range, decimals, comma decimal, NaN, infinity, strict grammar)
  *   - presetEquals (deep compare, type coercion, layers array, exotic values)
  *
  * Usage: node tests/test_utils.js
@@ -23,6 +23,7 @@ global.alert = function (msg) { alertCalls.push(msg); };
 ZSM.L = {
     ERR_MUST_BE_NUMBER: "%s must be a number",
     ERR_OUT_OF_RANGE:   "%s must be between %s and %s",
+    DEC_SEP:            ",",   // cs locale: limits in the alert read "0,1", not "0.1"
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -36,6 +37,8 @@ ZSM.L = {
 // ===== LOAD PRODUCTION CODE =====
 var utilsPath = path.join(__dirname, "..", "src", "lib", "utils.js");
 eval(fs.readFileSync(utilsPath, "utf8"));
+// validateNumber reads through the shared ZSM.Numbers, bound the way the build does.
+require("./lib/load_shared.js")(ZSM, ["numbers"]);
 
 
 // ===== TEST FRAMEWORK =====
@@ -125,9 +128,32 @@ assert(ZSM.Utils.validateNumber("1,2,3", 0, 10, "Test") === null, "validateNumbe
 alertCalls = [];
 assert(ZSM.Utils.validateNumber(Infinity, 0, 10, "Test") === null, "validateNumber: Infinity > max → null");
 
-// Scientific notation
+// Strict grammar (shared ZSM.Numbers.parse): a decimal comma or dot, spaces
+// around ignored. Exponent, hex, ".5", "5.", a typo, units, a thousands
+// space and an empty field are "must be a number" — never another number.
+var typos = ["1e2", "0x10", ".5", "5.", "1O5", "1 000", "20 mm", ""];
+for (var ti = 0; ti < typos.length; ti++) {
+    alertCalls = [];
+    assert(ZSM.Utils.validateNumber(typos[ti], 0, 1000, "Test") === null,
+        "validateNumber: '" + typos[ti] + "' → null");
+    assert(alertCalls.length === 1 && /must be a number/.test(alertCalls[0]),
+        "validateNumber: '" + typos[ti] + "' → 'must be a number' alert");
+}
+
+var readable = [["2,5", 2.5], [" 2,5 ", 2.5], ["2.5", 2.5], ["+2,5", 2.5]];
+for (var ri = 0; ri < readable.length; ri++) {
+    alertCalls = [];
+    assert(ZSM.Utils.validateNumber(readable[ri][0], 0, 10, "Test") === readable[ri][1],
+        "validateNumber: '" + readable[ri][0] + "' → " + readable[ri][1]);
+    assert(alertCalls.length === 0, "validateNumber: '" + readable[ri][0] + "' no alert");
+}
+
+// The limits in the out-of-range alert are written as the field is: with the
+// locale's decimal separator, the way ZSM.Numbers.format writes them.
 alertCalls = [];
-assert(ZSM.Utils.validateNumber("1e2", 0, 200, "Test") === 100, "validateNumber: '1e2' → 100");
+assert(ZSM.Utils.validateNumber("0,05", 0.1, 50, "Test") === null, "validateNumber: 0,05 below 0,1 → null");
+assert(alertCalls.length === 1 && /between 0,1 and 50/.test(alertCalls[0]),
+    "validateNumber: range alert names the limits as '0,1' and '50' (got: " + alertCalls[0] + ")");
 
 
 // =====================================================

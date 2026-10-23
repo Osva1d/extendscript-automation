@@ -73,6 +73,7 @@ global.alert = function () {};
 var utilsPath = path.join(__dirname, "..", "src", "lib", "utils.js");
 ZSM.L = { ERR_WRITE_SETTINGS: "Cannot write settings file." };
 eval(fs.readFileSync(utilsPath, "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 
 var configPath = path.join(__dirname, "..", "src", "config.js");
 eval(fs.readFileSync(configPath, "utf8"));

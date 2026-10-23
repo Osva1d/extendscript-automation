@@ -214,6 +214,21 @@ try {
         var buf = fs.readFileSync(distPath);
         var hasBOM = buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
         assert(hasBOM, "dist starts with UTF-8 BOM (required for ExtendScript Unicode)");
+
+        // The four shared modules are bound to ZSM after the locale (numbers
+        // reads ZSM.L.DEC_SEP) and before ZSM.Utils (validateNumber reads
+        // ZSM.Numbers), in the order tools/build.sh lists them.
+        var sharedCalls = ["buildNumbers(ZSM);", "buildFieldPaint(ZSM);",
+                           "buildRegistration(ZSM);", "buildDrawingScale(ZSM);"];
+        var prevAt = dist.indexOf("ZSM.L = (function");
+        var bound = prevAt !== -1;
+        for (var ci = 0; ci < sharedCalls.length && bound; ci++) {
+            var callAt = dist.indexOf(sharedCalls[ci]);
+            bound = callAt > prevAt;
+            prevAt = callAt;
+        }
+        assert(bound && prevAt < dist.indexOf("ZSM.Utils = {"),
+            "dist binds numbers, field_paint, registration, drawing_scale after ZSM.L and before ZSM.Utils");
     } else {
         console.log("  (skip: dist not built)");
     }
