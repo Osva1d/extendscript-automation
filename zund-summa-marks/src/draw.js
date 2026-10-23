@@ -166,21 +166,34 @@ ZSM.Draw = {
             try { zundSub = reg.layers.getByName("Zünd"); } catch (e) {}
             try { summaSub = reg.layers.getByName("Summa"); } catch (e) {}
 
-            // Legacy cleanup: if no mode sublayers exist, there may be
-            // marks placed directly on Regmarks from a pre-sublayer version.
-            // Clear them once so they don't coexist with the new sublayers.
-            if (!zundSub && !summaSub) {
-                this._clearLayer(reg);
+            // Only the sublayers "Zünd" and "Summa" are the script's. Tile Export
+            // draws straight into Regmarks and an operator may keep their own
+            // content there; a rule from the versions before 1.0.0 (marks
+            // directly on Regmarks) cleared the whole layer when neither
+            // sublayer existed. Now everything else stays and the run ends by
+            // saying how many objects that is (old marks of such a job stay
+            // beside the new ones).
+            var foreignInReg = this._countForeignInRegmarks(reg);
+            if (foreignInReg > 0) {
+                geo.warnings.push(ZSM.L.format(ZSM.L.WARN_REGMARKS_FOREIGN, foreignInReg));
             }
 
             // Remove current mode's sublayer (preserves the other mode).
             // Unlock & unhide first — `.remove()` on a locked or hidden
             // sublayer can crash AI at C++ level in some versions.
+            // A removal that fails must not go unnoticed: the run used to add a
+            // second sublayer of the same name next to the one that stayed, with
+            // the old marks under the new ones. Now it is counted as a drawing
+            // failure (see removeFailed below) and no second sublayer is added.
             var didRemoveSub = false;
+            var removeFailed = false;
             if (s.mode === "ZUND") {
                 if (zundSub) {
                     try { zundSub.locked = false; zundSub.visible = true; } catch (e) {}
-                    try { zundSub.remove(); didRemoveSub = true; } catch (e) {}
+                    try { zundSub.remove(); didRemoveSub = true; } catch (rmZ) {
+                        removeFailed = true;
+                        ZSM.Utils.log("render: removing the Zünd sublayer failed — " + rmZ.message);
+                    }
                 }
                 // A Zünd run invalidates any existing Summa output (artboard
                 // recompute + OPOS-outermost violation — see removeSummaOutput).
@@ -193,7 +206,10 @@ ZSM.Draw = {
                 }
             } else if (s.mode === "SUMMA" && summaSub) {
                 try { summaSub.locked = false; summaSub.visible = true; } catch (e) {}
-                try { summaSub.remove(); didRemoveSub = true; } catch (e) {}
+                try { summaSub.remove(); didRemoveSub = true; } catch (rmS) {
+                    removeFailed = true;
+                    ZSM.Utils.log("render: removing the Summa sublayer failed — " + rmS.message);
+                }
             }
 
             // Force AI to commit the sublayer removal before further mutations.
@@ -203,9 +219,19 @@ ZSM.Draw = {
                 try { app.redraw(); } catch (rd1) {}
             }
 
-            // Create fresh sublayer for current mode
-            var modeSub = reg.layers.add();
-            modeSub.name = modeSubName;
+            // Create fresh sublayer for current mode. When the old one could not
+            // be removed, none is created and nothing is drawn into the old one
+            // (new and old marks would sit mixed in one sublayer). The objects
+            // that would have gone into it count as failed to draw — reported
+            // like any other drawing failure — and the rest of the run (layer
+            // mapping, trim lines) goes on.
+            var modeSub = null;
+            if (removeFailed) {
+                drawFailures += Math.max(1, geo.marksZ.length + geo.marksS.length + (geo.barS ? 1 : 0));
+            } else {
+                modeSub = reg.layers.add();
+                modeSub.name = modeSubName;
+            }
 
             // Z-order Regmarks to front, but only if not already there.
             // Skipping the no-op call reduces C++ pipeline pressure on
@@ -318,8 +344,10 @@ ZSM.Draw = {
             // in transient state (just created/added). Wrap defensively;
             // failure here is non-fatal — pathItems.* calls below target
             // modeSub directly via the explicit reference.
-            try { doc.activeLayer = modeSub; } catch (al) {
-                ZSM.Utils.log("render: setting activeLayer failed — " + al.message);
+            if (modeSub) {
+                try { doc.activeLayer = modeSub; } catch (al) {
+                    ZSM.Utils.log("render: setting activeLayer failed — " + al.message);
+                }
             }
 
             // Same effective SF as core.js — must include s.scaleN, else
@@ -329,7 +357,7 @@ ZSM.Draw = {
             var zSize = (Number(s.markSizeZ) || 5.0) / sf;
             var rZ   = ZSM.Utils.mm2pt(zSize / 2);
 
-            var marksZ = geo.marksZ;
+            var marksZ = modeSub ? geo.marksZ : [];   // no sublayer: counted as failed above
             for (var z = 0; z < marksZ.length; z++) {
                 var m = marksZ[z];
                 try {
@@ -347,7 +375,7 @@ ZSM.Draw = {
             var sSize = (Number(s.markSizeS) || 3.0) / sf;
             var rS   = ZSM.Utils.mm2pt(sSize / 2);
 
-            var marksS = geo.marksS;
+            var marksS = modeSub ? geo.marksS : [];
             for (var sm = 0; sm < marksS.length; sm++) {
                 var m = marksS[sm];
                 try {
@@ -362,7 +390,7 @@ ZSM.Draw = {
             }
 
             // 6. Draw Summa registration bar
-            if (geo.barS) {
+            if (geo.barS && modeSub) {
                 try {
                     var bar = modeSub.pathItems.add();
                     bar.setEntirePath([[geo.barS.x1, geo.barS.y], [geo.barS.x2, geo.barS.y]]);
@@ -385,7 +413,7 @@ ZSM.Draw = {
             //     would mislead the operator. ZUND leaves an existing Trim
             //     alone (it belongs to the SUMMA layout, not ours to delete).
             if (geo.red && geo.red.length > 0) {
-                drawFailures += this._drawTrimTopLevel(geo.red, geo.warnings);
+                drawFailures += this._drawTrimTopLevel(geo.red, geo.warnings, unhidden);
             } else if (s.mode === "SUMMA") {
                 this._removeTrimLayer(geo.warnings);
             }
@@ -493,10 +521,12 @@ ZSM.Draw = {
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
      * @param {Array} warnings - Optional; receives a notice when the layer
      *                           holds objects the script did not create.
+     * @param {Array} unhidden - Optional collector (as for getLay); receives
+     *                           the Trim layer's name when it was hidden.
      * @returns {number} Trim lines that could not be drawn.
      * @private
      */
-    _drawTrimTopLevel: function (redLines, warnings) {
+    _drawTrimTopLevel: function (redLines, warnings, unhidden) {
         if (!redLines || redLines.length === 0) return 0;
         var doc = app.activeDocument;
         // CRITICAL (C++ crash guard): mark drawing leaves doc.activeLayer pointing
@@ -511,7 +541,11 @@ ZSM.Draw = {
         var trimLayer = null;
         try { trimLayer = doc.layers.getByName(ZSM.Config.layerTrim); } catch (e) { trimLayer = null; }
         if (trimLayer) {
-            try { trimLayer.locked = false; trimLayer.visible = true; } catch (eu) {}
+            try {
+                var trimWasHidden = !trimLayer.visible;
+                trimLayer.locked = false; trimLayer.visible = true;
+                if (trimWasHidden && unhidden) unhidden.push(ZSM.Config.layerTrim);
+            } catch (eu) {}
             // Refresh: drop only the script's own lines — foreign content stays.
             if (this._clearOwnTrimLines(trimLayer) > 0 && warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
             try { app.redraw(); } catch (rd) {}
@@ -707,30 +741,32 @@ ZSM.Draw = {
     },
 
     /**
-     * Removes all page items and sublayers from a layer, leaving it empty.
-     * Used to clear old Regmarks before re-rendering.
-     * @param {Layer} layer - Layer to clear.
+     * Counts what sits on the Regmarks layer outside the script's own
+     * sublayers "Zünd" and "Summa": objects directly on the layer and
+     * sublayers of any other name (each counts once, whatever it holds).
+     * The script never touches these; render() reports the number.
+     * @param {Layer} reg - The Regmarks layer.
+     * @returns {number}
      * @private
      */
-    _clearLayer: function (layer) {
+    _countForeignInRegmarks: function (reg) {
+        var foreign = 0;
         try {
-            // Remove sublayers first. Unlock & unhide each before remove —
-            // .remove() on a locked or hidden sublayer can crash AI at C++.
-            while (layer.layers.length > 0) {
-                try {
-                    var sub = layer.layers[0];
-                    try { sub.locked = false; sub.visible = true; } catch (eu) {}
-                    sub.remove();
-                } catch (e) { break; }
+            // Direct children only: Illustrator's layer.pageItems lists just
+            // those; the parent test keeps the count right wherever the
+            // collection also reaches into the sublayers.
+            var items = reg.pageItems;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].parent === reg) foreign++;
             }
-            // Remove page items (iterate backwards to avoid index shifts)
-            var items = layer.pageItems;
-            for (var i = items.length - 1; i >= 0; i--) {
-                try { items[i].remove(); } catch (e) {}
+            var subs = reg.layers;
+            for (var j = 0; j < subs.length; j++) {
+                if (subs[j].name !== "Zünd" && subs[j].name !== "Summa") foreign++;
             }
         } catch (e) {
-            ZSM.Utils.log("_clearLayer: " + e.message);
+            ZSM.Utils.log("_countForeignInRegmarks: " + e.message);
         }
+        return foreign;
     },
 
     // _isArtifactLayer / _getEffectiveBounds / _isInsideClippedGroup —

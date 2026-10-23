@@ -54,6 +54,7 @@ ZSM.L = {
     WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
     WARN_REG_ROUTING: "regskip %s",
     WARN_TRIM_FOREIGN: "trimforeign",
+    WARN_REGMARKS_FOREIGN: "regforeign %s",
     ERR_MARKS_ORIENT: "marks orient %s %s",
     ERR_MARKS_OVERLAP: "marks overlap %s %s",
     ERR_MARKS_OUTSIDE: "marks outside %s",
@@ -291,31 +292,38 @@ assert(bounds === null, "Empty doc: getBounds returns null");
 
 
 // =====================================================
-// TEST 7: Pre-existing Regmarks with legacy items → cleared on first run
+// TEST 7: Pre-existing Regmarks with items of its own → kept, and reported
 // =====================================================
-console.log("\n=== TEST 7: Legacy Regmarks cleanup ===");
+// Since 1.2.0 the script touches nothing in Regmarks outside its own sublayers
+// "Zünd" and "Summa" (spec §4.3). The pre-1.0.0 rule that cleared the layer
+// also deleted Tile Export's marks and an operator's own content.
+console.log("\n=== TEST 7: Items on Regmarks outside the script's sublayers are kept ===");
+var alerts7 = [], origAlert7 = global.alert;
+global.alert = function (m) { alerts7.push(String(m)); };
 doc = setupDoc({
     layers: [
         { name: "Regmarks", items: [
-            { type: "path", bounds: [-50, 200, 200, -50] }   // legacy mark
+            { type: "path", bounds: [-50, 200, 200, -50] }   // an old mark of unknown origin
         ]},
         { name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
     ]
 });
 settings = makeSettings({ mode: "ZUND" });
 bounds = ZSM.Draw.getBounds(settings);
-// Bounds should NOT include the legacy mark (it's on Regmarks, skipped)
-assertEq(bounds[0], 0, "Legacy: bounds L=0 (Regmarks legacy mark skipped)");
-assertEq(bounds[2], 100, "Legacy: bounds R=100");
+// Bounds should NOT include the old mark (it's on Regmarks, skipped)
+assertEq(bounds[0], 0, "Foreign: bounds L=0 (Regmarks item skipped)");
+assertEq(bounds[2], 100, "Foreign: bounds R=100");
 
 geo = ZSM.Core.calculateAll(settings, bounds);
 ZSM.Draw.render(geo, settings);
 
 regmarks = findLayer(doc, "Regmarks");
-// Legacy items should be cleared (Zünd sublayer takes over)
-assert(regmarks._items.length === 0, "Legacy: Regmarks direct items cleared");
+assertEq(regmarks._items.length, 1, "Foreign: the Regmarks direct item is kept");
 zundSub = findSublayer(regmarks, "Zünd");
-assert(zundSub !== null, "Legacy: Zünd sublayer created after cleanup");
+assert(zundSub !== null, "Foreign: Zünd sublayer created beside it");
+assert(alerts7.join("\n").indexOf("regforeign 1") >= 0,
+    "Foreign: the operator is told how many objects were left (got: " + alerts7.join(" | ") + ")");
+global.alert = origAlert7;
 
 
 // =====================================================
@@ -1381,6 +1389,160 @@ try { crash38 = render38(art38(120)); } finally { ZSM.Draw.getLay = origGetLay38
 assertEq(crash38.drew, false, "an unexpected error inside the drawing returns false (not a successful run)");
 assert(crash38.alerts.join("\n").indexOf("render error: layer gone") >= 0, "...after the render error message");
 global.alert = origAlert38;
+
+
+// =====================================================
+// TEST 39: Regmarks keeps what the script did not create (spec 1.2.0 §4.3)
+// =====================================================
+// ZUND → SUMMA → ZUND over a Regmarks layer with 3 objects of its own and a
+// sublayer "Moje": the script replaces only its sublayers "Zünd" and "Summa",
+// everything else stays, and every run says how many objects it left (the
+// sublayer counts as one; what is inside it and the script's own marks do not).
+console.log("\n=== TEST 39: foreign content in Regmarks survives ZUND → SUMMA → ZUND ===");
+var alerts39 = [], origAlert39 = global.alert;
+global.alert = function (m) { alerts39.push(String(m)); };
+function run39(mode) {
+    var s39 = makeSettings({ mode: mode });
+    alerts39.length = 0;
+    ZSM.Draw.render(ZSM.Core.calculateAll(s39, ZSM.Draw.getBounds(s39)), s39);
+    return alerts39.join("\n");
+}
+function foreignCount39(text) {
+    var m39 = /regforeign (\d+)/.exec(text);
+    return m39 ? Number(m39[1]) : null;
+}
+var doc39 = setupDoc({
+    layers: [
+        { name: "Regmarks", items: [
+            { type: "path", bounds: [-50, 200, 200, -50] },
+            { type: "path", bounds: [10, 20, 30, 0] },
+            { type: "path", bounds: [40, 60, 70, 50] }
+        ], sublayers: [
+            { name: "Moje", items: [{ type: "path", bounds: [5, 5, 9, 1] }] }
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var reg39 = findLayer(doc39, "Regmarks");
+var kept39 = reg39._items.slice();
+var moje39 = findSublayer(reg39, "Moje");
+function foreignIntact39(label) {
+    var same = reg39._items.length === 3;
+    for (var k = 0; same && k < 3; k++) same = reg39._items[k] === kept39[k];
+    assert(same, label + ": the 3 objects on Regmarks are the same objects");
+    assert(findSublayer(reg39, "Moje") === moje39 && countItems(moje39, "PathItem") === 1,
+        label + ": the sublayer 'Moje' and its object are intact");
+}
+
+var text39 = run39("ZUND");
+foreignIntact39("ZUND");
+var zund39a = findSublayer(reg39, "Zünd");
+assert(zund39a !== null && countItems(zund39a, "PathItem") === 5, "ZUND: the Zünd sublayer with 5 marks was created");
+assertEq(foreignCount39(text39), 4, "ZUND: told 4 objects were left (3 + the sublayer; got: " + text39 + ")");
+
+text39 = run39("SUMMA");
+foreignIntact39("SUMMA");
+assert(findSublayer(reg39, "Summa") !== null, "SUMMA: the Summa sublayer was created");
+assert(findSublayer(reg39, "Zünd") === zund39a, "SUMMA: Zünd left as it was");
+assertEq(foreignCount39(text39), 4, "SUMMA: told 4 again — the script's own sublayers and marks do not count (got: " + text39 + ")");
+
+text39 = run39("ZUND");
+foreignIntact39("ZUND again");
+var zund39b = findSublayer(reg39, "Zünd");
+assert(zund39b !== null && zund39b !== zund39a && countItems(zund39b, "PathItem") === 5,
+    "ZUND again: Zünd replaced by a fresh sublayer with 5 marks");
+assert(findSublayer(reg39, "Summa") === null, "ZUND again: the invalidated Summa sublayer is gone");
+assert(text39.indexOf("summa removed") >= 0, "ZUND again: the Summa removal is reported");
+assertEq(foreignCount39(text39), 4, "ZUND again: still told 4 (got: " + text39 + ")");
+
+// Nothing foreign → no notice (a clean document stays quiet)
+setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+text39 = run39("ZUND") + run39("SUMMA") + run39("ZUND");
+assertEq(foreignCount39(text39), null, "clean Regmarks: no notice about foreign objects (got: " + text39 + ")");
+global.alert = origAlert39;
+
+
+// =====================================================
+// TEST 40: a hidden Trim layer is reported as unhidden (spec 1.2.0 §4.4)
+// =====================================================
+// getLay reported Regmarks and the mapped layers; Trim was made visible
+// without a word.
+console.log("\n=== TEST 40: hidden Trim layer is named in the unhidden notice ===");
+var alerts40 = [], origAlert40 = global.alert;
+global.alert = function (m) { alerts40.push(String(m)); };
+function run40(layers, mode) {
+    var d40 = setupDoc({ layers: layers });
+    var s40 = makeSettings({ mode: mode || "SUMMA", drawRed: true });
+    alerts40.length = 0;
+    ZSM.Draw.render(ZSM.Core.calculateAll(s40, ZSM.Draw.getBounds(s40)), s40);
+    return { doc: d40, text: alerts40.join("\n") };
+}
+var art40 = { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] };
+
+var r40 = run40([{ name: "Trim", visible: false, items: [] }, art40]);
+assert(findLayer(r40.doc, "Trim").visible === true, "hidden Trim: made visible");
+assertEq(countItems(findLayer(r40.doc, "Trim"), "PathItem"), 2, "hidden Trim: the 2 trim lines are drawn");
+assert(r40.text.indexOf("unhidden Trim") >= 0, "hidden Trim: the notice names it (got: " + r40.text + ")");
+
+r40 = run40([{ name: "Regmarks", visible: false, items: [] }, { name: "Trim", visible: false, items: [] }, art40]);
+assert(r40.text.indexOf("unhidden Regmarks, Trim") >= 0,
+    "hidden Regmarks and Trim: one notice names both (got: " + r40.text + ")");
+
+// An operator's own hidden "Trim" layer: unhidden and the foreign object kept — both are said
+r40 = run40([{ name: "Trim", visible: false, items: [
+    { type: "path", bounds: [0, 50, 50, 0], strokeSpot: "Cut", stroked: true, filled: false }
+]}, art40]);
+assert(r40.text.indexOf("unhidden Trim") >= 0 && r40.text.indexOf("trimforeign") >= 0,
+    "hidden Trim with a foreign object: unhidden and foreign both reported (got: " + r40.text + ")");
+
+r40 = run40([{ name: "Trim", items: [] }, art40]);
+assert(r40.text.indexOf("unhidden") < 0, "visible Trim: no unhidden notice (got: " + r40.text + ")");
+r40 = run40([art40]);
+assert(r40.text.indexOf("unhidden") < 0, "Trim created by the run: no unhidden notice (got: " + r40.text + ")");
+global.alert = origAlert40;
+
+
+// =====================================================
+// TEST 41: a sublayer that cannot be removed is an error, not a second sublayer (spec 1.2.0 §4.4)
+// =====================================================
+// remove() of the old Zünd/Summa sublayer failed inside a silent catch: the
+// run went on, added a second sublayer with the same name, and the old marks
+// stayed under the new ones. Now the failure is counted as a drawing failure
+// (K12) and the run draws nothing into a sublayer that still holds the old set.
+console.log("\n=== TEST 41: failed removal of the old sublayer ===");
+var alerts41 = [], origAlert41 = global.alert;
+global.alert = function (m) { alerts41.push(String(m)); };
+function run41(subName, mode, drawRed) {
+    var d41 = setupDoc({ layers: [
+        { name: "Regmarks", sublayers: [
+            { name: subName, items: [{ type: "path", bounds: [-20, 120, -15, 115] }] }   // the old mark
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]});
+    var reg41 = findLayer(d41, "Regmarks");
+    var old41 = findSublayer(reg41, subName);
+    old41.remove = function () { throw new Error("remove refused"); };
+    var s41 = makeSettings({ mode: mode, drawRed: !!drawRed });
+    alerts41.length = 0;
+    var ret41 = ZSM.Draw.render(ZSM.Core.calculateAll(s41, ZSM.Draw.getBounds(s41)), s41);
+    return { doc: d41, reg: reg41, old: old41, text: alerts41.join("\n"), ret: ret41 };
+}
+
+var r41 = run41("Zünd", "ZUND");
+assertEq(r41.reg._sublayers.length, 1, "ZUND: no second sublayer next to the one that would not go");
+assert(findSublayer(r41.reg, "Zünd") === r41.old, "ZUND: the old sublayer is the only Zünd");
+assertEq(countItems(r41.old, "PathItem"), 1, "ZUND: nothing was mixed into the old sublayer");
+assert(r41.text.indexOf("ERR: marks failed 5") >= 0,
+    "ZUND: reported like any other drawing failure, counting the 5 marks not drawn (got: " + r41.text + ")");
+
+r41 = run41("Summa", "SUMMA", true);
+assertEq(r41.reg._sublayers.length, 1, "SUMMA: no second sublayer next to the one that would not go");
+assertEq(countItems(r41.old, "PathItem"), 1, "SUMMA: nothing was mixed into the old sublayer");
+assert(r41.text.indexOf("ERR: marks failed 5") >= 0,
+    "SUMMA: reported, counting the 4 marks and the OPOS bar not drawn (got: " + r41.text + ")");
+assertEq(countItems(findLayer(r41.doc, "Trim"), "PathItem"), 2, "SUMMA: the rest of the run goes on — trim lines are drawn");
+assertEq(r41.ret, true, "SUMMA: render still answers true (the run reached its end; Task 9 revisits)");
+global.alert = origAlert41;
 
 
 // =====================================================

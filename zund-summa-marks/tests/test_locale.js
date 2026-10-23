@@ -241,6 +241,23 @@ for (var gs = 0; gs < goneScale.length; gs++) {
 
 
 // =====================================================
+// TEST 12: the notice about foreign objects in Regmarks (spec 1.2.0 §4.3, canon §12.1)
+// =====================================================
+// The count stands after a colon (never "4 objektů"), the layer name in Czech
+// quotes, no exclamation mark; one %s, the count.
+console.log("\n=== TEST 12: WARN_REGMARKS_FOREIGN ===");
+var enR = loadLocale("en"), csR = loadLocale("cs");
+assert(csR.format(csR.WARN_REGMARKS_FOREIGN, 4).indexOf("(objektů: 4)") !== -1, "cs: the count stands after a colon");
+assert(csR.WARN_REGMARKS_FOREIGN.indexOf("„Regmarks“") !== -1, "cs: the layer name in Czech quotes „…“");
+assert(csR.WARN_REGMARKS_FOREIGN.indexOf("„Zünd“") !== -1 && csR.WARN_REGMARKS_FOREIGN.indexOf("„Summa“") !== -1,
+    "cs: the script's two sublayers are named");
+assert(enR.format(enR.WARN_REGMARKS_FOREIGN, 4).indexOf("(objects: 4)") !== -1, "en: the count stands after a colon");
+assertEq(enR.WARN_REGMARKS_FOREIGN.split("%s").length - 1, 1, "en: exactly one %s");
+assertEq(csR.WARN_REGMARKS_FOREIGN.split("%s").length - 1, 1, "cs: exactly one %s");
+assert(enR.WARN_REGMARKS_FOREIGN.indexOf("!") === -1 && csR.WARN_REGMARKS_FOREIGN.indexOf("!") === -1, "no exclamation mark");
+
+
+// =====================================================
 // SUMMARY
 // =====================================================
 console.log("\n" + "=".repeat(50));
