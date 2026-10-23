@@ -735,8 +735,12 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   (Odsazení 7, Počet ok 10, Velikost 3, Reg. tah 1, Bílé halo 3, Měřítko 1)
   se čtou jako běžný text, **jinak než** zašedlá pole (Rozteč 105 v režimu
   Počet ok, zóny 5 a 100). Do 1.4.0 vypadala všechna stejně bledá (snímky
-  2026-10-23). Napiš do Velikosti `abc` (pole zčervená) a pak `3`: číslo se
-  vrátí k normální barvě textu, ne do bledě šedé. Na Dark a Medium Dark totéž.
+  2026-10-23). Napiš do Velikosti `abc` a klikni do jiného pole (pole
+  zčervená až po opuštění — pole s kurzorem kreslí macOS a barvu skriptu
+  ignoruje; důvod v šedém řádku zčervená hned), pak `3` a zase jinam: číslo
+  vypadá stejně jako v sousedních polích, ne bledší ani tmavší. Na Dark
+  a Medium Dark totéž (tam světle šedá, na světlých jasech barva textu
+  Adobe).
 
 ### K5 — Předvolby: hvězdička, [Výchozí], Uložit
 1. **[Výchozí] z kódu.** Zazálohuj nastavení (úvod K). Spusť skript,

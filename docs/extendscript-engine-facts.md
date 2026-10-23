@@ -744,13 +744,23 @@ přijme `background`, `selection` a `focusRing`. Odmítnuté („Chybný argumen
 `fieldForeground`, `fieldBackground` — **chybová barva motivu neexistuje**.
 Pero nese barvu aktuálního jasu UI (`pen.color`): na Light `foreground`
 0,28, `disabledForeground` 0,74, štětec `background` 0,94 (zašedlý text má
-proti pozadí kontrast jen 1,65 : 1); na Dark `foreground` 0,60. Pero
+proti pozadí kontrast jen 1,65 : 1); na Dark `foreground` 0,60,
+`disabledForeground` 0,32, `selection` (pero) 0,60, štětec `background`
+0,20, `focusRing` modrá 0,27 / 0,63 / 0,96. Pero
 `THEME_COLOR` jde zapsat do `foregroundColor` edittextu i statictextu
 a přečte se zpátky s `type = 1` a `theme = "foreground"`, i po předchozím
 červeném peru. Jas UI je i v předvolbách: `app.preferences.
 getRealPreference("uiBrightness")` — 1 na Light, 0 na Dark (Medium Dark
-a Medium Light neměřeno). Jak pero z motivu na poli vypadá na obrazovce,
-ověřuje ruční test K4.
+a Medium Light neměřeno). **Na obrazovce** (snímky uživatele 2026-10-23):
+na Light je pole s perem `foreground` k nerozeznání od nativního, na Dark je
+0,60 znatelně tmavší než nativní bílá ostatních polí — tam odpovídá nativní
+bílé šedá 0,75. `FieldPaint.field` proto po červené volá podle štětce
+`background` (průměr < 0,5 = tmavé UI): tmavé UI 0,75, světlé pero motivu.
+
+**Zápis `null` (nebo `undefined`) do `graphics.foregroundColor` shodí
+Illustrator** — sonda 2026-10-23 v nezobrazeném okně, po předchozím červeném
+peru; nezkoušet znovu. Pero se tak nedá „vrátit“ nativnímu kreslení, jen
+nahradit jiným.
 
 **Šedý řádek tohle pero nedostává (ruling R15).** Nález je zakázaný
 statictext, do jehož `graphics.foregroundColor` se nikdy nezapisuje: má
