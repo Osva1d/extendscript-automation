@@ -113,7 +113,7 @@ ZSM.Config = {
 
 // Load production utility modules (no DOM dependencies)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
-require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
+require("./lib/load_shared.js")(ZSM, ["numbers", "field_paint"]);   // shared: ZSM.Numbers, ZSM.FieldPaint, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(ZSM);   // shared core module — bind to ZSM
@@ -742,6 +742,231 @@ runDialogs(pA3c, [
     function (win) { pick(win, "Banner Z"); clickGenerate(win); }
 ]);
 assertEq(pA3c.presets["[Last Settings]"].feedTop, 55, "a picked preset brings its own values for the other mode");
+
+
+// =====================================================
+// TEST 20 (spec 6.1-6.3): one strict number reading, a decimal comma stays a
+// comma, the shared field paint, no save over an invalid field
+// =====================================================
+// The live check read fields with parseFloat ("1O5" -> 1, "0x10" -> 0,
+// "1 000" -> 1, "20 mm" -> 20), the same fields were written back with String()
+// (a dot in a Czech dialog), and Save stayed live over a typo. The dialog now
+// reads through ZSM.Numbers.parse, writes through ZSM.Numbers.format, paints
+// through ZSM.FieldPaint.field, and greys Save / Save As while a field is
+// invalid. The pen is the mock's: a pen made with the family red carries it.
+console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===");
+(function () {
+    function isErrPen(pen) {
+        var c = pen && pen.color, e = ZSM.FieldPaint.COLORS.ERR;
+        return !!c && c[0] === e[0] && c[1] === e[1] && c[2] === e[2];
+    }
+    function fieldCtl(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    }
+    function btnText(win, text) {
+        return win.findOne(function (c) { return c.type === "button" && c.text === text; });
+    }
+    function okBtn(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
+    // The status line is the only statictext that starts with the warning sign.
+    function statusLine(win) {
+        return win.findOne(function (c) { return c.type === "statictext" && String(c.text).indexOf("⚠") === 0; });
+    }
+    function mineData(patch) {
+        var mine = ZSM.Config.getDefaults();
+        for (var k in patch) { if (patch.hasOwnProperty(k)) mine[k] = patch[k]; }
+        return { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mine } };
+    }
+    function gatesOf(win) {
+        return { ok: okBtn(win).enabled, save: btnText(win, ZSM.L.BTN_SAVE).enabled, saveAs: btnText(win, ZSM.L.BTN_SAVE_AS).enabled };
+    }
+
+    ZSM.L.DEC_SEP = ",";   // the Czech table's separator
+
+    // --- Typos: red field, Generate / Save / Save As grey, the status line names the field ---
+    var typos = ["1O5", "0x10", "1 000", "20 mm"];
+    for (var ti = 0; ti < typos.length; ti++) {
+        var typo = typos[ti];
+        var wT = buildAndCapture("ZUND", mineData({}));
+        var gapOut = fieldCtl(wT, ZSM.L.GAP_ZO), maxDist = fieldCtl(wT, ZSM.L.MAX_DIST);
+        // A valid edit first, so Save is live and the grey below is the gate's doing.
+        maxDist.text = "450"; maxDist.onChanging();
+        var before = gatesOf(wT);
+        assert(before.ok === true && before.save === true && before.saveAs === true,
+            "'" + typo + "': precondition, a valid edit leaves Generate, Save and Save As live");
+
+        gapOut.text = typo; gapOut.onChanging();
+        assert(isErrPen(gapOut.graphics.foregroundColor), "'" + typo + "': the field is painted in the family red");
+        var gT = gatesOf(wT);
+        assertEq(gT.ok, false, "'" + typo + "': Generate is grey");
+        assertEq(gT.save, false, "'" + typo + "': Save is grey");
+        assertEq(gT.saveAs, false, "'" + typo + "': Save As is grey");
+        var stT = statusLine(wT);
+        assert(stT !== null && stT.text.indexOf("Gap from edge") >= 0,
+            "'" + typo + "': the status line names the field (got '" + (stT && stT.text) + "')");
+
+        gapOut.text = "2,5"; gapOut.onChange();
+        assert(gapOut.graphics.foregroundColor === gapOut.graphics.ownPen, "'2,5': the field gets its own pen back");
+        var gOk = gatesOf(wT);
+        assert(gOk.ok === true && gOk.save === true && gOk.saveAs === true,
+            "'2,5' after '" + typo + "': Generate, Save and Save As are live again");
+        assertEq(statusLine(wT), null, "'2,5' after '" + typo + "': the warning is gone");
+    }
+
+    // --- A field that was never red is never written (shared FieldPaint) ---
+    var wClean = buildAndCapture("ZUND", mineData({}));
+    var painted = wClean.find(function (c) { return c.type === "edittext" && c.graphics.assignments !== 0; });
+    assertEq(painted.length, 0, "opened with valid values: no field is painted (" + painted.length + " were)");
+
+    // --- Save stays grey when something other than the live check refreshes the indicator ---
+    // chRed.onClick only refreshes the indicator; it must not give Save back.
+    var wS = buildAndCapture("SUMMA", mineData({ mode: "SUMMA" }));
+    var chRed = wS.findOne(function (c) { return c.type === "checkbox" && c.text === ZSM.L.DRAW_RED; });
+    var gapS = fieldCtl(wS, ZSM.L.GAP_ZO);
+    gapS.text = "1O5"; gapS.onChanging();
+    chRed.value = !chRed.value; chRed.onClick();
+    var gS = gatesOf(wS);
+    assert(gS.save === false && gS.saveAs === false && gS.ok === false,
+        "a checkbox refresh over '1O5': Save, Save As and Generate stay grey");
+
+    // --- Direct reads: the typo is NaN, not a prefix; the mode-switch snapshot does not store 1 ---
+    // getUIValues() is the dialog's own; it is seen through [Last Settings], which
+    // the switch writes from it, and through the dialog that opens from that.
+    var pSw = mineData({});
+    var swSecond = {};
+    runDialogs(pSw, [
+        function (win) {
+            var f = fieldCtl(win, ZSM.L.GAP_ZO);
+            f.text = "1O5"; f.onChanging();
+            clickRadio(win, ZSM.L.MODE_SUMMA);
+        },
+        function (win) {
+            var f = fieldCtl(win, ZSM.L.GAP_ZO);
+            swSecond.text = f.text;
+            swSecond.red = isErrPen(f.graphics.foregroundColor);
+            swSecond.gates = gatesOf(win);
+        }
+    ]);
+    var snap = pSw.presets["[Last Settings]"];
+    assert(snap && typeof snap.gapOuter === "number" && isNaN(snap.gapOuter),
+        "mode switch with '1O5': [Last Settings].gapOuter is NaN (got " + (snap && snap.gapOuter) + ")");
+    assert(snap && snap.gapOuter !== 1, "mode switch with '1O5': [Last Settings] does not store 1");
+    assertEq(swSecond.text, "", "the dialog opened after the switch shows an empty field for it");
+    assertEq(swSecond.red, true, "...painted red");
+    assert(swSecond.gates.ok === false && swSecond.gates.save === false && swSecond.gates.saveAs === false,
+        "...with Generate, Save and Save As grey");
+
+    // --- A stored null: empty red field, everything grey (review focus 2) ---
+    var wN = buildAndCapture("ZUND", mineData({ gapOuter: null }));
+    var nullField = fieldCtl(wN, ZSM.L.GAP_ZO);
+    assertEq(nullField.text, "", "gapOuter null opens as an empty field, not 'null'");
+    assert(isErrPen(nullField.graphics.foregroundColor), "...painted red");
+    var gN = gatesOf(wN);
+    assert(gN.ok === false && gN.save === false && gN.saveAs === false, "...Generate, Save and Save As grey");
+    var stN = statusLine(wN);
+    assert(stN !== null && stN.text.indexOf("Gap from edge") >= 0, "...and the status line names the field");
+
+    // The same through a preset pick: setUIValues validates, then the indicator refresh runs.
+    var pPick = mineData({});
+    var brokenPreset = ZSM.Config.getDefaults();
+    brokenPreset.gapOuter = null;
+    pPick.presets["Broken"] = brokenPreset;
+    var pickState = {};
+    runDialogs(pPick, [function (win) {
+        pick(win, "Broken");
+        var f = fieldCtl(win, ZSM.L.GAP_ZO);
+        pickState.text = f.text; pickState.red = isErrPen(f.graphics.foregroundColor); pickState.gates = gatesOf(win);
+    }]);
+    assertEq(pickState.text, "", "picking a preset with gapOuter null: empty field");
+    assertEq(pickState.red, true, "...red");
+    assert(pickState.gates.ok === false && pickState.gates.save === false && pickState.gates.saveAs === false,
+        "...Generate, Save and Save As grey after the pick (the indicator refresh does not give Save back)");
+
+    // --- Fixed source: the greyed gap field is not checked, so a typo there does not gate ---
+    var wF = buildAndCapture("ZUND", mineData({ useArtboardBounds: true }));
+    var gapG = fieldCtl(wF, ZSM.L.GAP_GZ);
+    gapG.text = "1O5"; gapG.onChanging();
+    assert(okBtn(wF).enabled === true && !isErrPen(gapG.graphics.foregroundColor),
+        "Fixed source: a typo in the greyed gap field neither paints it nor blocks Generate");
+
+    // --- Writing numbers: the locale's separator, no rounding ---
+    var fractions = { gapInner: 5.5, gapOuter: 2.5, maxDist: 500.5, markSizeZ: 0.25, orientDist: 100.5 };
+    var pFmt = mineData(fractions);
+    var firstZ = {};
+    runDialogs(pFmt, [function (win) {
+        firstZ.gapInner = fieldText(win, ZSM.L.GAP_GZ);
+        firstZ.gapOuter = fieldText(win, ZSM.L.GAP_ZO);
+        firstZ.maxDist = fieldText(win, ZSM.L.MAX_DIST);
+        firstZ.markSizeZ = fieldText(win, ZSM.L.MARK_SIZE_Z);
+        firstZ.orientDist = fieldText(win, ZSM.L.ORIENT_DIST);
+        clickGenerate(win);
+    }]);
+    assertEq(firstZ.gapInner, "5,5", "cs: gapInner 5.5 opens as '5,5'");
+    assertEq(firstZ.gapOuter, "2,5", "cs: gapOuter 2.5 opens as '2,5'");
+    assertEq(firstZ.maxDist, "500,5", "cs: maxDist 500.5 opens as '500,5'");
+    assertEq(firstZ.markSizeZ, "0,25", "cs: markSizeZ 0.25 opens as '0,25' (no rounding)");
+    assertEq(firstZ.orientDist, "100,5", "cs: orientDist 100.5 opens as '100,5'");
+    var last = pFmt.presets["[Last Settings]"];
+    assert(last && last.gapOuter === 2.5 && last.gapInner === 5.5 && last.markSizeZ === 0.25,
+        "cs: Generate reads the commas back as the same numbers");
+    var againZ = {};
+    runDialogs(pFmt, [function (win) {
+        againZ.gapOuter = fieldText(win, ZSM.L.GAP_ZO);
+        againZ.markSizeZ = fieldText(win, ZSM.L.MARK_SIZE_Z);
+    }]);
+    assertEq(againZ.gapOuter, "2,5", "cs: after Generate and a new opening gapOuter is still '2,5'");
+    assertEq(againZ.markSizeZ, "0,25", "cs: ...and markSizeZ '0,25'");
+
+    var pSum = mineData({ mode: "SUMMA", feedTop: 70.5, feedBottom: 50.25, markSizeS: 3.5 });
+    var sumTexts = {};
+    runDialogs(pSum, [function (win) {
+        sumTexts.feedTop = fieldText(win, ZSM.L.FEED_TOP);
+        sumTexts.feedBottom = fieldText(win, ZSM.L.FEED_BOT);
+        sumTexts.markSizeS = fieldText(win, ZSM.L.MARK_SIZE_S);
+    }]);
+    assertEq(sumTexts.feedTop, "70,5", "cs SUMMA: feedTop 70.5 opens as '70,5'");
+    assertEq(sumTexts.feedBottom, "50,25", "cs SUMMA: feedBottom 50.25 opens as '50,25'");
+    assertEq(sumTexts.markSizeS, "3,5", "cs SUMMA: markSizeS 3.5 opens as '3,5'");
+
+    // Typing a dot where the preset holds a comma is the same value, not a change.
+    var wSame = buildAndCapture("ZUND", mineData({ gapOuter: 2.5 }));
+    var sameField = fieldCtl(wSame, ZSM.L.GAP_ZO);
+    sameField.text = "2.5"; sameField.onChanging();
+    assertEq(btnText(wSame, ZSM.L.BTN_SAVE).enabled, false, "'2.5' typed over '2,5' is no change: Save stays grey");
+
+    // The first value of a row goes through the same formatter.
+    var hostWin = new Window("dialog", "host");
+    assertEq(ZSM.UI.addRow(hostWin, "L", 2.5, "tip").inp.text, "2,5", "cs: addRow writes its first value with the comma");
+    assertEq(ZSM.UI.addRow(hostWin, "L", null, "tip").inp.text, "", "addRow: null is an empty field, not 'null'");
+
+    // en: the dot
+    ZSM.L.DEC_SEP = ".";
+    var pEn = mineData({ gapOuter: 2.5 });
+    var enText = null, enAgain = null;
+    runDialogs(pEn, [function (win) { enText = fieldText(win, ZSM.L.GAP_ZO); clickGenerate(win); }]);
+    runDialogs(pEn, [function (win) { enAgain = fieldText(win, ZSM.L.GAP_ZO); }]);
+    assertEq(enText, "2.5", "en: gapOuter 2.5 opens as '2.5'");
+    assertEq(enAgain, "2.5", "en: ...and again after Generate and a new opening");
+    assertEq(ZSM.UI.addRow(hostWin, "L", 2.5, "tip").inp.text, "2.5", "en: addRow writes its first value with the dot");
+
+    // --- The limits in the status line are written the way the field is ---
+    ZSM.L.DEC_SEP = ",";
+    var wL = buildAndCapture("ZUND", mineData({}));
+    var sizeCs = fieldCtl(wL, ZSM.L.MARK_SIZE_Z);
+    sizeCs.text = "0,05"; sizeCs.onChanging();
+    var stCs = statusLine(wL);
+    assert(stCs !== null && stCs.text.indexOf("0,1–50") >= 0,
+        "cs: the status line gives the mark size limits as '0,1–50' (got '" + (stCs && stCs.text) + "')");
+    ZSM.L.DEC_SEP = ".";
+    var wLe = buildAndCapture("ZUND", mineData({}));
+    var sizeEn = fieldCtl(wLe, ZSM.L.MARK_SIZE_Z);
+    sizeEn.text = "0.05"; sizeEn.onChanging();
+    var stEn = statusLine(wLe);
+    assert(stEn !== null && stEn.text.indexOf("0.1–50") >= 0,
+        "en: the status line gives the mark size limits as '0.1–50' (got '" + (stEn && stEn.text) + "')");
+
+    delete ZSM.L.DEC_SEP;   // back to the suite's default (no separator -> dot)
+})();
 
 
 // =====================================================

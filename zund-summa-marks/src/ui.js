@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: ZSM.UI — ScriptUI dialog, preset logic, event handling
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation
+// Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation,
+//             ZSM.Numbers, ZSM.FieldPaint (shared)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -613,9 +614,12 @@ ZSM.UI = {
         // Internal helpers
         // =================================================================
 
-        /** Parse a numeric edittext value (comma-safe). */
+        /**
+         * Reads a numeric edittext through the family's one reading: a decimal
+         * comma or dot, anything else NaN (never a prefix of it).
+         */
         function parseNum(et) {
-            return parseFloat(et.text.replace(/,/g, "."));
+            return ZSM.Numbers.parse(et.text);
         }
 
         /**
@@ -687,8 +691,10 @@ ZSM.UI = {
             rbSumma.value = isS;
 
             // Shared controls
-            rGapZO.inp.text = String(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
-            rMaxD.inp.text  = String(obj.maxDist   !== undefined ? obj.maxDist   : 500);
+            // Numbers go into the fields with the locale's separator, unrounded;
+            // null (a damaged preset) is an empty field the live check names.
+            rGapZO.inp.text = ZSM.Numbers.format(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
+            rMaxD.inp.text  = ZSM.Numbers.format(obj.maxDist   !== undefined ? obj.maxDist   : 500);
             ZSM.UI.selectDDL(rColor.ddl, obj.markColor || "[Registration]");
             if (rColor.refresh) rColor.refresh();
 
@@ -696,18 +702,18 @@ ZSM.UI = {
             if (isZ) {
                 rbFixed.value   = !!obj.useArtboardBounds;
                 rbAuto.value    = !obj.useArtboardBounds;
-                rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
+                rGapGZ.inp.text = ZSM.Numbers.format(obj.gapInner  !== undefined ? obj.gapInner  : 5);
                 applySourceState();
-                rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
-                rOrientDist.inp.text = String(obj.orientDist !== undefined ? obj.orientDist : 100);
+                rMarkSize.inp.text = ZSM.Numbers.format(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
+                rOrientDist.inp.text = ZSM.Numbers.format(obj.orientDist !== undefined ? obj.orientDist : 100);
             }
 
             // SUMMA-specific
             if (isS) {
-                rFT.inp.text    = String(obj.feedTop    !== undefined ? obj.feedTop    : 70);
-                rFB.inp.text    = String(obj.feedBottom !== undefined ? obj.feedBottom : 50);
+                rFT.inp.text    = ZSM.Numbers.format(obj.feedTop    !== undefined ? obj.feedTop    : 70);
+                rFB.inp.text    = ZSM.Numbers.format(obj.feedBottom !== undefined ? obj.feedBottom : 50);
                 chRed.value     = !!obj.drawRed;
-                rMarkSize.inp.text = String(obj.markSizeS !== undefined ? obj.markSizeS : 3);
+                rMarkSize.inp.text = ZSM.Numbers.format(obj.markSizeS !== undefined ? obj.markSizeS : 3);
             }
 
             // Scale (Phase 2) — sync checkbox + field from scaleN value.
@@ -802,13 +808,20 @@ ZSM.UI = {
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
         }
 
+        // False while a number field the live check covers (active mode,
+        // enabled fields) is invalid: Save and Save As are grey then, so a
+        // preset is never saved over a typo. Set by liveValidateAll; read
+        // here so a refresh that comes after the check (a preset load, a
+        // checkbox, a colour pick) cannot give Save back.
+        var numbersOk = true;
+
         /**
          * Refresh the active dropdown item's text + Save button state.
          * Lighter than updatePresetList(); call from input onChange handlers.
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
-            try { btnSave.enabled   = modified; } catch (e) {}
+            try { btnSave.enabled   = modified && numbersOk; } catch (e) {}
             try { btnRevert.enabled = modified; } catch (e) {}
 
             if (!ddPreset.selection) return;
@@ -1095,10 +1108,9 @@ ZSM.UI = {
         //   - disable the Generate button if ANY visible numeric field is
         //     invalid (so the user can't submit an unprocessable value).
         //
-        // graphics.foregroundColor is wrapped in try/catch — Adobe's API
-        // can throw on certain Illustrator versions and graphics objects
-        // not yet "realised". Failure to colour is non-fatal: the
-        // OK-disable still works and protects from bad input.
+        // The painting is ZSM.FieldPaint.field (shared); it never throws —
+        // a host that refuses the pen leaves the field as it is, and the
+        // OK-disable still protects from bad input.
         //
         // Mode-specific fields (rGapGZ etc.) are conditionally added so
         // the numericRows array only contains rows that exist for the
@@ -1122,35 +1134,9 @@ ZSM.UI = {
         numericRows.push({ row: { inp: etScale }, rule: ZSM.Validation.rules.scaleN });
 
         function isValueInRange(et, rule) {
-            var raw = String(et.text || "").replace(/,/g, ".");
-            var n   = parseFloat(raw);
+            var n = ZSM.Numbers.parse(et.text);
             if (isNaN(n)) return false;
             return (n >= rule.min && n <= rule.max);
-        }
-
-        function markFieldValidity(et, valid) {
-            // Try to repaint the edittext. Wrapped because Adobe's graphics
-            // API can throw "no graphics yet" until the window is realised
-            // and on some legacy versions doesn't support newPen at all.
-            try {
-                var g = et.graphics;
-                if (!g || !g.newPen) return;
-                // Capture the field's DEFAULT foreground pen once (after graphics
-                // is realised). "Valid" must restore that theme default — forcing
-                // black [0,0,0] is wrong on Illustrator's dark UI (text vanishes)
-                // and visually fails to clear the red. Light-grey is a safe
-                // fallback if the default pen can't be read.
-                if (et._zsmDefPen === undefined) {
-                    et._zsmDefPen = g.foregroundColor || null;
-                }
-                if (valid) {
-                    g.foregroundColor = et._zsmDefPen
-                        ? et._zsmDefPen
-                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                } else {
-                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
-                }
-            } catch (e) { /* graphics not ready or unsupported — ignored */ }
         }
 
         function liveValidateAll() {
@@ -1159,6 +1145,7 @@ ZSM.UI = {
             // so guard against the not-yet-wired state — it re-runs after init.
             if (!numericRows) return true;
             var allValid = true;
+            var numbersAllOk = true;
             var invalidCount = 0;
             var firstMsg = "";
             for (var i = 0; i < numericRows.length; i++) {
@@ -1166,13 +1153,14 @@ ZSM.UI = {
                 if (!nr.row || !nr.row.inp) continue;
                 // Skip disabled rows (e.g. gapInner is disabled in Fixed mode)
                 if (!nr.row.inp.enabled) {
-                    markFieldValidity(nr.row.inp, true);
+                    ZSM.FieldPaint.field(nr.row.inp, true);
                     continue;
                 }
                 var ok = isValueInRange(nr.row.inp, nr.rule);
-                markFieldValidity(nr.row.inp, ok);
+                ZSM.FieldPaint.field(nr.row.inp, ok);
                 if (!ok) {
                     allValid = false;
+                    numbersAllOk = false;
                     invalidCount++;
                     if (!firstMsg) {
                         // scaleN's rule label is the bare "1:" ratio prefix — swap
@@ -1181,7 +1169,8 @@ ZSM.UI = {
                         if (lblKey === "SCALE_FIELD_LABEL") lblKey = "SCALE_CHECKBOX";
                         var lbl = (lblKey && l[lblKey]) ? l[lblKey] : "";
                         lbl = String(lbl).replace(/:\s*$/, "");
-                        firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl, nr.rule.min, nr.rule.max);
+                        firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl,
+                            ZSM.Numbers.format(nr.rule.min), ZSM.Numbers.format(nr.rule.max));
                     }
                 }
             }
@@ -1196,9 +1185,9 @@ ZSM.UI = {
             for (var li = 0; li < layRows.length; li++) {
                 var etL = layRows[li].etLayer;
                 if (!etL) continue;
-                if (marksOnlyOn) { markFieldValidity(etL, true); continue; }
+                if (marksOnlyOn) { ZSM.FieldPaint.field(etL, true); continue; }
                 var nameOk = String(etL.text || "").replace(/^\s+|\s+$/g, "") !== "";
-                markFieldValidity(etL, nameOk);
+                ZSM.FieldPaint.field(etL, nameOk);
                 if (!nameOk) {
                     allValid = false;
                     invalidCount++;
@@ -1234,6 +1223,13 @@ ZSM.UI = {
             }
 
             try { btnOk.enabled = allValid; } catch (e) {}
+
+            // Save and Save As follow the numbers (spec 6.3, canon 12.4). Set
+            // here, not only in refreshModifiedIndicator: the handlers call that
+            // BEFORE this check, so Save would trail the field by one keystroke.
+            numbersOk = numbersAllOk;
+            try { btnSaveAs.enabled = numbersOk; } catch (e) {}
+            try { btnSave.enabled   = numbersOk && isModified(); } catch (e) {}
 
             // Status line. When everything is valid it no longer sits empty (N1) —
             // it shows a subtle, default-coloured context summary (mode · scale ·
@@ -1432,7 +1428,7 @@ ZSM.UI = {
         vg.alignChildren = ["left", "center"];
         vg.spacing       = 6;
         vg.preferredSize.width = M.VALUE_GROUP;
-        var et = vg.add("edittext", undefined, String(value));
+        var et = vg.add("edittext", undefined, ZSM.Numbers.format(value));
         et.preferredSize.width = M.NUM_FIELD;
         if (tip) et.helpTip = tip;
         vg.add("statictext", undefined, "mm");

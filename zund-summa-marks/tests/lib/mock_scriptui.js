@@ -21,6 +21,41 @@
     var lastWindow = null;
     var origGlobals = {};
 
+    // A minimal ScriptUIGraphics stub, so the shared FieldPaint.field() and the
+    // status line's pen calls have something to write to (real colouring needs
+    // a realised OS control). A pen carries the colour it was made with, so a
+    // test can tell red from the field's own pen; foregroundColor starts as
+    // that own pen, the way a real control shows its theme colour, and ownPen
+    // is the test's handle to it. `assignments` counts every write to
+    // foregroundColor. (The same stub grommet-marks' mock carries.)
+    function makeGraphics() {
+        var own = { own: true };
+        var current = own;
+        var writes = 0;
+        var g = {
+            newPen: function (type, color, width) {
+                if (type === 1) { return { type: type, theme: color, width: width }; }
+                return { type: type, color: color, width: width };
+            },
+            newBrush: function () { return {}; },
+            ownPen: own,
+            PenType: { SOLID_COLOR: 0, THEME_COLOR: 1 },
+            BrushType: { SOLID_COLOR: 0 }
+        };
+        Object.defineProperty(g, "foregroundColor", {
+            get: function () { return current; },
+            set: function (pen) { current = pen; writes++; },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(g, "assignments", {
+            get: function () { return writes; },
+            enumerable: true,
+            configurable: true
+        });
+        return g;
+    }
+
     // Common control base — all properties used by ui.js are pre-declared
     function MockControl(type, parent, opts) {
         opts = opts || {};
@@ -46,6 +81,7 @@
         this.visible = true;
         this.helpTip = "";
         this.name = opts.name || "";
+        this.graphics = makeGraphics();
 
         // Event handlers
         this.onClick = null;
