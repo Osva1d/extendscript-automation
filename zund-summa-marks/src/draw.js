@@ -365,6 +365,7 @@ ZSM.Draw = {
                     bar.strokeOverprint = true;
                     bar.strokeWidth     = geo.barS.w;
                     bar.filled          = false;
+                    ZSM.Draw._plainStroke(bar);
                 } catch (e) {
                     drawFailures++;
                     ZSM.Utils.log("render: failed to draw OPOS bar");
@@ -606,6 +607,21 @@ ZSM.Draw = {
     },
 
     /**
+     * Gives a new open path a plain, solid stroke. A scripted path inherits the
+     * dashes and caps of whatever was selected last (measured: a selected dashed
+     * die-line gave a dashed OPOS bar with round caps, and a longer visible
+     * bounds). The join is left alone: both callers draw a two-point path
+     * with no corners. Same idea as grommet-marks' _plainStroke.
+     * @param {PathItem} path - Freshly created path, colour and width already set.
+     * @private
+     */
+    _plainStroke: function (path) {
+        path.stroked      = true;
+        path.strokeDashes = [];
+        path.strokeCap    = StrokeCap.BUTTENDCAP;
+    },
+
+    /**
      * Draws red trim lines as direct children of the given layer.
      * @param {Layer} layer    - Host layer.
      * @param {Array} redLines - geo.red entries ({x1,y1,x2,y2,w}).
@@ -627,6 +643,7 @@ ZSM.Draw = {
                 line.strokeColor = redColor;
                 line.strokeWidth = redLines[r].w;
                 line.filled      = false;
+                ZSM.Draw._plainStroke(line);
                 line.note        = ZSM.Config.trimNote;
             } catch (e) {
                 failed++;

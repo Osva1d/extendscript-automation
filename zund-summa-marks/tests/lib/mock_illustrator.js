@@ -5,6 +5,10 @@
  *   - Read-only traversal: getBounds, _measureLayer, _getEffectiveBounds
  *   - Mutation: layer add/remove, item creation (ellipse/rectangle/add),
  *     item move, name changes — sufficient for testing render() side effects
+ *   - Inherited stroke style: a path takes strokeDashes / strokeCap from the
+ *     document's default stroke (spec.defaultStroke = {dashes, cap}), as a
+ *     scripted path does in Illustrator (docs/extendscript-engine-facts.md
+ *     "Nová cesta dědí výchozí styl tahu"). Joins and miter limit not modeled.
  *
  * NOT modeled:
  *   - C++ crash semantics
@@ -267,6 +271,11 @@
         this.fillOverprint = false;
         this.strokeOverprint = false;
         this.strokeWidth = spec.strokeWidth || 0;
+        // Dashes and caps are inherited from the document's default stroke.
+        var docDef = findDoc(parent);
+        var inherited = docDef && docDef._defaultStroke;
+        this.strokeDashes = inherited ? inherited.dashes.slice() : [];
+        this.strokeCap = inherited ? inherited.cap : "BUTTENDCAP";
         this.note = spec.note || "";
         this.closed = !!spec.closed;
         this._points = spec.points || null;   // [[x, y], ...] for pathPoints
@@ -405,6 +414,10 @@
         this.scaleFactor = spec.scaleFactor || 1;
         this._layers = [];
         this._mutationLog = [];   // append-only operation log
+        // Style new paths inherit (set before the layers, which may hold paths).
+        this._defaultStroke = spec.defaultStroke
+            ? { dashes: spec.defaultStroke.dashes.slice(), cap: spec.defaultStroke.cap }
+            : null;
 
         var self = this;
         (spec.layers || []).forEach(function (l) {
@@ -509,7 +522,8 @@
     var origGlobals = {};
     function install() {
         var keys = ["app", "Layer", "GroupItem", "PathItem", "CompoundPathItem",
-                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor", "ColorModel"];
+                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor", "ColorModel",
+                    "StrokeCap"];
         for (var i = 0; i < keys.length; i++) {
             origGlobals[keys[i]] = global[keys[i]];
         }
@@ -542,6 +556,7 @@
             this.cyan = this.magenta = this.yellow = this.black = 0;
         };
         global.ColorModel = { SPOT: "SPOT", PROCESS: "PROCESS", REGISTRATION: "REGISTRATION" };
+        global.StrokeCap = { BUTTENDCAP: "BUTTENDCAP", ROUNDENDCAP: "ROUNDENDCAP", PROJECTINGENDCAP: "PROJECTINGENDCAP" };
         global.SpotColor = function () {
             this.typename = "SpotColor";
             this.spot = null;

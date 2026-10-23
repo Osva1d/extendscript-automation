@@ -1229,8 +1229,8 @@ Výchozí styl se mění výběrem:
 | `cesta.selected = true` | `[8,4]` | ROUNDENDCAP |
 
 Značky vytvořené potom (režim „Vybraná cesta") byly čárkované — registrační
-kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší a stav po zrušení
-výběru neměřen.
+kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší neměřen; stav po
+zrušení výběru viz „Doměřeno 2026-10-19" níže.
 
 Doměřeno 2026-09-29 (AI 30.8.2): po výběru cesty s `[8,4]`, posunem čárek 3,
 kulatými konci, kulatým spojem, limitem úhlu 9, průhledností 50 a režimem
@@ -1240,6 +1240,17 @@ u nové skupiny taky ne.
 
 **Důsledek:** cesta ze skriptu, na jejímž vzhledu záleží, si musí
 `strokeDashes = []`, `strokeCap` a `strokeJoin` nastavit výslovně.
+
+Doměřeno 2026-10-19 (AI 30.8.2) na zund-summa-marks: **`doc.selection = null`
+výchozí styl nevrátí.** Po výběru cesty s `[8,4]` a kulatými konci zůstalo
+`[8,4]` s kulatými konci výchozím i po zrušení výběru; OPOS pruh nakreslený
+potom byl čárkovaný s kulatými konci a jeho `visibleBounds` měla 508,5 pt
+místo 500 pt (pruh silný 8,5 pt; PNG prohlédnuté). Zrušit výběr tedy není
+oprava — styl si musí nastavit cesta sama (`ZSM.Draw._plainStroke`).
+Dvě drobnosti ze stejného měření: přiřazení `strokeColor` zapne `stroked`
+a přiřazení `fillColor` zapne `filled` (výslovné `stroked = true` je pojistka);
+`doc.defaultStrokeDashes = [6,3]` se bez výběru tiše neprovede — bez chyby
+a bez účinku.
 
 Doměřeno 2026-10-20 (AI 30.8.2) na tile-exportu: s vybranou čárkovanou cestou
 `[12,6]` s kulatými konci a spoji vyšly ve stejném dokumentu čárkované

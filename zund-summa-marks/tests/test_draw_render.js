@@ -1253,6 +1253,62 @@ assert(col35.typename === "CMYKColor" && col35.black === 100,
 
 
 // =====================================================
+// TEST 36: the OPOS bar and the trim lines ignore an inherited dashed style
+// =====================================================
+// A path made by a script takes its dashes and caps from the document's default
+// stroke, and selecting a dashed die-line sets that default (measured, AI 30.8.1
+// and 30.8.2: the bar and trim lines came out dashed with round caps, and the
+// bar's visibleBounds grew past its true length). Selection is not touched here,
+// so the mock document simply starts with such a default.
+console.log("\n=== TEST 36: bar and trim lines ignore an inherited dashed style ===");
+function dashedDefaultDoc() {
+    return setupDoc({
+        defaultStroke: { dashes: [8, 4], cap: StrokeCap.ROUNDENDCAP },
+        layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(150), 0] }] }]
+    });
+}
+function plainButt(item) {
+    return item.strokeDashes.length === 0 && item.strokeCap === StrokeCap.BUTTENDCAP;
+}
+var probe36 = dashedDefaultDoc();
+var fresh36 = probe36._layers[0].pathItems.add();
+assert(fresh36.strokeDashes.length === 2 && fresh36.strokeCap === StrokeCap.ROUNDENDCAP,
+    "precondition: a new path inherits the dashed, round-cap default");
+
+var doc36 = dashedDefaultDoc();
+var s36 = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(s36, ZSM.Draw.getBounds(s36)), s36);
+var summa36 = findSublayer(findLayer(doc36, "Regmarks"), "Summa");
+var bars36 = summa36._items.filter(function (it) { return it._points && it._points.length === 2; });
+var squares36 = summa36._items.filter(function (it) { return !it._points; });
+assertEq(bars36.length, 1, "SUMMA: one OPOS bar");
+assert(bars36.length === 1 && plainButt(bars36[0]),
+    "OPOS bar: no dashes, butt caps (got " + JSON.stringify(bars36[0] && bars36[0].strokeDashes)
+    + " " + (bars36[0] && bars36[0].strokeCap) + ")");
+assert(bars36.length === 1 && bars36[0].stroked === true, "OPOS bar: stroked");
+var trim36 = findLayer(doc36, "Trim")._items;
+assertEq(trim36.length, 2, "SUMMA: two trim lines");
+for (var t36 = 0; t36 < trim36.length; t36++) {
+    assert(plainButt(trim36[t36]), "trim line " + t36 + ": no dashes, butt caps (got "
+        + JSON.stringify(trim36[t36].strokeDashes) + " " + trim36[t36].strokeCap + ")");
+    assert(trim36[t36].stroked === true, "trim line " + t36 + ": stroked");
+}
+assertEq(squares36.length, 4, "SUMMA: four square marks");
+for (var q36 = 0; q36 < squares36.length; q36++) {
+    assert(squares36[q36].stroked === false, "square mark " + q36 + " stays unstroked");
+}
+
+var docZ36 = dashedDefaultDoc();
+var sZ36 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZ36, ZSM.Draw.getBounds(sZ36)), sZ36);
+var circles36 = findSublayer(findLayer(docZ36, "Regmarks"), "Zünd")._items;
+assertEq(circles36.length, 5, "ZUND: five circle marks");
+for (var c36 = 0; c36 < circles36.length; c36++) {
+    assert(circles36[c36].stroked === false, "circle mark " + c36 + " stays unstroked");
+}
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();
