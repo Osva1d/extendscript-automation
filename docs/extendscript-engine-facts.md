@@ -725,11 +725,32 @@ a Uložit zhasne.
 **Vlastní pero pole se před zobrazením přečíst nedá.** Po `buildDialog`
 (první `liveValidateAll` proběhne ještě v něm) mají všech 19 edittextů
 zapamatované pero `null`: `graphics.foregroundColor` se před zobrazením čte
-jako prázdná hodnota. `FieldPaint.field(…, true)` jim proto nastaví
-`FALLBACK` (šedá 0,75), už při prvním průchodu, ne až po opravě pole —
-stejně jako `paintField` v 1.3.0. Totéž platilo pro dřívější
-jednopopiskový šedý řádek (pero `null`). Jestli se pero dá přečíst
-po `show()`, neměřeno.
+jako `undefined` (změřeno znovu 2026-10-23 na edittextu i statictextu).
+`FieldPaint.field(…, true)` jim proto do 2026-10-23 nastavoval `FALLBACK`
+(šedá 0,75) už při prvním průchodu — stejně jako `paintField` v 1.3.0
+a `paintField` Tile Exportu 1.1.0. Na tmavém UI to nevadí, na **Medium Light
+a Light vypadaly hodnoty všech aktivních polí jako zašedlé** (snímky
+uživatele 2026-10-23, všechny čtyři jasy). Od té doby se pole, které nebylo
+červené, nemaluje vůbec (kreslí ho Illustrator), a po opravě dostane pero
+z motivu (níž). Jestli se vlastní pero dá přečíst po `show()`, neměřeno.
+
+**Barvy motivu Adobe jsou skriptu k dispozici** (Illustrator 30.8.2,
+2026-10-23, okno nezobrazené). `graphics.newPen(PenType.THEME_COLOR, název,
+1)` přijme `foreground`, `disabledForeground` a `selection` (název je
+necitlivý na velikost prvního písmene); `newBrush(BrushType.THEME_COLOR, …)`
+přijme `background`, `selection` a `focusRing`. Odmítnuté („Chybný argument“):
+`text`, `error`, `warning`, `border`, `label`, `link`, `hilite`,
+`highlight`, `appDialogBackground`, `dialogBackground`, `panelForeground`,
+`fieldForeground`, `fieldBackground` — **chybová barva motivu neexistuje**.
+Pero nese barvu aktuálního jasu UI (`pen.color`): na Light `foreground`
+0,28, `disabledForeground` 0,74, štětec `background` 0,94 (zašedlý text má
+proti pozadí kontrast jen 1,65 : 1); na Dark `foreground` 0,60. Pero
+`THEME_COLOR` jde zapsat do `foregroundColor` edittextu i statictextu
+a přečte se zpátky s `type = 1` a `theme = "foreground"`, i po předchozím
+červeném peru. Jas UI je i v předvolbách: `app.preferences.
+getRealPreference("uiBrightness")` — 1 na Light, 0 na Dark (Medium Dark
+a Medium Light neměřeno). Jak pero z motivu na poli vypadá na obrazovce,
+ověřuje ruční test K4.
 
 **Šedý řádek tohle pero nedostává (ruling R15).** Nález je zakázaný
 statictext, do jehož `graphics.foregroundColor` se nikdy nezapisuje: má
@@ -741,10 +762,12 @@ založení jednou obarvený `FieldPaint.text(lbl, "ERR")` (zobrazuje jen důvody
 pero se nevrací). Viditelný je vždy právě jeden z nich (`visible`). Čitelnost
 obou na čtyřech jasech uživatelského rozhraní Illustratoru ověřuje K4.
 
-**Neměřeno:** zobrazený dialog na displeji 13" (ruční test K7), barva polí
-a řádku na světlém a tmavém UI (K4), zalomení hlášky `ERR_CRITICAL`, jak
-měřítko zapsané z GM přečte dialog Tile Exportu (K1 krok 3; klíč je tentýž),
-běh přes Soubor › Skripty.
+**Ověřeno 2026-10-23:** dialog je na displeji 13" vidět celý i v nejvyšším
+stavu (ruční test K7, uživatel); měřítko zapsané z GM přečte vydaný Tile
+Export 1.1.0 (`TE.Doc.loadDrawingScale`) a naopak — automatický průchod K1.
+
+**Neměřeno:** zalomení hlášky `ERR_CRITICAL`, běh přes Soubor › Skripty,
+zobrazený dialog Tile Exportu s měřítkem z GM (klíč je tentýž).
 
 ### Pozor na menu příkazy s dialogem
 

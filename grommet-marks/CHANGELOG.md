@@ -95,6 +95,12 @@ Měřítko kresby 1:N a jazyk společný všem nástrojům
 
 ### Opraveno
 
+- **Hodnoty v polích jsou čitelné i na světlém uživatelském rozhraní.** Na
+  jasu Medium Light a Light vypadala čísla ve všech aktivních polích jako
+  zašedlá: skript jim dával vlastní světle šedou, protože barvu, kterou pole
+  mělo, si Illustrator před otevřením dialogu přečíst nenechá. Pole, které
+  nebylo červené, teď skript nebarví vůbec a kreslí ho Illustrator sám; po
+  opravě překlepu dostane zpět barvu textu z motivu Adobe pro nastavený jas.
 - **Odsazení od kraje uložené v předvolbě se mimo režim cesty kontroluje
   i proti horní mezi 9999.** Dřív stačilo, aby nebylo záporné, a předvolba
   mohla držet hodnotu, kterou pole v režimu cesty odmítne.

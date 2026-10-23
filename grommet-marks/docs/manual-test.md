@@ -731,6 +731,12 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
   (zejména na Medium Light). Nález je zakázaný popisek, který skript nikdy
   nemaluje; důvod je druhý popisek, červený, ve stejném místě. Mezi stavy
   se viditelný text vždy vymění celý (nezůstane vidět starý přes nový).
+- [ ] **Hodnoty v polích na Medium Light a Light.** Čísla v aktivních polích
+  (Odsazení 7, Počet ok 10, Velikost 3, Reg. tah 1, Bílé halo 3, Měřítko 1)
+  se čtou jako běžný text, **jinak než** zašedlá pole (Rozteč 105 v režimu
+  Počet ok, zóny 5 a 100). Do 1.4.0 vypadala všechna stejně bledá (snímky
+  2026-10-23). Napiš do Velikosti `abc` (pole zčervená) a pak `3`: číslo se
+  vrátí k normální barvě textu, ne do bledě šedé. Na Dark a Medium Dark totéž.
 
 ### K5 — Předvolby: hvězdička, [Výchozí], Uložit
 1. **[Výchozí] z kódu.** Zazálohuj nastavení (úvod K). Spusť skript,
