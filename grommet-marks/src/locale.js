@@ -157,7 +157,7 @@ GM.L = (function () {
             // Short on purpose: " · scale 1:N" widened the dialog by 32 px
             // (docs/extendscript-engine-facts.md, measured 2026-10-21).
             INFO_SCALE: " · 1:%s",
-            INFO_FALLBACK: "The preset wants a path, none is selected — marking the artboard.",
+            INFO_FALLBACK: "No path selected — marking the artboard.",
             INFO_CORNERS_1: "%s corner",
             INFO_CORNERS_2: "%s corners",
             INFO_CORNERS_5: "%s corners",
@@ -167,8 +167,8 @@ GM.L = (function () {
             INFO_ROUND_SHORT_1: "%s rounded",
             INFO_ROUND_SHORT_2: "%s rounded",
             INFO_ROUND_SHORT_5: "%s rounded",
-            INFO_TOP_START: "first mark at the top",
-            INFO_ON_PATH: "marks sit on the path",
+            INFO_TOP_START: "starts at the top",
+            INFO_ON_PATH: "no offset",
             DEC_SEP: ".",
             PATH_PARTIAL: "Selected part of the outline only",
             PATH_PARTIAL_COUNT: " (%s of %s segments)",
@@ -340,7 +340,7 @@ GM.L = (function () {
             // Schválně krátké: „ · měřítko 1:N“ rozšířilo dialog o 48 px
             // (docs/extendscript-engine-facts.md, naměřeno 2026-10-21).
             INFO_SCALE: " · 1:%s",
-            INFO_FALLBACK: "Předvolba chce cestu, žádná není vybraná — značí se artboard.",
+            INFO_FALLBACK: "Cesta není vybraná — značí se artboard.",
             INFO_CORNERS_1: "%s roh",
             INFO_CORNERS_2: "%s rohy",
             INFO_CORNERS_5: "%s rohů",
@@ -350,8 +350,8 @@ GM.L = (function () {
             INFO_ROUND_SHORT_1: "%s zaoblený",
             INFO_ROUND_SHORT_2: "%s zaoblené",
             INFO_ROUND_SHORT_5: "%s zaoblených",
-            INFO_TOP_START: "první značka nahoře",
-            INFO_ON_PATH: "značky leží na cestě",
+            INFO_TOP_START: "začátek nahoře",
+            INFO_ON_PATH: "bez odsazení",
             DEC_SEP: ",",
             PATH_PARTIAL: "Jen vybraná část obvodu",
             PATH_PARTIAL_COUNT: " (%s z %s úseků)",

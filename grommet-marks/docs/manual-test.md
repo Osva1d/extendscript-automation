@@ -139,11 +139,11 @@ Pokud máš staré `~/Library/Application Support/GrommetMarks/GrommetMarksSetti
 2. Zavři (Storno). Nakresli **uzavřený obdélník** (Rectangle Tool), vyber ho, spusť skript.
 - [ ] Radio **Vybraná cesta** je aktivní.
 - [ ] Klikni na něj → panel **Hrany zmizí**, místo něj se zobrazí panel **Cesta**.
-- [ ] Šedý řádek pod Umístěním hlásí: „Uzavřená cesta · 4 rohy · značky leží na cestě".
+- [ ] Šedý řádek pod Umístěním hlásí: „Uzavřená cesta · 4 rohy · bez odsazení".
 
 ### E2 — Cesta bez rohů (kruh)
 1. Nakresli **elipsu** (Ellipse Tool; kruh = Shift), vyber ji, spusť skript.
-- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · bez rohů · první značka nahoře · značky leží na cestě".
+- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · bez rohů · začátek nahoře · bez odsazení".
 - [ ] Radio **Počet** i **Rozteč** jsou oba aktivní (počet povolený bez rohů).
 - [ ] Panel **Rohové zóny** je zašedlý (žádné rohy → zóny nedávají smysl).
 
@@ -156,7 +156,7 @@ Obdélník **100×200 mm**, Rozteč **50 mm**. Přepni na Vybraná cesta → Gen
 
 ### E4 — Otevřená cesta
 1. Nakresli **otevřenou lomenou čáru** (Pen Tool, bez uzavření), vyber ji, spusť.
-- [ ] Šedý řádek pod Umístěním: „Otevřená cesta · N rohů · značky leží na cestě" (N ≥ 2, krajní body jsou vždy rohy).
+- [ ] Šedý řádek pod Umístěním: „Otevřená cesta · N rohů · bez odsazení" (N ≥ 2, krajní body jsou vždy rohy).
 - [ ] Generovat → krajní body cesty mají **vždy značku** (endpoint = povinný roh).
 
 ### E5 — ERR_PATH_GONE (fallback)
@@ -329,10 +329,10 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 1. Nakresli štít domu (Pen Tool, uzavřená cesta o pěti bodech): základna
    **600 mm**, stěny **320 mm**, hřeben **210 mm** nad okapy. Vyber ho nástrojem
    Výběr (V), spusť skript a přepni na **Vybraná cesta**.
-- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · 5 rohů · značky leží na cestě".
+- [ ] Šedý řádek pod Umístěním: „Uzavřená cesta · 5 rohů · bez odsazení".
 - [ ] Panel Cesta: **Odsazení od kraje** (0), Počet ok / Rozteč, zašedlé
   **Jen vybraná část obvodu**. Poznámka „posuňte si cestu předem" tam není.
-- [ ] Po zadání Odsazení **20** řádek ztratí „· značky leží na cestě".
+- [ ] Po zadání Odsazení **20** řádek ztratí „· bez odsazení".
 2. Odsazení od kraje **20**, Rozteč **300 mm**, Generovat.
 - [ ] **6 značek**: jedna v každém z pěti rohů a jedna uprostřed spodní strany.
 - [ ] Rohové značky leží **20 mm od obou stran** rohu, uvnitř tvaru. Kontrola
@@ -349,7 +349,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 1. Nakresli obdélník **600 × 320 mm** (Rectangle Tool) a v panelu Transformace
    nastav živým rohům poloměr **50 mm**. Vyber ho, spusť skript, **Vybraná
    cesta**.
-- [ ] Šedý řádek: „Uzavřená cesta · 4 zaoblené rohy · značky leží na cestě".
+- [ ] Šedý řádek: „Uzavřená cesta · 4 zaoblené rohy · bez odsazení".
 - [ ] Zvol **Počet ok**: pole ukáže **4** a je zašedlé (počet je dán rohy,
   zaoblené se počítají).
 2. Odsazení **20** (poloměr je větší), Rozteč **300 mm**, Generovat.
@@ -375,8 +375,8 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 ### J3 — Kruh: začátek nahoře, Počet
 1. Nakresli kruh o průměru **600 mm** (Ellipse Tool + Shift), vyber ho, spusť
    skript, **Vybraná cesta**.
-- [ ] Šedý řádek: „Uzavřená cesta · bez rohů · první značka nahoře · značky leží
-  na cestě". **Počet ok** i **Rozteč** jsou aktivní.
+- [ ] Šedý řádek: „Uzavřená cesta · bez rohů · začátek nahoře · bez
+  odsazení". **Počet ok** i **Rozteč** jsou aktivní.
 2. Odsazení **20**, **Počet ok 7**, Generovat.
 - [ ] **7 značek** na kružnici o poloměru 280 mm, první **přesně nahoře** (X
   značky = X středu kruhu), ostatní souměrně vlevo a vpravo po cca 51,4°.
@@ -452,7 +452,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 ### J6 — Otevřená cesta
 1. Nakresli otevřenou lomenou čáru ze tří bodů, dva úseky po cca **375 mm**
    (úhel u vrcholu cca 100°), vyber ji, spusť skript, **Vybraná cesta**.
-- [ ] Šedý řádek: „Otevřená cesta · 3 rohy · značky leží na cestě".
+- [ ] Šedý řádek: „Otevřená cesta · 3 rohy · bez odsazení".
 - [ ] Pole **Odsazení od kraje** je zašedlé; nápověda říká, že u otevřené
   cesty nejde určit, na kterou stranu odsadit.
 2. Generovat, Rozteč **300 mm** (v zašedlém poli klidně zůstává 20).
@@ -484,7 +484,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
    otevře z `[Last Settings]`; předvolbu `Stará 1.2` načti v seznamu **Načíst**
    (je-li už vybraná, přepni na `[Výchozí]` a zpět, nebo klikni na ↺).
 - [ ] Režim Vybraná cesta, **Odsazení od kraje** je **0** (ne 20); šedý řádek
-  končí „· značky leží na cestě".
+  končí „· bez odsazení".
 2. Generovat.
 - [ ] Značky leží přímo na vybrané (ručně odsazené) cestě — **žádné druhé
   odsazení**. Štít má ostré rohy, takže pro stejnou cestu a nastavení vyjdou
@@ -498,20 +498,20 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 ### J8 — Šedý řádek ve všech stavech a nápovědy zašedlých prvků
 - [ ] Řádek pod Umístěním ukazuje v těchto stavech přesně tyto texty (sleduj
   taky, že se při přepnutí režimu, jednotek a změně Odsazení mění hned).
-  Řádky uzavřených tvarů končí „· značky leží na cestě" jen při Odsazení 0;
+  Řádky uzavřených tvarů končí „· bez odsazení" jen při Odsazení 0;
   tabulka uvádí texty při **Odsazení větším než 0** (zadej 20).
 
 | stav | předpoklad | text |
 |---|---|---|
 | Hrany artboardu, 1 artboard | dokument s jedním artboardem | `1 artboard · 800 × 600 mm` podle dokumentu (po přepnutí na cm `80 × 60 cm`) |
 | Hrany artboardu, víc artboardů | dokument se 3 artboardy (4: `4 artboardy`, 5 a víc: `5 artboardů`) | `3 artboardy · značky dostanou všechny` |
-| předvolba chce cestu, žádná není vybraná | poslední běh (`[Last Settings]`) nebo načtená předvolba byl v režimu Vybraná cesta a při spuštění není nic vybráno | `Předvolba chce cestu, žádná není vybraná — značí se artboard.` Dialog se otevře v režimu Hrany artboardu. |
+| předvolba chce cestu, žádná není vybraná | poslední běh (`[Last Settings]`) nebo načtená předvolba byl v režimu Vybraná cesta a při spuštění není nic vybráno | `Cesta není vybraná — značí se artboard.` Dialog se otevře v režimu Hrany artboardu. |
 | štít | uzavřená cesta, Odsazení 20 | `Uzavřená cesta · 5 rohů` |
 | zaoblený obdélník (J2) | Odsazení 20 | `Uzavřená cesta · 4 zaoblené rohy` |
 | štít s oběma dolními rohy zaoblenými (živé rohy) | Odsazení 20 | `Uzavřená cesta · 3 rohy, 2 zaoblené` |
-| kruh | Odsazení 20 | `Uzavřená cesta · bez rohů · první značka nahoře` |
-| libovolná uzavřená cesta | Odsazení 0 | totéž + ` · značky leží na cestě` |
-| otevřená cesta | libovolné Odsazení (pole je zašedlé) | `Otevřená cesta · 3 rohy · značky leží na cestě` |
+| kruh | Odsazení 20 | `Uzavřená cesta · bez rohů · začátek nahoře` |
+| libovolná uzavřená cesta | Odsazení 0 | totéž + ` · bez odsazení` |
+| otevřená cesta | libovolné Odsazení (pole je zašedlé) | `Otevřená cesta · 3 rohy · bez odsazení` |
 
 - [ ] Nic se v řádku neuřízne ani nepřetéká a dialog neposkakuje při
   přepínání režimů. Dialog se vejde na obrazovku 13": nejvyšší stav
@@ -706,7 +706,7 @@ Obdélník v path mode, Zóny: Počet **2**, Rozteč **10 mm**.
 | # | stav | jak ho vyvolat | text v řádku |
 |---|---|---|---|
 | 1 | normální | Hrany artboardu, dokument bez měřítka | `1 artboard · 800 × 600 mm` (šedě) |
-| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · 1:10`; s vybraným štítem v režimu Vybraná cesta a **Odsazením od kraje 20** `Uzavřená cesta · 5 rohů · 1:10` (šedě); s výchozím Odsazením 0 řádek před koncem dodá `· značky leží na cestě` |
+| 2 | měřítko 1:10 | Měřítko kresby 10 | `1 artboard · 8000 × 6000 mm · 1:10`; s vybraným štítem v režimu Vybraná cesta a **Odsazením od kraje 20** `Uzavřená cesta · 5 rohů · 1:10` (šedě); s výchozím Odsazením 0 řádek před koncem dodá `· bez odsazení` |
 | 3 | jedno neplatné pole | Velikost `abc` | `✗ Velikost: zadejte číslo od 0,01 do 9999 mm.` (červeně) |
 | 4 | víc neplatných polí | `abc` do Velikosti, Reg. tahu a Bílého hala | `✗ Neplatná pole: 3 — opravte červená pole.` (červeně) |
 | 5 | bez tvaru, bez hrany | odškrtni Kruh i Kříž; v jiném běhu vypni Horní i Levou hranu | `✗ Značka nemá tvar — zapněte Kruh nebo Kříž.`; `✗ Není zapnutá žádná hrana.` (červeně) |

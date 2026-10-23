@@ -490,7 +490,7 @@ console.log("--- UI 1.3: summary line (spec §8.1) ---");
 
     var ui4 = buildUI3(null, mockPathInfo(5, true), null);
     ui4.modeUI.pathRB.value = true; ui4.modeUI.pathRB.onClick();
-    assert(lineOf(ui4).text === "Uzavřená cesta · 5 rohů · značky leží na cestě", "house, offset 0 (got '" + lineOf(ui4).text + "')");
+    assert(lineOf(ui4).text === "Uzavřená cesta · 5 rohů · bez odsazení", "house, offset 0 (got '" + lineOf(ui4).text + "')");
     ui4.pathUI.offsetIn.text = "20"; ui4.pathUI.offsetIn.onChanging();
     assert(lineOf(ui4).text === "Uzavřená cesta · 5 rohů", "offset 20: no 'on the path'");
     done();
@@ -498,7 +498,7 @@ console.log("--- UI 1.3: summary line (spec §8.1) ---");
     var ui5 = buildUI3(null, mockPathInfo(0, true), null);
     ui5.modeUI.pathRB.value = true; ui5.modeUI.pathRB.onClick();
     ui5.pathUI.offsetIn.text = "20"; ui5.pathUI.offsetIn.onChanging();
-    assert(lineOf(ui5).text === "Uzavřená cesta · bez rohů · první značka nahoře", "circle");
+    assert(lineOf(ui5).text === "Uzavřená cesta · bez rohů · začátek nahoře", "circle");
     done();
 
     var ui6 = buildUI3(null, mockPathInfo(5, true, 1000, { sharpCount: 3, roundCount: 2 }), null);
@@ -572,12 +572,12 @@ console.log("--- UI 1.3: path offset enables Save, invalid offset in the summary
     ui2.modeUI.pathRB.value = true; ui2.modeUI.pathRB.onClick();
     ui2.pathUI.offsetIn.text = "abc"; ui2.pathUI.offsetIn.onChanging();
     assert(lineOf(ui2).text.indexOf("Odsazení od kraje") > 0 && lineOf(ui2).text.indexOf("on the path") < 0 &&
-        lineOf(ui2).text.indexOf("leží na cestě") < 0,
+        lineOf(ui2).text.indexOf("bez odsazení") < 0,
         "invalid offset: the line gives the reason, no 'on the path' clause (got '" + lineOf(ui2).text + "')");
     ui2.pathUI.offsetIn.text = ""; ui2.pathUI.offsetIn.onChanging();
     assert(lineOf(ui2).text.indexOf("Odsazení od kraje") > 0, "empty offset: the reason as well");
     ui2.pathUI.offsetIn.text = "0"; ui2.pathUI.offsetIn.onChanging();
-    assert(lineOf(ui2).text === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    assert(lineOf(ui2).text === "Uzavřená cesta · 4 rohy · bez odsazení", "offset 0: the clause is there");
     done();
 })();
 
@@ -1496,7 +1496,7 @@ console.log("--- UI 1.4 reason: the finding keeps its clause for a wrong offset 
     var pi = mockPathInfo(4, true);
     function info(offset) { return GM.UI.placementInfoText({ pathMode: true, pathInfo: pi, docInfo: null, fallback: false, offset: offset, unit: "mm" }); }
     assert(info(NaN) === "Uzavřená cesta · 4 rohy", "a wrong offset is not 'on the path' (got '" + info(NaN) + "')");
-    assert(info(0) === "Uzavřená cesta · 4 rohy · značky leží na cestě", "offset 0: the clause is there");
+    assert(info(0) === "Uzavřená cesta · 4 rohy · bez odsazení", "offset 0: the clause is there");
     assert(info(20) === "Uzavřená cesta · 4 rohy", "offset 20: no clause");
 })();
 
@@ -1771,7 +1771,7 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     var pd = freshPData();
     pd.presets["[Default]"].placementMode = "path";
     var fb = buildUI3(pd, null, docAt(100, 100, 10));
-    assert(lineOf(fb).text === "Předvolba chce cestu, žádná není vybraná — značí se artboard · 1:10",
+    assert(lineOf(fb).text === "Cesta není vybraná — značí se artboard · 1:10",
         "the notice that no path is selected also ends with the scale, its full stop gives way to the bullet (got '" + lineOf(fb).text + "')");
     assert(lineOf(fb).text.indexOf(". ·") < 0 && lineOf(fb).text.indexOf(".") < 0, "...no 'full stop, bullet' anywhere in the line (review M5)");
     done();
@@ -1781,13 +1781,13 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     GM.L = enL;
     try {
         var stFb = { pathMode: false, pathInfo: null, docInfo: null, fallback: true, offset: 0, unit: "mm" };
-        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard.",
+        assert(GM.UI.placementInfoText(stFb) === "No path selected — marking the artboard.",
             "EN, 1:1: the notice as it is, with its full stop (got '" + GM.UI.placementInfoText(stFb) + "')");
         stFb.drawingScale = 10;
-        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard · 1:10",
+        assert(GM.UI.placementInfoText(stFb) === "No path selected — marking the artboard · 1:10",
             "EN, 1:10: the full stop gives way to the bullet (got '" + GM.UI.placementInfoText(stFb) + "')");
         stFb.drawingScale = 2.5;
-        assert(GM.UI.placementInfoText(stFb) === "The preset wants a path, none is selected — marking the artboard · 1:2.5",
+        assert(GM.UI.placementInfoText(stFb) === "No path selected — marking the artboard · 1:2.5",
             "EN, 1:2.5: the decimal point (got '" + GM.UI.placementInfoText(stFb) + "')");
     } finally { GM.L = savedL; }
     var stCs = { pathMode: false, pathInfo: null, docInfo: null, fallback: true, offset: 0, unit: "mm" };
@@ -1796,7 +1796,7 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
     // Path mode: the same ending, after the clause
     var p = buildUI3(null, mockPathInfo(5, true), docAt(100, 100, 10));
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
-    assert(lineOf(p).text === "Uzavřená cesta · 5 rohů · značky leží na cestě · 1:10", "closed path, offset 0 (got '" + lineOf(p).text + "')");
+    assert(lineOf(p).text === "Uzavřená cesta · 5 rohů · bez odsazení · 1:10", "closed path, offset 0 (got '" + lineOf(p).text + "')");
     p.pathUI.offsetIn.text = "20"; p.pathUI.offsetIn.onChanging();
     assert(lineOf(p).text === "Uzavřená cesta · 5 rohů · 1:10", "closed path, offset 20 (got '" + lineOf(p).text + "')");
     p.modeUI.scaleIn.text = "1"; p.modeUI.scaleIn.onChanging();
@@ -1830,7 +1830,7 @@ console.log("--- UI 1.4 scale: the line rounds the scale to one decimal, the fie
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
     p.modeUI.scaleIn.text = "33,3333"; p.modeUI.scaleIn.onChanging();
     var line = lineOf(p).text;
-    assert(line === "Uzavřená cesta · bez rohů · první značka nahoře · značky leží na cestě · 1:33,3",
+    assert(line === "Uzavřená cesta · bez rohů · začátek nahoře · bez odsazení · 1:33,3",
         "circle at offset 0, scale 33,3333: the line ends ' · 1:33,3' (got '" + line + "')");
     assert(p.modeUI.scaleIn.text === "33,3333", "the field still holds '33,3333' (got '" + p.modeUI.scaleIn.text + "')");
     assert(p.getRunOptions().drawingScale === 33.3333, "the run still gets 33.3333 (got " + p.getRunOptions().drawingScale + ")");
