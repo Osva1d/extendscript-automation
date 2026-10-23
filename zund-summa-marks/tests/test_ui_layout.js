@@ -47,7 +47,7 @@ ZSM.L = {
     ERROR_PREFIX: "ERR: ", ERR_MUST_BE_NUMBER: "%s nan", ERR_OUT_OF_RANGE: "%s range",
     ERR_NO_DOC: "no doc", ERR_NO_SEL: "no sel", ERR_CRITICAL: "critical: ",
     ERR_RENDER_CRITICAL: "render: ", ERR_GENERIC: "%s", ERR_COLOR_MISSING: "%s missing",
-    ERR_PRESET_DEL_DEF: "no del", ERR_PRESET_EXISTS: "exists?", ERR_RESERVED_NAME: "reserved",
+    ERR_CANNOT_DELETE_DEFAULT: "no del", ERR_ENTER_NAME: "enter a name", ERR_RESERVED_NAME: "reserved",
     ERR_WRITE_SETTINGS: "write fail", ERR_LAY_COLOR: "lay %s", ERR_SWATCH: "swatch %s",
     PRESET_DEFAULT: "[Default]", PRESET_LABEL: "Preset:",
     PROMPT_NEW_PRESET: "Name?", PROMPT_SAVE_AS: "Save as?",
@@ -75,7 +75,10 @@ ZSM.L = {
     PANEL_DOC: "Document",
     LBL_SCALE: "Drawing scale 1:", TIP_SCALE: "tip",
     MARKS_ONLY: "Marks only", TIP_MARKS_ONLY: "tip",
-    CONFIRM_DEL_PRESET: "del %s?",
+    // The canon's wording (extendscript-ui-standards 12.4), Czech: the tests read the quotes back.
+    CONFIRM_OVERWRITE_PRESET: "Předvolba „%s“ už existuje. Přepsat?",
+    CONFIRM_DELETE_PRESET: "Smazat předvolbu „%s“? Smazání nejde vrátit.",
+    BTN_REVERT: "↺",
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
     STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
     STATUS_OK: "%s · layers: %s", STATUS_OK_MARKS: "%s · marks only",
@@ -1186,6 +1189,278 @@ console.log("\n=== TEST 21 (spec 1.2.0 §5): drawing scale from the document ===
 
     delete ZSM.L.DEC_SEP;
     docWithScale(null);
+})();
+
+
+// =====================================================
+// TEST 22 (spec 1.2.0 §8): presets as the family canon
+// =====================================================
+// Every list item is relabelled on each change (switching away from an edited
+// preset left its " *" behind), [Default] is the factory values of the
+// dialog's own mode (in SUMMA it carried a permanent " *" and ↺ jumped to
+// Zünd), the save-as / delete texts are the canon's, and the panel is the
+// canon's template: ↺ in a group of its own beside the list, the preset
+// buttons at their native widths.
+console.log("\n=== TEST 22 (spec 1.2.0 §8): presets as the family canon ===");
+(function () {
+    var DEFAULT_ITEM = ZSM.L.PRESET_DEFAULT;
+    function btn(win, text) { return win.findOne(function (c) { return c.type === "button" && c.text === text; }); }
+    function itemTexts(win) {
+        return k5PresetDD(win).items.map(function (it) { return it.text; });
+    }
+    function field(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    }
+    function edit(win, label, text) { var f = field(win, label); f.text = text; f.onChanging(); }
+    function twoPresets(active) {
+        var a = ZSM.Config.getDefaults(); a.maxDist = 400;
+        var b = ZSM.Config.getDefaults(); b.maxDist = 300;
+        return { activePreset: active, presets: { "[Default]": ZSM.Config.getDefaults(), "A": a, "B": b } };
+    }
+    // SUMMA data whose last run is the SUMMA factory values of this document
+    // ([Default] maps the detected cut colour, so the last run must too).
+    function summaData(active, extra) {
+        var last = ZSM.Config.getDefaults();
+        last.mode = "SUMMA"; last.layers[0].color = "Cut";
+        var p = { activePreset: active, presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": last } };
+        for (var k in extra) { if (extra.hasOwnProperty(k)) p.presets[k] = extra[k]; }
+        return p;
+    }
+    function withStorage(fn) {
+        var origStorage = ZSM.Storage;
+        ZSM.Storage = { save: function () { return true; } };
+        try { return fn(); } finally {
+            ZSM.Storage = origStorage;
+            if (origStorage === undefined) delete ZSM.Storage;
+        }
+    }
+
+    // --- every item is relabelled, not only the active one ---
+    var rl = {};
+    runDialogs(twoPresets("A"), [function (win) {
+        rl.start = itemTexts(win);
+        edit(win, ZSM.L.MAX_DIST, "450");
+        rl.edited = itemTexts(win);
+        pick(win, "B");
+        rl.pickedB = itemTexts(win);
+        rl.pickedBSel = k5PresetDD(win).selection.text;
+        edit(win, ZSM.L.MAX_DIST, "310");
+        rl.editedB = itemTexts(win);
+        pick(win, "A");
+        rl.backToA = itemTexts(win);
+        edit(win, ZSM.L.MAX_DIST, "410");
+        pick(win, DEFAULT_ITEM);
+        rl.pickedDefault = itemTexts(win);
+        rl.revertAfter = btn(win, ZSM.L.BTN_REVERT).enabled;
+        rl.saveAfter = btn(win, ZSM.L.BTN_SAVE).enabled;
+    }]);
+    assertEq(JSON.stringify(rl.start), JSON.stringify([DEFAULT_ITEM, "A", "B"]), "A active, unedited: no asterisk anywhere");
+    assertEq(JSON.stringify(rl.edited), JSON.stringify([DEFAULT_ITEM, "A *", "B"]), "A edited: only A carries the asterisk");
+    assertEq(JSON.stringify(rl.pickedB), JSON.stringify([DEFAULT_ITEM, "A", "B"]),
+        "A edited, B picked: A loses its asterisk, B has none");
+    assertEq(rl.pickedBSel, "B", "...and the list shows B selected");
+    assertEq(JSON.stringify(rl.editedB), JSON.stringify([DEFAULT_ITEM, "A", "B *"]), "B edited: the asterisk moves to B");
+    assertEq(JSON.stringify(rl.backToA), JSON.stringify([DEFAULT_ITEM, "A", "B"]), "B edited, A picked: B loses its asterisk");
+    assertEq(JSON.stringify(rl.pickedDefault), JSON.stringify([DEFAULT_ITEM, "A", "B"]),
+        "A edited, [Default] picked: A loses its asterisk, [Default] has none");
+    assertEq(rl.revertAfter, false, "...and the revert button is grey");
+    assertEq(rl.saveAfter, false, "...and so is Save");
+
+    // --- [Default] in SUMMA: the factory values of SUMMA, the mode stays ---
+    function summaWalk(how) {
+        var out = { closeCodes: [] };
+        var p = summaData("[Default]");
+        var shown = runDialogs(p, [function (win) {
+            win.close = function (code) { out.closeCodes.push(code); };
+            out.startMode = radioOn(win, ZSM.L.MODE_SUMMA);
+            out.startItems = itemTexts(win);
+            out.startSave = btn(win, ZSM.L.BTN_SAVE).enabled;
+            out.startRevert = btn(win, ZSM.L.BTN_REVERT).enabled;
+            out.startSaveAs = btn(win, ZSM.L.BTN_SAVE_AS).enabled;
+            edit(win, ZSM.L.FEED_TOP, "90");
+            edit(win, ZSM.L.GAP_ZO, "3");
+            out.editedItems = itemTexts(win);
+            out.editedSave = btn(win, ZSM.L.BTN_SAVE).enabled;
+            out.editedRevert = btn(win, ZSM.L.BTN_REVERT).enabled;
+            how(win);
+            out.feedTop = field(win, ZSM.L.FEED_TOP).text;
+            out.gapOuter = field(win, ZSM.L.GAP_ZO).text;
+            out.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
+            out.items = itemTexts(win);
+            out.save = btn(win, ZSM.L.BTN_SAVE).enabled;
+            out.revert = btn(win, ZSM.L.BTN_REVERT).enabled;
+            out.colour = mappingColour(win);
+        }]);
+        out.shown = shown.length;
+        return out;
+    }
+    var viaRevert = summaWalk(function (win) { btn(win, ZSM.L.BTN_REVERT).onClick(); });
+    assertEq(viaRevert.startMode, true, "SUMMA [Default]: the dialog opens as SUMMA");
+    assertEq(JSON.stringify(viaRevert.startItems), JSON.stringify([DEFAULT_ITEM]), "SUMMA [Default] unedited: no asterisk");
+    assert(viaRevert.startSave === false && viaRevert.startRevert === false, "...Save and ↺ are grey");
+    assertEq(viaRevert.startSaveAs, true, "...Save As is live");
+    assertEq(JSON.stringify(viaRevert.editedItems), JSON.stringify([DEFAULT_ITEM + " *"]), "SUMMA [Default] edited: the asterisk");
+    assert(viaRevert.editedSave === true && viaRevert.editedRevert === true, "...Save and ↺ are live");
+    assertEq(viaRevert.shown, 1, "↺ on SUMMA [Default]: no second dialog");
+    assert(viaRevert.closeCodes.length === 0, "↺ on SUMMA [Default]: the dialog is not closed (no mode switch)");
+    assertEq(viaRevert.summaOn, true, "↺ on SUMMA [Default]: the dialog is still SUMMA");
+    assertEq(viaRevert.feedTop, "70", "↺ on SUMMA [Default]: the SUMMA factory top feed");
+    assertEq(viaRevert.gapOuter, "0", "↺ on SUMMA [Default]: the factory gap from the edge");
+    assertEq(viaRevert.colour, "Cut", "↺ on SUMMA [Default]: the mapping row has the detected cut colour, as the Defaults button gives");
+    assertEq(JSON.stringify(viaRevert.items), JSON.stringify([DEFAULT_ITEM]), "↺ on SUMMA [Default]: no asterisk again");
+    assert(viaRevert.save === false && viaRevert.revert === false, "↺ on SUMMA [Default]: Save and ↺ grey again");
+
+    var viaButton = summaWalk(function (win) { btn(win, ZSM.L.BTN_RESET).onClick(); });
+    assert(viaButton.feedTop === viaRevert.feedTop && viaButton.gapOuter === viaRevert.gapOuter &&
+           viaButton.colour === viaRevert.colour && viaButton.shown === viaRevert.shown &&
+           JSON.stringify(viaButton.items) === JSON.stringify(viaRevert.items),
+        "↺ on [Default] does what the Defaults button does");
+    assertEq(viaButton.summaOn, true, "the Defaults button keeps SUMMA");
+
+    // Picking [Default] from the list in a SUMMA dialog: the SUMMA factory values, no jump to Zünd.
+    var mine = ZSM.Config.getDefaults();
+    mine.mode = "SUMMA"; mine.feedTop = 99; mine.layers[0].color = "Cut";
+    var pick1 = { closeCodes: [] };
+    var pMine = summaData("Mine", { "Mine": mine });
+    pMine.presets["[Last Settings]"] = JSON.parse(JSON.stringify(mine));   // the last run was Mine as saved
+    var shownPick = runDialogs(pMine, [function (win) {
+        win.close = function (code) { pick1.closeCodes.push(code); };
+        pick1.startItems = itemTexts(win);
+        pick1.startFeed = field(win, ZSM.L.FEED_TOP).text;
+        pick(win, DEFAULT_ITEM);
+        pick1.feedTop = field(win, ZSM.L.FEED_TOP).text;
+        pick1.items = itemTexts(win);
+        pick1.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
+    }]);
+    assertEq(JSON.stringify(pick1.startItems), JSON.stringify([DEFAULT_ITEM, "Mine"]), "SUMMA, Mine active, unedited: no asterisk");
+    assertEq(pick1.startFeed, "99", "SUMMA dialog on Mine shows its feed");
+    assert(shownPick.length === 1 && pick1.closeCodes.length === 0, "picking [Default] in SUMMA: no mode switch");
+    assertEq(pick1.feedTop, "70", "picking [Default] in SUMMA: the SUMMA factory top feed");
+    assertEq(JSON.stringify(pick1.items), JSON.stringify([DEFAULT_ITEM, "Mine"]), "picking [Default] in SUMMA: no asterisk anywhere");
+    assertEq(pick1.summaOn, true, "picking [Default] in SUMMA: still SUMMA");
+
+    // ZUND [Default]: ↺ is the Defaults button there too.
+    var zr = {};
+    runDialogs(twoPresets("[Default]"), [function (win) {
+        edit(win, ZSM.L.GAP_ZO, "7");
+        btn(win, ZSM.L.BTN_REVERT).onClick();
+        zr.gap = field(win, ZSM.L.GAP_ZO).text; zr.colour = mappingColour(win); zr.items = itemTexts(win);
+    }]);
+    assertEq(zr.gap, "0", "ZUND: ↺ on [Default] gives the factory values");
+    assertEq(zr.colour, "Cut", "ZUND: ↺ on [Default] keeps the detected cut colour");
+    assertEq(JSON.stringify(zr.items), JSON.stringify([DEFAULT_ITEM, "A", "B"]), "ZUND: ↺ on [Default] clears the asterisk");
+
+    // --- Save As: the canon's texts and checks ---
+    function saveAs(answer, confirmAnswer, pre) {
+        var log = { alerts: [], confirms: [] };
+        var o = { prompt: global.prompt, alert: global.alert, confirm: global.confirm };
+        global.prompt = function (m) { log.prompt = m; return answer; };
+        global.alert = function (m) { log.alerts.push(m); };
+        global.confirm = function (m) { log.confirms.push(m); return confirmAnswer; };
+        var p = twoPresets("A");
+        try {
+            withStorage(function () {
+                runDialogs(p, [function (win) {
+                    edit(win, ZSM.L.MAX_DIST, "450");   // an edit, so there is something to save
+                    if (pre) pre(win);
+                    btn(win, ZSM.L.BTN_SAVE_AS).onClick();
+                    log.items = itemTexts(win);
+                }]);
+            });
+        } finally {
+            global.prompt = o.prompt; global.alert = o.alert; global.confirm = o.confirm;
+        }
+        log.pData = p;
+        return log;
+    }
+    var emptyNames = ["", "   ", "\t "];
+    for (var ei = 0; ei < emptyNames.length; ei++) {
+        var eLog = saveAs(emptyNames[ei], true);
+        assertEq(JSON.stringify(eLog.alerts), JSON.stringify([ZSM.L.ERR_ENTER_NAME]),
+            "Save As with " + JSON.stringify(emptyNames[ei]) + ": ERR_ENTER_NAME");
+        assert(eLog.confirms.length === 0 && eLog.pData.activePreset === "A" && !eLog.pData.presets[emptyNames[ei]],
+            "...and nothing is saved");
+    }
+    var rLog = saveAs("[x]", true);
+    assertEq(JSON.stringify(rLog.alerts), JSON.stringify([ZSM.L.ERR_RESERVED_NAME]), "Save As with '[x]': ERR_RESERVED_NAME");
+    assert(rLog.confirms.length === 0 && rLog.pData.activePreset === "A", "...and nothing is saved");
+    var cLog = saveAs(null, true);
+    assert(cLog.alerts.length === 0 && cLog.confirms.length === 0 && cLog.pData.activePreset === "A",
+        "Save As cancelled (prompt null): no message, nothing saved");
+    assertEq(cLog.prompt, ZSM.L.PROMPT_SAVE_AS, "Save As asks with PROMPT_SAVE_AS");
+
+    var oLog = saveAs("A", false);
+    assertEq(oLog.confirms.length, 1, "Save As over 'A': one confirmation");
+    assert(String(oLog.confirms[0]).indexOf("„A“") !== -1, "...the confirmation names „A“ (got '" + oLog.confirms[0] + "')");
+    assertEq(oLog.confirms[0], ZSM.L.format(ZSM.L.CONFIRM_OVERWRITE_PRESET, "A"), "...it is CONFIRM_OVERWRITE_PRESET");
+    assertEq(oLog.pData.presets["A"].maxDist, 400, "...declined: 'A' keeps its saved value");
+    var oLog2 = saveAs("  A  ", true);
+    assertEq(oLog2.confirms.length, 1, "Save As over ' A ' (spaces): the trimmed name is confirmed");
+    assert(String(oLog2.confirms[0]).indexOf("„A“") !== -1, "...as „A“");
+    assertEq(oLog2.pData.presets["A"].maxDist, 450, "...accepted: 'A' holds the edited value");
+    assertEq(JSON.stringify(oLog2.items), JSON.stringify([DEFAULT_ITEM, "A", "B"]), "...and the list shows no asterisk");
+
+    var nLog = saveAs("C", true);
+    assert(nLog.alerts.length === 0 && nLog.confirms.length === 0, "Save As with a new name: no message, no confirmation");
+    assertEq(nLog.pData.activePreset, "C", "...the new preset is active");
+    assertEq(nLog.pData.presets["C"].maxDist, 450, "...it holds the edited values");
+    assertEq(nLog.pData.presets["A"].maxDist, 400, "...and 'A' is as it was saved");
+    assertEq(JSON.stringify(nLog.items), JSON.stringify([DEFAULT_ITEM, "A", "B", "C"]), "...the list shows A without asterisk and C unmodified");
+
+    // --- Delete: the canon's confirmation, the default cannot be deleted ---
+    function del(active, confirmAnswer) {
+        var log = { alerts: [], confirms: [] };
+        var o = { alert: global.alert, confirm: global.confirm };
+        global.alert = function (m) { log.alerts.push(m); };
+        global.confirm = function (m) { log.confirms.push(m); return confirmAnswer; };
+        var p = twoPresets(active);
+        try {
+            withStorage(function () {
+                runDialogs(p, [function (win) {
+                    btn(win, ZSM.L.BTN_DEL).onClick();
+                    log.items = itemTexts(win);
+                }]);
+            });
+        } finally { global.alert = o.alert; global.confirm = o.confirm; }
+        log.pData = p;
+        return log;
+    }
+    var dNo = del("A", false);
+    assertEq(dNo.confirms.length, 1, "Delete 'A': one confirmation");
+    assertEq(dNo.confirms[0], ZSM.L.format(ZSM.L.CONFIRM_DELETE_PRESET, "A"), "...it is CONFIRM_DELETE_PRESET");
+    assert(String(dNo.confirms[0]).indexOf("„A“") !== -1, "...naming „A“");
+    assert(dNo.pData.presets["A"] !== undefined && dNo.pData.activePreset === "A", "...declined: 'A' stays");
+    var dYes = del("A", true);
+    assert(dYes.pData.presets["A"] === undefined && dYes.pData.activePreset === "[Default]", "...accepted: 'A' is gone, [Default] is active");
+    assertEq(JSON.stringify(dYes.items), JSON.stringify([DEFAULT_ITEM, "B"]), "...and the list follows");
+    var dDef = del("[Default]", true);
+    assertEq(JSON.stringify(dDef.alerts), JSON.stringify([ZSM.L.ERR_CANNOT_DELETE_DEFAULT]),
+        "Delete on [Default]: ERR_CANNOT_DELETE_DEFAULT");
+    assertEq(dDef.confirms.length, 0, "...without asking first");
+
+    // --- the panel: ↺ in a group of its own, the buttons at their native widths ---
+    var wP = buildAndCapture("ZUND");
+    var pnl = wP.findOne(function (c) { return c.type === "panel" && c.text === ZSM.L.PANEL_PRESET; });
+    var ddP = pnl.findOne(function (c) { return c.type === "dropdownlist"; });
+    var revertP = btn(pnl, ZSM.L.BTN_REVERT);
+    assert(revertP !== null, "the ↺ button is labelled with BTN_REVERT");
+    assertEq(typeof ZSM.UI.M.REVERT_BTN, "number", "M.REVERT_BTN is a width");
+    assertEq(ZSM.UI.M.PRESET_BTN, undefined, "M.PRESET_BTN is gone");
+    assertEq(revertP.preferredSize.width, ZSM.UI.M.REVERT_BTN, "↺ takes its width from M.REVERT_BTN");
+    assert(revertP.parent !== ddP.parent && revertP.parent.parent === ddP.parent,
+        "↺ sits in a group of its own inside the list's row");
+    assertEq(revertP.parent.children.length, 1, "...which holds nothing else");
+    assertEq(JSON.stringify(revertP.parent.alignment), JSON.stringify(["right", "center"]), "...aligned right (it takes none of the row's slack)");
+    var labels = [ZSM.L.BTN_SAVE, ZSM.L.BTN_SAVE_AS, ZSM.L.BTN_DEL, ZSM.L.BTN_RESET];
+    for (var li = 0; li < labels.length; li++) {
+        assertEq(btn(pnl, labels[li]).preferredSize.width, -1, "'" + labels[li] + "' has no width set (native)");
+    }
+    var oldRevert = ZSM.L.BTN_REVERT;
+    ZSM.L.BTN_REVERT = "<R>";
+    var wR = buildAndCapture("ZUND");
+    assert(btn(wR, "<R>") !== null, "the ↺ text is not a literal in the code");
+    ZSM.L.BTN_REVERT = oldRevert;
 })();
 
 

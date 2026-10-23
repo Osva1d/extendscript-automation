@@ -258,6 +258,49 @@ assert(enR.WARN_REGMARKS_FOREIGN.indexOf("!") === -1 && csR.WARN_REGMARKS_FOREIG
 
 
 // =====================================================
+// TEST 13: the preset texts of the family canon (spec 1.2.0 §8, canon §12.4)
+// =====================================================
+// One set of sentences and keys in all four tools; a preset is a "předvolba",
+// never "nastavení". The wording is the canon's table, character for character.
+console.log("\n=== TEST 13: preset texts as the canon ===");
+var enP = loadLocale("en"), csP = loadLocale("cs");
+var canonCs = {
+    PRESET_DEFAULT:            "[Výchozí]",
+    BTN_REVERT:                "↺",
+    PROMPT_SAVE_AS:            "Název nové předvolby:",
+    CONFIRM_OVERWRITE_PRESET:  "Předvolba „%s“ už existuje. Přepsat?",
+    CONFIRM_DELETE_PRESET:     "Smazat předvolbu „%s“? Smazání nejde vrátit.",
+    ERR_ENTER_NAME:            "Zadejte název předvolby.",
+    ERR_RESERVED_NAME:         "Názvy v hranatých závorkách jsou vyhrazené. Zvolte jiný název.",
+    ERR_CANNOT_DELETE_DEFAULT: "Výchozí předvolbu nejde smazat."
+};
+var canonEn = {
+    PRESET_DEFAULT:            "[Default]",
+    BTN_REVERT:                "↺",
+    PROMPT_SAVE_AS:            "Name of the new preset:",
+    CONFIRM_OVERWRITE_PRESET:  "Preset \"%s\" already exists. Replace it?",
+    CONFIRM_DELETE_PRESET:     "Delete preset \"%s\"? This cannot be undone.",
+    ERR_ENTER_NAME:            "Enter a preset name.",
+    ERR_RESERVED_NAME:         "Names in square brackets are reserved. Choose another name.",
+    ERR_CANNOT_DELETE_DEFAULT: "The default preset cannot be deleted."
+};
+for (var ck in canonCs) {
+    if (!canonCs.hasOwnProperty(ck)) continue;
+    assertEq(csP[ck], canonCs[ck], "cs: " + ck + " is the canon's text");
+    assertEq(enP[ck], canonEn[ck], "en: " + ck + " is the canon's text");
+}
+assertEq(csP.format(csP.CONFIRM_DELETE_PRESET, "A"), "Smazat předvolbu „A“? Smazání nejde vrátit.",
+    "cs: CONFIRM_DELETE_PRESET names the preset in „…“");
+assertEq(csP.format(csP.CONFIRM_OVERWRITE_PRESET, "A"), "Předvolba „A“ už existuje. Přepsat?",
+    "cs: CONFIRM_OVERWRITE_PRESET names the preset in „…“");
+var goneP = ["ERR_PRESET_DEL_DEF", "CONFIRM_DEL_PRESET", "ERR_PRESET_EXISTS"];
+for (var gp = 0; gp < goneP.length; gp++) {
+    assert(enP[goneP[gp]] === undefined && csP[goneP[gp]] === undefined,
+        "the key " + goneP[gp] + " the canon's key replaced is gone");
+}
+
+
+// =====================================================
 // SUMMARY
 // =====================================================
 console.log("\n" + "=".repeat(50));

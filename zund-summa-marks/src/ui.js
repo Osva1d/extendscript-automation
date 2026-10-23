@@ -22,7 +22,7 @@ ZSM.UI = {
         ET_LAYER:     152,   // layer-name edittext (< LABEL_COL, N6)
         SWATCH:       16,    // colour swatch square
         LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj)
-        PRESET_BTN:   92,    // preset action buttons
+        REVERT_BTN:   30,    // [deviation] ↺ is one glyph; the native 80 px would dwarf the preset row
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
         SP_GROUP:     8,     // group spacing (preset, mode, source, buttons …)
@@ -116,6 +116,14 @@ ZSM.UI = {
         var isZ = (mode === "ZUND");
         var isS = (mode === "SUMMA");
 
+        // [Default] is the factory values of THIS dialog's mode. show() builds
+        // the Zünd ones, so in a SUMMA dialog it read "modified" for good (the
+        // modes differ) and a ↺ or a pick of it jumped to Zünd. The factory
+        // object carries the values of both modes, so only its mode tag moves.
+        if (pData.presets[c.PRESET_KEY_DEFAULT]) {
+            pData.presets[c.PRESET_KEY_DEFAULT].mode = mode;
+        }
+
         // Resolve initial values: [Last Settings] → active preset → defaults
         var sData = pData.presets["[Last Settings]"]
                  || pData.presets[pData.activePreset]
@@ -157,7 +165,7 @@ ZSM.UI = {
         pPreset.margins = 12;
         pPreset.spacing = M.SP_GROUP;
 
-        // Row 1: label + dropdown (full width)
+        // Row 1: label, list, revert. The list takes the row's slack.
         var grpPresetTop = pPreset.add("group");
         grpPresetTop.alignment = ["fill", "top"];
         grpPresetTop.spacing   = M.SP_GROUP;
@@ -171,22 +179,26 @@ ZSM.UI = {
         // edits. Compact icon-only button (N7) so it no longer crowds the preset
         // dropdown; the helpTip carries the meaning. Enabled only when the preset
         // has unsaved changes (gated in refreshModifiedIndicator). Distinct from
-        // Reset/Defaults (which loads factory defaults).
-        var btnRevert = grpPresetTop.add("button", undefined, "↺");
-        btnRevert.preferredSize = [30, 24];
-        btnRevert.alignment = ["right", "center"];
+        // Reset/Defaults (which loads factory defaults) — except on [Default],
+        // where "as saved" IS the factory values (btnRevert.onClick).
+        // In a group of its own: ScriptUI shares a row's slack among ALL its
+        // controls, so a bare button grows with the list (canon 9, engine-facts).
+        var grpRevert = grpPresetTop.add("group");
+        grpRevert.alignment = ["right", "center"];
+        var btnRevert = grpRevert.add("button", undefined, l.BTN_REVERT);
+        btnRevert.preferredSize.width = M.REVERT_BTN;   // [deviation] see M
         btnRevert.helpTip = l.TIP_REVERT;
 
-        // Row 2: action buttons. "Defaults" (factory reset, N8) sits on the left
-        // — it's a different class of action from the per-preset Save/Save As/
-        // Delete cluster on the right, so it gets its own visual slot instead of
-        // being hidden behind a [Default] dropdown pick (low discoverability).
+        // Row 2: action buttons, all at their native widths. "Defaults" (factory
+        // reset, N8) sits on the left — it's a different class of action from the
+        // per-preset Save/Save As/Delete cluster on the right, so it gets its own
+        // visual slot instead of being hidden behind a [Default] dropdown pick
+        // (low discoverability).
         var grpPresetBtns = pPreset.add("group");
         grpPresetBtns.alignment = ["fill", "top"];
         grpPresetBtns.spacing = M.SP_GROUP;
 
         var btnReset = grpPresetBtns.add("button", undefined, l.BTN_RESET);
-        btnReset.preferredSize.width = 80;
         btnReset.alignment = ["left", "center"];
         btnReset.helpTip = l.TIP_RESET;
 
@@ -194,19 +206,15 @@ ZSM.UI = {
         grpPresetBtnsR.alignment = ["right", "center"];
         grpPresetBtnsR.spacing = M.SP_GROUP;
 
-        // Uniform width so the three buttons line up evenly (text-based widths
-        // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
-        var PRESET_BTN_W = M.PRESET_BTN;
+        // Native widths: the 92 px these once had is too narrow for "Uložit jako…",
+        // which needs 103 (UI audits 2026-09-28/29, canon 9).
         var btnSave = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE);
-        btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
 
         var btnSaveAs = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE_AS);
-        btnSaveAs.preferredSize.width = PRESET_BTN_W;
         btnSaveAs.helpTip = l.TIP_SAVE_AS;
 
         var btnDel = grpPresetBtnsR.add("button", undefined, l.BTN_DEL);
-        btnDel.preferredSize.width = PRESET_BTN_W;
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
@@ -744,23 +752,26 @@ ZSM.UI = {
         }
 
         /**
-         * Refresh the active dropdown item's text + Save button state.
+         * Refresh the asterisk + the Save / Revert states.
          * Lighter than updatePresetList(); call from input onChange handlers.
+         * Relabels EVERY item, not only the active one: switching away from an
+         * edited preset would otherwise leave its " *" behind.
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
             applySaveGate(modified);
             try { btnRevert.enabled = modified; } catch (e) {}
 
-            if (!ddPreset.selection) return;
-            var idx = ddPreset.selection.index;
-            var key = sortedKeys[idx];
-            if (key !== pData.activePreset) return;
-            var displayText = (key === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : key;
-            if (modified) displayText += " *";
-            try { ddPreset.items[idx].text = displayText; } catch (e) {
-                // Some ScriptUI versions don't allow direct mutation
-                updatePresetList();
+            for (var j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
+                var key = sortedKeys[j];
+                var displayText = (key === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : key;
+                if (modified && key === pData.activePreset) displayText += " *";
+                if (ddPreset.items[j].text === displayText) continue;
+                try { ddPreset.items[j].text = displayText; } catch (e) {
+                    // Some ScriptUI versions don't allow direct mutation
+                    updatePresetList();
+                    return;
+                }
             }
         }
 
@@ -827,18 +838,22 @@ ZSM.UI = {
          */
         btnSaveAs.onClick = function () {
             var raw = prompt(l.PROMPT_SAVE_AS, "");
-            if (raw === null || raw === "") return;
+            if (raw === null) return;   // cancelled
 
-            // Pre-validate to give a localized alert for reserved names
-            // (UIState.saveAs returns "invalid-name" but no alert).
-            var clean = ZSM.UIState.validatePresetName(raw);
-            if (!clean) {
+            // Pre-validate to give a localized alert (UIState.saveAs returns
+            // "invalid-name" for both cases but shows nothing): an empty or
+            // whitespace-only name is not a reserved one (canon 12.4).
+            if (!/\S/.test(raw)) {
+                alert(l.ERR_ENTER_NAME);
+                return;
+            }
+            if (!ZSM.UIState.validatePresetName(raw)) {
                 alert(l.ERR_RESERVED_NAME);
                 return;
             }
 
             var r = ZSM.UIState.saveAs(pData, raw, getUIValues(), function (existingName) {
-                return confirm(l.ERR_PRESET_EXISTS);
+                return confirm(l.format(l.CONFIRM_OVERWRITE_PRESET, existingName));
             });
             if (!r.ok) return;
             updatePresetList();
@@ -850,17 +865,17 @@ ZSM.UI = {
             // Guard reserved preset before prompting (no point confirming a
             // delete that will be rejected anyway).
             if (pData.activePreset === c.PRESET_KEY_DEFAULT) {
-                alert(l.ERR_PRESET_DEL_DEF);
+                alert(l.ERR_CANNOT_DELETE_DEFAULT);
                 return;
             }
             // Destructive + persisted to disk immediately → require explicit
             // confirmation (extendscript-ui-standards §10, ui-ux-principles §5).
-            if (!confirm(ZSM.L.format(l.CONFIRM_DEL_PRESET, pData.activePreset))) {
+            if (!confirm(l.format(l.CONFIRM_DELETE_PRESET, pData.activePreset))) {
                 return;
             }
             var r = ZSM.UIState.deleteActive(pData);
             if (!r.ok) {
-                if (r.reason === "reserved") alert(l.ERR_PRESET_DEL_DEF);
+                if (r.reason === "reserved") alert(l.ERR_CANNOT_DELETE_DEFAULT);
                 return;
             }
             updatePresetList();
@@ -875,8 +890,14 @@ ZSM.UI = {
          * Revert restores exactly what the selected preset holds on disk, so the
          * user can undo experimental edits without re-picking the preset. Enabled
          * only when modified (see refreshModifiedIndicator). Does NOT persist.
+         * On [Default] "as saved" is the factory values, so it is the Defaults
+         * button (btnReset): the dialog keeps its mode.
          */
         btnRevert.onClick = function () {
+            if (pData.activePreset === c.PRESET_KEY_DEFAULT) {
+                btnReset.onClick();
+                return;
+            }
             var preset = pData.presets[pData.activePreset];
             if (!preset) return;
             loadPreset(preset);
