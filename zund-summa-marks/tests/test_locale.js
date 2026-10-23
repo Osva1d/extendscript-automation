@@ -223,6 +223,24 @@ assertEq(L.format("100%% complete"), "100%% complete", "format: %% pass-through"
 
 
 // =====================================================
+// TEST 11: the drawing scale field (spec 1.2.0 §5.1) — the family's label
+// =====================================================
+console.log("\n=== TEST 11: drawing scale texts ===");
+var enS = loadLocale("en"), csS = loadLocale("cs");
+assertEq(enS.LBL_SCALE, "Drawing scale 1:", "en: LBL_SCALE as grommet-marks and tile-export");
+assertEq(csS.LBL_SCALE, "Měřítko kresby 1:", "cs: LBL_SCALE as grommet-marks and tile-export");
+assert(typeof csS.TIP_SCALE === "string" && csS.TIP_SCALE.indexOf("1–100") !== -1,
+    "cs: TIP_SCALE gives the range 1–100");
+assert(typeof enS.TIP_SCALE === "string" && enS.TIP_SCALE.indexOf("1–100") !== -1,
+    "en: TIP_SCALE gives the range 1–100");
+var goneScale = ["SCALE_CHECKBOX", "TIP_SCALE_CHECKBOX", "SCALE_FIELD_LABEL", "TIP_SCALE_FIELD", "ERR_MUST_BE_INTEGER"];
+for (var gs = 0; gs < goneScale.length; gs++) {
+    assert(enS[goneScale[gs]] === undefined && csS[goneScale[gs]] === undefined,
+        "the checkbox-era key " + goneScale[gs] + " is gone");
+}
+
+
+// =====================================================
 // SUMMARY
 // =====================================================
 console.log("\n" + "=".repeat(50));

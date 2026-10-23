@@ -15,6 +15,7 @@
     "test:uistate": "node tests/test_ui_state.js",
     "test:props": "node tests/test_properties.js",
     "test:e2e": "node tests/test_e2e_workflow.js",
+    "test:main": "node tests/test_main.js",
     "test:es3": "node tests/test_es3_compliance.js",
     "test:layout": "node tests/test_ui_layout.js",
     "build": "bash tools/build.sh",

@@ -90,6 +90,10 @@ function assert(cond, msg) {
     else { fail++; console.log("  FAIL: " + msg); }
 }
 
+function assertEqList(a, b, msg) {
+    assert(JSON.stringify(a) === JSON.stringify(b), msg + " (got " + JSON.stringify(a) + ")");
+}
+
 function resetMockFS() {
     mockFS = {};
 }
@@ -401,6 +405,57 @@ for (var k2 in defaults2) {
         assert(p2[k2] !== undefined, "Multi-migration: '" + k2 + "' filled in");
     }
 }
+
+
+// =====================================================
+// TEST 16: the drawing scale never reaches the settings file (spec 1.2.0 §5.2)
+// =====================================================
+// The scale belongs to the document (XMP). The dialog still hands it to the
+// run in [Last Settings].scaleN, so the object in memory keeps it — main.js
+// reads it after saving — but the file written must not carry it in any
+// preset, and a 1.1.0 file that does still loads.
+console.log("\n=== TEST 16: scaleN is never written to the settings file ===");
+resetMockFS();
+var lastRun = ZSM.Config.getDefaults();
+lastRun.scaleN = 10;
+lastRun.gapInner = 12;
+var mine16 = ZSM.Config.getDefaults();
+mine16.scaleN = 2.5;
+var named16 = ZSM.Config.getDefaults();   // a preset a user named "scaleN": only the key inside presets goes
+var wrapper16 = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(),
+    "[Last Settings]": lastRun, "Mine": mine16, "scaleN": named16 } };
+ZSM.Storage.save(wrapper16);
+/** Names of the presets in a written file that still carry scaleN. */
+function presetsWithScale(text) {
+    var f = JSON.parse(text || "{}"), out = [];
+    for (var k in (f.presets || {})) {
+        if (f.presets.hasOwnProperty(k) && f.presets[k].hasOwnProperty("scaleN")) out.push(k);
+    }
+    return out;
+}
+var written16 = mockFS[NEW_PATH] || "";
+assert(written16 !== "", "save() wrote the file");
+assertEqList(presetsWithScale(written16), [], "the file has no scaleN in any preset");
+var file16 = JSON.parse(written16 || "{}");
+assert(file16.presets && file16.presets["[Last Settings]"] && file16.presets["[Last Settings]"].gapInner === 12,
+    "[Last Settings] keeps its other values");
+assert(file16.presets && file16.presets["scaleN"] !== undefined, "a preset named 'scaleN' is kept");
+assert(file16.activePreset === "Mine", "activePreset kept");
+assert(lastRun.scaleN === 10 && mine16.scaleN === 2.5, "the object in memory is unchanged (main.js reads scaleN from it)");
+assert(wrapper16.presets["[Last Settings]"] === lastRun, "...the same preset objects, not copies");
+
+// A 1.1.0 file with scaleN in [Last Settings] and a named preset loads, and
+// the next save drops it (review focus 1).
+resetMockFS();
+var old110 = ZSM.Config.getDefaults(); old110.scaleN = 10; old110.gapOuter = 3;
+var oldMine = ZSM.Config.getDefaults(); oldMine.scaleN = 10;
+mockFS[NEW_PATH] = JSON.stringify({ activePreset: "Mine", presets: {
+    "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": old110, "Mine": oldMine } });
+var loaded16 = ZSM.Storage.load();
+assert(loaded16 !== null, "a 1.1.0 file with scaleN loads");
+assert(loaded16 && loaded16.presets["[Last Settings]"].gapOuter === 3, "...with its values");
+ZSM.Storage.save(loaded16);
+assertEqList(presetsWithScale(mockFS[NEW_PATH]), [], "...and the next save writes it without scaleN");
 
 
 // =====================================================

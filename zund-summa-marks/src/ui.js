@@ -2,7 +2,7 @@
 // Module: ZSM.UI — ScriptUI dialog, preset logic, event handling
 // Part of: Illustrator Zund & Summa Marks
 // Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation,
-//             ZSM.Numbers, ZSM.FieldPaint (shared)
+//             ZSM.Numbers, ZSM.FieldPaint, ZSM.DrawingScale (shared)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -15,13 +15,13 @@ ZSM.UI = {
     //  • COLOR_DD (spot-dropdown right-edge axis, N5) stays separate from VALUE_GROUP
     //  • LABEL_COL and COLOR_DD are two DIFFERENT axes — never unify them
     M: {
-        LABEL_COL:    178,   // label column (hdrLayer, ddLayer, addRow.st, addColorRow.st)
+        LABEL_COL:    178,   // label column (hdrLayer, ddLayer, addRow.st, addColorRow.st, stScale)
         COLOR_DD:     112,   // colour dropdown width (ddColor, addColorRow.ddl-with-swatch)
         VALUE_GROUP:  130,   // value sub-group (addRow.vg, addColorRow.ddl-no-swatch)
-        NUM_FIELD:    56,    // numeric edittext (addRow.et)
+        NUM_FIELD:    56,    // numeric edittext (addRow.et, etScale)
         ET_LAYER:     152,   // layer-name edittext (< LABEL_COL, N6)
         SWATCH:       16,    // colour swatch square
-        LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj/scale spacer)
+        LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj)
         PRESET_BTN:   92,    // preset action buttons
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
@@ -59,11 +59,15 @@ ZSM.UI = {
         // does both). Computed here at show() entry so the mode-switch loop
         // below reuses the same docData on every iteration without re-querying
         // the DOM. Runs in front of any UI construction.
+        // drawingScale: N of 1:N the document remembers (none stored = 1). A
+        // mode switch writes the field back here, so the reopened dialog shows
+        // what the user typed — the scale is the document's, not a preset's.
         var docData = {
             swatches:      ZSM.Draw.getSwatchNames(),
             swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
-            detectedColor: ZSM.Draw.detectCutColor()
+            detectedColor: ZSM.Draw.detectCutColor(),
+            drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1
         };
 
         // [Default] holds factory values only: Save never writes it (it turns
@@ -99,7 +103,9 @@ ZSM.UI = {
      *
      * @param {string} mode    - "ZUND" or "SUMMA"
      * @param {Object} pData   - Preset wrapper (mutated in place on OK/Save)
-     * @param {Object} docData - {swatches, layers, detectedColor}
+     * @param {Object} docData - {swatches, layers, detectedColor, drawingScale}
+     *        drawingScale = the scale field's start value (number; NaN for a
+     *        typo carried through a mode switch, shown as an empty field)
      * @returns {Object|null}
      */
     buildDialog: function (mode, pData, docData) {
@@ -258,114 +264,33 @@ ZSM.UI = {
             rbFixed.helpTip = l.TIP_SRC_FIXED;
         }
 
-        // --- Scale row (Phase 2): 72px spacer + checkbox + 1:N field ---
-        // Scale describes the document, but lives in the merged Output panel now.
-        // Derived state: scaleN > 1 → checkbox checked, field enabled.
-        // scaleN === 1 → checkbox unchecked, field disabled at "1".
-        // Single source of truth: scaleN value (no extra checkbox state stored).
+        // --- Drawing scale 1:N (spec 1.2.0 §5.1) ---
+        // One decimal field, as in grommet-marks and tile-export. It starts
+        // from the document (docData.drawingScale) and only the document keeps
+        // it: presets, the last run, a mode switch and the Defaults button
+        // never change it. Built like an addRow row (label column, NUM_FIELD)
+        // without the unit, so the field shares the geometry fields' axis.
         var grpScale = pOutput.add("group");
-        grpScale.orientation   = "row";
-        grpScale.alignChildren = ["left", "center"];
-        grpScale.spacing       = 10;   // breathing room between checkbox and the ratio
+        var stScale = grpScale.add("statictext", undefined, l.LBL_SCALE);
+        stScale.preferredSize.width = M.LABEL_COL;
+        stScale.helpTip = l.TIP_SCALE;
+        var etScale = grpScale.add("edittext", undefined, ZSM.Numbers.format(docData.drawingScale));
+        etScale.preferredSize.width = M.NUM_FIELD;
+        etScale.helpTip = l.TIP_SCALE;
 
-        // Leading spacer (LABEL_COL_W) aligns the checkbox's left edge with the
-        // radios above. A statictext carries the width reliably (groups ignore it).
-        var stScaleSpacer = grpScale.add("statictext", undefined, "");
-        stScaleSpacer.preferredSize.width = LABEL_COL_W;
-
-        var cbScale = grpScale.add("checkbox", undefined, l.SCALE_CHECKBOX);
-        cbScale.helpTip = l.TIP_SCALE_CHECKBOX;
-
-        // "1:" hugs its field as one unit (tight spacing) instead of floating
-        // with equal gaps on both sides.
-        var grpRatio = grpScale.add("group");
-        grpRatio.orientation   = "row";
-        grpRatio.alignChildren = ["left", "center"];
-        grpRatio.spacing       = 3;
-
-        var stScaleLabel = grpRatio.add("statictext", undefined, l.SCALE_FIELD_LABEL);
-        stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
-
-        var etScale = grpRatio.add("edittext", undefined, "1");
-        etScale.preferredSize.width = M.NUM_FIELD;   // same axis as addRow's numeric fields
-        etScale.helpTip = l.TIP_SCALE_FIELD;
-
-        /** Enable/disable the ratio field AND its "1:" label together, so the
-         *  whole "1:N" unit greys out as one when scaling is off. */
-        function setScaleEnabled(on) {
-            etScale.enabled      = on;
-            stScaleLabel.enabled = on;
-        }
-
-        // Sync UI to initial scaleN value
-        var initScaleN = parseInt(sData.scaleN, 10);
-        if (isNaN(initScaleN) || initScaleN < 1) initScaleN = 1;
-        if (initScaleN > 1) {
-            cbScale.value   = true;
-            etScale.text    = String(initScaleN);
-            setScaleEnabled(true);
-        } else {
-            cbScale.value   = false;
-            etScale.text    = "1";
-            setScaleEnabled(false);
-        }
-
-        /** Read current scaleN from the UI controls (clean integer 1..10). */
-        function readScaleN() {
-            if (!cbScale.value) return 1;
-            var n = parseInt(etScale.text, 10);
-            if (isNaN(n) || n < 1) return 1;
-            if (n > 10) return 10;
-            return n;
-        }
-
-        /** Apply title suffix when scaling is active. */
+        /** Title suffix " — 1:N" while the field holds a valid scale other
+         *  than 1:1 — the scale the run would use, written like the field. */
         function applyTitleSuffix() {
-            var n = readScaleN();
-            var baseTitle = c.ui.title || "";
-            // Strip any previous suffix " — 1:N"
-            var base = baseTitle.replace(/\s*—\s*1:\d+\s*$/, "");
-            try {
-                w.text = (n > 1) ? (base + " — 1:" + n) : base;
-            } catch (e) {}
+            var n = parseNum(etScale), r = ZSM.Validation.rules.scaleN;
+            var scaled = (n >= r.min && n <= r.max && n !== 1);   // NaN fails both bounds
+            w.text = scaled ? (c.ui.title + " — 1:" + ZSM.Numbers.format(n)) : c.ui.title;
         }
         applyTitleSuffix();   // initial
 
-        cbScale.onClick = function () {
-            if (cbScale.value) {
-                setScaleEnabled(true);
-                // Auto-suggest "10" when activating from "1"
-                var cur = parseInt(etScale.text, 10);
-                if (isNaN(cur) || cur <= 1) etScale.text = "10";
-            } else {
-                setScaleEnabled(false);
-                etScale.text = "1";
-            }
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-        };
-
-        // onChange (commit, focus leaves the field) vs onChanging (every
-        // keystroke) MUST differ here: the auto-uncheck on "1" may only run on
-        // commit. If it ran per keystroke, typing "12" would disable the field
-        // after the first "1" — mid-typing lockout. liveValidateAll paints the
-        // field red / gates Generate for out-of-range values (e.g. 50).
-        etScale.onChange = function () {
-            var n = parseInt(etScale.text, 10);
-            // Auto-uncheck when user explicitly commits 1
-            if (n === 1) {
-                cbScale.value   = false;
-                setScaleEnabled(false);
-            }
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
-        etScale.onChanging = function () {
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
+        // Not a preset value, so no modified-indicator refresh: the live check
+        // paints the field, gates Generate / Save / Save As and the status line.
+        etScale.onChanging = function () { applyTitleSuffix(); liveValidateAll(); };
+        etScale.onChange   = etScale.onChanging;
 
         // =================================================================
         // Panel: Gap / Geometry (mode-specific rows)
@@ -674,7 +599,9 @@ ZSM.UI = {
                 markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
                 orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
-                scaleN:            readScaleN(),
+                // The run's scale (NaN while the field is wrong); presetEquals
+                // ignores it and Storage.save leaves it out of the file.
+                scaleN:            parseNum(etScale),
                 marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
@@ -719,20 +646,8 @@ ZSM.UI = {
                 rMarkSize.inp.text = ZSM.Numbers.format(obj.markSizeS !== undefined ? obj.markSizeS : 3);
             }
 
-            // Scale (Phase 2) — sync checkbox + field from scaleN value.
-            var newScaleN = parseInt(obj.scaleN, 10);
-            if (isNaN(newScaleN) || newScaleN < 1) newScaleN = 1;
-            if (newScaleN > 10) newScaleN = 10;
-            if (newScaleN > 1) {
-                cbScale.value   = true;
-                etScale.text    = String(newScaleN);
-                setScaleEnabled(true);
-            } else {
-                cbScale.value   = false;
-                etScale.text    = "1";
-                setScaleEnabled(false);
-            }
-            applyTitleSuffix();
+            // The drawing scale field is left alone: it is the document's
+            // (spec 1.2.0 §5.2), whatever obj.scaleN an old preset carries.
 
             // Rebuild layer rows
             while (layContainer.children.length > 0) {
@@ -1000,6 +915,8 @@ ZSM.UI = {
 
             // Preserve window position across mode switch
             docData._lastBounds = w.bounds;
+            // ...and the scale field: the reopened dialog starts from it
+            docData.drawingScale = parseNum(etScale);
 
             switchTarget = newMode;
             w.close(2); // code 2 = mode switch (not OK, not Cancel)
@@ -1062,8 +979,9 @@ ZSM.UI = {
                 drawRed:           isS ? !!chRed.value       : undefined,
                 useArtboardBounds: isZ ? !!rbFixed.value     : false,
                 markColor:         markColorSel,
-                // scaleN: derived from checkbox + field state (1 when unchecked)
-                scaleN:            readScaleN(),
+                // The drawing scale field: validated like the others, carried to
+                // the run in [Last Settings], never written to the settings file.
+                scaleN:            etScale.text,
                 marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
@@ -1140,10 +1058,7 @@ ZSM.UI = {
         }
         numericRows.push({ row: rGapZO, rule: ZSM.Validation.rules.gapOuter });
         numericRows.push({ row: rMaxD,  rule: ZSM.Validation.rules.maxDist  });
-        // Scale field (1:N) — without this an out-of-range N (e.g. 50) would be
-        // silently clamped to 10 by readScaleN with no visual signal. Wrapped in
-        // {inp:} to match the row shape; skipped automatically when the checkbox
-        // is off (the field is disabled then).
+        // The drawing scale field, wrapped in {inp:} to match the row shape.
         numericRows.push({ row: { inp: etScale }, rule: ZSM.Validation.rules.scaleN });
 
         function isValueInRange(et, rule) {
@@ -1176,12 +1091,11 @@ ZSM.UI = {
                     numbersAllOk = false;
                     invalidCount++;
                     if (!firstMsg) {
-                        // scaleN's rule label is the bare "1:" ratio prefix — swap
-                        // it for the checkbox caption so the message reads sensibly.
+                        // The label without its colon — and the scale's without
+                        // its ratio: "Drawing scale 1:" names "Drawing scale".
                         var lblKey = nr.rule && nr.rule.label;
-                        if (lblKey === "SCALE_FIELD_LABEL") lblKey = "SCALE_CHECKBOX";
                         var lbl = (lblKey && l[lblKey]) ? l[lblKey] : "";
-                        lbl = String(lbl).replace(/:\s*$/, "");
+                        lbl = String(lbl).replace(/\s*1:\s*$/, "").replace(/:\s*$/, "");
                         firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl,
                             ZSM.Numbers.format(nr.rule.min), ZSM.Numbers.format(nr.rule.max));
                     }
@@ -1254,8 +1168,8 @@ ZSM.UI = {
                 if (allValid) {
                     amber = false;
                     var ctx = mode;
-                    var sN  = readScaleN();
-                    if (sN > 1) ctx += " · 1:" + sN;
+                    var sN  = parseNum(etScale);   // valid here: allValid includes the field
+                    if (sN !== 1) ctx += " · 1:" + ZSM.Numbers.format(sN);
                     var marksOnlyCtx = false;
                     try { marksOnlyCtx = cbMarksOnly.value; } catch (emc) {}
                     msg = marksOnlyCtx

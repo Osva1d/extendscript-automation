@@ -40,10 +40,10 @@ ZSM.Validation = {
         markSizeS:  { min: 0.1, max: 50,   label: "MARK_SIZE_S", mode: "SUMMA" },
         feedTop:    { min: 0,   max: 1000, label: "FEED_TOP",    mode: "SUMMA" },
         feedBottom: { min: 0,   max: 1000, label: "FEED_BOT",    mode: "SUMMA" },
-        // Phase 2 — manual scale (1:N). Integer 1..10.
-        // scaleN=1 = no scaling (UI checkbox unchecked, field disabled).
-        // scaleN=2..10 = doc is 1:N (UI checkbox checked, field shows N).
-        scaleN:     { min: 1,   max: 10,   label: "SCALE_FIELD_LABEL", integer: true }
+        // The drawing scale 1:N (spec 1.2.0 §5.1), decimal, the family's
+        // range. N < 1 is invalid, not 1:1: the family draws it as 1:1
+        // (getEffectiveSF) and the canon forbids a silent substitute.
+        scaleN:     { min: 1,   max: 100,  label: "LBL_SCALE" }
     },
 
     /**
@@ -95,16 +95,6 @@ ZSM.Validation = {
             var label = L[rule.label] || rule.label || field;
             var val = ZSM.Utils.validateNumber(raw[field], rule.min, rule.max, label);
             if (val === null) {
-                errors.push({ field: field, label: label });
-            } else if (rule.integer && val !== Math.floor(val)) {
-                // Integer-only rule (e.g. scaleN): reject decimals. The value
-                // passed the range check, so validateNumber showed NO alert —
-                // this "must be integer" alert is the only message the user sees.
-                try {
-                    if (typeof alert === "function" && L.ERR_MUST_BE_INTEGER) {
-                        alert(L.format ? L.format(L.ERR_MUST_BE_INTEGER, label) : L.ERR_MUST_BE_INTEGER);
-                    }
-                } catch (e) {}
                 errors.push({ field: field, label: label });
             } else {
                 settings[field] = val;

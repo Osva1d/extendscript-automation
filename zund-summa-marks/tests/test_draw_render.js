@@ -1340,6 +1340,50 @@ for (var c37 = 0; c37 < circles37.length; c37++) {
 
 
 // =====================================================
+// TEST 38: render() says whether it drew (spec 1.2.0 §5.2)
+// =====================================================
+// main.js stores the drawing scale in the document only after a run that drew:
+// a refusal promises "the document was not changed", the scale included. Every
+// way out of render() answers: true after drawing, false when it stopped.
+console.log("\n=== TEST 38: render() returns whether it drew ===");
+var alerts38 = [], origAlert38 = global.alert;
+global.alert = function (m) { alerts38.push(String(m)); };
+function render38(spec, sOver, tweakGeo) {
+    var d = setupDoc(spec);
+    var s38 = makeSettings(sOver || { mode: "ZUND" });
+    var g38 = ZSM.Core.calculateAll(s38, ZSM.Draw.getBounds(s38));
+    if (tweakGeo) tweakGeo(g38);
+    alerts38 = [];
+    return { drew: ZSM.Draw.render(g38, s38), doc: d, alerts: alerts38.slice() };
+}
+var art38 = function (wMm) { return { layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(wMm), 0] }] }] }; };
+
+var ok38 = render38(art38(120));
+assertEq(ok38.drew, true, "a run that drew returns true");
+assert(findLayer(ok38.doc, "Regmarks") !== null, "...and the marks are there");
+
+var orient38 = render38(art38(90));   // the orientation mark lands on a corner mark (ERR_MARKS_ORIENT)
+assertEq(orient38.drew, false, "a mark conflict (ERR_MARKS_ORIENT) returns false");
+assert(orient38.alerts.join("\n").indexOf("marks orient") >= 0, "...after its message");
+assert(findLayer(orient38.doc, "Regmarks") === null, "...and nothing was drawn");
+
+var nan38 = render38(art38(120), null, function (g) { g.marksZ[0].cx = NaN; });
+assertEq(nan38.drew, false, "invalid geometry returns false");
+
+var big38 = render38({ layers: [{ name: "Art", items: [{ type: "path", bounds: [-8160, 100, 8160, 0] }] }] });
+assertEq(big38.drew, false, "an artboard Illustrator refuses returns false");
+assert(big38.alerts.join("\n").indexOf("artboard too large") >= 0, "...after its message");
+
+var origGetLay38 = ZSM.Draw.getLay;
+ZSM.Draw.getLay = function () { throw new Error("layer gone"); };
+var crash38;
+try { crash38 = render38(art38(120)); } finally { ZSM.Draw.getLay = origGetLay38; }
+assertEq(crash38.drew, false, "an unexpected error inside the drawing returns false (not a successful run)");
+assert(crash38.alerts.join("\n").indexOf("render error: layer gone") >= 0, "...after the render error message");
+global.alert = origAlert38;
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

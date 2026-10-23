@@ -131,10 +131,11 @@ for (var i = 0; i < requiredRuleFields.length; i++) {
     assert(typeof ZSM.Validation.rules[f].label === "string", "Rule '" + f + "' has label");
 }
 
-// scaleN-specific schema asserts (Phase 2)
+// The drawing scale 1:N (spec 1.2.0 §5.1): 1 to 100, decimal, the field's label
 assert(ZSM.Validation.rules.scaleN.min === 1, "scaleN.min === 1");
-assert(ZSM.Validation.rules.scaleN.max === 10, "scaleN.max === 10");
-assert(ZSM.Validation.rules.scaleN.integer === true, "scaleN.integer === true");
+assert(ZSM.Validation.rules.scaleN.max === 100, "scaleN.max === 100");
+assert(ZSM.Validation.rules.scaleN.integer === undefined, "scaleN takes decimals (no integer flag)");
+assertEq(ZSM.Validation.rules.scaleN.label, "LBL_SCALE", "scaleN names the field LBL_SCALE");
 
 
 // =====================================================
@@ -363,41 +364,32 @@ assertEq(r.settings.orientDist, 100, "SUMMA: orientDist from prev (100)");
 
 
 // =====================================================
-// TEST 11: scaleN (Phase 2) — boundary + integer-only
+// TEST 11: the drawing scale 1:N — 1 to 100, decimal (spec 1.2.0 §5.1)
 // =====================================================
-console.log("\n=== TEST 11: scaleN boundary + integer ===");
+// The scale was an integer 1–10 read with parseInt: "2,5" ran as 1:2 and the
+// typo "1O" as 1:1. It now reads like every other field (ZSM.Numbers.parse),
+// takes decimals, and N < 1 is invalid — the family draws it as 1:1
+// (getEffectiveSF) and the canon forbids a silent substitute.
+console.log("\n=== TEST 11: drawing scale 1–100, decimal ===");
+function scaleOf(v) { return ZSM.Validation.validate(rawZund({ scaleN: v }), fullPrev(), L_EN); }
+/** The validated scale, or null when the run is refused. */
+function scaleValue(v) { var r = scaleOf(v); return r.valid ? r.settings.scaleN : null; }
+
+assertEq(scaleValue("2,5"), 2.5, "scaleN '2,5' -> 2.5");
+assertEq(scaleValue("2.5"), 2.5, "scaleN '2.5' -> 2.5");
+assertEq(scaleValue("1"), 1, "scaleN '1' -> 1 (the minimum, real size)");
+assertEq(scaleValue("100"), 100, "scaleN '100' -> 100 (the maximum)");
+assertEq(scaleValue("10"), 10, "scaleN '10' -> 10");
+assertEq(scaleValue(10), 10, "scaleN 10 (a number) -> 10");
+
 alertCalls = [];
-
-// Valid integer values in range
-assert(ZSM.Validation.validate(rawZund({ scaleN: 1 }),  fullPrev(), L_EN).valid, "scaleN=1 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 2 }),  fullPrev(), L_EN).valid, "scaleN=2 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 5 }),  fullPrev(), L_EN).valid, "scaleN=5 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 10 }), fullPrev(), L_EN).valid, "scaleN=10 (max) valid");
-
-// Out of range
-alertCalls = [];
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 0 }),  fullPrev(), L_EN).valid, "scaleN=0 below min");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 11 }), fullPrev(), L_EN).valid, "scaleN=11 above max");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: -1 }), fullPrev(), L_EN).valid, "scaleN=-1 invalid");
-
-// Integer-only: decimals must fail (use a value that's IN-range as decimal but not integer)
-alertCalls = [];
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 2.5 }), fullPrev(), L_EN).valid, "scaleN=2.5 invalid (not integer)");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 5.1 }), fullPrev(), L_EN).valid, "scaleN=5.1 invalid (not integer)");
-
-// String inputs (UI sends numbers, but validation should still cope)
-assert(ZSM.Validation.validate(rawZund({ scaleN: "10" }), fullPrev(), L_EN).valid, "scaleN='10' string valid");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: "abc" }), fullPrev(), L_EN).valid, "scaleN='abc' invalid");
-
-// Settings preserved when valid
-var rOk = ZSM.Validation.validate(rawZund({ scaleN: 10 }), fullPrev(), L_EN);
-assertEq(rOk.settings.scaleN, 10, "scaleN=10: settings.scaleN === 10");
-
-// Fallback to prev when scaleN missing in raw (backward compat for old presets)
-alertCalls = [];
-var prevWithScale = fullPrev(); prevWithScale.scaleN = 5;
-var rFallback = ZSM.Validation.validate(rawZund(), prevWithScale, L_EN);  // no scaleN in raw
-assertEq(rFallback.settings.scaleN, 5, "scaleN missing in raw → fallback to prev.scaleN=5");
+assert(!scaleOf("0,5").valid, "scaleN '0,5' invalid (N < 1 is never drawn as 1:1 silently)");
+assert(!scaleOf("101").valid, "scaleN '101' invalid (above 100)");
+assert(!scaleOf("1O").valid, "scaleN '1O' invalid (a typo, not 1)");
+assert(!scaleOf("0").valid, "scaleN '0' invalid");
+assert(!scaleOf("-1").valid, "scaleN '-1' invalid");
+assert(!scaleOf("").valid, "scaleN '' invalid (the field is required)");
+assertEq(alertCalls.length, 6, "each invalid scale gives exactly one alert (got " + alertCalls.length + ")");
 
 
 // =====================================================

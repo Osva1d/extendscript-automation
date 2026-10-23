@@ -9,6 +9,9 @@
  *     document's default stroke (spec.defaultStroke = {dashes, cap}), as a
  *     scripted path does in Illustrator (docs/extendscript-engine-facts.md
  *     "Nová cesta dědí výchozí styl tahu"). Joins and miter limit not modeled.
+ *   - doc.XMPString: a plain readable and writable string, the packet of a
+ *     new document (XMP_PACKET, an RDF without a drawing scale) unless
+ *     spec.xmp gives another — enough for ZSM.DrawingScale to read and write.
  *
  * NOT modeled:
  *   - C++ crash semantics
@@ -33,6 +36,12 @@
     "use strict";
 
     var nextId = 1;
+
+    // The XMP packet of a new document: an RDF with Illustrator's own
+    // description and no drawing scale, so DrawingScale.save has where to write.
+    var XMP_PACKET = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        + '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreatorTool>Adobe Illustrator</xmp:CreatorTool>'
+        + "</rdf:Description></rdf:RDF></x:xmpmeta>";
 
     // ===== Helpers =====
     function arrayRemove(arr, item) {
@@ -464,6 +473,7 @@
         this.selection = null;
         this.activeLayer = this._layers[0] || null;
         this.rulerOrigin = [0, 0];
+        this.XMPString = (spec.xmp !== undefined) ? spec.xmp : XMP_PACKET;
     }
     Object.defineProperty(MockDocument.prototype, "layers", {
         get: function () {
@@ -577,6 +587,7 @@
         install: install,
         uninstall: uninstall,
         buildDoc: buildDoc,
+        XMP_PACKET: XMP_PACKET,
         MockLayer: MockLayer,
         MockPathItem: MockPathItem,
         MockGroupItem: MockGroupItem,

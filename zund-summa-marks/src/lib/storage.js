@@ -32,7 +32,35 @@ ZSM.Storage = {
     },
 
     /**
-     * Serializes and saves the full preset wrapper to disk.
+     * The wrapper as the settings file holds it: every preset without scaleN.
+     * The drawing scale belongs to the document (spec 1.2.0 §5.2); the run
+     * object in memory keeps it — main.js reads it after saving — so this is
+     * a copy, and the presets in `data` stay the same objects. PURE FUNCTION.
+     * @param {Object} data - Full preset wrapper {presets, activePreset}.
+     * @returns {Object} A shallow copy with scaleN left out of each preset.
+     */
+    fileCopy: function (data) {
+        var out = {};
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) out[key] = data[key];
+        }
+        if (data.presets) {
+            out.presets = {};
+            for (var name in data.presets) {
+                if (!data.presets.hasOwnProperty(name)) continue;
+                var src = data.presets[name], dst = {};
+                for (var k in src) {
+                    if (src.hasOwnProperty(k) && k !== "scaleN") dst[k] = src[k];
+                }
+                out.presets[name] = dst;
+            }
+        }
+        return out;
+    },
+
+    /**
+     * Serializes and saves the full preset wrapper to disk, without the
+     * drawing scale (fileCopy).
      * Returns success so CALLERS decide how to surface a failure (alert with
      * context); this module never alerts itself. open(), write() and close()
      * are all checked — File.write returns false on a full disk / permission
@@ -48,7 +76,7 @@ ZSM.Storage = {
                 ZSM.Utils.log("Storage.save: open(w) failed for " + f.fsName);
                 return false;
             }
-            var wrote  = f.write(JSON.stringify(data));
+            var wrote  = f.write(JSON.stringify(this.fileCopy(data)));
             var closed = f.close();
             if (!wrote || !closed) {
                 ZSM.Utils.log("Storage.save: write/close failed for " + f.fsName);

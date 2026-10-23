@@ -122,7 +122,8 @@ ZSM.Utils = {
      *
      * Compares fixed schema fields (mode, gaps, sizes, color, etc.)
      * plus layers[] array (name+color per row). Extra fields outside
-     * the schema are ignored.
+     * the schema are ignored — scaleN among them: the drawing scale
+     * belongs to the document, not to a preset (spec 1.2.0 §5.2).
      *
      * @param {Object} a - First settings object.
      * @param {Object} b - Second settings object.
@@ -133,7 +134,7 @@ ZSM.Utils = {
         var keys = ["mode", "gapInner", "gapOuter", "maxDist",
                     "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
                     "markSizeZ", "markSizeS", "orientDist", "markColor",
-                    "scaleN", "marksOnly"];
+                    "marksOnly"];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }

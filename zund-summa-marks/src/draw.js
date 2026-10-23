@@ -85,6 +85,11 @@ ZSM.Draw = {
      *
      * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
      * @param {Object} s   - Settings from UI.
+     * @returns {boolean} True when the run drew (a mark that failed to draw is
+     *     reported, the run still counts); false when it stopped — refused
+     *     before changing the document (invalid geometry, a mark conflict, an
+     *     artboard Illustrator refuses), or an unexpected error. main.js stores
+     *     the drawing scale only after true (spec 1.2.0 §5.2).
      */
     render: function (geo, s) {
         var doc = app.activeDocument;
@@ -95,7 +100,7 @@ ZSM.Draw = {
             // set is worse than none.
             if (!this._geometryIsFinite(geo, s)) {
                 ZSM.Utils.error(ZSM.L.ERR_GEOMETRY_INVALID);
-                return;
+                return false;
             }
             // Nor when marks would print as one shape or partly off the
             // artboard. With the defaults the orientation mark lands on the
@@ -107,7 +112,7 @@ ZSM.Draw = {
                                     outside: ZSM.L.ERR_MARKS_OUTSIDE }[conflict.type];
                 ZSM.Utils.error(ZSM.L.format(conflictMsg, Math.round(conflict.dist * 10) / 10,
                     (s.mode === "SUMMA") ? s.markSizeS : s.markSizeZ));
-                return;
+                return false;
             }
 
             // 0. Deselect all — removing or reordering items/layers while
@@ -145,7 +150,7 @@ ZSM.Draw = {
                     ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_ARTBOARD_TOO_LARGE,
                         Math.round(ZSM.Utils.pt2mm(geo.ab[2] - geo.ab[0]) * sfAb),
                         Math.round(ZSM.Utils.pt2mm(geo.ab[1] - geo.ab[3]) * sfAb)));
-                    return;
+                    return false;
                 }
             }
 
@@ -439,9 +444,11 @@ ZSM.Draw = {
                 ZSM.Utils.warn(geo.warnings.join("\n"));
             }
             app.redraw();
+            return true;
 
         } catch (e) {
             ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_RENDER_CRITICAL, e.message));
+            return false;
         }
     },
 

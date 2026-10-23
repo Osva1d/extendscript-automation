@@ -194,7 +194,7 @@ assert(ZSM.Utils.presetEquals(a, a) === true, "presetEquals: same reference → 
 console.log("\n=== TEST 6: presetEquals single-field diff ===");
 var fields = ["mode", "gapInner", "gapOuter", "maxDist", "feedTop", "feedBottom",
               "drawRed", "useArtboardBounds", "markSizeZ", "markSizeS",
-              "orientDist", "markColor", "scaleN"];
+              "orientDist", "markColor"];
 for (var fi = 0; fi < fields.length; fi++) {
     var orig = makeBaseline();
     var modified = makeBaseline();
@@ -206,6 +206,14 @@ for (var fi = 0; fi < fields.length; fi++) {
     assert(ZSM.Utils.presetEquals(orig, modified) === false,
            "presetEquals: diff in '" + k + "' → false");
 }
+
+
+// The drawing scale belongs to the document, not to a preset (spec 1.2.0 §5.2):
+// a preset saved at 1:10 by 1.1.0 must not show "*" in a 1:1 document.
+var scaled = makeBaseline();
+scaled.scaleN = 10;
+assert(ZSM.Utils.presetEquals(makeBaseline(), scaled) === true,
+       "presetEquals: objects differing only in scaleN → true (the scale is not a preset value)");
 
 
 // =====================================================

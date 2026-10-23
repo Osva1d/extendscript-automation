@@ -20,7 +20,6 @@ ZSM.L = (function () {
             ERROR_PREFIX:        "ERROR: ",
             WARN_PREFIX:         "WARNING: ",
             ERR_MUST_BE_NUMBER:  "%s must be a number!",
-            ERR_MUST_BE_INTEGER: "%s must be a whole number!",
             ERR_OUT_OF_RANGE:    "%s must be between %s and %s!",
             ERR_NO_DOC:          "No document open.",
             ERR_NO_SEL:          "There is no artwork in the document to place marks around. Add artwork, or choose Fixed to Artboard.",
@@ -63,10 +62,10 @@ ZSM.L = (function () {
             SRC_FIXED:     "Fixed to Artboard",
             TIP_SRC_AUTO:  "Marks are placed around all artwork in the document, including hidden layers and anything outside the artboard, and the artboard is resized to fit. The selection is ignored.",
             TIP_SRC_FIXED: "Marks placed relative to current Artboard; size unchanged.",
-            SCALE_CHECKBOX:     "Work at scale",
-            TIP_SCALE_CHECKBOX: "Enable when your document is a scaled-down representation (e.g. a 5 m banner prepared at 1:10 in a 500 mm artboard). Then enter all dimensions in real-world mm.",
-            SCALE_FIELD_LABEL:  "1:",
-            TIP_SCALE_FIELD:    "Document scale ratio. Enter N where 1 unit in your document equals N units in reality. Range 1–10.",
+            // The drawing scale 1:N, as grommet-marks and tile-export word it; the
+            // document remembers it (ZSM.DrawingScale).
+            LBL_SCALE:     "Drawing scale 1:",
+            TIP_SCALE:     "The scale the document is drawn at: 1:10 means the artwork is ten times smaller than the real thing. The document remembers it. Every value in the dialog is entered at real-world size, mark size included. Range 1–100.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Preset:",
@@ -149,7 +148,6 @@ ZSM.L = (function () {
             ERROR_PREFIX:        "CHYBA: ",
             WARN_PREFIX:         "UPOZORNĚNÍ: ",
             ERR_MUST_BE_NUMBER:  "%s musí být číslo!",
-            ERR_MUST_BE_INTEGER: "%s musí být celé číslo!",
             ERR_OUT_OF_RANGE:    "%s musí být mezi %s a %s!",
             ERR_NO_DOC:          "Není otevřený dokument.",
             ERR_NO_SEL:          "V dokumentu není žádná grafika, kolem které by šly značky umístit. Přidejte grafiku, nebo zvolte Dle Artboardu (Fixed).",
@@ -192,10 +190,8 @@ ZSM.L = (function () {
             SRC_FIXED:     "Dle Artboardu (Fixed)",
             TIP_SRC_AUTO:  "Značky se umístí kolem veškeré grafiky v dokumentu, i ve skrytých vrstvách a mimo artboard, a artboard se přizpůsobí. Výběr se nebere v úvahu.",
             TIP_SRC_FIXED: "Pozice značek se určí podle stávajícího Artboardu; jeho velikost se nemění.",
-            SCALE_CHECKBOX:     "Pracovat v měřítku",
-            TIP_SCALE_CHECKBOX: "Zapněte, pokud je dokument zmenšenou předlohou (např. 5m banner připravený v měřítku 1:10 na 500 mm artboardu). Pak zadávejte všechny rozměry v reálných mm.",
-            SCALE_FIELD_LABEL:  "1:",
-            TIP_SCALE_FIELD:    "Měřítko dokumentu. Zadejte N, kde 1 jednotka v dokumentu = N jednotek v realitě. Rozsah 1–10.",
+            LBL_SCALE:     "Měřítko kresby 1:",
+            TIP_SCALE:     "V jakém měřítku je dokument nakreslený: 1:10 znamená, že grafika je desetkrát menší než ve skutečnosti. Dokument si ho zapamatuje. Hodnoty v dialogu se zadávají ve skutečné velikosti, včetně velikosti značek. Rozsah 1–100.",
 
             // --- UI: Presets ---
             PRESET_LABEL:       "Předvolba:",

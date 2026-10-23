@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: Entry point — IIFE, orchestration
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Config, ZSM.Core, ZSM.Draw, ZSM.Storage, ZSM.UI, ZSM.Utils
+// Depends on: ZSM.Config, ZSM.Core, ZSM.Draw, ZSM.Storage, ZSM.UI, ZSM.Utils,
+//             ZSM.DrawingScale (shared: the scale the document remembers)
 // ------------------------------------------------------------------------
 (function (ZSM) {
     var draw = ZSM.Draw;
@@ -38,6 +39,10 @@
         // Show dialog — returns updated wrapper or null on cancel
         var resultWrapper = ZSM.UI.show(pData);
         if (!resultWrapper) return;
+
+        // The drawing scale the document held when the run began (none = 1:1),
+        // to tell whether the run changes it.
+        var docScale = ZSM.DrawingScale.load(app.activeDocument) || 1;
 
         // Persist settings before rendering (so a crash doesn't lose the config).
         // Alert on failure but continue with the render — the user already
@@ -86,7 +91,16 @@
         }
 
         var geo = ZSM.Core.calculateAll(res, bounds);
-        draw.render(geo, res);
+        var drew = draw.render(geo, res);
+
+        // The document remembers the scale for the next run — only when it
+        // differs from what the document held (a document without a scale and
+        // a run at 1:1 stays untouched) and only after a run that drew: a
+        // refusal promises "the document was not changed". res.scaleN is the
+        // dialog's validated field; it is never in the settings file.
+        if (drew && res.scaleN !== docScale) {
+            ZSM.DrawingScale.save(app.activeDocument, res.scaleN);
+        }
 
     } catch (e) {
         // e.line is undefined for non-Error throws — append only when present.

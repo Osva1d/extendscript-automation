@@ -73,8 +73,7 @@ ZSM.L = {
     DEF_CUT: "Cut", DEF_KISS: "Kiss-cut",
     // v26.6.0 audit additions
     PANEL_DOC: "Document",
-    SCALE_CHECKBOX: "Work at scale", TIP_SCALE_CHECKBOX: "tip",
-    SCALE_FIELD_LABEL: "1:", TIP_SCALE_FIELD: "tip",
+    LBL_SCALE: "Drawing scale 1:", TIP_SCALE: "tip",
     MARKS_ONLY: "Marks only", TIP_MARKS_ONLY: "tip",
     CONFIRM_DEL_PRESET: "del %s?",
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
@@ -113,7 +112,12 @@ ZSM.Config = {
 
 // Load production utility modules (no DOM dependencies)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
-require("./lib/load_shared.js")(ZSM, ["numbers", "field_paint"]);   // shared: ZSM.Numbers, ZSM.FieldPaint, bound the way the build does
+require("./lib/load_shared.js")(ZSM, ["numbers", "field_paint", "drawing_scale"]);   // shared: ZSM.Numbers, ZSM.FieldPaint, ZSM.DrawingScale, bound the way the build does
+
+// The document the dialog opens for: show() reads the drawing scale from its
+// XMP packet. A new document's packet holds none (scale 1); tests swap it.
+var XMP_PACKET = require("./lib/mock_illustrator.js").XMP_PACKET;
+global.app = { activeDocument: { XMPString: XMP_PACKET } };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "validation.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(ZSM);   // shared core module — bind to ZSM
@@ -132,7 +136,7 @@ ZSM.Draw = {
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8"));
 
 /** Helper: build a fresh dialog and return the captured Window. */
-function buildAndCapture(mode, pData) {
+function buildAndCapture(mode, pData, drawingScale) {
     pData = pData || {
         activePreset: "[Default]",
         presets: { "[Default]": ZSM.Config.getDefaults() }
@@ -141,7 +145,8 @@ function buildAndCapture(mode, pData) {
         swatches: ZSM.Draw.getSwatchNames(),
         swatchRGB: ZSM.Draw.getSwatchRGBMap(),
         layers: ZSM.Draw.getLayerNames(),
-        detectedColor: ZSM.Draw.detectCutColor()
+        detectedColor: ZSM.Draw.detectCutColor(),
+        drawingScale: (drawingScale !== undefined) ? drawingScale : 1   // what show() reads from the document
     };
     ZSM.UI.buildDialog(mode, pData, docData);
     return SUI.lastWindow();
@@ -1019,6 +1024,168 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         "en: the status line gives the mark size limits as '0.1–50' (got '" + (stEn && stEn.text) + "')");
 
     delete ZSM.L.DEC_SEP;   // back to the suite's default (no separator -> dot)
+})();
+
+
+// =====================================================
+// TEST 21 (spec 1.2.0 §5): the drawing scale comes from the document
+// =====================================================
+// A checkbox "Work at scale" and an integer field "1:" used to take the scale
+// from the preset and the last run: after a 1:10 job the next 1:1 job opened
+// at 1:10. One decimal field "Drawing scale 1:" now starts from the
+// document's XMP (no scale stored = 1), and neither a preset, the last run, a
+// mode switch nor the Defaults button changes it.
+console.log("\n=== TEST 21 (spec 1.2.0 §5): drawing scale from the document ===");
+(function () {
+    var BASE_TITLE = ZSM.Config.ui.title;
+    function isErrPen(pen) {
+        var c = pen && pen.color, e = ZSM.FieldPaint.COLORS.ERR;
+        return !!c && c[0] === e[0] && c[1] === e[1] && c[2] === e[2];
+    }
+    function scaleCtl(win) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === ZSM.L.LBL_SCALE; });
+        return lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    }
+    function scaleText(win) { var et = scaleCtl(win); return et ? et.text : null; }
+    function typeScale(win, text) { var et = scaleCtl(win); et.text = text; et.onChanging(); }
+    // The status line at rest starts with the mode: "ZUND · …" / "SUMMA · …".
+    function restLine(win) {
+        var st = win.findOne(function (c) { return c.type === "statictext" && /^(ZUND|SUMMA) · /.test(String(c.text)); });
+        return st ? st.text : null;
+    }
+    function okBtn(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
+    function btn(win, text) { return win.findOne(function (c) { return c.type === "button" && c.text === text; }); }
+    function presetShown(win) { var dd = k5PresetDD(win); return dd.selection ? dd.selection.text : null; }
+    function docWithScale(n) {
+        global.app.activeDocument = { XMPString: (n === null) ? XMP_PACKET : ZSM.DrawingScale.write(XMP_PACKET, n) };
+    }
+    function data(lastScale, mineScale) {
+        var last = ZSM.Config.getDefaults(), mine = ZSM.Config.getDefaults();
+        if (lastScale !== undefined) last.scaleN = lastScale;
+        if (mineScale !== undefined) mine.scaleN = mineScale;
+        return { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mine, "[Last Settings]": last } };
+    }
+    function bannerData() {
+        var p = data();
+        var banner = ZSM.Config.getDefaults(); banner.mode = "SUMMA"; banner.feedTop = 123;
+        var gap = ZSM.Config.getDefaults(); gap.gapInner = 17;
+        p.presets["Banner"] = banner; p.presets["Gap17"] = gap;
+        return p;
+    }
+
+    ZSM.L.DEC_SEP = ",";   // the Czech table's separator
+
+    // --- the document holds 1:10: field, title, status line ---
+    docWithScale(10);
+    var s10 = {}, p10 = data();
+    runDialogs(p10, [function (win) {
+        s10.field = scaleText(win); s10.title = win.text; s10.line = restLine(win);
+        clickGenerate(win);
+    }]);
+    assertEq(s10.field, "10", "XMP 1:10: the field shows '10'");
+    assert(s10.title === BASE_TITLE + " — 1:10", "XMP 1:10: the title ends ' — 1:10' (got '" + s10.title + "')");
+    assert(s10.line !== null && s10.line.indexOf("· 1:10") !== -1,
+        "XMP 1:10: the status line carries '· 1:10' (got '" + s10.line + "')");
+    assertEq(p10.presets["[Last Settings]"].scaleN, 10, "XMP 1:10: Generate runs at 1:10");
+
+    // --- 1:2,5 is written with the comma ---
+    docWithScale(2.5);
+    var s25 = {}, p25 = data();
+    runDialogs(p25, [function (win) {
+        s25.field = scaleText(win); s25.title = win.text; s25.line = restLine(win);
+        clickGenerate(win);
+    }]);
+    assertEq(s25.field, "2,5", "XMP 2.5: the field shows '2,5'");
+    assert(s25.title === BASE_TITLE + " — 1:2,5", "XMP 2.5: the title ends ' — 1:2,5' (got '" + s25.title + "')");
+    assert(s25.line !== null && s25.line.indexOf("· 1:2,5") !== -1,
+        "XMP 2.5: the status line carries '· 1:2,5' (got '" + s25.line + "')");
+    assertEq(p25.presets["[Last Settings]"].scaleN, 2.5, "XMP 2.5: Generate runs at 1:2.5");
+
+    // --- review focus 1: a 1.1.0 file at 1:10, a document without a scale ---
+    docWithScale(null);
+    var s1 = {}, p1 = data(10, 10);
+    runDialogs(p1, [function (win) {
+        s1.field = scaleText(win); s1.title = win.text; s1.line = restLine(win); s1.preset = presetShown(win);
+        s1.save = btn(win, ZSM.L.BTN_SAVE).enabled;
+        clickGenerate(win);
+    }]);
+    assertEq(s1.field, "1", "1.1.0 file with scaleN 10, no scale in the document: the field shows '1'");
+    assertEq(s1.title, BASE_TITLE, "...the title has no scale suffix");
+    assert(s1.line !== null && s1.line.indexOf("1:") === -1, "...the status line no scale (got '" + s1.line + "')");
+    assertEq(s1.preset, "Mine", "...the preset list shows 'Mine' without ' *'");
+    assertEq(s1.save, false, "...Save is grey (nothing changed)");
+    assertEq(p1.presets["[Last Settings]"].scaleN, 1, "...and Generate runs at 1:1");
+
+    // --- "2,5" survives the mode switches, a preset pick and the Defaults button ---
+    docWithScale(null);
+    var seen = [];
+    runDialogs(bannerData(), [
+        function (win) { typeScale(win, "2,5"); clickRadio(win, ZSM.L.MODE_SUMMA); },
+        function (win) { seen.push(["ZUND -> SUMMA", scaleText(win), win.text]); clickRadio(win, ZSM.L.MODE_ZUND); },
+        function (win) {
+            seen.push(["SUMMA -> ZUND", scaleText(win), win.text]);
+            pick(win, "Gap17");
+            seen.push(["same-mode preset", scaleText(win), win.text]);
+            btn(win, ZSM.L.BTN_RESET).onClick();
+            seen.push(["Defaults button", scaleText(win), win.text]);
+            pick(win, "Banner");
+        },
+        function (win) { seen.push(["other-mode preset", scaleText(win), win.text]); }
+    ]);
+    assertEq(seen.length, 5, "the scale walk reached every step");
+    for (var si = 0; si < seen.length; si++) {
+        assertEq(seen[si][1], "2,5", seen[si][0] + ": the field still shows '2,5'");
+        assertEq(seen[si][2], BASE_TITLE + " — 1:2,5", seen[si][0] + ": the title still ends ' — 1:2,5'");
+    }
+
+    // --- the field is not a preset value: no "*", Save stays grey ---
+    docWithScale(null);
+    var wM = buildAndCapture("ZUND", data(), 1);
+    typeScale(wM, "10");
+    assertEq(presetShown(wM), "Mine", "typing a scale does not mark the preset modified");
+    assertEq(btn(wM, ZSM.L.BTN_SAVE).enabled, false, "...Save stays grey");
+    assertEq(wM.text, BASE_TITLE + " — 1:10", "...the title follows the field: ' — 1:10'");
+    typeScale(wM, "1");
+    assertEq(wM.text, BASE_TITLE, "...and loses the suffix at '1'");
+
+    // --- an invalid scale: red field, Generate / Save / Save As grey, no suffix ---
+    var bad = ["0,5", "101", "1O", ""];
+    for (var bi = 0; bi < bad.length; bi++) {
+        var wB = buildAndCapture("ZUND", data(), 1);
+        btn(wB, ZSM.L.BTN_RESET).onClick();   // an unsaved change, so Save would be live
+        var before = btn(wB, ZSM.L.BTN_SAVE).enabled;
+        typeScale(wB, bad[bi]);
+        assert(isErrPen(scaleCtl(wB).graphics.foregroundColor), "'" + bad[bi] + "': the scale field is red");
+        assertEq(okBtn(wB).enabled, false, "'" + bad[bi] + "': Generate is grey");
+        assert(before === true && btn(wB, ZSM.L.BTN_SAVE).enabled === false,
+            "'" + bad[bi] + "': Save turns grey (was " + before + ")");
+        assertEq(btn(wB, ZSM.L.BTN_SAVE_AS).enabled, false, "'" + bad[bi] + "': Save As is grey");
+        assertEq(wB.text, BASE_TITLE, "'" + bad[bi] + "': the title carries no scale");
+        var warn = wB.findOne(function (c) { return c.type === "statictext" && String(c.text).indexOf("⚠") === 0; });
+        // The suite's STATUS_RANGE is "%s range %s–%s": the label without its ratio "1:".
+        assert(warn !== null && warn.text.indexOf("⚠ Drawing scale range 1–100") === 0,
+            "'" + bad[bi] + "': the status line names the field 'Drawing scale' (got '" + (warn && warn.text) + "')");
+        typeScale(wB, "2,5");
+        assert(okBtn(wB).enabled === true && !isErrPen(scaleCtl(wB).graphics.foregroundColor),
+            "'2,5' after '" + bad[bi] + "': valid again");
+    }
+
+    // --- a typo carried through a mode switch stays a typo, never 1 ---
+    docWithScale(10);
+    var carried = {};
+    runDialogs(data(), [
+        function (win) { typeScale(win, "1O"); clickRadio(win, ZSM.L.MODE_SUMMA); },
+        function (win) {
+            carried.text = scaleText(win);
+            carried.red = isErrPen(scaleCtl(win).graphics.foregroundColor);
+            carried.ok = okBtn(win).enabled;
+        }
+    ]);
+    assertEq(carried.text, "", "'1O' carried through a switch: an empty field, not '1' or '10'");
+    assert(carried.red === true && carried.ok === false, "...red, Generate grey");
+
+    delete ZSM.L.DEC_SEP;
+    docWithScale(null);
 })();
 
 

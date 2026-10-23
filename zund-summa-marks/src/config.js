@@ -55,10 +55,13 @@ ZSM.Config = {
             markSizeS:        3,
             orientDist:       100,
             markColor:        "[Registration]",
-            // Phase 2 (v26.4.0): manual scale support for shrunken docs.
+            // The drawing scale 1:N of the run (spec 1.2.0 §5). Not a setting:
+            // the dialog fills it from the document (ZSM.DrawingScale) and
+            // Storage.save never writes it to the settings file; the key only
+            // carries it from the dialog to the run.
             // scaleN = 1  → no scaling (user input == real mm == doc mm)
             // scaleN > 1  → doc is 1:N (user input in real mm; math divides by N
-            //               on top of AI's scaleFactor). UI enabled via checkbox.
+            //               on top of AI's scaleFactor).
             scaleN:           1,
             // Phase 3 (v26.5.0): "marks only" — when true, the script ONLY draws
             // registration marks and does NOT touch layers (no path routing, no
