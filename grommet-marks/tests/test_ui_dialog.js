@@ -1553,6 +1553,41 @@ console.log("--- UI 1.4 reason: the line is wide enough for the longest reason -
     done();
 })();
 
+// Characters are not pixels: with the shorter findings the longest English
+// sample by count ("Closed path · no corners · …", 361 px) is narrower than the
+// zones reason ("✗ Corner zones — Spacing: …", 393 px), which the line then cut
+// (measured 2026-10-23). Where the host can measure text, both labels take the
+// pixel width of the widest sample.
+console.log("--- UI 1.4: the line takes the pixel width of its widest sample ---");
+(function () {
+    function px(t) { return SUI.measure(t)[0]; }
+    var saved = GM.L, langs = [["cs", saved], ["en", tableFor("en_US")]];
+    try {
+        for (var k = 0; k < langs.length; k++) {
+            GM.L = langs[k][1];
+            var samples = GM.UI.infoSamples(), widest = 0, i;
+            for (i = 0; i < samples.length; i++) widest = Math.max(widest, px(samples[i]));
+            var ui = buildUI(null, mockPathInfo(4, true));
+            var f = ui.modeUI.infoLbl, r = ui.modeUI.reasonLbl;
+            assert(f.preferredSize.width === Math.ceil(widest) && r.preferredSize.width === Math.ceil(widest),
+                langs[k][0] + ": both labels take the widest sample, " + Math.ceil(widest) + " px (got " + f.preferredSize.width + " / " + r.preferredSize.width + ")");
+            var zr = GM.L.REASON_MARK + GM.UI.blockReason({ invalid: [{ label: GM.UI.reasonLabels().zonePitch, rule: GM.Validation.rules.cornerPitch, unit: " mm" }] });
+            assert(px(zr) <= f.preferredSize.width, langs[k][0] + ": the zones reason fits (" + px(zr) + " px): '" + zr + "'");
+            if (langs[k][0] === "en") {
+                assert(zr.length < GM.UI.longestInfoText().length && px(zr) > px(GM.UI.longestInfoText()),
+                    "en precheck: the zones reason has fewer characters than the longest sample but is wider");
+            }
+            done();
+        }
+    } finally { GM.L = saved; }
+    SUI.install({ noMeasure: true });
+    var ui2 = GM.UI.buildDialog(freshPData(), mockPathInfo(4, true));
+    assert(ui2.modeUI.infoLbl.preferredSize.width === -1 && ui2.modeUI.reasonLbl.preferredSize.width === -1,
+        "a host that cannot measure: the width is left to the text the labels are made with (got " +
+        ui2.modeUI.infoLbl.preferredSize.width + ")");
+    done();
+})();
+
 // ===== TESTS: the drawing scale 1:N (spec 4, 5; Task 6) =====
 // The field sits on the second row of the Placement panel, after the units; the
 // document supplies the starting value; the scale is not a setting (no preset,
@@ -1825,7 +1860,8 @@ console.log("--- UI 1.4 scale: the grey line ends with the scale, the size is th
 console.log("--- UI 1.4 scale: the line rounds the scale to one decimal, the field and the run keep it (ruling R14) ---");
 (function () {
     // The line's width is fixed by its widest sample, "… · 1:99,9" (measured
-    // 459 px in Illustrator 30.8.2): more decimals would clip its ending.
+    // 459 px in Illustrator 30.8.2, 389 px since the shorter texts of
+    // 2026-10-23): more decimals would clip its ending.
     var p = buildUI3(null, mockPathInfo(0, true, 1000), docAt(100, 100, 1));
     p.modeUI.pathRB.value = true; p.modeUI.pathRB.onClick();
     p.modeUI.scaleIn.text = "33,3333"; p.modeUI.scaleIn.onChanging();
@@ -2021,7 +2057,8 @@ console.log("--- Locale: the drawing scale (spec 4.3, 5; canon 12.1) ---");
         "SCALE_LABEL: the family's label, ends with the colon (got '" + cs.SCALE_LABEL + "' / '" + en.SCALE_LABEL + "')");
     // The short ending: measured in Illustrator 30.8.2 on 2026-10-21, the CS
     // dialog is 583 px wide with " · měřítko 1:99,9" and 535 px with
-    // " · 1:99,9" (EN 566 / 534; 1.3.0 was 521 px).
+    // " · 1:99,9" (EN 566 / 534; 1.3.0 was 521 px). Since the shorter texts
+    // of 2026-10-23 it is 465 px (EN 481).
     assert(cs.INFO_SCALE === " · 1:%s" && en.INFO_SCALE === " · 1:%s",
         "INFO_SCALE: the short ending of the grey line, ' · 1:N' (got '" + cs.INFO_SCALE + "' / '" + en.INFO_SCALE + "')");
     assert(cs.SCALE_FIELD === "Měřítko kresby" && en.SCALE_FIELD === "Drawing scale",

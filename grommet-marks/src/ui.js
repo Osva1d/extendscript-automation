@@ -341,12 +341,13 @@ GM.UI = {
     },
 
     /**
-     * The longest text the line can show — its width is fixed by the first
-     * text: the findings with the drawing scale at their end (spec 5), and the
-     * reasons (spec 5) at their worst: every label with the widest limits of
-     * the rules, in the longest unit.
+     * Every text the line can show at its widest: the findings with the
+     * drawing scale at their end (spec 5), and the reasons (spec 5) at their
+     * worst — every label with the widest limits of the rules, in the longest
+     * unit.
+     * @returns {Array} The sample strings.
      */
-    longestInfoText: function () {
+    infoSamples: function () {
         var L = GM.L;
         var tail = L.format(L.INFO_SCALE, GM.Numbers.format(99.9));
         var samples = [
@@ -372,11 +373,40 @@ GM.UI = {
             samples.push(L.REASON_MARK + L.format(L.REASON_FIELD, labels[key], lo, hi, " mm"));
             samples.push(L.REASON_MARK + L.format(L.REASON_FIELD_INT, labels[key], lo, hi));
         }
-        var longest = "";
+        return samples;
+    },
+
+    /**
+     * The longest sample by characters — the text both labels of the line are
+     * made with, so the line is wide enough where text cannot be measured.
+     * @returns {string}
+     */
+    longestInfoText: function () {
+        var samples = GM.UI.infoSamples(), longest = "";
         for (var i = 0; i < samples.length; i++) {
             if (samples[i].length > longest.length) longest = samples[i];
         }
         return longest;
+    },
+
+    /**
+     * The pixel width of the widest sample. Characters are not pixels: the
+     * longest English sample by count is narrower than the zones reason
+     * (361 against 393 px, measured 2026-10-23). measureString works before
+     * the dialog is laid out.
+     * @param {Object} g - A statictext's ScriptUIGraphics.
+     * @returns {number} Whole pixels, or 0 when the host cannot measure.
+     */
+    widestInfoWidth: function (g) {
+        if (!g || !g.measureString) return 0;
+        var samples = GM.UI.infoSamples(), widest = 0;
+        try {
+            for (var i = 0; i < samples.length; i++) widest = Math.max(widest, g.measureString(samples[i])[0]);
+        } catch (e) {
+            GM.Utils.log("widestInfoWidth: " + e.message);
+            return 0;
+        }
+        return Math.ceil(widest);
     },
 
     /**
@@ -524,6 +554,12 @@ GM.UI = {
         var placeReason = infoStack.add("statictext", undefined, GM.UI.longestInfoText());
         GM.FieldPaint.text(placeReason, "ERR");
         placeReason.visible = false;
+        // Where text can be measured, both take the widest sample in pixels.
+        var infoWidth = GM.UI.widestInfoWidth(placeInfo.graphics);
+        if (infoWidth > 0) {
+            placeInfo.preferredSize.width = infoWidth;
+            placeReason.preferredSize.width = infoWidth;
+        }
 
         // =================================================================
         // Placement stack — Edges and Path are two modes of the SAME slot, so

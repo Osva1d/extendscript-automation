@@ -42,6 +42,22 @@
     // every write to foregroundColor. A THEME_COLOR pen carries its theme name,
     // as Illustrator's does (measured 2026-10-23).
     var ownPenReadable = true;
+    // measureString, as Illustrator's (it measures before layout, measured
+    // 2026-10-23), with a crude proportional model: narrow marks and
+    // punctuation 3 px, wide letters and dashes 9, the rest 6 — enough that a
+    // string with fewer characters can be the wider one, as in a real font.
+    // install({noMeasure: true}) builds controls without it.
+    var canMeasure = true;
+    function measure(text) {
+        var t = String(text), w = 0;
+        for (var i = 0; i < t.length; i++) {
+            var ch = t.charAt(i);
+            if (" ·.,:;|ilIjtfr!()1-".indexOf(ch) >= 0) w += 3;
+            else if ("mwMW—✗".indexOf(ch) >= 0) w += 9;
+            else w += 6;
+        }
+        return [w, 15];
+    }
     function makeGraphics() {
         var own = { own: true };
         var current = own;
@@ -54,6 +70,7 @@
             },
             newBrush: function () { return {}; },
             ownPen: own,
+            measureString: canMeasure ? measure : undefined,
             PenType: { SOLID_COLOR: 0, THEME_COLOR: 1 },
             BrushType: { SOLID_COLOR: 0 }
         };
@@ -273,6 +290,7 @@
 
     function install(opts) {
         ownPenReadable = !(opts && opts.ownPenUnreadable);
+        canMeasure = !(opts && opts.noMeasure);
         var keys = ["Window", "ScriptUI", "$", "alert", "prompt", "confirm"];
         for (var i = 0; i < keys.length; i++) origGlobals[keys[i]] = global[keys[i]];
         global.Window = MockWindow;
@@ -297,6 +315,7 @@
         install: install,
         uninstall: uninstall,
         lastWindow: function () { return lastWindow; },
+        measure: measure,
         MockWindow: MockWindow,
         MockControl: MockControl
     };
