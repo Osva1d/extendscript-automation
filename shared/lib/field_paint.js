@@ -20,9 +20,12 @@
 // Illustrator reads a control's own pen back as undefined before show(), so
 // the pen given back used to be FALLBACK light grey — on the Medium Light and
 // Light UI every field then looked greyed out (2026-10-23). A field that was
-// never red is therefore left alone, and one that was red takes the theme pen
-// "foreground": Adobe's text colour for the current UI brightness (measured in
-// Illustrator 30.8.2: 0.28 on Light, 0.60 on Dark).
+// never red is therefore left alone. One that was red gets, on a light UI, the
+// theme pen "foreground" — Adobe's text colour, identical to the host's own on
+// Light — and on a dark UI the light grey, because the theme's 0.60 there is
+// visibly dimmer than the white the host draws its fields in, and 0.75 looked
+// like it (user screenshots 2026-10-23). The theme brush "background" tells
+// the two apart (Illustrator 30.8.2: 0.94 on Light, 0.20 on Dark).
 // ------------------------------------------------------------------------
 function buildFieldPaint(NS) {
     function log(msg) {
@@ -37,9 +40,10 @@ function buildFieldPaint(NS) {
             OK:   [0.36, 0.60, 0.34]
         },
 
-        // The pen a field gets back after red when neither its own pen nor the
-        // theme's text colour is available: a light grey. Legible on the dark
-        // UI only — near invisible on the light one, hence the last resort.
+        // The pen a field gets back after red on the dark UI, where it looks
+        // like the host's own white; also the last resort when the host has no
+        // theme pen. Near invisible on the light UI, so never chosen there
+        // while the theme's text colour is available.
         FALLBACK: [0.75, 0.75, 0.75],
 
         /**
@@ -47,8 +51,10 @@ function buildFieldPaint(NS) {
          * back its own colour once it is valid. A field that was never red is
          * never written: the host draws it in its own colour for the current
          * UI brightness. The first red remembers the own pen on the control;
-         * when it cannot be read (Illustrator), the field gets the theme pen
-         * "foreground" back, and FALLBACK only when the host has no theme pen.
+         * when it cannot be read (Illustrator), the field gets FALLBACK back
+         * on a dark UI and the theme pen "foreground" on a light one (or when
+         * the brightness is unknown), and FALLBACK when the host has no theme
+         * pen.
          * Never throws: a host build that refuses the pen leaves the field as
          * it is, and the primary button, greyed by the caller, still protects
          * the run.
@@ -65,10 +71,29 @@ function buildFieldPaint(NS) {
                     return;
                 }
                 if (et.sharedDefaultPen === undefined) { return; }   // never red: leave the host's colour
-                g.foregroundColor = et.sharedDefaultPen || this.themeText(g) ||
-                    g.newPen(g.PenType.SOLID_COLOR, this.FALLBACK.concat([1]), 1);
+                var grey = g.newPen(g.PenType.SOLID_COLOR, this.FALLBACK.concat([1]), 1);
+                g.foregroundColor = et.sharedDefaultPen ||
+                    (this.isDarkUI(g) === true ? grey : (this.themeText(g) || grey));
             } catch (e) {
                 log("FieldPaint.field: " + e.message);
+            }
+        },
+
+        /**
+         * Whether the UI is dark, from the theme brush "background".
+         * @param {Object} g - A control's ScriptUIGraphics.
+         * @returns {boolean|null} True on a dark UI, false on a light one,
+         *     null when the host has no theme brush.
+         */
+        isDarkUI: function (g) {
+            if (!g.newBrush || !g.BrushType || g.BrushType.THEME_COLOR === undefined) { return null; }
+            try {
+                var c = g.newBrush(g.BrushType.THEME_COLOR, "background").color;
+                if (!c || c.length < 3) { return null; }
+                return (c[0] + c[1] + c[2]) / 3 < 0.5;
+            } catch (e) {
+                log("FieldPaint.isDarkUI: " + e.message);
+                return null;
             }
         },
 

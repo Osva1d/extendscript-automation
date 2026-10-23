@@ -20,7 +20,9 @@ function sameRGB(pen, rgb) {
 // A ScriptUI control's graphics object, as far as the module uses it. A theme
 // pen carries its theme name, as Illustrator's does (measured 2026-10-23);
 // `writes` counts every pen written to the control.
-function mockControl(defaultPen, noThemePens) {
+// `background` (0-1 grey) gives the control a theme brush "background" of that
+// colour, as Illustrator's (0.94 on Light, 0.20 on Dark, measured 2026-10-23).
+function mockControl(defaultPen, noThemePens, background) {
     var g = {
         PenType: noThemePens ? { SOLID_COLOR: "solid" } : { SOLID_COLOR: "solid", THEME_COLOR: "theme" },
         writes: 0,
@@ -29,6 +31,13 @@ function mockControl(defaultPen, noThemePens) {
             return { type: type, color: color, width: width };
         }
     };
+    if (background !== undefined) {
+        g.BrushType = { SOLID_COLOR: "solid", THEME_COLOR: "theme" };
+        g.newBrush = function (type, name) {
+            if (type === "theme" && name === "background") { return { type: type, theme: name, color: [background, background, background, 1] }; }
+            throw new Error("Chybný argument " + name);
+        };
+    }
     var current = defaultPen;
     Object.defineProperty(g, "foregroundColor", {
         get: function () { return current; },
@@ -80,6 +89,29 @@ assert(sameRGB(et2.graphics.foregroundColor, P.COLORS.ERR), "red again on the ne
 P.field(et2, true);
 assert(isThemeText(et2.graphics.foregroundColor), "and the theme pen again");
 
+console.log("\n=== field: on the dark UI the light grey, which matches the host's own text there ===");
+// On Dark the theme's "foreground" is 0.60, visibly dimmer than the white the
+// host draws its fields in; light grey 0.75 looked like that white (user
+// screenshots 2026-10-23). The theme background tells the two apart.
+var etL = mockControl(undefined, false, 0.94);
+P.field(etL, false); P.field(etL, true);
+assert(isThemeText(etL.graphics.foregroundColor), "light background 0.94: the theme text pen");
+var etD = mockControl(undefined, false, 0.196);
+P.field(etD, false); P.field(etD, true);
+assert(sameRGB(etD.graphics.foregroundColor, P.FALLBACK), "dark background 0.20: light grey");
+var etM = mockControl(undefined, false, 0.72);
+P.field(etM, false); P.field(etM, true);
+assert(isThemeText(etM.graphics.foregroundColor), "Medium Light-like background 0.72: the theme text pen");
+var etB = mockControl(undefined, false, 0.94);
+etB.graphics.newBrush = function () { throw new Error("brush refused"); };
+logged.length = 0;
+P.field(etB, false); P.field(etB, true);
+assert(isThemeText(etB.graphics.foregroundColor), "a refused background brush: the theme text pen");
+assert(logged.length === 1 && /isDarkUI: brush refused/.test(logged[0]), "...and the refusal is logged");
+var etO = mockControl({ own: true }, false, 0.196);
+P.field(etO, false); P.field(etO, true);
+assert(etO.graphics.foregroundColor && etO.graphics.foregroundColor.own === true, "a readable own pen wins on the dark UI too");
+
 console.log("\n=== field: light grey only where the host has no theme pens ===");
 var et3 = mockControl(undefined, true);
 P.field(et3, false);
@@ -91,6 +123,7 @@ et4.graphics.newPen = function (type, color, width) {
     if (type === "theme") { throw new Error("theme refused"); }
     return make(type, color, width);
 };
+logged.length = 0;
 P.field(et4, false);
 P.field(et4, true);
 assert(sameRGB(et4.graphics.foregroundColor, P.FALLBACK), "a refused theme pen: light grey");
