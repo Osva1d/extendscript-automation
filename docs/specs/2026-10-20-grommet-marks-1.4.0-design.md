@@ -4,7 +4,7 @@ Nástroj: `grommet-marks`, namespace `GM`. Navazuje na vydání 1.3.0
 (2026-10-17, tag `grommet-marks/v1.3.0`).
 
 Datum: 2026-10-20 · Stav: **implementováno** na větvi `feat/grommet-marks-1.4.0`
-(2026-10-21), nevydáno; návrh schválen uživatelem 2026-10-21
+(2026-10-21), **vydáno jako 1.4.0 (2026-10-23)**; návrh schválen uživatelem 2026-10-21
 
 Vzniklo z rozhovoru 2026-10-20 (otázky uživateli, náhled dialogu ve dvou
 variantách) a z rozhodnutí, která pro celou rodinu nástrojů už padla:

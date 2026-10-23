@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Grommet Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [1.4.0] — 2026-10-23
 
 Měřítko kresby 1:N a jazyk společný všem nástrojům
 ([návrh](../docs/specs/2026-10-20-grommet-marks-1.4.0-design.md)).
