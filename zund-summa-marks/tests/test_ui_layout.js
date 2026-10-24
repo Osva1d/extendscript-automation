@@ -44,11 +44,14 @@ SUI.install();
 
 var ZSM = {};
 ZSM.L = {
-    ERROR_PREFIX: "ERR: ", ERR_MUST_BE_NUMBER: "%s nan", ERR_OUT_OF_RANGE: "%s range",
+    ERROR_PREFIX: "ERR: ",
+    // The locale's shape (spec 1.2.0 §9.3): field, min, max; the unit rides on the max.
+    ERR_MUST_BE_NUMBER: "%s: enter a number from %s to %s.", ERR_OUT_OF_RANGE: "%s: enter a number from %s to %s.",
     ERR_NO_DOC: "no doc", ERR_NO_SEL: "no sel", ERR_CRITICAL: "critical: ",
-    ERR_RENDER_CRITICAL: "render: ", ERR_GENERIC: "%s", ERR_COLOR_MISSING: "%s missing",
+    ERR_RENDER_CRITICAL: "render: ", ERR_COLOR_MISSING: "%s missing",
+    ERR_LAY_NAME: "A layer row has the colour %s but no name.",
     ERR_CANNOT_DELETE_DEFAULT: "no del", ERR_ENTER_NAME: "enter a name", ERR_RESERVED_NAME: "reserved",
-    ERR_WRITE_SETTINGS: "write fail", ERR_LAY_COLOR: "lay %s", ERR_SWATCH: "swatch %s",
+    ERR_WRITE_SETTINGS: "write fail",
     PRESET_DEFAULT: "[Default]", PRESET_LABEL: "Preset:",
     PROMPT_NEW_PRESET: "Name?", PROMPT_SAVE_AS: "Save as?",
     BTN_SAVE: "Save", BTN_SAVE_AS: "Save As…", BTN_DEL: "Delete", BTN_RESET: "Defaults",
@@ -62,7 +65,7 @@ ZSM.L = {
     MARK_SIZE_Z: "Zünd Size:", MARK_SIZE_S: "Summa Size:", MARK_COLOR: "Color:",
     ORIENT_DIST: "Orient dist:", FEED_TOP: "Feed top:", FEED_BOT: "Feed bottom:",
     DRAW_RED: "Trim lines",
-    COL_COLOR: "Color", COL_LAYER: "Layer", PRESET_PLACEHOLDER: "My Preset",
+    COL_COLOR: "Color", COL_LAYER: "Layer",
     TIP_MODE: "tip", TIP_SRC_AUTO: "tip", TIP_SRC_FIXED: "tip",
     TIP_GAP_GZ: "tip", TIP_GAP_ZO: "tip", TIP_MAX_DIST: "tip",
     TIP_SIZE_Z: "tip", TIP_SIZE_S: "tip", TIP_MARK_COLOR: "tip",
@@ -70,7 +73,6 @@ ZSM.L = {
     TIP_LAY_COLOR: "tip", TIP_LAY_NAME: "tip", TIP_BTN_REMOVE: "tip", TIP_BTN_ADD: "tip",
     TIP_SAVE: "tip", TIP_SAVE_AS: "tip", TIP_DEL: "tip", TIP_RESET: "tip",
     TIP_OK: "tip", TIP_CANCEL: "tip", TIP_PRESET: "tip", TIP_REVERT: "tip",
-    DEF_CUT: "Cut", DEF_KISS: "Kiss-cut",
     // v26.6.0 audit additions
     PANEL_DOC: "Document",
     LBL_SCALE: "Drawing scale 1:", TIP_SCALE: "tip",
@@ -1678,6 +1680,110 @@ console.log("\n=== TEST 23 (spec 1.2.0 §7): the status line says what the scrip
     assert(shownLine !== null && shownLine.indexOf("artboard 1 560 × 3 050 mm") !== -1,
         "show(): the active artboard (156 × 305 mm) × Large Canvas 10 (got '" + shownLine + "')");
     assertEq(selectionWrites, 0, "show(): the selection is never written before the dialog");
+})();
+
+
+// =====================================================
+// TEST 23 (spec 1.2.0 §9.3, §10): the validation alerts and the first focus
+// =====================================================
+// A blocking alert carries one ERROR_PREFIX; the field name has no colon of its
+// own in the middle of the sentence and no exclamation mark ("Mezera od okraje:
+// musí být číslo!" -> "Mezera od okraje: zadejte číslo od 0 do 1000 mm."); the
+// drawing scale names no ratio and no unit. The dialog's first focus goes to
+// the first field the operator can type in — in Fixed the gap from graphics is
+// greyed, and the focus used to land on it.
+console.log("\n=== TEST 23 (spec 1.2.0 §9.3, §10): validation alerts, first focus ===");
+(function () {
+    function fieldOf(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl ? lbl.parent.findOne(function (c) { return c.type === "edittext"; }) : null;
+    }
+    function okOf(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
+    function dataOf(patch) {
+        var mine = ZSM.Config.getDefaults();
+        for (var k in patch) { if (patch.hasOwnProperty(k)) mine[k] = patch[k]; }
+        return { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": mine } };
+    }
+    function activeFields(win) {
+        return win.find(function (c) { return c.type === "edittext" && c.active === true; });
+    }
+    // Generate pressed on a dialog whose field `label` holds `text`; returns the alerts.
+    function generateWith(mode, patch, label, text) {
+        var seen = [], o = global.alert;
+        global.alert = function (m) { seen.push(String(m)); };
+        try {
+            var win = buildAndCapture(mode, dataOf(patch));
+            var f = fieldOf(win, label);
+            f.text = text; f.onChanging();
+            okOf(win).onClick();
+        } finally { global.alert = o; }
+        return seen;
+    }
+
+    // --- first focus ---
+    var wFocusAuto = buildAndCapture("ZUND", dataOf({ useArtboardBounds: false }));
+    var actAuto = activeFields(wFocusAuto);
+    assertEq(actAuto.length, 1, "ZUND Auto-fit: one field has the focus");
+    assert(actAuto[0] === fieldOf(wFocusAuto, ZSM.L.GAP_GZ), "ZUND Auto-fit: the focus is on the gap from graphics");
+
+    var wFocusFixed = buildAndCapture("ZUND", dataOf({ useArtboardBounds: true }));
+    assertEq(fieldOf(wFocusFixed, ZSM.L.GAP_GZ).enabled, false, "ZUND Fixed: precondition, the gap from graphics is greyed");
+    var actFixed = activeFields(wFocusFixed);
+    assertEq(actFixed.length, 1, "ZUND Fixed: one field has the focus");
+    assert(actFixed[0] === fieldOf(wFocusFixed, ZSM.L.GAP_ZO) && actFixed[0].enabled === true,
+        "ZUND Fixed: the focus is on the first field that can be typed in (gap from edge), not on the greyed one");
+
+    var wFocusSumma = buildAndCapture("SUMMA", dataOf({ mode: "SUMMA" }));
+    var actSumma = activeFields(wFocusSumma);
+    assert(actSumma.length === 1 && actSumma[0] === fieldOf(wFocusSumma, ZSM.L.GAP_ZO), "SUMMA: the focus is on the gap from edge");
+
+    // --- alerts from validation ---
+    var typo = generateWith("ZUND", {}, ZSM.L.GAP_ZO, "abc");
+    assertEq(typo.length, 1, "a typo in a field: Generate shows one alert");
+    assertEq(typo[0], "ERR: Gap from edge: enter a number from 0 to 1000 mm.", "...one prefix, the name without its colon, the range in mm");
+
+    var range = generateWith("ZUND", {}, ZSM.L.MAX_DIST, "9999");
+    assertEq(range[0], "ERR: Max dist: enter a number from 5 to 5000 mm.", "out of range: the same sentence");
+
+    var scale = generateWith("ZUND", {}, ZSM.L.LBL_SCALE, "500");
+    assertEq(scale.length, 1, "the scale out of range: one alert");
+    assertEq(scale[0], "ERR: Drawing scale: enter a number from 1 to 100.", "...no \"1:\" after the name, no \"mm\"");
+    var scaleTypo = generateWith("ZUND", {}, ZSM.L.LBL_SCALE, "1O");
+    assertEq(scaleTypo[0], scale[0], "the scale typo: the same sentence");
+
+    var all = typo.concat(range, scale, scaleTypo);
+    for (var ai = 0; ai < all.length; ai++) {
+        assert(all[ai].indexOf(": :") === -1 && all[ai].indexOf("::") === -1 && all[ai].indexOf("!") === -1,
+            "alert " + ai + ": no second colon, no exclamation mark");
+    }
+
+    // --- a mapping row with a colour and no name: a blocking error with the prefix ---
+    var nameAlerts = [], oAlert = global.alert;
+    global.alert = function (m) { nameAlerts.push(String(m)); };
+    try {
+        var wName = buildAndCapture("ZUND", dataOf({}));
+        var panel = wName.findOne(function (c) { return c.type === "panel" && c.text === ZSM.L.PANEL_LAYERS; });
+        var etName = panel.findOne(function (c) { return c.type === "edittext"; });
+        etName.text = "";
+        okOf(wName).onClick();
+    } finally { global.alert = oAlert; }
+    assertEq(nameAlerts.length, 1, "a layer row without a name: one alert");
+    assertEq(nameAlerts[0], "ERR: " + ZSM.L.format(ZSM.L.ERR_LAY_NAME, "[Registration]"), "...with the prefix");
+
+    // --- settings that could not be saved from the preset buttons: the preset sentence, the dialog stays ---
+    var saveAlerts = [], oAlert2 = global.alert, oPrompt = global.prompt, origStorage23 = ZSM.Storage;
+    global.alert = function (m) { saveAlerts.push(String(m)); };
+    global.prompt = function () { return "Novy"; };
+    ZSM.Storage = { save: function () { return false; } };
+    try {
+        var wSave = buildAndCapture("ZUND", dataOf({}));
+        fieldOf(wSave, ZSM.L.MAX_DIST).text = "450"; fieldOf(wSave, ZSM.L.MAX_DIST).onChanging();
+        wSave.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE_AS; }).onClick();
+    } finally {
+        global.alert = oAlert2; global.prompt = oPrompt; ZSM.Storage = origStorage23;
+        if (origStorage23 === undefined) delete ZSM.Storage;
+    }
+    assertEq(JSON.stringify(saveAlerts), JSON.stringify([ZSM.L.ERR_WRITE_SETTINGS]), "Save As that cannot write: ERR_WRITE_SETTINGS once");
 })();
 
 

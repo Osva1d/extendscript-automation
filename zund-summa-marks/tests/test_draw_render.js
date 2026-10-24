@@ -41,11 +41,11 @@ Mock.install();
 var ZSM = {};
 ZSM.L = {
     ERROR_PREFIX: "ERR: ",
-    ERR_RENDER_CRITICAL: "render error: %s",
+    ERR_RENDER_CRITICAL: "render error: %s (line %s)",
     ERR_ARTBOARD_TOO_LARGE: "artboard too large %s %s",
     ERR_GEOMETRY_INVALID: "geometry invalid",
     WARN_SUMMA_REMOVED: "summa removed",
-    ERR_GENERIC: "err: %s",
+    WARN_SUMMA_NOT_REMOVED: "summa NOT removed",
     ERR_COLOR_MISSING: "missing color %s %s",
     WARN_PREFIX: "WARN: ",
     WARN_LAYERS_UNHIDDEN: "unhidden %s",
@@ -1386,8 +1386,23 @@ var origGetLay38 = ZSM.Draw.getLay;
 ZSM.Draw.getLay = function () { throw new Error("layer gone"); };
 var crash38;
 try { crash38 = render38(art38(120)); } finally { ZSM.Draw.getLay = origGetLay38; }
-assertEq(crash38.drew, false, "an unexpected error inside the drawing returns false (not a successful run)");
+assertEq(crash38.drew, null, "an unexpected error inside the drawing returns null (not false: the document may be changed, not a refusal)");
 assert(crash38.alerts.join("\n").indexOf("render error: layer gone") >= 0, "...after the render error message");
+
+// The crash alert: ONE prefix (the second one, "Critical error", is gone from the
+// locale), the message and the line of the error, "?" when the thrown value has none.
+function crashAlert38(thrown) {
+    var o = ZSM.Draw.getLay;
+    ZSM.Draw.getLay = function () { throw thrown; };
+    try { return render38(art38(120)); } finally { ZSM.Draw.getLay = o; }
+}
+var errLine38 = new Error("layer gone"); errLine38.line = 42;
+var withLine38 = crashAlert38(errLine38);
+assertEq(withLine38.alerts.length, 1, "a crash: exactly one alert");
+assertEq(withLine38.alerts[0], "ERR: render error: layer gone (line 42)", "...ERROR_PREFIX once, the message, the line");
+var noLine38 = crashAlert38(new Error("layer gone"));
+assertEq(noLine38.alerts[0], "ERR: render error: layer gone (line ?)", "...a thrown value without a line says \"?\"");
+assertEq(noLine38.drew, null, "...and still returns null");
 global.alert = origAlert38;
 
 
@@ -1541,8 +1556,81 @@ assertEq(countItems(r41.old, "PathItem"), 1, "SUMMA: nothing was mixed into the 
 assert(r41.text.indexOf("ERR: marks failed 5") >= 0,
     "SUMMA: reported, counting the 4 marks and the OPOS bar not drawn (got: " + r41.text + ")");
 assertEq(countItems(findLayer(r41.doc, "Trim"), "PathItem"), 2, "SUMMA: the rest of the run goes on — trim lines are drawn");
-assertEq(r41.ret, true, "SUMMA: render still answers true (the run reached its end; Task 9 revisits)");
+assertEq(r41.ret, true, "SUMMA: render still answers true (the document was changed, the run reached its end)");
 global.alert = origAlert41;
+
+
+// =====================================================
+// TEST 42 (R6): a Summa output the Zünd run cannot remove is said, not swallowed
+// =====================================================
+// removeSummaOutput() logged a failing remove() into the debug console only and
+// its outer catch was empty: the operator was left with Summa marks inside the
+// new Zünd set (OPOS needs them outermost) and no word about it. Now the
+// failure is logged AND joins the run's warnings; the outer catch logs too.
+console.log("\n=== TEST 42 (R6): removeSummaOutput failures are reported ===");
+var alerts42 = [], origAlert42 = global.alert, logs42 = [];
+global.alert = function (m) { alerts42.push(String(m)); };
+var origLog42 = ZSM.Utils.log;
+ZSM.Utils.log = function (m) { logs42.push(String(m)); };
+function summaThenZund42(breakIt) {
+    var d42 = setupDoc({ layers: [
+        { name: "Cut", items: [{ type: "path", spot: "Cut", bounds: [10, 90, 90, 10] }] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]});
+    var sS42 = makeSettings({ mode: "SUMMA", drawRed: true });
+    ZSM.Draw.render(ZSM.Core.calculateAll(sS42, ZSM.Draw.getBounds(sS42)), sS42);
+    var sub42 = findSublayer(findLayer(d42, "Regmarks"), "Summa");
+    if (breakIt) sub42.remove = function () { throw new Error("remove refused"); };
+    alerts42.length = 0; logs42.length = 0;
+    return { doc: d42, sub: sub42 };
+}
+
+// 1. Called by itself with a warnings array: false, a log line, a warning.
+var a42 = summaThenZund42(true);
+var warn42 = [];
+assertEq(ZSM.Draw.removeSummaOutput(warn42), false, "a remove() that throws: removeSummaOutput answers false");
+assert(logs42.join("\n").indexOf("remove refused") >= 0, "...and logs why");
+assertEq(warn42.length, 1, "...and adds one warning to the run's list");
+assertEq(warn42[0], ZSM.L.WARN_SUMMA_NOT_REMOVED, "...the 'Summa output could not be removed' notice");
+assert(findSublayer(findLayer(a42.doc, "Regmarks"), "Summa") === a42.sub, "...the Summa sublayer is still there");
+assert(findLayer(a42.doc, "Trim") !== null, "...and so is the Trim layer (it goes only together with the Summa set)");
+
+// 2. Without an array (an older caller) it still answers and logs, without throwing.
+ZSM.Draw.removeSummaOutput();
+assert(true, "no warnings array: no throw");
+
+// 3. Through render(): the end-of-run alert carries the notice, the Zünd marks are drawn.
+var b42 = summaThenZund42(true);
+var sZ42 = makeSettings({ mode: "ZUND" });
+var drew42 = ZSM.Draw.render(ZSM.Core.calculateAll(sZ42, ZSM.Draw.getBounds(sZ42)), sZ42);
+assertEq(drew42, true, "a ZUND run over a Summa sublayer that will not go: the run draws");
+assert(alerts42.join("\n").indexOf("summa NOT removed") >= 0,
+    "...and the end-of-run notice says the Summa output stayed (got: " + alerts42.join(" | ") + ")");
+assert(alerts42.join("\n").indexOf("summa removed") < 0 || alerts42.join("\n").indexOf("summa NOT removed") >= 0,
+    "...never the 'removed' notice for a set that was not removed");
+assert(alerts42.join("\n").indexOf("WARN: ") === 0, "...as a warning (one WARN_PREFIX)");
+assertEq(countItems(findSublayer(findLayer(b42.doc, "Regmarks"), "Zünd"), "PathItem"), 5, "...the Zünd marks are drawn");
+
+// 4. The regular path is unchanged: removed, the old notice, no new one.
+var c42 = summaThenZund42(false);
+var sZ42b = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZ42b, ZSM.Draw.getBounds(sZ42b)), sZ42b);
+assert(alerts42.join("\n").indexOf("summa removed") >= 0 && alerts42.join("\n").indexOf("NOT") < 0,
+    "a Summa set that goes: the 'removed' notice only (got: " + alerts42.join(" | ") + ")");
+
+// 5. The outer catch logs: the document itself unreachable.
+var origActive42 = global.app.activeDocument;
+Object.defineProperty(global.app, "activeDocument", { configurable: true, get: function () { throw new Error("no document"); } });
+logs42.length = 0;
+var outer42;
+try { outer42 = ZSM.Draw.removeSummaOutput(); } finally {
+    Object.defineProperty(global.app, "activeDocument", { configurable: true, writable: true, value: origActive42 });
+}
+assertEq(outer42, false, "an unreachable document: answers false");
+assert(logs42.join("\n").indexOf("no document") >= 0, "...and the outer catch logs it (got: " + logs42.join(" | ") + ")");
+
+ZSM.Utils.log = origLog42;
+global.alert = origAlert42;
 
 
 // =====================================================

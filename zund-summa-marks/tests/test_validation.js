@@ -26,16 +26,19 @@ global.alert = function (msg) { alertCalls.push(msg); };
 
 // Minimal locale (with format() for validateNumber alerts)
 var L_EN = {
-    ERR_MUST_BE_NUMBER: "%s must be a number",
-    ERR_OUT_OF_RANGE:   "%s must be between %s and %s",
-    GAP_ZO:        "Outer gap",
-    GAP_GZ:        "Inner gap",
-    MAX_DIST:      "Max distance",
-    MARK_SIZE_Z:   "Zünd size",
-    MARK_SIZE_S:   "Summa size",
-    ORIENT_DIST:   "Orient distance",
-    FEED_TOP:      "Feed top",
-    FEED_BOT:      "Feed bottom",
+    ERROR_PREFIX:       "ERR: ",
+    ERR_MUST_BE_NUMBER: "%s: enter a number from %s to %s.",
+    ERR_OUT_OF_RANGE:   "%s: enter a number from %s to %s.",
+    // Labels as the dialog has them: a trailing colon, the scale's with its ratio.
+    GAP_ZO:        "Outer gap:",
+    GAP_GZ:        "Inner gap:",
+    MAX_DIST:      "Max distance:",
+    MARK_SIZE_Z:   "Zünd size:",
+    MARK_SIZE_S:   "Summa size:",
+    ORIENT_DIST:   "Orient distance:",
+    FEED_TOP:      "Feed top:",
+    FEED_BOT:      "Feed bottom:",
+    LBL_SCALE:     "Drawing scale 1:",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -390,6 +393,41 @@ assert(!scaleOf("0").valid, "scaleN '0' invalid");
 assert(!scaleOf("-1").valid, "scaleN '-1' invalid");
 assert(!scaleOf("").valid, "scaleN '' invalid (the field is required)");
 assertEq(alertCalls.length, 6, "each invalid scale gives exactly one alert (got " + alertCalls.length + ")");
+
+
+// =====================================================
+// TEST 12: the alert names the field without its colon, in mm — the scale without its ratio and unit (spec 1.2.0 §9.3, R5)
+// =====================================================
+// "Mezera od okraje: musí být číslo!" had the label's colon in the middle of
+// the sentence; "Měřítko kresby 1:" would have read "Měřítko kresby 1:: ... mm".
+console.log("\n=== TEST 12: validation alerts ===");
+assertEq(ZSM.Validation.plainLabel("Outer gap:"), "Outer gap", "plainLabel: a trailing colon goes");
+assertEq(ZSM.Validation.plainLabel("Drawing scale 1:"), "Drawing scale", "plainLabel: the scale's ratio goes with its colon");
+assertEq(ZSM.Validation.plainLabel("Měřítko kresby 1: "), "Měřítko kresby", "plainLabel: spaces around are ignored");
+assertEq(ZSM.Validation.plainLabel("Panel"), "Panel", "plainLabel: a label without a colon is kept");
+assertEq(ZSM.Validation.plainLabel("GAP_ZO"), "GAP_ZO", "plainLabel: the key fallback is kept");
+
+alertCalls = [];
+r = ZSM.Validation.validate(rawZund({ gapOuter: "abc" }), fullPrev(), L_EN);
+assertEq(alertCalls.length, 1, "a typo in a field: one alert");
+assertEq(alertCalls[0], "ERR: Outer gap: enter a number from 0 to 1000 mm.", "...with one prefix, the field name, the range in mm");
+assertEq(r.errors[0].label, "Outer gap:", "...the error record keeps the label as the dialog shows it");
+
+alertCalls = [];
+ZSM.Validation.validate(rawZund({ markSizeZ: "99" }), fullPrev(), L_EN);
+assertEq(alertCalls[0], "ERR: Zünd size: enter a number from 0.1 to 50 mm.", "out of range: the same sentence");
+
+alertCalls = [];
+ZSM.Validation.validate(rawZund({ scaleN: "500" }), fullPrev(), L_EN);
+assertEq(alertCalls.length, 1, "scale out of range: one alert");
+assertEq(alertCalls[0], "ERR: Drawing scale: enter a number from 1 to 100.", "...without \"1:\" after the name, without \"mm\"");
+alertCalls = [];
+ZSM.Validation.validate(rawZund({ scaleN: "1O" }), fullPrev(), L_EN);
+assertEq(alertCalls[0], "ERR: Drawing scale: enter a number from 1 to 100.", "scale typo: the same sentence");
+for (var ai = 0; ai < alertCalls.length; ai++) {
+    assert(alertCalls[ai].indexOf(": :") === -1 && alertCalls[ai].indexOf("::") === -1 && alertCalls[ai].indexOf("!") === -1,
+        "alert " + ai + ": no second colon, no exclamation mark");
+}
 
 
 // =====================================================

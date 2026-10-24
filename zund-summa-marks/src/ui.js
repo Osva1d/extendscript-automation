@@ -1008,12 +1008,12 @@ ZSM.UI = {
             // Every row carries a colour (defaults to [Registration]); a row with
             // a colour but a blank/whitespace name is an incomplete mapping that
             // render would silently drop. Block with a clear message so the user
-            // names it or removes the row (symmetric to ERR_LAY_COLOR). Skipped
-            // in marks-only mode — the mapping is ignored there.
+            // names it or removes the row. Skipped in marks-only mode — the
+            // mapping is ignored there.
             if (!cbMarksOnly.value) {
                 for (var lc = 0; lc < layers.length; lc++) {
                     if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
-                        alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                        ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
                         return;
                     }
                 }
@@ -1153,8 +1153,7 @@ ZSM.UI = {
                         // The label without its colon — and the scale's without
                         // its ratio: "Drawing scale 1:" names "Drawing scale".
                         var lblKey = nr.rule && nr.rule.label;
-                        var lbl = (lblKey && l[lblKey]) ? l[lblKey] : "";
-                        lbl = String(lbl).replace(/\s*1:\s*$/, "").replace(/:\s*$/, "");
+                        var lbl = ZSM.Validation.plainLabel((lblKey && l[lblKey]) ? l[lblKey] : "");
                         firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl,
                             ZSM.Numbers.format(nr.rule.min), ZSM.Numbers.format(nr.rule.max));
                     }
@@ -1334,10 +1333,14 @@ ZSM.UI = {
             w.location = [docData._lastBounds.x, docData._lastBounds.y];
         }
 
-        // Initial keyboard focus on the first editable geometry field so Tab
-        // walks the dialog in creation order (N9: explicit, predictable focus
-        // start instead of relying on the platform default).
-        try { (isZ ? rGapGZ : rGapZO).inp.active = true; } catch (e) {}
+        // Initial keyboard focus on the first geometry field the operator can
+        // type in, so Tab walks the dialog in creation order (N9: explicit,
+        // predictable focus start instead of relying on the platform default).
+        // In Fixed the gap from graphics is greyed — the focus goes to the
+        // next field, not to one that cannot take it.
+        try { ((isZ && rGapGZ.inp.enabled) ? rGapGZ : rGapZO).inp.active = true; } catch (eFocus) {
+            ZSM.Utils.log("initial focus skipped — " + eFocus.message);
+        }
 
         w.show();
 

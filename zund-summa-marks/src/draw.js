@@ -85,11 +85,13 @@ ZSM.Draw = {
      *
      * @param {Object} geo - Geometry from ZSM.Core.calculateAll().
      * @param {Object} s   - Settings from UI.
-     * @returns {boolean} True when the run drew (a mark that failed to draw is
-     *     reported, the run still counts); false when it stopped — refused
-     *     before changing the document (invalid geometry, a mark conflict, an
-     *     artboard Illustrator refuses), or an unexpected error. main.js stores
-     *     the drawing scale only after true (spec 1.2.0 §5.2).
+     * @returns {(boolean|null)} Three answers (spec 1.2.0 §5.2, §9.4; main.js
+     *     acts on each): true when the run drew (a mark that failed to draw is
+     *     reported, the run still counts) — the scale is stored; false when it
+     *     was refused before changing the document (invalid geometry, a mark
+     *     conflict, an artboard Illustrator refuses) — the ruler origin is
+     *     given back; null after an unexpected error inside the drawing — the
+     *     document may be partly changed, so neither.
      */
     render: function (geo, s) {
         var doc = app.activeDocument;
@@ -199,7 +201,7 @@ ZSM.Draw = {
                 // recompute + OPOS-outermost violation — see removeSummaOutput).
                 // Removed here, after the new artboard was accepted; the bounds
                 // measurement already left it out.
-                if (this.removeSummaOutput()) {
+                if (this.removeSummaOutput(geo.warnings)) {
                     geo.warnings.push(ZSM.L.WARN_SUMMA_REMOVED);
                     summaSub = null;
                     didRemoveSub = true;
@@ -475,8 +477,9 @@ ZSM.Draw = {
             return true;
 
         } catch (e) {
-            ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_RENDER_CRITICAL, e.message));
-            return false;
+            // e.line is undefined for non-Error throws — "?" in that case, as in main.js.
+            ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_RENDER_CRITICAL, e.message, String(e.line || "?")));
+            return null;
         }
     },
 
@@ -615,9 +618,14 @@ ZSM.Draw = {
      * bounds so the Zünd marks land exactly where a clean run would put them;
      * render() calls it again defensively (second call is a no-op).
      *
+     * A Summa sublayer that cannot be removed stays behind with the Trim layer;
+     * that is logged and said to the operator through the run's warnings.
+     *
+     * @param {Array} [warnings] - Receives WARN_SUMMA_NOT_REMOVED when the
+     *     sublayer could not be removed.
      * @returns {boolean} True if any Summa output was removed.
      */
-    removeSummaOutput: function () {
+    removeSummaOutput: function (warnings) {
         var removed = false;
         try {
             var doc = app.activeDocument;
@@ -637,13 +645,16 @@ ZSM.Draw = {
                         try { app.redraw(); } catch (rd) {}
                     } catch (e3) {
                         ZSM.Utils.log("removeSummaOutput: sublayer remove failed — " + e3.message);
+                        if (warnings) warnings.push(ZSM.L.WARN_SUMMA_NOT_REMOVED);
                     }
                 }
             }
             // The Trim layer belongs to the Summa sheet layout — remove it only
             // together with that layout, never on its own.
             if (removed) this._removeTrimLayer();
-        } catch (e) {}
+        } catch (e) {
+            ZSM.Utils.log("removeSummaOutput failed — " + e.message);
+        }
         return removed;
     },
 

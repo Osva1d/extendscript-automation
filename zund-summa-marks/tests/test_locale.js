@@ -202,15 +202,17 @@ assertEq(L.format("[%s]", ""), "[]", "format: empty string arg");
 // TEST 9: format() — real-world templates
 // =====================================================
 console.log("\n=== TEST 9: format() with real strings ===");
-assertEq(L.format(L.ERR_MUST_BE_NUMBER, "Gap"),
-         "Gap must be a number!", "format: ERR_MUST_BE_NUMBER realistic call");
-assertEq(L.format(L.ERR_OUT_OF_RANGE, "Gap", 0, 100),
-         "Gap must be between 0 and 100!", "format: ERR_OUT_OF_RANGE realistic call");
+assertEq(L.format(L.ERR_MUST_BE_NUMBER, "Gap", 0, "100 mm"),
+         "Gap: enter a number from 0 to 100 mm.", "format: ERR_MUST_BE_NUMBER realistic call");
+assertEq(L.format(L.ERR_OUT_OF_RANGE, "Gap", 0, "100 mm"),
+         "Gap: enter a number from 0 to 100 mm.", "format: ERR_OUT_OF_RANGE realistic call");
 
 // Czech variant
 var Lcs = loadLocale("cs");
-assertEq(Lcs.format(Lcs.ERR_OUT_OF_RANGE, "Mezera", 0, 100),
-         "Mezera musí být mezi 0 a 100!", "format: Czech ERR_OUT_OF_RANGE");
+assertEq(Lcs.format(Lcs.ERR_OUT_OF_RANGE, "Mezera od okraje", "0", "1000 mm"),
+         "Mezera od okraje: zadejte číslo od 0 do 1000 mm.", "format: Czech ERR_OUT_OF_RANGE");
+assertEq(Lcs.format(Lcs.ERR_MUST_BE_NUMBER, "Mezera od okraje", "0", "1000 mm"),
+         "Mezera od okraje: zadejte číslo od 0 do 1000 mm.", "format: Czech ERR_MUST_BE_NUMBER");
 
 
 // =====================================================
@@ -298,6 +300,143 @@ for (var gp = 0; gp < goneP.length; gp++) {
     assert(enP[goneP[gp]] === undefined && csP[goneP[gp]] === undefined,
         "the key " + goneP[gp] + " the canon's key replaced is gone");
 }
+
+
+// =====================================================
+// TEST 14: messages and glossary as the family canon (spec 1.2.0 §9, canon §12.1, §12.2, §12.8)
+// =====================================================
+console.log("\n=== TEST 14: messages and glossary as the family canon ===");
+var enM = loadLocale("en"), csM = loadLocale("cs");
+var mKeys = [];
+for (var mk in csM) { if (csM.hasOwnProperty(mk) && mk !== "format") mKeys.push(mk); }
+
+// --- typography (canon 12.1): „…“ for names, no "!", only the two prefixes ---
+for (var ti = 0; ti < mKeys.length; ti++) {
+    var tk = mKeys[ti], cv = csM[tk], ev = enM[tk];
+    assert(cv.indexOf("‘") === -1 && cv.indexOf("’") === -1, "cs " + tk + ": no ‘…’ (names stand in „…“)");
+    assert(cv.indexOf("!") === -1, "cs " + tk + ": no exclamation mark");
+    assert(ev.indexOf("!") === -1, "en " + tk + ": no exclamation mark");
+    if (tk !== "ERROR_PREFIX" && tk !== "WARN_PREFIX") {
+        assert(cv.indexOf("CHYBA: ") === -1 && cv.indexOf("UPOZORNĚNÍ: ") === -1,
+            "cs " + tk + ": no prefix of its own (the call site composes ERROR_PREFIX / WARN_PREFIX)");
+        assert(ev.indexOf("ERROR: ") === -1 && ev.indexOf("WARNING: ") === -1,
+            "en " + tk + ": no prefix of its own");
+    }
+    assert(cv.indexOf("KRITICKÁ") === -1, "cs " + tk + ": no 'KRITICKÁ'");
+    assert(cv.indexOf("Velikost Zünd") === -1, "cs " + tk + ": no 'Velikost Zünd' (the glossary says Průměr značky)");
+    assert(!/\bline\b/.test(cv), "cs " + tk + ": no English 'line'");
+    // "artboard" in lower case, a capital only opening a sentence
+    assert(cv.replace(/(^|[.?] )Artboard/g, "$1artboard").indexOf("Artboard") === -1, "cs " + tk + ": 'artboard' in lower case");
+}
+assert(csM.ERROR_PREFIX === "CHYBA: " && csM.WARN_PREFIX === "UPOZORNĚNÍ: ", "cs: the two prefixes");
+
+// --- templates of the canon (12.2), character for character ---
+var canonMsg = {
+    cs: {
+        ERR_NO_DOC:   "Před spuštěním skriptu otevřete dokument.",
+        ERR_CRITICAL: "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu."
+    },
+    en: {
+        ERR_NO_DOC:   "Open a document before running the script.",
+        ERR_CRITICAL: "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer."
+    }
+};
+for (var cm in canonMsg.cs) {
+    if (!canonMsg.cs.hasOwnProperty(cm)) continue;
+    assertEq(csM[cm], canonMsg.cs[cm], "cs: " + cm + " is the canon's text");
+    assertEq(enM[cm], canonMsg.en[cm], "en: " + cm + " is the canon's text");
+}
+assertEq(csM.format(csM.ERR_CRITICAL, "boom", "42").indexOf("boom (řádek 42)"), csM.ERR_CRITICAL.indexOf("%s (řádek"),
+    "cs: ERR_CRITICAL names the line in Czech");
+
+// --- a crash while drawing: one template, the line, Undo (spec 9.2) ---
+assertEq(csM.ERR_RENDER_CRITICAL.split("%s").length - 1, 2, "cs: ERR_RENDER_CRITICAL takes the message and the line");
+assertEq(enM.ERR_RENDER_CRITICAL.split("%s").length - 1, 2, "en: ERR_RENDER_CRITICAL takes the message and the line");
+assert(csM.ERR_RENDER_CRITICAL.indexOf("řádek") !== -1, "cs: ERR_RENDER_CRITICAL says řádek");
+assert(csM.ERR_RENDER_CRITICAL.indexOf("Zpět (Cmd+Z") !== -1 && csM.ERR_RENDER_CRITICAL.indexOf("SUMMA") !== -1,
+    "cs: ERR_RENDER_CRITICAL advises Zpět (Cmd+Z), several steps for SUMMA");
+assert(csM.ERR_RENDER_CRITICAL.indexOf("Vrátit") === -1 && csM.ERR_RENDER_CRITICAL.indexOf("Kritická chyba") === -1,
+    "cs: ERR_RENDER_CRITICAL no longer sends the operator to File > Revert, nor carries a second prefix");
+assert(enM.ERR_RENDER_CRITICAL.indexOf("(line ") !== -1 && enM.ERR_RENDER_CRITICAL.indexOf("Cmd+Z") !== -1
+    && enM.ERR_RENDER_CRITICAL.indexOf("Revert") === -1 && enM.ERR_RENDER_CRITICAL.toLowerCase().indexOf("critical error") === -1,
+    "en: the same, in English");
+
+// --- settings not saved: the consequence, split by what follows (spec 9.2) ---
+assert(csM.ERR_WRITE_SETTINGS.indexOf("Předvolby") === 0 && csM.ERR_WRITE_SETTINGS.indexOf("příště se dialog otevře") !== -1,
+    "cs: ERR_WRITE_SETTINGS speaks of the presets and says what happens next time");
+assert(csM.ERR_WRITE_SETTINGS.indexOf("Značky") === -1 && csM.ERR_WRITE_SETTINGS.indexOf("Běh pokračuje") === -1,
+    "cs: ERR_WRITE_SETTINGS (preset buttons) does not promise a run");
+assert(csM.ERR_WRITE_SETTINGS_RUN.indexOf("příště se dialog otevře s předchozími hodnotami") !== -1
+    && /Značky se vykreslí\.$/.test(csM.ERR_WRITE_SETTINGS_RUN), "cs: ERR_WRITE_SETTINGS_RUN says the marks are drawn");
+assert(typeof enM.ERR_WRITE_SETTINGS === "string" && /marks will be drawn\.$/i.test(enM.ERR_WRITE_SETTINGS_RUN)
+    && enM.ERR_WRITE_SETTINGS.toLowerCase().indexOf("marks") === -1, "en: the same split");
+
+// --- "Dokument nebyl změněn." (spec 9.4) ---
+assert(/Dokument nebyl změněn\.$/.test(csM.ERR_NO_SEL) && /The document was not changed\.$/.test(enM.ERR_NO_SEL),
+    "ERR_NO_SEL ends with the document's state");
+assert(/Dokument nebyl změněn\.$/.test(csM.ERR_ARTBOARD_TOO_LARGE) && /The document was not changed\.$/.test(enM.ERR_ARTBOARD_TOO_LARGE),
+    "ERR_ARTBOARD_TOO_LARGE ends with the same sentence");
+assert(csM.ERR_NO_SEL.indexOf("Dle artboardu (Fixed)") !== -1, "cs: ERR_NO_SEL names the option as the dialog does");
+
+// --- validation: "<field>: enter a number from <min> to <max> mm." (spec 9.3) ---
+assertEq(csM.ERR_MUST_BE_NUMBER.split("%s").length - 1, 3, "cs: ERR_MUST_BE_NUMBER takes field, min, max");
+assertEq(csM.ERR_OUT_OF_RANGE.split("%s").length - 1, 3, "cs: ERR_OUT_OF_RANGE takes field, min, max");
+assertEq(enM.ERR_MUST_BE_NUMBER.split("%s").length - 1, 3, "en: ERR_MUST_BE_NUMBER takes field, min, max");
+assertEq(enM.ERR_OUT_OF_RANGE.split("%s").length - 1, 3, "en: ERR_OUT_OF_RANGE takes field, min, max");
+assert(csM.format(csM.ERR_OUT_OF_RANGE, "Mezera", 0, 5).indexOf(": :") === -1
+    && csM.format(csM.ERR_OUT_OF_RANGE, "Mezera", 0, 5).indexOf("::") === -1, "cs: no second colon");
+
+// --- the glossary (canon 12.8) ---
+assertEq(csM.MAX_DIST, "Max. rozteč značek:", "cs: MAX_DIST");
+assertEq(csM.MARK_SIZE_Z, "Průměr značky:", "cs: MARK_SIZE_Z");
+assertEq(csM.MARK_COLOR, "Barva značek:", "cs: MARK_COLOR");
+assertEq(csM.GAP_GZ, "Mezera od grafiky:", "cs: GAP_GZ unchanged");
+assertEq(csM.ORIENT_DIST, "Odsazení orientační značky:", "cs: ORIENT_DIST unchanged");
+assertEq(enM.MAX_DIST, "Max. mark spacing:", "en: MAX_DIST");
+assertEq(enM.MARK_SIZE_Z, "Mark diameter:", "en: MARK_SIZE_Z");
+assertEq(enM.MARK_COLOR, "Mark color:", "en: MARK_COLOR");
+assert(csM.TIP_ORIENT_DIST.indexOf("mezi okraji značek") !== -1, "cs: TIP_ORIENT_DIST says the gap is between the mark edges");
+assert(enM.TIP_ORIENT_DIST.indexOf("between the edges of the marks") !== -1, "en: TIP_ORIENT_DIST says the gap is between the mark edges");
+assert(csM.ERR_MARKS_OVERLAP.indexOf("max. rozteč značek") !== -1 && csM.ERR_MARKS_ORIENT.indexOf("max. rozteč značek") !== -1,
+    "cs: the collision messages say 'max. rozteč značek'");
+assert(csM.ERR_MARKS_OVERLAP.indexOf("velikost značky") !== -1, "cs: ...and keep 'velikost značky'");
+assertEq(csM.SRC_FIXED, "Dle artboardu (Fixed)", "cs: SRC_FIXED, artboard in lower case");
+assert(csM.TIP_SRC_FIXED.indexOf("artboardu") !== -1, "cs: TIP_SRC_FIXED, artboard in lower case");
+// a preset is a "předvolba", never "nastavení"
+assert(csM.TIP_SAVE_AS.indexOf("nastavení") === -1 && csM.TIP_SAVE_AS.indexOf("předvolb") !== -1, "cs: TIP_SAVE_AS says předvolba");
+assert(csM.TIP_RESET.indexOf("nastavení") === -1 && csM.TIP_RESET.indexOf("předvolb") !== -1, "cs: TIP_RESET says předvolba");
+
+// --- the registration colour in words (spec 9.5) ---
+assert(csM.WARN_COLOR_FALLBACK.indexOf("[Registration]") === -1 && csM.WARN_COLOR_FALLBACK.indexOf("registrační") !== -1,
+    "cs: WARN_COLOR_FALLBACK says 'registrační barva', not [Registration]");
+assert(enM.WARN_COLOR_FALLBACK.indexOf("[Registration]") === -1 && enM.WARN_COLOR_FALLBACK.indexOf("registration colour") !== -1,
+    "en: WARN_COLOR_FALLBACK says 'registration colour'");
+assert(csM.TIP_MARK_COLOR.indexOf("[Registration]") === -1 && csM.TIP_MARK_COLOR.indexOf("výchozí") === -1
+    && csM.TIP_MARK_COLOR.indexOf("Registrační barva") !== -1, "cs: TIP_MARK_COLOR no longer calls the registration colour the default");
+assert(enM.TIP_MARK_COLOR.indexOf("[Registration]") === -1, "en: TIP_MARK_COLOR without [Registration]");
+
+// --- the names in „…“ (canon 12.1) ---
+assertEq(csM.format(csM.ERR_COLOR_MISSING, "Cut", "Cut"), "Vrstva „Cut“: v barvě „Cut“ není v dokumentu žádná cesta, nic se nepřesunulo. Zkontrolujte barvu řezových cest.",
+    "cs: ERR_COLOR_MISSING is the canon's example");
+assert(csM.WARN_TRIM_FOREIGN.indexOf("„Trim“") !== -1, "cs: WARN_TRIM_FOREIGN names the layer in „…“");
+assert(csM.format(csM.ERR_LAY_NAME, "Cut").indexOf("(„Cut“)") !== -1, "cs: ERR_LAY_NAME names the colour in „…“");
+
+// --- the duplicate colour: a mapping fact, not a document fact (Task 8 hand-over) ---
+assert(enM.STATUS_DUP_COLOR.indexOf("mapped twice") !== -1 && enM.STATUS_DUP_COLOR.indexOf("several layers") === -1,
+    "en: STATUS_DUP_COLOR says the colour is mapped twice");
+
+// --- a Summa output the Zünd run could not remove (R6) ---
+assert(typeof csM.WARN_SUMMA_NOT_REMOVED === "string" && typeof enM.WARN_SUMMA_NOT_REMOVED === "string",
+    "WARN_SUMMA_NOT_REMOVED exists in both languages");
+assert(csM.WARN_SUMMA_NOT_REMOVED.indexOf("„Summa“") !== -1 && csM.WARN_SUMMA_NOT_REMOVED.indexOf("SUMMA") !== -1,
+    "cs: WARN_SUMMA_NOT_REMOVED names the sublayer and says to run SUMMA again");
+
+// --- keys nothing reads (spec 9.6) ---
+var deadKeys = ["ERR_LAY_COLOR", "ERR_SWATCH", "ERR_GENERIC", "ERR_MIN_ROW", "DEF_CUT", "DEF_KISS", "PRESET_PLACEHOLDER"];
+for (var dk = 0; dk < deadKeys.length; dk++) {
+    assert(enM[deadKeys[dk]] === undefined && csM[deadKeys[dk]] === undefined, "the unused key " + deadKeys[dk] + " is gone");
+}
+assert(typeof csM.BTN_REVERT === "string" && typeof csM.DEC_SEP === "string", "BTN_REVERT and DEC_SEP stay (in use)");
 
 
 // =====================================================

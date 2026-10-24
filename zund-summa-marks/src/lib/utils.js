@@ -58,26 +58,29 @@ ZSM.Utils = {
      * Validates a numerical input within a range.
      * Reads the text with the shared ZSM.Numbers.parse: a decimal comma or dot,
      * anything else ("1e2", "0x10", ".5", "1O5", empty) is not a number.
-     * Returns null and shows alert if invalid; keeps dialog open.
+     * Returns null and shows an error alert if invalid; keeps dialog open.
+     * Both failures say the same: "<name>: enter a number from <min> to <max>
+     * mm." (spec 1.2.0 §9.3) — the operator needs the range either way.
      * @param {string|number} val - The value to validate.
      * @param {number} min - Minimum allowed value (inclusive).
      * @param {number} max - Maximum allowed value (inclusive).
-     * @param {string} name - Display name used in error messages.
+     * @param {string} name - Display name used in the message, without a colon.
+     * @param {string} [unit] - Unit after the upper limit; "mm" when omitted,
+     *     "" for a field without one (the drawing scale).
      * @returns {number|null} Validated number or null if invalid.
      */
-    validateNumber: function (val, min, max, name) {
+    validateNumber: function (val, min, max, name, unit) {
         // One reading for the family (shared ZSM.Numbers.parse): a decimal
         // comma or dot, spaces around ignored. "1e2", "0x10", ".5", "1O5",
         // "20 mm" and an empty field are NaN — an empty field is invalid
         // here, every ZSM field is required — never a different number.
         var n = ZSM.Numbers.parse(val);
-        if (isNaN(n)) {
-            alert(ZSM.L.format(ZSM.L.ERR_MUST_BE_NUMBER, name));
-            return null;
-        }
-        if (n < min || n > max) {
+        if (isNaN(n) || n < min || n > max) {
             // Limits written the way the field is: the locale's decimal separator.
-            alert(ZSM.L.format(ZSM.L.ERR_OUT_OF_RANGE, name, ZSM.Numbers.format(min), ZSM.Numbers.format(max)));
+            var u = (unit === undefined) ? "mm" : unit;
+            var hi = ZSM.Numbers.format(max) + (u ? " " + u : "");
+            var template = isNaN(n) ? ZSM.L.ERR_MUST_BE_NUMBER : ZSM.L.ERR_OUT_OF_RANGE;
+            ZSM.Utils.error(ZSM.L.format(template, name, ZSM.Numbers.format(min), hi));
             return null;
         }
         return n;
