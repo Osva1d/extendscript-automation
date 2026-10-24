@@ -8,8 +8,8 @@ automatické sady (`npm test` v `zund-summa-marks/`). Opravy z code review
 Tady zůstává to, co automat nevidí: dialog okem a myší, hlavní zakázka od
 začátku do konce, běh z menu, anglický Illustrator a stroj.
 
-**Brána pro vydání jsou sekce 1–5.** Sekce 6 je rychlá kontrola čísel a hlášek
-bez harnessu. Co prošlo, zaškrtni; co ne, nahlas podle sekce 7. Na konci vyplň
+**Brána pro vydání jsou sekce 1–6.** Sekce 7 je rychlá kontrola čísel a hlášek
+bez harnessu. Co prošlo, zaškrtni; co ne, nahlas podle sekce 8. Na konci vyplň
 záznam a před dalším kolem vrať zaškrtnutí na `[ ]`. Kódy K1–K12 odkazují na
 nálezy v reportu z review.
 
@@ -44,7 +44,7 @@ dokumentu **Cut ← Cut**.
   se jmenuje „Dle grafiky (Auto-fit)" a nápověda říká, že se výběr nebere
   v úvahu (A1).
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Generovat.
-- [ ] **1.3 Validace.** Rozteč 99999 → pole zčervená a Generovat se vypne; zpět na
+- [ ] **1.3 Validace.** Max. rozteč značek 99999 → pole zčervená a Generovat se vypne; zpět na
   500 → obojí se vrátí. Znovu neplatná hodnota a pak ↺ nebo jiná předvolba →
   dialog se zotaví. Prázdné pole → Generovat vypnuté. Hodnota `10,5` s čárkou
   projde.
@@ -81,7 +81,7 @@ a přesouvá cesty čistě v řezové barvě.
   vrstvě Trim nahoře; Regmarks › Zünd a Regmarks › Summa vedle sebe.
 - [ ] **2.4 ZUND po SUMMA.** → upozornění „Výstup Summa byl odstraněn…",
   zůstanou jen značky Zünd.
-- [ ] **2.5 Dle Artboardu (Fixed).** ZUND → značky uvnitř artboardu, artboard
+- [ ] **2.5 Dle artboardu (Fixed).** ZUND → značky uvnitř artboardu, artboard
   beze změny.
 - [ ] **2.6 Pouze značky.** Dokument s už separovanými vrstvami (Cut, Kiss-cut
   s obsahem), zaškrtnout „Pouze značky (neměnit vrstvy)" → mapování zešedne;
@@ -102,11 +102,13 @@ a přesouvá cesty čistě v řezové barvě.
 
 ## 3. Běh z menu a Zpět (K11)
 
-- [ ] Dokument s grafikou a cestou v barvě Cut, SUMMA s mapováním Cut ← Cut
-  a ořezovými linkami, spustit přes Soubor › Skripty, pak Úpravy › Zpět po
-  jednom kroku → artboard se vrátí na původní rozměr jako samostatný krok
-  (přes AppleScript to byly 4 kroky celkem); další Zpět už vrací tvou úpravu
-  z doby před spuštěním.
+- [ ] Dokument s grafikou a cestou v barvě Cut, posuňte grafiku o kousek (úprava
+  před spuštěním), SUMMA s mapováním Cut ← Cut a ořezovými linkami, spusťte
+  přes Soubor › Skripty, pak Úpravy › Zpět po jednom kroku → artboard se vrátí
+  na původní rozměr jako samostatný krok, čtvrtým Zpět (změřeno 2026-10-24
+  příkazem menu Zpět ze skriptu: ořezové linky, vrstva Trim, značky a vrstvy,
+  artboard); až další Zpět vrací posun grafiky. U ZUND s mapováním jsou to dva
+  kroky (značky a vrstvy, pak artboard). Měřítko kresby zůstane — viz 6.2.
 
 ---
 
@@ -136,7 +138,95 @@ a přesouvá cesty čistě v řezové barvě.
 
 ---
 
-## 6. Regresní přehled
+## 6. Nové v 1.2.0 — čistý tah, měřítko kresby, rodinný jazyk
+
+> Co přinesla verze 1.2.0
+> ([návrh](../../docs/specs/2026-10-23-zund-summa-marks-1.2.0-design.md)).
+> Logiku (čtení čísel, předvolby, texty, parita CS/EN, měřítko v XMP přes
+> mock) hlídají Node testy a v Illustratoru ji 2026-10-24 ověřil harness bez
+> zobrazení dialogu (`../../docs/extendscript-engine-facts.md`). Tady je, co
+> harness nevidí: dialog na obrazovce, barvy, myš a klávesnice, Tile Export
+> v ruce a běh z menu.
+>
+> **Příprava:** Forex dokument z oddílu 0 bez měřítka (nový dokument, nebo
+> zadejte 1 a jednou Generovat) a jedna zakázka Tile Exportu (viz 6.2).
+
+- [ ] **6.1 Plný tah s vybranou perforací (P3).** V dokumentu s grafikou
+  nakreslete přes grafiku rovnou cestu, dejte jí přerušovanou čáru 8/4
+  a zaoblené konce (panel Tah) a **nechte ji vybranou**. SUMMA se zaškrtnutým
+  „Přidat ořezové linky“, Generovat → OPOS pruh pod grafikou je **plný
+  s rovnými konci** a končí přesně na šířce grafiky, ne o 3 mm dál; obě
+  červené ořezové linky jsou plné; vaše perforace zůstala přerušovaná.
+  Vytiskněte a načtěte u Summy (5.3).
+- [ ] **6.2 Měřítko z dokumentu.** (a) Zakázka Tile Exportu, kde jste
+  v Tile Exportu zadali Měřítko kresby 1:10 a potvrdili dialog (Tile Export
+  zapíše měřítko hned po potvrzení; potřebuje umístěnou grafiku a cílovou
+  složku, postup je v ručním testu Grommet Marks K1). Kontrolní pláty, které
+  po sobě Tile Export nechá (artboardy `TE_…`, vrstva `TE_panels`), smažte —
+  měřítko leží v metadatech dokumentu a smazání ho nezmění. Spusťte Zünd
+  & Summa Marks → pole **Měřítko kresby 1:**
+  ukazuje **10**, titulek končí „— 1:10“, stavový řádek končí „· 1:10“
+  a v režimu Dle artboardu ukazuje artboard ve skutečné velikosti (× 10).
+  (b) Změňte pole na **4** a Generovat; otevřete dialog Tile Exportu
+  a zavřete ho Storno → nabízí 1:4. (c) Nový dokument → pole ukazuje **1**, ne
+  4 ani 10: předvolby ani poslední běh měřítko nenesou. (d) Pole **2,5**,
+  Generovat, další spuštění → **2,5** (ne 2.5 ani 2). (e) Přepnutí ZUND ↔ SUMMA,
+  výběr jiné předvolby a tlačítko Výchozí pole nezmění.
+- [ ] **6.3 Přechod z 1.1.0.** Dokument, který jste kreslili ve verzi 1.1.0
+  v měřítku 1:10, se otevře s polem **1** — dokument
+  měřítko v sobě nemá. Titulek je bez přípony a řádek bez „· 1:10“: vidět je to
+  jen v poli. Zadejte 10, Generovat a spusťte znovu → **10**.
+- [ ] **6.4 Neplatné měřítko.** Do pole napište postupně `0,5`, `0`, `101`,
+  `abc` a `1e1` → pokaždé pole zčervená, **Generovat, Uložit i Uložit jako…**
+  zešednou a řádek nad tlačítky je červený: „✗ Měřítko kresby — povolený
+  rozsah 1–100.“ Platí `1`, `100` a `10` s mezerou okolo.
+- [ ] **6.5 Zpět vrací značky, ne měřítko.** Měřítko **7**, Generovat, pak
+  Úpravy › Zpět tolikrát, kolik má běh kroků (oddíl 3) → značky i artboard
+  jsou zpět, ale další spuštění ukáže v poli **7**. Zadejte 1 a jednou
+  Generovat → dokument je zase bez měřítka.
+- [ ] **6.6 Čísla s čárkou a překlepy (N1, P1, N6).** Max. rozteč značek
+  `450,5` → projde a po Generovat a dalším spuštění je tam zase `450,5`.
+  Postupně `1O5` (písmeno O), `0x10`, `1 000`, `20 mm` → pole zčervená,
+  Generovat a Uložit zešednou, řádek: „✗ Max. rozteč značek — povolený rozsah
+  5–5000.“ Dvě neplatná pole → „✗ Chyb ve formuláři: 2 — viz zvýrazněná
+  pole.“
+- [ ] **6.7 Předvolby (P5, J3).** Předvolba `Test A`, změňte hodnotu → „Test A
+  *“; přepněte na `[Výchozí]` → hvězdička u `Test A` **zmizí**. V režimu SUMMA
+  je `[Výchozí]` bez „*“ a jeho výběr ze seznamu i ↺ nechají dialog v SUMMA.
+  Uložit jako… s prázdným nebo mezerovým názvem → „Zadejte název předvolby.“;
+  existující název → „Předvolba „Test A“ už existuje. Přepsat?“. Smazat →
+  „Smazat předvolbu „Test A“? Smazání nejde vrátit.“ ↺ stojí vedle seznamu,
+  „Uložit jako…“ je na tlačítku celé.
+- [ ] **6.8 Stavový řádek na světlém i tmavém UI.** V klidu je řádek šedý
+  a říká, co skript našel: `ZUND · řez „Cut“`, v Dle artboardu
+  `ZUND · artboard 1 560 × 3 050 mm · řez „Cut“`, se zaškrtnutým Pouze značky
+  `… · pouze značky`, v dokumentu bez řezové barvy `… · řez nenalezen`. Klikněte
+  na „+ Přidat“ (nový řádek dostane stejnou řezovou barvu) → červeně
+  „✗ Barva „Cut“ je přiřazena více vrstvám — odeberte duplicitu.“, celé,
+  nic se neuřízne. Po odebrání řádku se vrátí šedý nález. Projděte to na
+  tmavém i světlém jasu uživatelského rozhraní (Illustrator › Nastavení ›
+  Uživatelské rozhraní › Jas): červená je čitelná, šedý nález vypadá jako
+  zašedlý text, ne jinak.
+- [ ] **6.9 Dialog na displeji 13".** ZUND i SUMMA, česky i anglicky: dialog je
+  vidět celý i s tlačítky Storno a Generovat (bez záhlaví okna měří ZUND 720
+  px, SUMMA 756 px, šířka 465 px; změřeno). S osmi řádky mapování měří 923 a
+  932 px a na 13" displeji se nemusí vejít — stejně jako v 1.1.0; zapište, od
+  kolika řádků se tlačítka schovají.
+- [ ] **6.10 Hlášky (J5, J6).** Bez otevřeného dokumentu → „Před spuštěním
+  skriptu otevřete dokument.“ Prázdný dokument, Dle grafiky → „CHYBA:
+  V dokumentu není žádná grafika… Dokument nebyl změněn.“ a počátek pravítek,
+  který jste si předtím posunuli, zůstane, kde byl. Názvy v hláškách stojí
+  v „…“, žádná hláška nekončí vykřičníkem.
+- [ ] **6.11 Výstup Tile Exportu ve vrstvě Regmarks.** Zakázka, ve které Tile
+  Export nakreslil značky přímo do vrstvy Regmarks (bez podvrstev): ZUND,
+  Generovat → značky Tile Exportu **zůstanou**, vedle nich vznikne
+  Regmarks › Zünd a běh skončí „UPOZORNĚNÍ: Vrstva „Regmarks“ obsahuje
+  i objekty, které nevytvořil skript (objektů: N)…“ (N = počet objektů Tile
+  Exportu, ne včetně podvrstev). Dřív je skript smazal.
+
+---
+
+## 7. Regresní přehled
 
 Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchozí.
 
@@ -151,30 +241,34 @@ Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchoz�
 | totéž, pak SUMMA s linkami | artboard 244 × 266; vrstva Trim se 2 linkami; Regmarks › Summa 4 značky + pruh |
 | 90 široká, ZUND (K7) | chyba „Orientační značka by se dotýkala jiné značky…"; dokument beze změny |
 | Fixed, artboard 100 × 100, ZUND (K7) | chyba „Značka by přesahovala artboard o 10 mm…"; dokument beze změny |
-| dokument 500 × 500 v měřítku 1:10, značky 5, rozteč 400 | titulek „… — 1:10"; značky v dokumentu 0,5; zrušené měřítko → zpět 5 |
+| dokument 500 × 500, Měřítko kresby 10, značky 5, rozteč 400 | titulek „… — 1:10“; značky v dokumentu 0,5; Měřítko kresby 1 → zpět 5 |
+| stejná grafika 1:1 a desetkrát menší v 1:10 (ZUND i SUMMA s linkami) | polohy i velikosti v 1:10 přesně desetinové (změřeno 2026-10-24: nejvýš 0,00003 pt) |
 
 **Hlášky** (česky):
 
-- bez dokumentu → „Není otevřený dokument."; prázdný dokument, Dle grafiky →
-  „V dokumentu není žádná grafika, kolem které by šly značky umístit…"
-- grafika tak velká, že by artboard přesáhl mez Illustratoru (K10) → „Artboard
-  by měl … × … mm, a to Illustrator nedovolí…", dokument beze změny
-- řádek mapování se jménem Trim nebo Regmarks (K6) → „Vrstvu ‘Trim’ nejde
-  použít v mapování…", dokument beze změny
-- objekt s řezovým tahem a tiskovou výplní (K1) → zůstane na místě, „Objekty
-  v řezové barvě ‘Cut’, které mají i tiskovou výplň…"
-- cesta v barvě Cut v ořezové masce nebo zamčené podvrstvě (K2) → „Vrstva ‘Cut’:
-  některé cesty v barvě ‘Cut’ zůstaly na místě…"
+- bez dokumentu → „Před spuštěním skriptu otevřete dokument.“; prázdný
+  dokument, Dle grafiky → „CHYBA: V dokumentu není žádná grafika, kolem které
+  by šly značky umístit… Dokument nebyl změněn.“
+- grafika tak velká, že by artboard přesáhl mez Illustratoru (K10) → „CHYBA:
+  Artboard by měl … × … mm, a to Illustrator nedovolí… Dokument nebyl změněn.“
+- řádek mapování se jménem Trim nebo Regmarks (K6) → „CHYBA: Vrstvu „Trim“
+  nejde použít v mapování… Dokument nebyl změněn.“
+- objekt s řezovým tahem a tiskovou výplní (K1) → zůstane na místě,
+  „UPOZORNĚNÍ: Objekty v řezové barvě „Cut“, které mají i tiskovou výplň…“
+- cesta v barvě Cut v ořezové masce nebo zamčené podvrstvě (K2) → „Vrstva
+  „Cut“: některé cesty v barvě „Cut“ zůstaly na místě…“
 - přímá barva Cut, kterou nemá žádná cesta, řádek Cut ← Cut (A7) → „Vrstva
-  ‘Cut’: v barvě ‘Cut’ není v dokumentu žádná cesta, nic se nepřesunulo…"
-- vlastní objekt ve vrstvě Trim (K6) → zůstane, „Vrstva ‘Trim’ obsahuje
-  i objekty, které nevytvořil skript…"
-- řádek mapování s barvou a bez názvu → „Řádek vrstvy má barvu (‘Cut’), ale
-  nemá název…"
+  „Cut“: v barvě „Cut“ není v dokumentu žádná cesta, nic se nepřesunulo…“
+- vlastní objekt ve vrstvě Trim (K6) → zůstane, „Vrstva „Trim“ obsahuje
+  i objekty, které nevytvořil skript…“
+- cizí objekt přímo ve vrstvě Regmarks → zůstane, „Vrstva „Regmarks“ obsahuje
+  i objekty, které nevytvořil skript (objektů: N)…“
+- řádek mapování s barvou a bez názvu → „CHYBA: Řádek vrstvy má barvu („Cut“),
+  ale nemá název…“
 
 ---
 
-## 7. Když něco selže
+## 8. Když něco selže
 
 Nahlas nastavení dialogu (nebo název předvolby), co vyšlo a co jsi čekal.
 
@@ -185,15 +279,16 @@ Nahlas nastavení dialogu (nebo název předvolby), co vyšlo a co jsi čekal.
 | ve Vzornících přibyla barva | náhradní barva značek | název barvy, dokument |
 | vrstva přejmenovaná na Graphics | přejmenování spodní vrstvy | která vrstva, jestli byla v mapování, pořadí vrstev |
 | špatná velikost nebo poloha značek | geometrie nebo měřítko | nastavení a naměřené hodnoty |
+| značky desetkrát menší nebo větší | měřítko kresby z dokumentu (pole, titulek, stavový řádek) | co ukazovalo pole Měřítko kresby a který nástroj dokument předtím zpracoval |
 | pád skriptu nebo Illustratoru | — | panel Vrstvy a posloupnost kroků |
 
 ---
 
-## 8. Záznam
+## 9. Záznam
 
 ```
 Datum: ______   Build (commit): ______   Illustrator: ______   Locale: CZ / EN
-Sekce 1 [ ]  2 [ ]  3 [ ]  4 [ ]  5 [ ]
+Sekce 1 [ ]  2 [ ]  3 [ ]  4 [ ]  5 [ ]  6 [ ]
 Verdikt: [ ] vydat   [ ] blokováno — proč: ______
 ```
 

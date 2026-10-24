@@ -448,3 +448,63 @@ Kontrolní tabulka: každé pravidlo kánonu (`extendscript-ui-standards` §9,
 Moduly přibudou do `tools/build.sh` za `buildUIState(ZSM);` po dvojicích
 `cat` + `build…(ZSM);`, jako v GM (`grommet-marks/tools/build.sh`);
 sahají na `ZSM.L` a `ZSM.Utils.log` až při volání.
+
+## 17. Odchylky od návrhu (implementace 2026-10-23/24)
+
+Co se při stavbě změnilo proti textu výš; čísla jsou z měření v Illustratoru
+30.8.2 (`docs/extendscript-engine-facts.md`, oddíl „Čistý tah, měřítko kresby,
+Zpět a rozměry dialogu zund-summa-marks 1.2.0“, 2026-10-24).
+
+- **Počátek pravítek se vrací, nepřesouvá** (§9.4). Geometrie čte souřadnice
+  od počátku [0, 0], takže ho `main.js` nastavuje dál před měřením. Věta
+  „Dokument nebyl změněn.“ přesto platí doslova: běh odmítnutý dřív, než se
+  dokument změnil (prázdný dokument, `render()` vrátí `false`), vrátí
+  operátorovi jeho původní počátek. Změřeno: počátek posunutý na [100, 50]
+  zůstal po odmítnutí kolizí značek i po odmítnutí prázdného dokumentu; běh,
+  který kreslil, ho nechá v rohu artboardu jako dřív.
+- **`render()` odpovídá třemi hodnotami** (§5.2 chtěl jen „úspěch“, R4):
+  `true` = kreslilo (i s ohlášenou chybou části výstupu — měřítko se uloží),
+  `false` = odmítnuto bez změny (počátek pravítek se vrátí), `null` = pád
+  uprostřed kreslení (dokument může být změněný: počátek zůstane, měřítko se
+  neuloží).
+- **[Výchozí] vybrané ze seznamu zůstane v aktuálním režimu** (§8 to říkal jen
+  o ↺, R8). [Výchozí] jsou tovární hodnoty režimu, který dialog ukazuje,
+  takže výběr ze seznamu i ↺ nechají SUMMA v SUMMA. Dřív výběr přepnul do
+  ZUND; CHANGELOG to říká.
+- **Rada po pádu při kreslení: několik kroků Zpět v každém režimu** (§9.2
+  psal „s poznámkou, že u SUMMA je to několik kroků“ — to je chyba, R10).
+  Každý běh se vrací několika kroky a změna artboardu je samostatný krok:
+  změřeno příkazem menu Zpět ZUND s mapováním 2 kroky (značky a vrstvy, pak
+  artboard), SUMMA s mapováním a ořezovými linkami 4 (poslední artboard).
+  Hláška žádný režim nejmenuje a nepíše „a skript spusťte znovu“.
+- **Zašedlá Mezera od grafiky se při Uložit uloží s hodnotou předvolby**
+  (§6.1, ruling úkolu 3): pole zašedlé v Dle artboardu živá kontrola
+  přeskakuje, takže by se překlep v něm uložil jako `null`. `getUIValues`
+  proto bere hodnotu předchozí (aktivní předvolby), jako handler Generovat.
+- **`ERR_NO_DOC` a `ERR_CRITICAL` jsou bez předpony** (§9.3 dával předponu
+  všem blokujícím chybám, R9). Kánon §12.2 je uvádí jako hotové šablony a GM
+  i BRE je ukazují bez předpony.
+- **Stavový řádek je 425 px a dialog 465 px** (§7: „změří se pro nejdelší
+  text“). Šířka 415 px z úkolu 8 byla odhad podle modelu písma, který nepočítal
+  s tím, že `detectCutColor` vrací název barvy, jak ho má dokument: nález
+  s „CUTCONTOUR“ měří 425 px (EN 424) a důvod „✗ Barva „CUTCONTOUR“ je
+  přiřazena více vrstvám…“ 418 px — obojí se uřízlo. `M.STATUS_W` je teď
+  změřený a test v `test_ui_layout.js` drží texty, pro které se měřilo.
+  Dialog: ZUND 465 × 720, SUMMA 465 × 756 (1.1.0: 448 × 717 a 753), česky
+  i anglicky stejně; strop ~850 px drží s jedním až čtyřmi řádky mapování
+  (odhad z krajních stavů, řádek přidá 25–29 px), s osmi měří dialog
+  923/932 px skoro stejně jako 1.1.0 (920/932).
+- **Rozměr grafiky ve stavovém řádku chybí** (§7: „pokud je změření hranic
+  před dialogem levné“). Měření bez zrušení výběru existuje (táž procházka
+  jako `ZSM.Bounds.get`, výsledek stejný, výběr zůstane), ale roste
+  kvadraticky: 1 006 cest 15 ms, 5 026 cest 0,25 s, 20 101 cest 3,9 s, a to
+  pro každý režim zvlášť (ZUND a SUMMA počítají jiné podvrstvy Regmarks).
+  Dialog by se na velkém dokumentu otevíral o sekundy později i pro Storno,
+  proto `docData.artwork` zůstává `null` a v Dle grafiky a SUMMA řádek
+  rozměr neuvádí.
+- **Zpět ze skriptu a z menu se liší** (§5.2 předpokládal „Zpět vrátí
+  značky, ne měřítko“, naměřeno v GM přes `app.undo()`). Měřítko Zpět
+  nevrátí v obou případech, ale `app.undo()` nevrátil po běhu ZSM ani
+  artboard (ani 1.1.0), příkaz menu Zpět ano. README, CHANGELOG a ruční test
+  proto mluví o krocích naměřených příkazem menu; Cmd+Z po běhu z menu Soubor
+  › Skripty ověří ruční test (oddíl 3).
