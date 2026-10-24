@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: Numbers (shared) — number fields: reading the text, writing it back
-// Part of: shared core (no consumer yet; extendscript-ui-standards §12.3)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
+//          extendscript-ui-standards §12.3)
 //
 // Namespace-neutral factory: buildNumbers(NS) registers NS.Numbers on the
 // namespace object passed in. A tool's build cats this file and appends its
@@ -12,8 +13,9 @@
 //
 // parse() is tile-export's TE.Utils.parseNumber, unchanged. grommet-marks and
 // zund-summa-marks each fixed the same class of typo on their own, through
-// Number(), and the three drifted apart: "0x10" reads as 16 there, as invalid
-// here (follow-up audit 2026-10-17, N1). One grammar for the family is the
+// Number(), and the three drifted apart: "0x10" read as 16 there, as invalid
+// here (follow-up audit 2026-10-17, N1) — until grommet-marks 1.4.0 and
+// zund-summa-marks 1.2.0 took this module. One grammar for the family is the
 // "fix once, holds there too" criterion docs/decisions.md asks for.
 // ------------------------------------------------------------------------
 function buildNumbers(NS) {

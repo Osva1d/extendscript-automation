@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: Registration (shared) — the document's registration swatch, by type
-// Part of: shared core (no consumer yet; manipulating-illustrator-items §2)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
+//          manipulating-illustrator-items §2)
 //
 // Namespace-neutral factory: buildRegistration(NS) registers NS.Registration
 // on the namespace object passed in. A tool's build cats this file and
@@ -14,9 +15,9 @@
 // the Swatches panel is not fixed: where index 1 holds White, a tool trusting
 // the position draws marks the cutter's camera cannot see. tile-export got
 // this fix first, zund-summa-marks the same one on 2026-10-03, and
-// grommet-marks still reads swatches[1] — the "fix once, holds there too"
-// criterion docs/decisions.md asks for. Taken from tile-export's
-// TE.Draw.getRegistrationName.
+// grommet-marks read swatches[1] until it took this module in 1.4.0 — the
+// "fix once, holds there too" criterion docs/decisions.md asks for. Taken
+// from tile-export's TE.Draw.getRegistrationName.
 // ------------------------------------------------------------------------
 function buildRegistration(NS) {
     function log(msg) {

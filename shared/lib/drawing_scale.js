@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: DrawingScale (shared) — the drawing scale 1:N kept in the document
-// Part of: shared core (no consumer yet; extendscript-ui-standards §12.9)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
+//          extendscript-ui-standards §12.9)
 //
 // Namespace-neutral factory: buildDrawingScale(NS) registers NS.DrawingScale
 // on the namespace object passed in. A tool's build cats this file and

@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: FieldPaint (shared) — the family's status colours on ScriptUI text
-// Part of: shared core (no consumer yet; extendscript-ui-standards §12.3, §12.6)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
+//          extendscript-ui-standards §12.3, §12.6)
 //
 // Namespace-neutral factory: buildFieldPaint(NS) registers NS.FieldPaint on
 // the namespace object passed in. A tool's build cats this file and appends
@@ -14,8 +15,8 @@
 // fix in all three: the field's own pen is captured before it is painted and
 // given back afterwards, because forcing black hides the text on the dark UI.
 // Three copies of one fix is the "fix once, holds there too" criterion
-// docs/decisions.md asks for. The colours are the canon's (§12.6), from
-// tile-export's TE.UI.COLORS.
+// docs/decisions.md asks for; all three tools now use this module instead.
+// The colours are the canon's (§12.6), from tile-export's TE.UI.COLORS.
 //
 // Illustrator reads a control's own pen back as undefined before show(), so
 // the pen given back used to be FALLBACK light grey — on the Medium Light and
