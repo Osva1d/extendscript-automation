@@ -1812,6 +1812,43 @@ console.log("\n=== TEST 23 (spec 1.2.0 §9.3, §10): validation alerts, first fo
 
 
 // =====================================================
+// TEST 24 (spec 1.2.0 §7, §11): the status line holds its widest text
+// =====================================================
+// M.STATUS_W was measured in Illustrator 30.8.2 (2026-10-24, measureString in
+// the label's own font, docs/extendscript-engine-facts.md) for the texts
+// below. It was 415 px, a font-model estimate: the finding with
+// „CUTCONTOUR“ (425 px) and the duplicate reason with it (418 px) were cut
+// off. Node cannot measure pixels, so the test keeps the measurement honest:
+// a change to any of these texts fails here until it is measured again.
+console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the widest texts ===");
+(function () {
+    var localeSrc = fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8");
+    function realL(locale) { return new Function("ZSM", "app", localeSrc + "; return ZSM.L;")({}, { locale: locale }); }
+    var MEASURED = [
+        { locale: "cs_CZ", kind: "finding",   px: 425, text: "ZUND · artboard 99 999,9 × 99 999,9 mm · řez „CUTCONTOUR“ · 1:99,9" },
+        { locale: "en_US", kind: "finding",   px: 424, text: "ZUND · artboard 99,999.9 × 99,999.9 mm · cut \"CUTCONTOUR\" · 1:99.9" },
+        { locale: "cs_CZ", kind: "duplicate", px: 418, text: "✗ Barva „CUTCONTOUR“ je přiřazena více vrstvám — odeberte duplicitu." }
+    ];
+    var big = 99999.9 / 99.9;   // foundText multiplies by the scale and rounds to a tenth
+    var origL = ZSM.L;
+    try {
+        for (var i = 0; i < MEASURED.length; i++) {
+            var m = MEASURED[i];
+            ZSM.L = realL(m.locale);
+            var text = (m.kind === "finding")
+                ? ZSM.UI.foundText({ mode: "ZUND", fixed: true, marksOnly: false, artboard: { w: big, h: big },
+                                     artwork: null, cutColor: "CUTCONTOUR", scale: 99.9 })
+                : "✗ " + ZSM.L.format(ZSM.L.STATUS_DUP_COLOR, "CUTCONTOUR");
+            assertEq(text, m.text, m.locale + " " + m.kind + ": the text M.STATUS_W was measured for (re-measure in Illustrator when it changes)");
+            assert(ZSM.UI.M.STATUS_W >= m.px, m.locale + " " + m.kind + ": M.STATUS_W " + ZSM.UI.M.STATUS_W + " holds the measured " + m.px + " px");
+        }
+    } finally {
+        ZSM.L = origL;
+    }
+})();
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 SUI.uninstall();

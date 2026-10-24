@@ -25,13 +25,14 @@ ZSM.UI = {
         REVERT_BTN:   30,    // [deviation] ↺ is one glyph; the native 80 px would dwarf the preset row
         // [deviation] live text (canon §4, reason 2): the status line's two
         // labels change text while the dialog is open and keep their first
-        // width. Sized for the widest text either can hold, cs and en: the
-        // finding with 99 999,9 × 99 999,9 mm, „CutContour“ and 1:99,9 (408 px;
-        // 412 px with the artwork's size), every range reason, the duplicate
-        // reason with CutContour (402 px). Measured on a Lucida Grande 12 model
-        // that gives the 105 px the canon measured for "Mezera od grafiky"; a
+        // width. Sized for the widest text either can hold, cs and en,
+        // measured in Illustrator 30.8.2 (measureString in the label's own
+        // font, 2026-10-24, engine-facts): the finding with 99 999,9 ×
+        // 99 999,9 mm, „CUTCONTOUR“ (detectCutColor keeps the document's case)
+        // and 1:99,9 is 425 px (en 424); the widest reason, a duplicate
+        // „CUTCONTOUR“ row, 418 px. The window is this plus its margins; a
         // user's longer colour name or scale truncates at the end.
-        STATUS_W:     415,
+        STATUS_W:     425,
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
         SP_GROUP:     8,     // group spacing (preset, mode, source, buttons …)
