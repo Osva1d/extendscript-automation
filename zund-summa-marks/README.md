@@ -73,7 +73,7 @@ Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
 Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk.
 
-Vrstvy **Regmarks** a **Trim** patří skriptu (značky a ořezové linky) a v mapování je použít nejde. Ve vrstvě Trim skript obnovuje jen své vlastní ořezové linky; cizí objekty v ní nechá a upozorní na ně. Ve vrstvě Regmarks obnovuje jen své podvrstvy „Zünd“ a „Summa“: objekty, které v ní leží mimo ně — třeba značky z výstupu Tile Exportu, který kreslí přímo do Regmarks, nebo značky ze starší zakázky z doby před 1.0.0 —, zůstanou vedle nových značek a běh na ně upozorní i s počtem. Před řezáním je zkontrolujte.
+Vrstvy **Regmarks** a **Trim** patří skriptu (značky a ořezové linky) a v mapování je použít nejde. Ve vrstvě Trim skript obnovuje jen své vlastní ořezové linky; cizí objekty v ní nechá a upozorní na ně. Ve vrstvě Regmarks obnovuje jen své podvrstvy „Zünd“ a „Summa“: objekty, které v ní leží mimo ně — třeba značky v PDF plátu, které Tile Export exportoval v režimu Zünd (tam je kreslí přímo do vrstvy Regmarks), nebo značky ze starší zakázky z doby před 1.0.0 —, zůstanou vedle nových značek a běh na ně upozorní i s počtem. Před řezáním je zkontrolujte.
 
 ### Presets
 

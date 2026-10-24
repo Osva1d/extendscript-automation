@@ -217,12 +217,17 @@ a přesouvá cesty čistě v řezové barvě.
   V dokumentu není žádná grafika… Dokument nebyl změněn.“ a počátek pravítek,
   který jste si předtím posunuli, zůstane, kde byl. Názvy v hláškách stojí
   v „…“, žádná hláška nekončí vykřičníkem.
-- [ ] **6.11 Výstup Tile Exportu ve vrstvě Regmarks.** Zakázka, ve které Tile
-  Export nakreslil značky přímo do vrstvy Regmarks (bez podvrstev): ZUND,
-  Generovat → značky Tile Exportu **zůstanou**, vedle nich vznikne
-  Regmarks › Zünd a běh skončí „UPOZORNĚNÍ: Vrstva „Regmarks“ obsahuje
-  i objekty, které nevytvořil skript (objektů: N)…“ (N = počet objektů Tile
-  Exportu, ne včetně podvrstev). Dřív je skript smazal.
+- [ ] **6.11 Výstup Tile Exportu ve vrstvě Regmarks.** Značky přímo ve vrstvě
+  Regmarks (bez podvrstev) má **PDF plátu, které Tile Export exportoval
+  v režimu Zünd** — ne pracovní dokument, tam leží Regmarks jako podvrstva
+  kontrolního plátu (`TE_panels` › `TE_nn` › Regmarks). Otevřete takové
+  tiskové PDF v Illustratoru (vrstvy Regmarks, Cut, Graphics) a v panelu
+  Vrstvy si spočítejte objekty ve vrstvě Regmarks (N). Spusťte Zünd & Summa
+  Marks, ZUND, Generovat → značky Tile Exportu **zůstanou** přímo ve vrstvě
+  Regmarks, vedle nich vznikne podvrstva Regmarks › Zünd s novými značkami
+  a běh skončí „UPOZORNĚNÍ: Vrstva „Regmarks“ obsahuje i objekty, které
+  nevytvořil skript (objektů: N)…“ (N bez obsahu podvrstev). Dřív je skript
+  smazal. PDF zavřete bez uložení.
 
 ---
 

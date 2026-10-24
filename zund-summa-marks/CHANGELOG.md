@@ -126,8 +126,9 @@ v závorkách odkazují na audity společného jazyka
   je plný a viditelně stejně dlouhý jako grafika (PNG prohlédnuté). Značky
   Zünd a Summa tah nemají a netýkalo se jich to.
 - **Cizí obsah ve vrstvě Regmarks zůstane.** Když vrstva Regmarks neměla
-  podvrstvu Zünd ani Summa, skript smazal celý její obsah — i značky
-  z výstupu Tile Exportu (ten kreslí přímo do Regmarks) nebo vlastní obsah.
+  podvrstvu Zünd ani Summa, skript smazal celý její obsah — i značky v PDF
+  plátu, které Tile Export exportoval v režimu Zünd (ten je kreslí přímo do
+  vrstvy Regmarks), nebo vlastní obsah.
   Teď mění jen své podvrstvy „Zünd“ a „Summa“ a na konci běhu upozorní,
   kolik cizích objektů ve vrstvě zůstalo. Ve staré zakázce z doby před 1.0.0
   zůstanou staré značky vedle nových; upozornění řekne kde.
