@@ -1013,7 +1013,11 @@ ZSM.UI = {
             if (!cbMarksOnly.value) {
                 for (var lc = 0; lc < layers.length; lc++) {
                     if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
-                        ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                        // The colour as the list shows it: layers[].color holds the
+                        // canonical token "[Registration]", the list the document's
+                        // own swatch name ("[Registrační]" in a Czech install).
+                        ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_LAY_NAME,
+                            ZSM.UI.ddlValue(layRows[lc].ddColor) || layers[lc].color));
                         return;
                     }
                 }

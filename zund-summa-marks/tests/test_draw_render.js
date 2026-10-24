@@ -1596,8 +1596,12 @@ assert(findSublayer(findLayer(a42.doc, "Regmarks"), "Summa") === a42.sub, "...th
 assert(findLayer(a42.doc, "Trim") !== null, "...and so is the Trim layer (it goes only together with the Summa set)");
 
 // 2. Without an array (an older caller) it still answers and logs, without throwing.
-ZSM.Draw.removeSummaOutput();
-assert(true, "no warnings array: no throw");
+logs42.length = 0;
+var noArr42 = "not called", threw42 = false;
+try { noArr42 = ZSM.Draw.removeSummaOutput(); } catch (eNoArr) { threw42 = true; }
+assertEq(threw42, false, "no warnings array: no throw");
+assertEq(noArr42, false, "...still answers false");
+assert(logs42.join("\n").indexOf("remove refused") >= 0, "...and still logs why (got: " + logs42.join(" | ") + ")");
 
 // 3. Through render(): the end-of-run alert carries the notice, the Zünd marks are drawn.
 var b42 = summaThenZund42(true);
@@ -1606,7 +1610,7 @@ var drew42 = ZSM.Draw.render(ZSM.Core.calculateAll(sZ42, ZSM.Draw.getBounds(sZ42
 assertEq(drew42, true, "a ZUND run over a Summa sublayer that will not go: the run draws");
 assert(alerts42.join("\n").indexOf("summa NOT removed") >= 0,
     "...and the end-of-run notice says the Summa output stayed (got: " + alerts42.join(" | ") + ")");
-assert(alerts42.join("\n").indexOf("summa removed") < 0 || alerts42.join("\n").indexOf("summa NOT removed") >= 0,
+assert(alerts42.join("\n").indexOf("summa removed") < 0,
     "...never the 'removed' notice for a set that was not removed");
 assert(alerts42.join("\n").indexOf("WARN: ") === 0, "...as a warning (one WARN_PREFIX)");
 assertEq(countItems(findSublayer(findLayer(b42.doc, "Regmarks"), "Zünd"), "PathItem"), 5, "...the Zünd marks are drawn");

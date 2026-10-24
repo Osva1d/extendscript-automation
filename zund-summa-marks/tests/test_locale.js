@@ -353,11 +353,22 @@ assertEq(csM.format(csM.ERR_CRITICAL, "boom", "42").indexOf("boom (řádek 42)")
 assertEq(csM.ERR_RENDER_CRITICAL.split("%s").length - 1, 2, "cs: ERR_RENDER_CRITICAL takes the message and the line");
 assertEq(enM.ERR_RENDER_CRITICAL.split("%s").length - 1, 2, "en: ERR_RENDER_CRITICAL takes the message and the line");
 assert(csM.ERR_RENDER_CRITICAL.indexOf("řádek") !== -1, "cs: ERR_RENDER_CRITICAL says řádek");
-assert(csM.ERR_RENDER_CRITICAL.indexOf("Zpět (Cmd+Z") !== -1 && csM.ERR_RENDER_CRITICAL.indexOf("SUMMA") !== -1,
-    "cs: ERR_RENDER_CRITICAL advises Zpět (Cmd+Z), several steps for SUMMA");
+// Undo (R10): the whole run is undone in SEVERAL Zpět steps and the artboard
+// change is a step of its own (README, engine-facts) — for ZUND too, so the
+// advice names no mode and does not promise one Cmd+Z.
+assert(csM.ERR_RENDER_CRITICAL.indexOf("několika kroky Zpět (Cmd+Z)") !== -1
+    && csM.ERR_RENDER_CRITICAL.indexOf("změna artboardu je samostatný krok") !== -1,
+    "cs: ERR_RENDER_CRITICAL advises several Zpět steps (Cmd+Z), the artboard change a step of its own");
+assert(csM.ERR_RENDER_CRITICAL.indexOf("zkontrolujte artboard a vrstvy") !== -1, "cs: ...and to check the artboard and the layers");
+assert(csM.ERR_RENDER_CRITICAL.indexOf("SUMMA") === -1 && csM.ERR_RENDER_CRITICAL.indexOf("spusťte") === -1,
+    "cs: ...no mode named, no 'run it again' (after an unexpected error it would likely stop again)");
 assert(csM.ERR_RENDER_CRITICAL.indexOf("Vrátit") === -1 && csM.ERR_RENDER_CRITICAL.indexOf("Kritická chyba") === -1,
     "cs: ERR_RENDER_CRITICAL no longer sends the operator to File > Revert, nor carries a second prefix");
-assert(enM.ERR_RENDER_CRITICAL.indexOf("(line ") !== -1 && enM.ERR_RENDER_CRITICAL.indexOf("Cmd+Z") !== -1
+assert(enM.ERR_RENDER_CRITICAL.indexOf("The script stopped on an unexpected error while drawing: ") === 0
+    && enM.ERR_RENDER_CRITICAL.indexOf("(line ") !== -1 && enM.ERR_RENDER_CRITICAL.indexOf("Cmd+Z") !== -1
+    && enM.ERR_RENDER_CRITICAL.indexOf("several Cmd+Z steps") !== -1
+    && enM.ERR_RENDER_CRITICAL.indexOf("the artboard change is a step of its own") !== -1
+    && enM.ERR_RENDER_CRITICAL.indexOf("SUMMA") === -1 && enM.ERR_RENDER_CRITICAL.indexOf("again") === -1
     && enM.ERR_RENDER_CRITICAL.indexOf("Revert") === -1 && enM.ERR_RENDER_CRITICAL.toLowerCase().indexOf("critical error") === -1,
     "en: the same, in English");
 

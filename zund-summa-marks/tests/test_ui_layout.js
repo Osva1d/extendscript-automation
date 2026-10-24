@@ -1757,18 +1757,42 @@ console.log("\n=== TEST 23 (spec 1.2.0 §9.3, §10): validation alerts, first fo
             "alert " + ai + ": no second colon, no exclamation mark");
     }
 
-    // --- a mapping row with a colour and no name: a blocking error with the prefix ---
-    var nameAlerts = [], oAlert = global.alert;
-    global.alert = function (m) { nameAlerts.push(String(m)); };
+    // --- a mapping row with a colour and no name: a blocking error with the prefix, the colour as the list shows it ---
+    // On a Czech install the document's registration swatch is "[Registrační]";
+    // the stored token "[Registration]" must not reach the operator (spec 9.5).
+    function nameAlertFor(swatches, rowColour) {
+        var seen = [], oA = global.alert, shown = {};
+        global.alert = function (m) { seen.push(String(m)); };
+        var rgb = {};
+        for (var si = 0; si < swatches.length; si++) rgb[swatches[si]] = "REG";
+        var d = dataOf({ layers: [{ name: "Cut", color: rowColour }] });
+        try {
+            ZSM.UI.buildDialog("ZUND", d, { swatches: swatches, swatchRGB: rgb, layers: ZSM.Draw.getLayerNames(),
+                detectedColor: "Cut", drawingScale: 1 });
+            var wN = SUI.lastWindow();
+            var panelN = wN.findOne(function (c) { return c.type === "panel" && c.text === ZSM.L.PANEL_LAYERS; });
+            // The row's second dropdown is the colour (the first lists the layers).
+            shown.colour = ZSM.UI.ddlValue(panelN.find(function (c) { return c.type === "dropdownlist"; })[1]);
+            panelN.findOne(function (c) { return c.type === "edittext"; }).text = "";
+            okOf(wN).onClick();
+        } finally { global.alert = oA; }
+        shown.alerts = seen;
+        return shown;
+    }
+    var CZ_REG = "[Registrační]", origRegName = ZSM.Draw.getRegistrationName;
+    ZSM.Draw.getRegistrationName = function () { return CZ_REG; };
     try {
-        var wName = buildAndCapture("ZUND", dataOf({}));
-        var panel = wName.findOne(function (c) { return c.type === "panel" && c.text === ZSM.L.PANEL_LAYERS; });
-        var etName = panel.findOne(function (c) { return c.type === "edittext"; });
-        etName.text = "";
-        okOf(wName).onClick();
-    } finally { global.alert = oAlert; }
-    assertEq(nameAlerts.length, 1, "a layer row without a name: one alert");
-    assertEq(nameAlerts[0], "ERR: " + ZSM.L.format(ZSM.L.ERR_LAY_NAME, "[Registration]"), "...with the prefix");
+        var nameReg = nameAlertFor([CZ_REG, "Cut", "Kiss-cut"], "[Registration]");
+        assertEq(nameReg.colour, CZ_REG, "a row on the registration colour: the list shows the document's swatch name");
+        assertEq(nameReg.alerts.length, 1, "...a layer row without a name: one alert");
+        assertEq(nameReg.alerts[0], "ERR: " + ZSM.L.format(ZSM.L.ERR_LAY_NAME, CZ_REG),
+            "...with the prefix and the colour as the list shows it (got: " + nameReg.alerts[0] + ")");
+        assert(nameReg.alerts[0].indexOf("[Registration]") === -1, "...never the stored token [Registration]");
+        var nameCut = nameAlertFor([CZ_REG, "Cut", "Kiss-cut"], "Cut");
+        assertEq(nameCut.alerts[0], "ERR: " + ZSM.L.format(ZSM.L.ERR_LAY_NAME, "Cut"), "a spot colour is named as it is");
+    } finally {
+        if (origRegName === undefined) delete ZSM.Draw.getRegistrationName; else ZSM.Draw.getRegistrationName = origRegName;
+    }
 
     // --- settings that could not be saved from the preset buttons: the preset sentence, the dialog stays ---
     var saveAlerts = [], oAlert2 = global.alert, oPrompt = global.prompt, origStorage23 = ZSM.Storage;
