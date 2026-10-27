@@ -4,7 +4,7 @@ Nástroj: `zund-summa-marks`, namespace `ZSM`. Navazuje na vydání 1.1.0
 (2026-10-03, tag `zund-summa-marks/v1.1.0`, veřejný — oprava znamená novou
 verzi).
 
-Datum: 2026-10-23 · Stav: **návrh, čeká na schválení**
+Datum: 2026-10-23 · Stav: **schváleno 2026-10-23, implementováno na větvi `feat/zund-summa-marks-1.2.0`**
 
 Vzniklo z prověrky nálezů dvou auditů společného jazyka pro ZSM
 (2026-10-17 až 2026-10-19: čtyři ověřovatelé proti kódu, převod čísel
@@ -513,7 +513,8 @@ Zpět a rozměry dialogu zund-summa-marks 1.2.0“, 2026-10-24).
   ukazoval jen „Thru-cut", protože `detectCutColor` vrací první barvu podle
   priority. Uživatel zvolil vypsat všechny: nové `ZSM.Draw.detectCutColors()`
   (CutContour → Thru-cut → Kiss-cut → Cut, v zápisu dokumentu), řádek je
-  ukáže dvě jménem a zbytek jako „+N" (`řezy: „Thru-cut", „Kiss-cut"`).
+  ukáže počet všech a nejvýš dvě jména, bez „+N", aby zkrácení konce
+  počet neschovalo (`řezy (2): „Thru-cut", „Kiss-cut"`).
   Měřítko se přesunulo před řezové barvy: řádek se zkracuje na konci a dlouhý
   seznam barev nesmí schovat měřítko. `detectCutColor` dál vrací první barvu
   (plní [Výchozí]). Šířka `M.STATUS_W` se nemění: nejširší změřený text má

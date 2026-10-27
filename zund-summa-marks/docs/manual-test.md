@@ -29,7 +29,7 @@ a po testu ho vrať.
 | dokument | příprava |
 |---|---|
 | Forex | nový dokument 1560 × 3050 mm, CMYK, jednotky mm; ve vrstvě obdélník ~1500 × 3000 mm (grafika); přímá barva **Cut** a pár cest v ní |
-| malý | nový dokument s obdélníkem 100 × 100 mm, pro čísla v sekci 6 |
+| malý | nový dokument s obdélníkem 100 × 100 mm, pro čísla v sekci 7 |
 
 **Výchozí nastavení:** tlačítko **Výchozí** v panelu Předvolby. Řádek
 mapování dostane řezovou barvu, kterou skript v dokumentu najde — ve Forex
@@ -201,12 +201,14 @@ a přesouvá cesty čistě v řezové barvě.
   a říká, co skript našel: `ZUND · řez „Cut“`, v Dle artboardu
   `ZUND · artboard 1 560 × 3 050 mm · řez „Cut“`, se zaškrtnutým Pouze značky
   `… · pouze značky`, v dokumentu bez řezové barvy `… · řez nenalezen`.
-  Dokument s přímými barvami Thru-cut a Kiss-cut → `… · řezy: „Thru-cut“,
-  „Kiss-cut“` (obě, ne jen první); se čtyřmi známými řezovými barvami dvě
-  jménem a „+2“. Klikněte
+  Dokument s přímými barvami Thru-cut a Kiss-cut → `… · řezy (2): „Thru-cut“,
+  „Kiss-cut“` (obě, ne jen první); dokument se čtyřmi známými řezovými
+  barvami → `… · řezy (4): „CutContour“, „Thru-cut“` — počet je vidět a nic
+  důležitého není useknuté. Klikněte
   na „+ Přidat“ (nový řádek dostane stejnou řezovou barvu) → červeně
   „✗ Barva „Cut“ je přiřazena více vrstvám — odeberte duplicitu.“, celé,
-  nic se neuřízne. Po odebrání řádku se vrátí šedý nález. Projděte to na
+  nic se neuřízne. Totéž s barvou „CUTCONTOUR“ (velkými písmeny) v řádku
+  mapování: po „+ Přidat“ je červený důvod také vidět celý. Po odebrání řádku se vrátí šedý nález. Projděte to na
   tmavém i světlém jasu uživatelského rozhraní (Illustrator › Nastavení ›
   Uživatelské rozhraní › Jas): červená je čitelná, šedý nález vypadá jako
   zašedlý text, ne jinak.

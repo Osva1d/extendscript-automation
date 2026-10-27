@@ -50,7 +50,8 @@ ve stejném kroku s ostatními změnami by ji Illustrator nevrátil vůbec. SUMM
 s ořezovými linkami má kroků víc než ZUND: běh ZUND s mapováním vrátí dva kroky
 (značky a vrstvy, pak artboard), běh SUMMA s mapováním a ořezovými linkami
 čtyři (poslední je artboard); další krok už vrací vaši úpravu z doby před
-spuštěním. Měřítko kresby, které běh zapsal do dokumentu, Zpět nevrátí.
+spuštěním. Počty jsou změřené příkazem menu Úpravy › Zpět; Cmd+Z po běhu
+z menu Soubor › Skripty ověřuje ruční test (oddíl 3). Měřítko kresby, které běh zapsal do dokumentu, Zpět nevrátí.
 
 ### Módy
 
@@ -58,7 +59,7 @@ spuštěním. Měřítko kresby, které běh zapsal do dokumentu, Zpět nevrát�
 
 **Dle artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu.
 
-Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, měřítko, když není 1:1, a všechny známé řezové barvy, které v dokumentu našel (dvě jménem, další jako „+N“), nebo „řez nenalezen“ — například `ZUND · artboard 1 560 × 3 050 mm · 1:10 · řezy: „Thru-cut“, „Kiss-cut“`. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
+Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, měřítko, když není 1:1, a známé řezové barvy, které v dokumentu našel (u dvou a více počet všech a nejvýš dvě jména), nebo „řez nenalezen“ — například `ZUND · artboard 1 560 × 3 050 mm · 1:10 · řezy (2): „Thru-cut“, „Kiss-cut“`. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
 
 Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
 
