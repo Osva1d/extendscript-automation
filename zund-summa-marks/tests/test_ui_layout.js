@@ -87,7 +87,7 @@ ZSM.L = {
     // The status line at rest (spec 1.2.0 §7), Czech: the tests read the spec's text back.
     STATUS_FOUND_ARTBOARD: "artboard %s × %s mm", STATUS_FOUND_ARTWORK: "grafika %s × %s mm",
     STATUS_FOUND_CUT: "řez „%s“", STATUS_NO_CUT: "řez nenalezen",
-    STATUS_FOUND_CUTS: "řezy: %s", STATUS_CUT_NAME: "„%s“", STATUS_CUT_MORE: " +%s", STATUS_MARKS_ONLY: "pouze značky",
+    STATUS_FOUND_CUTS: "řezy (%s): %s", STATUS_CUT_NAME: "„%s“", STATUS_MARKS_ONLY: "pouze značky",
     THOU_SEP: " ",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -1862,9 +1862,9 @@ console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the
 // TEST 25 (spec 1.2.0 §7): the finding names every cut colour found
 // =====================================================
 // A document with Thru-cut and Kiss-cut showed only „Thru-cut“. The finding
-// now lists the known cut colours the document has, at most two by name and
-// "+N" for the rest; the scale comes before them, so a long list is what
-// the label's end-truncation cuts, never the scale.
+// now lists the known cut colours the document has: the count of all of them
+// first, then at most two names, so the label's end-truncation can cut a
+// name but never the count; the scale comes before them too.
 console.log("\n=== TEST 25 (spec 1.2.0 §7): every cut colour found is in the status line ===");
 (function () {
     var localeSrc = fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8");
@@ -1878,15 +1878,15 @@ console.log("\n=== TEST 25 (spec 1.2.0 §7): every cut colour found is in the st
         ZSM.L = realL("cs_CZ");
         assertEq(ft([]), "ZUND · artboard 1 560 × 3 050 mm · řez nenalezen", "cs: none found");
         assertEq(ft(["Cut"]), "ZUND · artboard 1 560 × 3 050 mm · řez „Cut“", "cs: one, as before");
-        assertEq(ft(["Thru-cut", "Kiss-cut"]), "ZUND · artboard 1 560 × 3 050 mm · řezy: „Thru-cut“, „Kiss-cut“",
+        assertEq(ft(["Thru-cut", "Kiss-cut"]), "ZUND · artboard 1 560 × 3 050 mm · řezy (2): „Thru-cut“, „Kiss-cut“",
             "cs: two, both by name");
         assertEq(ft(["CutContour", "Thru-cut", "Kiss-cut", "Cut"]),
-            "ZUND · artboard 1 560 × 3 050 mm · řezy: „CutContour“, „Thru-cut“ +2", "cs: four, two by name and +2");
+            "ZUND · artboard 1 560 × 3 050 mm · řezy (4): „CutContour“, „Thru-cut“", "cs: four, the count of all and two names");
         assertEq(ft(["Thru-cut", "Kiss-cut"], 10),
-            "ZUND · artboard 15 600 × 30 500 mm · 1:10 · řezy: „Thru-cut“, „Kiss-cut“", "cs: the scale before the cut colours");
+            "ZUND · artboard 15 600 × 30 500 mm · 1:10 · řezy (2): „Thru-cut“, „Kiss-cut“", "cs: the scale before the cut colours");
         ZSM.L = realL("en_US");
         assertEq(ft(["Thru-cut", "Kiss-cut", "Cut"]),
-            "ZUND · artboard 1,560 × 3,050 mm · cuts: \"Thru-cut\", \"Kiss-cut\" +1", "en: plural, +1");
+            "ZUND · artboard 1,560 × 3,050 mm · cuts (3): \"Thru-cut\", \"Kiss-cut\"", "en: three, the count of all");
     } finally {
         ZSM.L = origL;
     }

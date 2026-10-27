@@ -1406,8 +1406,8 @@ ZSM.UI = {
      * found in the document. The mode; the artboard (Fixed) or the artwork
      * (Auto-fit, SUMMA) at real size — × N, as every value in the dialog is
      * real size — left out when unknown; the scale when not 1:1, written as
-     * the field writes it; then every known cut colour found (two by name,
-     * the rest as "+N"), or that none was, or "marks only" when the mapping
+     * the field writes it; then every known cut colour found (with two or more
+     * the count of all first, then two names), or that none was, or "marks only" when the mapping
      * is off.
      * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork,
      *     cutColors, scale}; artboard / artwork {w, h} in document mm or null,
@@ -1435,11 +1435,11 @@ ZSM.UI = {
             } else if (cuts.length === 1) {
                 parts.push(L.format(L.STATUS_FOUND_CUT, cuts[0]));
             } else {
-                // At most two by name, the rest as "+N".
+                // The count of all first (truncation hides the end), then at
+                // most two names.
                 var named = [];
                 for (var i = 0; i < cuts.length && i < 2; i++) named.push(L.format(L.STATUS_CUT_NAME, cuts[i]));
-                var more = (cuts.length > 2) ? L.format(L.STATUS_CUT_MORE, cuts.length - 2) : "";
-                parts.push(L.format(L.STATUS_FOUND_CUTS, named.join(", ")) + more);
+                parts.push(L.format(L.STATUS_FOUND_CUTS, cuts.length, named.join(", ")));
             }
         }
         return parts.join(" · ");

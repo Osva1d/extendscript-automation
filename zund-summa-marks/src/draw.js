@@ -112,8 +112,10 @@ ZSM.Draw = {
             if (conflict) {
                 var conflictMsg = { overlap: ZSM.L.ERR_MARKS_OVERLAP, orient: ZSM.L.ERR_MARKS_ORIENT,
                                     outside: ZSM.L.ERR_MARKS_OUTSIDE }[conflict.type];
-                ZSM.Utils.error(ZSM.L.format(conflictMsg, Math.round(conflict.dist * 10) / 10,
-                    (s.mode === "SUMMA") ? s.markSizeS : s.markSizeZ));
+                // Numbers as a field writes them (Czech "2,5"), not with a dot.
+                ZSM.Utils.error(ZSM.L.format(conflictMsg,
+                    ZSM.Numbers.format(Math.round(conflict.dist * 10) / 10),
+                    ZSM.Numbers.format((s.mode === "SUMMA") ? s.markSizeS : s.markSizeZ)));
                 return false;
             }
 
@@ -169,8 +171,8 @@ ZSM.Draw = {
             try { summaSub = reg.layers.getByName("Summa"); } catch (e) {}
 
             // Only the sublayers "Zünd" and "Summa" are the script's. Tile Export
-            // draws straight into Regmarks and an operator may keep their own
-            // content there; a rule from the versions before 1.0.0 (marks
+            // draws its exported Zünd PDFs straight into Regmarks and an
+            // operator may keep their own content there; a rule from the versions before 1.0.0 (marks
             // directly on Regmarks) cleared the whole layer when neither
             // sublayer existed. Now everything else stays and the run ends by
             // saying how many objects that is (old marks of such a job stay
@@ -548,7 +550,9 @@ ZSM.Draw = {
                 var trimWasHidden = !trimLayer.visible;
                 trimLayer.locked = false; trimLayer.visible = true;
                 if (trimWasHidden && unhidden) unhidden.push(ZSM.Config.layerTrim);
-            } catch (eu) {}
+            } catch (eu) {
+                ZSM.Utils.log("render: unhiding the Trim layer failed — " + eu.message);
+            }
             // Refresh: drop only the script's own lines — foreign content stays.
             if (this._clearOwnTrimLines(trimLayer) > 0 && warnings) warnings.push(ZSM.L.WARN_TRIM_FOREIGN);
             try { app.redraw(); } catch (rd) {}

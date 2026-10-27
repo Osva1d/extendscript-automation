@@ -1375,6 +1375,20 @@ assertEq(orient38.drew, false, "a mark conflict (ERR_MARKS_ORIENT) returns false
 assert(orient38.alerts.join("\n").indexOf("marks orient") >= 0, "...after its message");
 assert(findLayer(orient38.doc, "Regmarks") === null, "...and nothing was drawn");
 
+// The numbers in the message are written the way a field writes them (Czech "12,3").
+(function () {
+    var origFind = ZSM.Core.findMarkConflict, origSep = ZSM.L.DEC_SEP;
+    ZSM.Core.findMarkConflict = function () { return { type: "overlap", dist: 12.34 }; };
+    ZSM.L.DEC_SEP = ",";
+    try {
+        var dec38 = render38(art38(120), { mode: "ZUND", markSizeZ: 2.5 });
+        assert(dec38.alerts.join("\n").indexOf("marks overlap 12,3 2,5") >= 0,
+            "ERR_MARKS_* numbers use the locale's decimal separator (got: " + dec38.alerts.join("|") + ")");
+    } finally {
+        ZSM.Core.findMarkConflict = origFind; ZSM.L.DEC_SEP = origSep;
+    }
+})();
+
 var nan38 = render38(art38(120), null, function (g) { g.marksZ[0].cx = NaN; });
 assertEq(nan38.drew, false, "invalid geometry returns false");
 
