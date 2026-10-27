@@ -62,6 +62,9 @@ console.log("\n=== an intro line comes first ===");
 S.show(opts({ intro: "Cílová složka: „/Users/shop/out“", pairs: [{ label: "Exportováno:", value: 1, always: true }] }));
 assert(last().children[0].type === "statictext" && last().children[0].text === "Cílová složka: „/Users/shop/out“",
     "the intro line above the counts");
+var intro = last().children[0];
+assert(intro.preferredSize.width === undefined && intro.minimumSize.width === S.NOTE_W,
+    "the intro keeps its own width, at least NOTE_W: a long folder path is not cut");
 
 console.log("\n=== with FieldPaint built, its red ===");
 var NS2 = {};
