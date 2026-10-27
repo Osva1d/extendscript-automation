@@ -58,7 +58,7 @@ spuštěním. Měřítko kresby, které běh zapsal do dokumentu, Zpět nevrát�
 
 **Dle artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu.
 
-Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, řezovou barvu (nebo „řez nenalezen“) a měřítko, když není 1:1 — například `ZUND · artboard 1 560 × 3 050 mm · řez „CutContour“ · 1:10`. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
+Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, měřítko, když není 1:1, a všechny známé řezové barvy, které v dokumentu našel (dvě jménem, další jako „+N“), nebo „řez nenalezen“ — například `ZUND · artboard 1 560 × 3 050 mm · 1:10 · řezy: „Thru-cut“, „Kiss-cut“`. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
 
 Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
 
@@ -87,7 +87,7 @@ Preset si pamatuje i mód. Výběr presetu jiného módu (nebo ↺ na něj) pře
 
 Pole **Měřítko kresby 1:** v panelu Nastavení výstupu říká, v jakém měřítku je dokument nakreslený: 1:10 znamená, že grafika je desetkrát menší než ve skutečnosti. Hodnoty v dialogu (mezery, rozteč, velikost značek) zadáváte ve skutečné velikosti a skript je vydělí. Platí číslo od 1 do 100, i desetinné (`2,5`).
 
-Měřítko patří dokumentu, ne předvolbě: pole se při otevření vyplní tím, co si dokument pamatuje (nic uloženého = 1), a do dokumentu se zapíše po běhu, který kreslil, jen když se změnilo. Přepnutí režimu, výběr předvolby ani tlačítko Výchozí ho nemění. Dokument si ho pamatuje ve stejném klíči jako Tile Export a Grommet Marks, takže měřítko zapsané jedním nástrojem nabídnou i ostatní. Je-li jiné než 1:1, stojí i v titulku dialogu („— 1:10“) a na konci stavového řádku.
+Měřítko patří dokumentu, ne předvolbě: pole se při otevření vyplní tím, co si dokument pamatuje (nic uloženého = 1), a do dokumentu se zapíše po běhu, který kreslil, jen když se změnilo. Přepnutí režimu, výběr předvolby ani tlačítko Výchozí ho nemění. Dokument si ho pamatuje ve stejném klíči jako Tile Export a Grommet Marks, takže měřítko zapsané jedním nástrojem nabídnou i ostatní. Je-li jiné než 1:1, stojí i v titulku dialogu („— 1:10“) a ve stavovém řádku.
 
 - **Dokument z verze 1.1.0**, který jste kreslili v měřítku, měřítko v sobě nemá a otevře se v 1:1. Zadejte měřítko jednou do pole; po Generovat si ho dokument pamatuje.
 - **Zpět** vrátí značky a artboard, ne měřítko: po Zpět dialog nabídne měřítko vráceného běhu. Přepište pole; dokument bez měřítka dostanete zadáním 1 a jedním Generovat.

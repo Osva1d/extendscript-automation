@@ -508,3 +508,14 @@ Zpět a rozměry dialogu zund-summa-marks 1.2.0“, 2026-10-24).
   artboard (ani 1.1.0), příkaz menu Zpět ano. README, CHANGELOG a ruční test
   proto mluví o krocích naměřených příkazem menu; Cmd+Z po běhu z menu Soubor
   › Skripty ověří ruční test (oddíl 3).
+- **Řádek nálezu vypisuje všechny známé řezové barvy** (§7 počítal s jednou,
+  `řez „Cut"`). Ruční kontrola 2026-10-24: dokument s Thru-cut a Kiss-cut
+  ukazoval jen „Thru-cut", protože `detectCutColor` vrací první barvu podle
+  priority. Uživatel zvolil vypsat všechny: nové `ZSM.Draw.detectCutColors()`
+  (CutContour → Thru-cut → Kiss-cut → Cut, v zápisu dokumentu), řádek je
+  ukáže dvě jménem a zbytek jako „+N" (`řezy: „Thru-cut", „Kiss-cut"`).
+  Měřítko se přesunulo před řezové barvy: řádek se zkracuje na konci a dlouhý
+  seznam barev nesmí schovat měřítko. `detectCutColor` dál vrací první barvu
+  (plní [Výchozí]). Šířka `M.STATUS_W` se nemění: nejširší změřený text má
+  jednu barvu, stejné znaky jen v jiném pořadí; seznam dvou dlouhých jmen se
+  na konci zkrátí.
