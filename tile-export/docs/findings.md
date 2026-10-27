@@ -146,6 +146,7 @@ polích.
 | N50 | při měřítku kresby 100 byl v panelu Dokument useknutý čistý formát a spad („dole 50“ místo 500 mm) a volba „1:100 jako kre…“: rozvržení s nejširšími texty běželo až po načtení předvolby, jejíž změna výběru v seznamu dialog rozvrhla se skutečnými hodnotami (ruční test 1.1.0, 2026-10-17) | `a5c923c` |
 | N49 | návrh uživatele (ruční test 1.1.0): levý sloupec užší — volby umístění přelepu pod sebou, dostupný spad na dvou řádcích, seznam předvoleb bez vlivu na šířku, text přepínačů a zaškrtávátek ve výšce popisku; dialog 1022 × 836 px místo 1178 × 836 (1.2.0, 2026-10-20) | `a6c38b2` |
 | N51 | s vybranou čárkovanou cestou vyšly linky kontrolních plátů i řez Zünd čárkované se zaoblenými konci — nová cesta přebírá styl tahu z výběru; export ne, nový dokument začíná čistý (audit P3, změřeno 2026-10-20) | `693c128` |
+| N52 | souhrn exportu usekl cílovou složku delší než asi 62 znaků — úvodní řádek měl pevných 500 px (`/Volumes/Data/Zakázky/2026/10/26_13456 Kaufland Praha/tisk/pláty` potřebuje 515); teď má svou šířku a 500 px je jen minimum (test 1.13 sondou, 2026-10-27) | `066415f` |
 
 Opraveno přímo během testu, bez čísla: desetinná čárka se v dialogu zahazovala
 (`bf78166`), souhrn ukazoval celé milimetry (`19d7a11`), vypnutá linka

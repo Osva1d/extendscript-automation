@@ -152,8 +152,9 @@ a exportovat: okno průběhu ukazuje plát, „(n z 12)“ a ukazatel. Podržet 
 hláška „Zastavuji — rozpracovaný plát se dokončí…“, export skončí po plátu, který
 běžel, a souhrn napíše „Zastaveno po n z 12 plátů.“ bez „Vše proběhlo bez
 chyb.“ Celý export: souhrn s cílovou složkou, Exportováno 12, Chyby 0 a „Vše
-proběhlo bez chyb.“ Se zaškrtnutým **Po dokončení otevřít cílovou složku** se
-složka otevře ve Finderu. Prázdná cílová složka: „✗ Vyberte cílovou složku.“
+proběhlo bez chyb.“ Dlouhá cílová složka (přes 62 znaků) se v souhrnu
+neusekne, okno se rozšíří (N52). Se zaškrtnutým **Po dokončení otevřít cílovou
+složku** se složka otevře ve Finderu. Prázdná cílová složka: „✗ Vyberte cílovou složku.“
 ve Výsledku, export šedý, Jen pláty aktivní; Vybrat… se ptá stejnými slovy.
 
 **1.14 Přeskočit hotové výstupy (1.2.0).** Uložený dokument, export, pak znovu
@@ -214,4 +215,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N51.
+další číslo v [nálezech](findings.md), naposledy N52.
