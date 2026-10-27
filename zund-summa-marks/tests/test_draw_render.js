@@ -1638,6 +1638,23 @@ global.alert = origAlert42;
 
 
 // =====================================================
+// TEST 43 (spec 1.2.0 §7): every known cut colour in the document is found
+// =====================================================
+// The status line said only the first known cut colour detectCutColor found,
+// so a document with Thru-cut and Kiss-cut read as "řez „Thru-cut“". The line
+// now lists every known cut spot, in detectCutColor's priority order;
+// detectCutColor keeps answering the first one (it seeds [Výchozí]).
+console.log("\n=== TEST 43 (spec 1.2.0 §7): detectCutColors lists every known cut spot ===");
+setupDoc({ spots: [{ name: "Kiss-cut" }, { name: "Bílá" }, { name: "Thru-cut" }, { name: "cut" }], layers: [] });
+assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), JSON.stringify(["Thru-cut", "Kiss-cut", "cut"]),
+    "known cut spots in priority order, the document's own case, others left out");
+assertEq(ZSM.Draw.detectCutColor(), "Thru-cut", "detectCutColor still answers the first one");
+setupDoc({ spots: [{ name: "Bílá" }], layers: [] });
+assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), "[]", "no known cut spot: an empty list");
+assertEq(ZSM.Draw.detectCutColor(), ZSM.Draw.getRegistrationName(), "...and detectCutColor keeps its registration fallback");
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 Mock.uninstall();

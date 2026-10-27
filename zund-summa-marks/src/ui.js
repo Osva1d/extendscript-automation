@@ -82,6 +82,7 @@ ZSM.UI = {
             swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
             detectedColor: ZSM.Draw.detectCutColor(),
+            cutColors:     ZSM.Draw.detectCutColors(),
             drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1,
             artboard:      this.activeArtboardSize(),
             artwork:       null
@@ -563,6 +564,9 @@ ZSM.UI = {
         // detectCutColor falls back to the registration swatch when no known
         // cut spot exists, and registration cannot be a cut colour.
         var docCut = (canonColor(docData.detectedColor) === "[Registration]") ? "" : (docData.detectedColor || "");
+        // Every known cut colour, for the finding; older docData (tests) carry
+        // only detectedColor.
+        var docCuts = docData.cutColors || (docCut ? [docCut] : []);
 
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
@@ -1231,7 +1235,7 @@ ZSM.UI = {
                     marksOnly: marksOnlyOn,
                     artboard:  docData.artboard,
                     artwork:   docData.artwork,
-                    cutColor:  docCut,
+                    cutColors: docCuts,
                     scale:     parseNum(etScale)   // valid here: allValid includes the field
                 });
                 stFound.visible  = true;
@@ -1401,12 +1405,13 @@ ZSM.UI = {
      * The status line at rest (spec 1.2.0 §7, canon 12.3): what the script
      * found in the document. The mode; the artboard (Fixed) or the artwork
      * (Auto-fit, SUMMA) at real size — × N, as every value in the dialog is
-     * real size — left out when unknown; the cut colour found, or that none
-     * was, or "marks only" when the mapping is off; the scale when not 1:1,
-     * written as the field writes it.
+     * real size — left out when unknown; the scale when not 1:1, written as
+     * the field writes it; then every known cut colour found (two by name,
+     * the rest as "+N"), or that none was, or "marks only" when the mapping
+     * is off.
      * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork,
-     *     cutColor, scale}; artboard / artwork {w, h} in document mm or null,
-     *     cutColor "" for none found, scale the valid N of 1:N.
+     *     cutColors, scale}; artboard / artwork {w, h} in document mm or null,
+     *     cutColors the names found ([] for none), scale the valid N of 1:N.
      * @returns {string}
      */
     foundText: function (st) {
@@ -1418,9 +1423,25 @@ ZSM.UI = {
             parts.push(L.format(st.fixed ? L.STATUS_FOUND_ARTBOARD : L.STATUS_FOUND_ARTWORK,
                 ZSM.UI.formatSize(size.w * n), ZSM.UI.formatSize(size.h * n)));
         }
-        if (st.marksOnly) parts.push(L.STATUS_MARKS_ONLY);
-        else parts.push(st.cutColor ? L.format(L.STATUS_FOUND_CUT, st.cutColor) : L.STATUS_NO_CUT);
+        // The scale before the cut colours: the label truncates at its end,
+        // and a long list of colours must never hide the scale.
         if (n !== 1) parts.push("1:" + ZSM.Numbers.format(n));
+        if (st.marksOnly) {
+            parts.push(L.STATUS_MARKS_ONLY);
+        } else {
+            var cuts = st.cutColors || [];
+            if (cuts.length === 0) {
+                parts.push(L.STATUS_NO_CUT);
+            } else if (cuts.length === 1) {
+                parts.push(L.format(L.STATUS_FOUND_CUT, cuts[0]));
+            } else {
+                // At most two by name, the rest as "+N".
+                var named = [];
+                for (var i = 0; i < cuts.length && i < 2; i++) named.push(L.format(L.STATUS_CUT_NAME, cuts[i]));
+                var more = (cuts.length > 2) ? L.format(L.STATUS_CUT_MORE, cuts.length - 2) : "";
+                parts.push(L.format(L.STATUS_FOUND_CUTS, named.join(", ")) + more);
+            }
+        }
         return parts.join(" · ");
     },
 

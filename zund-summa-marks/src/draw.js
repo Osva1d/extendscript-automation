@@ -1088,31 +1088,48 @@ ZSM.Draw = {
     },
 
     /**
-     * Detects the most likely cut-path spot color in the active document.
-     * Checks document spots against a priority list of industry-standard
-     * cut color names (case-insensitive). Returns the first match.
-     * Falls back to localized Registration name if no match found.
+     * Every known cut-path spot colour in the active document: document
+     * spots matched against industry-standard cut colour names
+     * (case-insensitive), in priority order, each in the document's own case.
+     * The status line lists them (spec 1.2.0 §7).
      *
      * Priority: CutContour (Versaworks/Onyx/Caldera) → Thru-cut (Zünd) →
      *           Kiss-cut (Zünd) → Cut (generic)
      *
-     * @returns {string} Detected spot color name or Registration fallback.
+     * @returns {string[]} Spot names; empty when the document has none.
      */
-    detectCutColor: function () {
+    detectCutColors: function () {
         var priority = ["cutcontour", "thru-cut", "kiss-cut", "cut"];
+        var found = [];
         try {
             var spots = app.activeDocument.spots;
             for (var p = 0; p < priority.length; p++) {
                 for (var i = 0; i < spots.length; i++) {
                     try {
                         if (spots[i].name.toLowerCase() === priority[p]) {
-                            return spots[i].name; // preserve original case
+                            found.push(spots[i].name); // preserve original case
+                            break;
                         }
-                    } catch (e2) {}
+                    } catch (e2) {
+                        ZSM.Utils.log("detectCutColors: spot " + i + " unreadable: " + e2.message);
+                    }
                 }
             }
-        } catch (e) {}
-        return this.getRegistrationName();
+        } catch (e) {
+            ZSM.Utils.log("detectCutColors: spots unreadable: " + e.message);
+        }
+        return found;
+    },
+
+    /**
+     * The first known cut spot (detectCutColors' priority order), or the
+     * registration name when the document has none. Seeds [Výchozí]'s
+     * mapping row.
+     * @returns {string}
+     */
+    detectCutColor: function () {
+        var found = this.detectCutColors();
+        return found.length > 0 ? found[0] : this.getRegistrationName();
     },
 
     /**
