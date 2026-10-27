@@ -22,7 +22,8 @@ function buildSummary(NS) {
         LABEL_W: 150,
         VALUE_W: 60,
         // [deviation] wrap width (§4, reason 3): a note in one line of 500 px;
-        // the details box 480 x 200 px scrolls past that.
+        // the details box 480 x 200 px scrolls past that. Only a floor for
+        // the intro, which may be longer (see show).
         NOTE_W: 500,
         DETAILS: [480, 200],
         // The canon's red (§12.6), used when NS.FieldPaint is not built.
@@ -58,7 +59,11 @@ function buildSummary(NS) {
 
             if (o.intro) {
                 var stIntro = w.add("statictext", undefined, o.intro);
-                stIntro.preferredSize.width = this.NOTE_W;
+                // Its own width, at least NOTE_W: the intro names a folder,
+                // and at a fixed 500 px a path past ~62 characters was cut
+                // (2026-10-27). The text is set before show(), so the label
+                // measures it; a long path widens the window instead.
+                stIntro.minimumSize.width = this.NOTE_W;
             }
 
             var gPairs = w.add("group");

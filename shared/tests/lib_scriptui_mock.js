@@ -9,6 +9,7 @@ function Control(type, text, props) {
     this.props = props;
     this.children = [];
     this.preferredSize = {};
+    this.minimumSize = {};
     this.graphics = {
         PenType: { SOLID_COLOR: "solid" },
         newPen: function (t, color) { return { color: color }; }
