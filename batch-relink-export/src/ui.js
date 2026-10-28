@@ -418,144 +418,56 @@ BRE.UI = {
     },
 
     // ---------------------------------------------------------------------
-    // Progress palette
+    // Progress palette and summary — the shared modules progress.js and
+    // summary.js (extendscript-ui-standards §12.5); BRE hands them its texts.
     // ---------------------------------------------------------------------
 
     /**
-     * Creates and shows a progress palette. The batch is stopped by holding
-     * Esc: a palette button gets no clicks while the script runs — Illustrator
-     * does not dispatch them, however the loop redraws or waits — but the
-     * keyboard state can be read (both measured, AI 30.8.2).
+     * Creates and shows the progress palette (BRE.Progress). The batch stops
+     * on held Esc, after the file in progress.
      * @param {number} total - Total number of files.
      * @returns {Object} { isCancelled(), poll(), update(i, name), finish(), close() }
      */
     createProgress: function (total) {
         var l = BRE.L;
-
-        var dlg = new Window("palette", l.PROGRESS_TITLE, undefined, { closeButton: false });
-        dlg.orientation = "column";
-        dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 15;
-        dlg.spacing = 10;
-
-        var statusText = dlg.add("statictext", undefined, l.PROGRESS_INIT);
-        statusText.preferredSize.width = 450;
-        var bar = dlg.add("progressbar", undefined, 0, total);
-        bar.preferredSize.width = 450;
-
-        var cancelled = false;
-        var stopHint = dlg.add("statictext", undefined, l.PROGRESS_STOP_HINT);
-        stopHint.preferredSize.width = 450;
-        stopHint.justify = "center";
-
-        // Latches a stop request while Esc is held. The loop acts on it
-        // between files, so the file in progress is finished.
-        function poll() {
-            if (cancelled) return;
-            try {
-                if (ScriptUI.environment.keyboardState.keyName === "Escape") {
-                    cancelled = true;
-                    stopHint.text = l.PROGRESS_STOPPING;
-                    dlg.update();
-                }
-            } catch (e) {}
-        }
-
-        dlg.show();
-
-        return {
-            isCancelled: function () {
-                poll();
-                return cancelled;
-            },
-            poll: poll,
-            update: function (index, fileName) {
-                // Keep the status line from overflowing on long names.
-                var nm = fileName;
-                if (nm.length > 38) nm = nm.substr(0, 18) + "…" + nm.substr(nm.length - 17);
-                statusText.text = l.format(l.PROGRESS_FILE,
-                    nm, String(index + 1), String(total));
-                bar.value = index;
-                dlg.update();
-                poll();
-            },
-            finish: function () {
-                bar.value = total;
-                dlg.update();
-            },
-            close: function () {
-                try { dlg.close(); } catch (e) {}
-            }
-        };
+        return BRE.Progress.create(total, {
+            title: l.PROGRESS_TITLE,
+            init: l.PROGRESS_INIT,
+            item: l.PROGRESS_FILE,
+            hint: l.PROGRESS_STOP_HINT,
+            stopping: l.PROGRESS_STOPPING
+        });
     },
 
-    // ---------------------------------------------------------------------
-    // Summary log
-    // ---------------------------------------------------------------------
-
     /**
-     * Shows a summary dialog after processing completes.
+     * Shows the summary after processing (BRE.Summary). A stopped batch gets
+     * the cancellation note and never "all OK".
      * @param {Object} results - { success, errors, skipped, blocked, removed,
      *        manual, cancelled, total, log }
      */
     showSummary: function (results) {
         var l = BRE.L;
-
-        var logWin = new Window("dialog", l.LOG_TITLE);
-        logWin.orientation = "column";
-        logWin.alignChildren = ["fill", "top"];
-        logWin.margins = 20;
-        logWin.spacing = 15;
-
-        // Aligned label : value pairs (Errors red when > 0).
-        var RED = [0.76, 0.31, 0.25];
-        var pairsGrp = logWin.add("group");
-        pairsGrp.orientation = "column";
-        pairsGrp.alignChildren = ["left", "center"];
-        pairsGrp.spacing = 3;
-        function addPair(label, val, redIfPositive, force) {
-            if (!force && val === 0) return;
-            var g = pairsGrp.add("group");
-            g.alignChildren = ["left", "center"];
-            g.spacing = 8;
-            var ls = g.add("statictext", undefined, label);
-            ls.preferredSize.width = 150;
-            var vs = g.add("statictext", undefined, String(val));
-            vs.preferredSize.width = 60;
-            if (redIfPositive && val > 0) BRE.UI._color(vs, RED);
-        }
-        addPair(l.LOG_SUCCESS, results.success, false, true);
-        addPair(l.LOG_ERRORS, results.errors, true, true);
-        addPair(l.LOG_SKIPPED, results.skipped, false, true);
-        addPair(l.LOG_BLOCKED, results.blocked, false, false);
-        addPair(l.LOG_REMOVED, results.removed, false, false);
-        addPair(l.LOG_MANUAL_LABEL, results.manual, false, false);
-
+        var note = null;
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
-            var cancST = logWin.add("statictext", undefined,
-                l.format(l.LOG_CANCELLED, String(completed), String(results.total)));
-            cancST.preferredSize.width = 500;
+            note = l.format(l.LOG_CANCELLED, String(completed), String(results.total));
         }
-
-        if (results.log.length > 0) {
-            var detailPanel = logWin.add("panel", undefined, l.LOG_DETAILS);
-            detailPanel.alignChildren = ["fill", "fill"];
-            detailPanel.margins = 15;
-            var logBox = detailPanel.add("edittext", undefined, results.log.join("\n"),
-                { multiline: true, scrolling: true, "readonly": true });
-            logBox.preferredSize = [480, 200];
-        } else if (!results.cancelled) {
-            // A stopped batch is not "all OK" — the rest never ran.
-            logWin.add("statictext", undefined, l.LOG_ALL_OK);
-        }
-
-        var closeGrp = logWin.add("group");
-        closeGrp.alignment = ["right", "center"];
-        closeGrp.spacing = 8;
-        closeGrp.add("button", undefined, l.BTN_CLOSE, { name: "ok" });
-
-        logWin.show();
+        BRE.Summary.show({
+            title: l.LOG_TITLE,
+            pairs: [
+                { label: l.LOG_SUCCESS, value: results.success, always: true },
+                { label: l.LOG_ERRORS, value: results.errors, alert: true, always: true },
+                { label: l.LOG_SKIPPED, value: results.skipped, always: true },
+                { label: l.LOG_BLOCKED, value: results.blocked },
+                { label: l.LOG_REMOVED, value: results.removed },
+                { label: l.LOG_MANUAL_LABEL, value: results.manual }
+            ],
+            note: note,
+            details: results.log,
+            detailsTitle: l.LOG_DETAILS,
+            allOk: l.LOG_ALL_OK,
+            close: l.BTN_CLOSE
+        });
     },
 
     // ---------------------------------------------------------------------

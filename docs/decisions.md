@@ -264,7 +264,7 @@ každého nástroje.
 | `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
 | `registration.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
 | `drawing_scale.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
-| `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | — (převezme ve svém vlákně) |
+| `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | ✓ od 1.2.0 |
 
 Hlavičky modulů v `shared/lib/` jmenují své konzumenty; sdílené testy
 (`npm run test:shared`) zůstávají, protože modul mění chování všem najednou.

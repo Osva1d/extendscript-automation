@@ -22,6 +22,11 @@ mají Grommet Marks, Zünd & Summa Marks i Tile Export.
   a „vzor pojmenování"; volba „Přeskočit existující soubory" se jmenuje
   „Přeskočit hotové výstupy", jako v Tile Exportu. Krátké popisky „Výstup:"
   a „Vzor:" zůstaly kvůli úzkému sloupci popisků.
+- **Okno průběhu a výsledek zpracování jsou sdílené se sadou.** BRE používá
+  moduly `shared/lib/progress.js` a `summary.js`, které z něj vznikly a které
+  má i Tile Export; vlastní kopie zmizely. Texty i chování (zastavení Esc,
+  souhrn bez „Vše proběhlo bez chyb." po zastavení) se nemění, okna mají
+  nativní okraje ScriptUI.
 
 ### Opraveno
 
