@@ -34,12 +34,9 @@ v závorkách odkazují na audity společného jazyka
   v Illustratoru).
 - **Stavový řádek říká, co skript v dokumentu našel (J8).** Šedý řádek nad
   tlačítky ukazuje režim, ve Fixed velikost artboardu ve skutečné velikosti
-  (artboard × měřítko), měřítko, když není 1:1, a všechny známé řezové barvy,
-  které skript v dokumentu našel (CutContour, Thru-cut, Kiss-cut, Cut; u dvou
-  a více nejdřív počet všech a nejvýš dvě jména), nebo „řez nenalezen“, při
-  zapnutém Pouze značky „pouze značky“: `ZUND · artboard 1 560 × 3 050 mm ·
-  1:10 · řezy (2): „Thru-cut“, „Kiss-cut“`. Měřítko a počet stojí před jmény,
-  aby je dlouhý seznam při zkrácení řádku neschoval.
+  (artboard × měřítko), měřítko, když není 1:1, a při zapnutém Pouze značky
+  „pouze značky“: `ZUND · artboard 1 560 × 3 050 mm · 1:10`. Řezové barvy
+  neopakuje — ty ukazují řádky mapování, chybějící s „(chybí)“.
   Dřív opakoval nastavení dialogu a „vrstvy: N“ počítalo řádky mapování, ne
   vrstvy v dokumentu. V režimu Dle grafiky a v SUMMA rozměr grafiky
   neuvádí: změřit grafiku před otevřením dialogu trvá na velkém dokumentu

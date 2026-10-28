@@ -59,7 +59,7 @@ z menu Soubor › Skripty ověřuje ruční test (oddíl 3). Měřítko kresby, 
 
 **Dle artboardu (Fixed)** — artboard se nemění; značky se umisťují od okraje artboardu.
 
-Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, měřítko, když není 1:1, a známé řezové barvy, které v dokumentu našel (u dvou a více počet všech a nejvýš dvě jména), nebo „řez nenalezen“ — například `ZUND · artboard 1 560 × 3 050 mm · 1:10 · řezy (2): „Thru-cut“, „Kiss-cut“`. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
+Stavový řádek nad tlačítky ukazuje, co skript v dokumentu našel: režim, ve Fixed velikost artboardu ve skutečné velikosti, měřítko, když není 1:1, a „pouze značky“, když je mapování vypnuté — například `ZUND · artboard 1 560 × 3 050 mm · 1:10`. Řezové barvy neopakuje: ukazují je řádky mapování. Dokud je Generovat šedé, ukazuje místo toho červeně důvod (✗ a pole s povoleným rozsahem). V režimu Dle grafiky a v SUMMA rozměr grafiky neuvádí: změřit ji před dialogem by na velkém dokumentu trvalo sekundy.
 
 Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka s pravou dolní rohovou u grafiky široké kolem 90 mm) nebo by ve Fixed módu přesahovaly artboard, zastaví běh dřív, než se dokument změní. Hláška řekne, kterou hodnotu upravit.
 

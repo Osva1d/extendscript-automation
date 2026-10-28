@@ -165,7 +165,7 @@ a přesouvá cesty čistě v řezové barvě.
   po sobě Tile Export nechá (artboardy `TE_…`, vrstva `TE_panels`), smažte —
   měřítko leží v metadatech dokumentu a smazání ho nezmění. Spusťte Zünd
   & Summa Marks → pole **Měřítko kresby 1:**
-  ukazuje **10**, titulek končí „— 1:10“, stavový řádek ukazuje „· 1:10 ·“ před řezovou barvou
+  ukazuje **10**, titulek končí „— 1:10“, stavový řádek končí „· 1:10“
   a v režimu Dle artboardu ukazuje artboard ve skutečné velikosti (× 10).
   (b) Změňte pole na **4** a Generovat; otevřete dialog Tile Exportu
   a zavřete ho Storno → nabízí 1:4. (c) Nový dokument → pole ukazuje **1**, ne
@@ -198,13 +198,10 @@ a přesouvá cesty čistě v řezové barvě.
   „Smazat předvolbu „Test A“? Smazání nejde vrátit.“ ↺ stojí vedle seznamu,
   „Uložit jako…“ je na tlačítku celé.
 - [ ] **6.8 Stavový řádek na světlém i tmavém UI.** V klidu je řádek šedý
-  a říká, co skript našel: `ZUND · řez „Cut“`, v Dle artboardu
-  `ZUND · artboard 1 560 × 3 050 mm · řez „Cut“`, se zaškrtnutým Pouze značky
-  `… · pouze značky`, v dokumentu bez řezové barvy `… · řez nenalezen`.
-  Dokument s přímými barvami Thru-cut a Kiss-cut → `… · řezy (2): „Thru-cut“,
-  „Kiss-cut“` (obě, ne jen první); dokument se čtyřmi známými řezovými
-  barvami → `… · řezy (4): „CutContour“, „Thru-cut“` — počet je vidět a nic
-  důležitého není useknuté. Klikněte
+  a říká, co skript našel: `ZUND`, v Dle artboardu
+  `ZUND · artboard 1 560 × 3 050 mm`, se zaškrtnutým Pouze značky
+  `… · pouze značky`. Řezové barvy v řádku nejsou (ukazují je řádky
+  mapování). Klikněte
   na „+ Přidat“ (nový řádek dostane stejnou řezovou barvu) → červeně
   „✗ Barva „Cut“ je přiřazena více vrstvám — odeberte duplicitu.“, celé,
   nic se neuřízne. Totéž s barvou „CUTCONTOUR“ (velkými písmeny) v řádku

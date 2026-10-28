@@ -933,6 +933,14 @@ velkými písmeny je reálný případ — a duplicitní řádek vznikne hned po
 425 px a dialog 465 px. V 1.1.0 se tentýž důvod uřízl (414 px v 408 px, EN
 „Colour CUTCONTOUR is mapped to more than one layer…“ 489 px).
 
+Doměřeno 2026-10-28 (stejná metoda, kalibrace: první řádek tabulky znovu
+425 px): řádek nálezu bez řezové barvy — `ZUND · artboard 99 999,9 ×
+99 999,9 mm · 1:99,9` 298 px (EN 298), s „pouze značky“ 390 px (EN „marks
+only“ 374). Varianty se seznamem barev ze Vzorníku, které uživatel odmítl:
+`… 1 560 × 3 050 mm · řezy ve Vzorníku: „Thru-cut“, „Kiss-cut“, „Cut“`
+492 px, s „Vzorník:“ 440 px, čtyři barvy a 1:10 až 630 px. Nejširší text
+řádku je teď důvod duplicitní „CUTCONTOUR“ (418 px).
+
 **Most: `saveAs` a `-1712`.** Z osmi volání, která dokument uložila do
 `.ai` (`saveAs` s `IllustratorSaveOptions`), pět skončilo na straně
 AppleScriptu timeoutem `-1712` (60–200 s), přestože skript doběhl: soubor
