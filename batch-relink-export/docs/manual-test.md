@@ -51,6 +51,9 @@ soubor kratší) a prázdnou cílovou složku.
   a nic se nezapíše. Podsložka zdrojové složky jako Výstup projde.
 - [ ] **1.4 Náhled (T2).** Dávka s kratším posledním souborem → tučný verdikt
   „… archů lze zpracovat (1 s upozorněním) · 0 blokováno", celý čitelný.
+  Symboly ✓ ⚠ ✗ u řádků kontroly jsou čitelné ve světlém i tmavém UI
+  Illustratoru (Předvolby › Uživatelské rozhraní) — barvy sady vedle sebe na
+  obou neověřené.
   Dávka, kde je každý soubor delší než počet pozic → Pokračovat je vypnuté;
   zkus i Enter — jestli vypnuté tlačítko spustí, ověřené není.
 - [ ] **1.5 Storno.** Storno v hlavním dialogu, u dotazu na otevřenou šablonu

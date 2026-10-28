@@ -362,22 +362,23 @@ BRE.UI = {
         rowsGrp.spacing = 3;
         rowsGrp.margins = [4, 2, 0, 2];
 
-        var GREEN = [0.36, 0.60, 0.34], AMBER = [0.79, 0.64, 0.23],
-            RED = [0.76, 0.31, 0.25], GREY = [0.60, 0.60, 0.58];
-        function addCountRow(n, str, rgb, force) {
+        // The family's status symbols and colours (extendscript-ui-standards
+        // §12.6): ✓ OK, ⚠ processed with a warning, ✗ blocked.
+        var SYMBOLS = { OK: "\u2713", WARN: "\u26a0", ERR: "\u2717" };
+        function addCountRow(n, str, kind, force) {
             if (!force && n === 0) return;
             var g = rowsGrp.add("group");
             g.alignChildren = ["left", "center"];
             g.spacing = 7;
-            var dot = g.add("statictext", undefined, "●");  // ●
-            BRE.UI._color(dot, rgb);
+            var sym = g.add("statictext", undefined, SYMBOLS[kind]);
+            BRE.FieldPaint.text(sym, kind);
             g.add("statictext", undefined, l.format(str, String(n)));
         }
-        addCountRow(c.ok, l.SCAN_OK, GREEN, true);
-        addCountRow(c.partial, l.SCAN_PARTIAL, AMBER, false);
-        addCountRow(c.under, l.SCAN_UNDER, AMBER, false);
-        addCountRow(c.unreadable, l.SCAN_UNREADABLE, GREY, false);
-        addCountRow(c.over, l.SCAN_OVER, RED, false);
+        addCountRow(c.ok, l.SCAN_OK, "OK", true);
+        addCountRow(c.partial, l.SCAN_PARTIAL, "WARN", false);
+        addCountRow(c.under, l.SCAN_UNDER, "WARN", false);
+        addCountRow(c.unreadable, l.SCAN_UNREADABLE, "WARN", false);
+        addCountRow(c.over, l.SCAN_OVER, "ERR", false);
 
         // --- Per-file anomaly details (everything except "ok") ---
         var details = [];
@@ -473,19 +474,6 @@ BRE.UI = {
     // ---------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------
-
-    /**
-     * Sets a control's text colour. Wrapped in try/catch — colouring is
-     * cosmetic and must never break the dialog if a host build rejects the pen.
-     * @param {Object} ctrl - A ScriptUI control (statictext).
-     * @param {number[]} rgb - [r, g, b] in 0..1.
-     */
-    _color: function (ctrl, rgb) {
-        try {
-            var g = ctrl.graphics;
-            ctrl.graphics.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, rgb, 1);
-        } catch (e) {}
-    },
 
     /**
      * Adds a labeled file/folder row to a panel. The narrow label shares the

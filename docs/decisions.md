@@ -261,7 +261,7 @@ každého nástroje.
 | `ui_state.js` | ✓ | ✓ | ✓ | — |
 | `cut_marks.js` | — | ✓ | ✓ | — |
 | `numbers.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
-| `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
+| `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | ✓ od 1.2.0 |
 | `registration.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
 | `drawing_scale.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
 | `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | ✓ od 1.2.0 |

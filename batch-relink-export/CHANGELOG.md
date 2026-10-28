@@ -27,6 +27,10 @@ mají Grommet Marks, Zünd & Summa Marks i Tile Export.
   má i Tile Export; vlastní kopie zmizely. Texty i chování (zastavení Esc,
   souhrn bez „Vše proběhlo bez chyb." po zastavení) se nemění, okna mají
   nativní okraje ScriptUI.
+- **Stavové symboly a barvy sady v náhledu.** Řádky kontroly zdrojů mají
+  ✓ (v pořádku), ⚠ (zpracuje se s upozorněním, i nečitelný počet stran)
+  a ✗ (blokováno) v barvách sady místo barevných teček; počet chyb v souhrnu
+  má červenou sady.
 
 ### Opraveno
 
