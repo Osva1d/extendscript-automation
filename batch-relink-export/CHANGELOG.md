@@ -4,6 +4,20 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [Nevydáno]
+
+Rodinný jazyk sady: BRE přebírá kánon `extendscript-ui-standards` §12, který
+vzešel z auditu společného jazyka
+([report](../docs/reports/2026-10-14-audit-spolecneho-jazyka.md)) a který už
+mají Grommet Marks, Zünd & Summa Marks i Tile Export.
+
+### Změněno
+
+- **Popisky polí končí dvojtečkou** — „Šablona (.ai):", „Zdroj (PDF):",
+  „Výstup:", „Vzor:", „PDF preset:", stejně jako v ostatních nástrojích sady
+  a v dialozích Illustratoru. Dvojtečku mají i popisky počtů v souhrnu
+  („Úspěšně:", „Chyby:"…). „PDF Preset" se píše „PDF preset".
+
 ## [1.1.0] — 2026-10-03
 
 ### Přidáno
