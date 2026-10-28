@@ -86,8 +86,7 @@ ZSM.L = {
     STATUS_DUP_COLOR: "dup %s",
     // The status line at rest (spec 1.2.0 §7), Czech: the tests read the spec's text back.
     STATUS_FOUND_ARTBOARD: "artboard %s × %s mm", STATUS_FOUND_ARTWORK: "grafika %s × %s mm",
-    STATUS_FOUND_CUT: "řez „%s“", STATUS_NO_CUT: "řez nenalezen",
-    STATUS_FOUND_CUTS: "řezy (%s): %s", STATUS_CUT_NAME: "„%s“", STATUS_MARKS_ONLY: "pouze značky",
+    STATUS_MARKS_ONLY: "pouze značky",
     THOU_SEP: " ",
     format: function (template) {
         var args = []; for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -1066,7 +1065,7 @@ console.log("\n=== TEST 21 (spec 1.2.0 §5): drawing scale from the document ===
     function typeScale(win, text) { var et = scaleCtl(win); et.text = text; et.onChanging(); }
     // The status line at rest starts with the mode: "ZUND · …" / "SUMMA · …".
     function restLine(win) {
-        var st = win.findOne(function (c) { return c.type === "statictext" && /^(ZUND|SUMMA) · /.test(String(c.text)); });
+        var st = win.findOne(function (c) { return c.type === "statictext" && /^(ZUND|SUMMA)( · |$)/.test(String(c.text)); });
         return st ? st.text : null;
     }
     function okBtn(win) { return win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }); }
@@ -1547,90 +1546,31 @@ console.log("\n=== TEST 23 (spec 1.2.0 §7): the status line says what the scrip
     var t0 = f0.text;
     assert(t0.indexOf("ZUND · ") === 0, "the finding starts with the mode (got '" + t0 + "')");
     assert(t0.indexOf("artboard 1 560 × 3 050 mm") !== -1, "Fixed: the artboard at real size, thousands grouped (got '" + t0 + "')");
-    assert(t0.indexOf("řez „Cut“") !== -1, "the cut colour found, in „…“ (got '" + t0 + "')");
+    assertEq(t0.indexOf("řez"), -1, "no cut colour in the line: the mapping rows show it (got '" + t0 + "')");
     assertEq(t0.indexOf("1:"), -1, "1:1: no scale in the line (got '" + t0 + "')");
     assertEq(t0.indexOf("layers"), -1, "no mapping-row count any more (got '" + t0 + "')");
 
-    // --- 1:10, artboard 156 × 305: the real size is × 10, the scale before the cut colour (TEST 25) ---
+    // --- 1:10, artboard 156 × 305: the real size is × 10, the scale at the end ---
     var t10 = found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text;
     assert(t10.indexOf("artboard 1 560 × 3 050 mm") !== -1, "1:10: the artboard × 10 (got '" + t10 + "')");
-    assert(t10.indexOf(" · 1:10 · ") !== -1, "1:10: ' · 1:10 · ' before the cut colour (got '" + t10 + "')");
+    assert(/ · 1:10$/.test(t10), "1:10: the line ends ' · 1:10' (got '" + t10 + "')");
 
     // --- the scale typed while the dialog is open: size and ending follow the field ---
     var wS = buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 } });
     var etScale = fieldCtl(wS, ZSM.L.LBL_SCALE);
     etScale.text = "10"; etScale.onChanging();
     var tS = found(wS).text;
-    assert(tS.indexOf("artboard 1 560 × 3 050 mm") !== -1 && tS.indexOf(" · 1:10 · ") !== -1,
-        "typing 10 into the scale: 1 560 × 3 050 mm and ' · 1:10 · ' (got '" + tS + "')");
-
-    // --- no cut colour: detectCutColor's registration fallback is "not found" ---
-    var tReg = found(buildWith("ZUND", FIXED, { artboard: AB.artboard, detectedColor: "[Registration]" })).text;
-    assert(tReg.indexOf("řez nenalezen") !== -1 && tReg.indexOf("„") === -1,
-        "no cut colour ([Registration]): 'řez nenalezen' (got '" + tReg + "')");
-    ZSM.Draw.getRegistrationName = function () { return "[Registrace]"; };
-    try {
-        var tRegCs = found(buildWith("ZUND", FIXED, { artboard: AB.artboard, detectedColor: "[Registrace]" })).text;
-        assert(tRegCs.indexOf("řez nenalezen") !== -1, "no cut colour (Czech [Registrace]): 'řez nenalezen' (got '" + tRegCs + "')");
-    } finally { delete ZSM.Draw.getRegistrationName; }
-
-    // --- an invalid field: ✗ in the error colour; fixed, the finding and its own pen are back ---
-    var wE = buildWith("ZUND", FIXED, AB);
-    var fE = found(wE), rE = reason(wE), before = fE.text;
-    var maxD = fieldCtl(wE, ZSM.L.MAX_DIST);
-    maxD.text = "1O5"; maxD.onChanging();
-    assert(rE.visible === true && fE.visible === false, "'1O5': the reason shows instead of the finding");
-    assert(rE.text.indexOf("✗ ") === 0, "'1O5': the reason starts with ✗ (got '" + rE.text + "')");
-    assertEq(rE.text.indexOf("⚠"), -1, "'1O5': no ⚠ any more");
-    assert(sameRGB(rE.graphics.foregroundColor, COLORS.ERR), "'1O5': the reason's pen is COLORS.ERR");
-    assertEq(okBtn(wE).enabled, false, "'1O5': Generate is grey");
-    maxD.text = "450"; maxD.onChanging();
-    assert(fE.visible === true && rE.visible === false, "'450' after '1O5': the finding shows again");
-    assertEq(fE.text, before, "'450': the same finding as before the error");
-    assert(fE.graphics.foregroundColor === fE.graphics.ownPen && fE.graphics.assignments === 0,
-        "'450': the finding has the pen it had before the error (never written)");
-    assert(!sameRGB(fE.graphics.foregroundColor, COLORS.ERR) && !sameRGB(fE.graphics.foregroundColor, COLORS.WARN),
-        "'450': neither ERR nor WARN on the finding");
-    // Several invalid fields: the count, after ✗.
-    maxD.text = "x"; maxD.onChanging();
-    var gapO = fieldCtl(wE, ZSM.L.GAP_ZO);
-    gapO.text = "y"; gapO.onChanging();
-    assert(rE.visible === true && rE.text.indexOf("✗ 2 out of range") === 0,
-        "two invalid fields: '✗ ' and the count (got '" + rE.text + "')");
-
-    // --- Auto-fit: the artwork's size when known, never the artboard's ---
-    var tAuto = found(buildWith("ZUND", {}, AB)).text;
-    assert(tAuto.indexOf("artboard") === -1 && tAuto.indexOf("×") === -1,
-        "Auto-fit, artwork not measured: no size at all (got '" + tAuto + "')");
-    assertEq(tAuto, "ZUND · řez „Cut“", "Auto-fit, artwork not measured: mode and cut colour");
-    var tArt = found(buildWith("ZUND", {}, { artboard: AB.artboard, artwork: { w: 1200, h: 800 } })).text;
-    assert(tArt.indexOf("grafika 1 200 × 800 mm") !== -1 && tArt.indexOf("artboard") === -1,
-        "Auto-fit, artwork measured: 'grafika 1 200 × 800 mm' (got '" + tArt + "')");
-    // The source radios switch the line while the dialog is open.
-    var wR = buildWith("ZUND", {}, AB);
-    var rbFixedCtl = ctl(wR, "radiobutton", ZSM.L.SRC_FIXED), rbAutoCtl = ctl(wR, "radiobutton", ZSM.L.SRC_AUTO);
-    rbFixedCtl.value = true; rbAutoCtl.value = false; rbFixedCtl.onClick();
-    var tToFixed = found(wR).text;
-    rbAutoCtl.value = true; rbFixedCtl.value = false; rbAutoCtl.onClick();
-    var tToAuto = found(wR).text;
-    assert(tToFixed.indexOf("artboard 1 560 × 3 050 mm") !== -1, "Auto -> Fixed: the artboard appears (got '" + tToFixed + "')");
-    assertEq(tToAuto.indexOf("artboard"), -1, "Fixed -> Auto: the artboard goes (got '" + tToAuto + "')");
-
-    // --- SUMMA fits the artwork: no artboard size ---
-    var tSum = found(buildWith("SUMMA", { mode: "SUMMA" }, AB)).text;
-    assertEq(tSum, "SUMMA · řez „Cut“", "SUMMA, artwork not measured: mode and cut colour only (got '" + tSum + "')");
-    var tSumArt = found(buildWith("SUMMA", { mode: "SUMMA" }, { artwork: { w: 1200, h: 800 }, drawingScale: 2.5 })).text;
-    assert(tSumArt.indexOf("SUMMA · grafika 3 000 × 2 000 mm") === 0 && tSumArt.indexOf(" · 1:2.5 · ") !== -1,
-        "SUMMA, artwork measured at 1:2.5: real size and the scale (got '" + tSumArt + "')");
+    assert(tS.indexOf("artboard 1 560 × 3 050 mm") !== -1 && / · 1:10$/.test(tS),
+        "typing 10 into the scale: 1 560 × 3 050 mm and ' · 1:10' (got '" + tS + "')");
 
     // --- marks only: "pouze značky" in place of the cut colour, live ---
     var wM = buildWith("ZUND", { useArtboardBounds: true, marksOnly: true }, AB);
     var tM = found(wM).text;
-    assert(tM.indexOf("pouze značky") !== -1 && tM.indexOf("řez") === -1,
-        "marks only: 'pouze značky', no cut colour (got '" + tM + "')");
+    assert(tM.indexOf("pouze značky") !== -1,
+        "marks only: 'pouze značky' (got '" + tM + "')");
     var cbM = ctl(wM, "checkbox", ZSM.L.MARKS_ONLY);
     cbM.value = false; cbM.onClick();
-    assert(found(wM).text.indexOf("řez „Cut“") !== -1, "marks only off: the cut colour is back (got '" + found(wM).text + "')");
+    assertEq(found(wM).text.indexOf("pouze značky"), -1, "marks only off: 'pouze značky' gone (got '" + found(wM).text + "')");
 
     // --- decimals: a tenth, the locale's separators ---
     ZSM.L.DEC_SEP = ",";
@@ -1649,7 +1589,7 @@ console.log("\n=== TEST 23 (spec 1.2.0 §7): the status line says what the scrip
     try {
         ZSM.L = realL("cs_CZ");
         assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text,
-            "ZUND · artboard 1 560 × 3 050 mm · 1:10 · řez „Cut“", "cs: the spec's line, with the scale before the cut colour (TEST 25)");
+            "ZUND · artboard 1 560 × 3 050 mm · 1:10", "cs: the spec's line without the cut colour");
         var cs = ZSM.L;
         assertEq(cs.STATUS_OK, undefined, "cs: STATUS_OK is gone");
         assertEq(cs.STATUS_OK_MARKS, undefined, "cs: STATUS_OK_MARKS is gone");
@@ -1662,11 +1602,9 @@ console.log("\n=== TEST 23 (spec 1.2.0 §7): the status line says what the scrip
             "cs: the duplicate colour is named in „…“");
         ZSM.L = realL("en_US");
         assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, drawingScale: 10 })).text,
-            "ZUND · artboard 1,560 × 3,050 mm · 1:10 · cut \"Cut\"", "en: the same line in English");
+            "ZUND · artboard 1,560 × 3,050 mm · 1:10", "en: the same line in English");
         assertEq(found(buildWith("ZUND", { useArtboardBounds: true, marksOnly: true }, { artboard: { w: 156, h: 305 },
             detectedColor: "[Registration]" })).text, "ZUND · artboard 156 × 305 mm · marks only", "en: marks only");
-        assertEq(found(buildWith("ZUND", FIXED, { artboard: { w: 156, h: 305 }, detectedColor: "[Registration]" })).text,
-            "ZUND · artboard 156 × 305 mm · no cut colour", "en: no cut colour");
         assertEq(ZSM.L.STATUS_OK, undefined, "en: STATUS_OK is gone");
     } finally { ZSM.L = mockL; }
 
@@ -1823,11 +1761,10 @@ console.log("\n=== TEST 23 (spec 1.2.0 §9.3, §10): validation alerts, first fo
 // =====================================================
 // M.STATUS_W was measured in Illustrator 30.8.2 (2026-10-24, measureString in
 // the label's own font, docs/extendscript-engine-facts.md) for the texts
-// below. It was 415 px, a font-model estimate: the finding with
-// „CUTCONTOUR“ (425 px) and the duplicate reason with it (418 px) were cut
-// off. Since TEST 25 the scale stands before the cut colour: the same
-// characters in another order, so the measured widths hold (no kerning
-// across " · "); re-measure at the next Illustrator check.
+// below. It was 415 px, a font-model estimate, and cut off the finding with
+// „CUTCONTOUR“ (425 px) and the duplicate reason (418 px). Since 2026-10-28
+// the finding names no cut colour (TEST 25); its widest form was measured
+// again then (390 px, en 374), so the duplicate reason is the widest text.
 // Node cannot measure pixels, so the test keeps the measurement honest:
 // a change to any of these texts fails here until it is measured again.
 console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the widest texts ===");
@@ -1835,8 +1772,8 @@ console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the
     var localeSrc = fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8");
     function realL(locale) { return new Function("ZSM", "app", localeSrc + "; return ZSM.L;")({}, { locale: locale }); }
     var MEASURED = [
-        { locale: "cs_CZ", kind: "finding",   px: 425, text: "ZUND · artboard 99 999,9 × 99 999,9 mm · 1:99,9 · řez „CUTCONTOUR“" },
-        { locale: "en_US", kind: "finding",   px: 424, text: "ZUND · artboard 99,999.9 × 99,999.9 mm · 1:99.9 · cut \"CUTCONTOUR\"" },
+        { locale: "cs_CZ", kind: "finding",   px: 390, text: "ZUND · artboard 99 999,9 × 99 999,9 mm · 1:99,9 · pouze značky" },
+        { locale: "en_US", kind: "finding",   px: 374, text: "ZUND · artboard 99,999.9 × 99,999.9 mm · 1:99.9 · marks only" },
         { locale: "cs_CZ", kind: "duplicate", px: 418, text: "✗ Barva „CUTCONTOUR“ je přiřazena více vrstvám — odeberte duplicitu." }
     ];
     var big = 99999.9 / 99.9;   // foundText multiplies by the scale and rounds to a tenth
@@ -1846,8 +1783,8 @@ console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the
             var m = MEASURED[i];
             ZSM.L = realL(m.locale);
             var text = (m.kind === "finding")
-                ? ZSM.UI.foundText({ mode: "ZUND", fixed: true, marksOnly: false, artboard: { w: big, h: big },
-                                     artwork: null, cutColors: ["CUTCONTOUR"], scale: 99.9 })
+                ? ZSM.UI.foundText({ mode: "ZUND", fixed: true, marksOnly: true, artboard: { w: big, h: big },
+                                     artwork: null, scale: 99.9 })
                 : "✗ " + ZSM.L.format(ZSM.L.STATUS_DUP_COLOR, "CUTCONTOUR");
             assertEq(text, m.text, m.locale + " " + m.kind + ": the text M.STATUS_W was measured for (re-measure in Illustrator when it changes)");
             assert(ZSM.UI.M.STATUS_W >= m.px, m.locale + " " + m.kind + ": M.STATUS_W " + ZSM.UI.M.STATUS_W + " holds the measured " + m.px + " px");
@@ -1859,48 +1796,33 @@ console.log("\n=== TEST 24 (spec 1.2.0 §7, §11): status width measured for the
 
 
 // =====================================================
-// TEST 25 (spec 1.2.0 §7): the finding names every cut colour found
+// TEST 25 (spec 1.2.0 §17): the finding names no cut colour
 // =====================================================
-// A document with Thru-cut and Kiss-cut showed only „Thru-cut“. The finding
-// now lists the known cut colours the document has: the count of all of them
-// first, then at most two names, so the label's end-truncation can cut a
-// name but never the count; the scale comes before them too.
-console.log("\n=== TEST 25 (spec 1.2.0 §7): every cut colour found is in the status line ===");
+// The line listed cut colours from the Swatches: first one, then all of them.
+// The user (2026-10-28) saw that the mapping rows already show the colours
+// that get cut, with „(chybí)" for a missing one, and that the line only got
+// longer. It now names none, whatever the document holds.
+console.log("\n=== TEST 25 (spec 1.2.0 §17): no cut colour in the status line ===");
 (function () {
     var localeSrc = fs.readFileSync(path.join(__dirname, "..", "src", "locale.js"), "utf8");
     function realL(locale) { return new Function("ZSM", "app", localeSrc + "; return ZSM.L;")({}, { locale: locale }); }
     var origL = ZSM.L;
-    function ft(cuts, scale) {
+    function ft(scale) {
         return ZSM.UI.foundText({ mode: "ZUND", fixed: true, marksOnly: false,
-            artboard: { w: 1560, h: 3050 }, artwork: null, cutColors: cuts, scale: scale || 1 });
+            artboard: { w: 1560, h: 3050 }, artwork: null, scale: scale || 1 });
     }
     try {
         ZSM.L = realL("cs_CZ");
-        assertEq(ft([]), "ZUND · artboard 1 560 × 3 050 mm · řez nenalezen", "cs: none found");
-        assertEq(ft(["Cut"]), "ZUND · artboard 1 560 × 3 050 mm · řez „Cut“", "cs: one, as before");
-        assertEq(ft(["Thru-cut", "Kiss-cut"]), "ZUND · artboard 1 560 × 3 050 mm · řezy (2): „Thru-cut“, „Kiss-cut“",
-            "cs: two, both by name");
-        assertEq(ft(["CutContour", "Thru-cut", "Kiss-cut", "Cut"]),
-            "ZUND · artboard 1 560 × 3 050 mm · řezy (4): „CutContour“, „Thru-cut“", "cs: four, the count of all and two names");
-        assertEq(ft(["Thru-cut", "Kiss-cut"], 10),
-            "ZUND · artboard 15 600 × 30 500 mm · 1:10 · řezy (2): „Thru-cut“, „Kiss-cut“", "cs: the scale before the cut colours");
+        assertEq(ft(), "ZUND · artboard 1 560 × 3 050 mm", "cs: mode and artboard, no cut colour");
+        assertEq(ft(10), "ZUND · artboard 15 600 × 30 500 mm · 1:10", "cs: the scale at the end");
+        ["STATUS_FOUND_CUT", "STATUS_FOUND_CUTS", "STATUS_CUT_NAME", "STATUS_NO_CUT"].forEach(function (k) {
+            assertEq(ZSM.L[k], undefined, "cs: " + k + " is gone");
+        });
         ZSM.L = realL("en_US");
-        assertEq(ft(["Thru-cut", "Kiss-cut", "Cut"]),
-            "ZUND · artboard 1,560 × 3,050 mm · cuts (3): \"Thru-cut\", \"Kiss-cut\"", "en: three, the count of all");
+        assertEq(ft(10), "ZUND · artboard 15,600 × 30,500 mm · 1:10", "en: the same");
     } finally {
         ZSM.L = origL;
     }
-    // Through the dialog: docData.cutColors from show() reaches the line.
-    SUI.install();
-    var docData = { swatches: ZSM.Draw.getSwatchNames(), swatchRGB: ZSM.Draw.getSwatchRGBMap(),
-        layers: ZSM.Draw.getLayerNames(), detectedColor: "Thru-cut", cutColors: ["Thru-cut", "Kiss-cut"],
-        drawingScale: 1, artboard: null, artwork: null };
-    ZSM.UI.buildDialog("ZUND", { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } }, docData);
-    var win = SUI.lastWindow();
-    var lbl = win.findOne(function (c) { return c.type === "statictext" && c.enabled === false &&
-        String(c.text).indexOf("ZUND") === 0; });
-    assert(lbl && lbl.text.indexOf("Thru-cut") >= 0 && lbl.text.indexOf("Kiss-cut") >= 0,
-        "the dialog's finding names both cut colours (got: " + (lbl ? lbl.text : "no label") + ")");
 })();
 
 

@@ -140,10 +140,6 @@ ZSM.L = (function () {
             // joined with " · " after the mode (spec 1.2.0 §7).
             STATUS_FOUND_ARTBOARD: "artboard %s × %s mm",
             STATUS_FOUND_ARTWORK:  "artwork %s × %s mm",
-            STATUS_FOUND_CUT:  "cut \"%s\"",
-            STATUS_FOUND_CUTS: "cuts (%s): %s",
-            STATUS_CUT_NAME:   "\"%s\"",
-            STATUS_NO_CUT:     "no cut colour",
             STATUS_MARKS_ONLY: "marks only",
             PANEL_OUTPUT:      "Output Settings",
             BTN_RESET:         "Defaults",
@@ -276,10 +272,6 @@ ZSM.L = (function () {
             // spojené „ · “ (spec 1.2.0 §7).
             STATUS_FOUND_ARTBOARD: "artboard %s × %s mm",
             STATUS_FOUND_ARTWORK:  "grafika %s × %s mm",
-            STATUS_FOUND_CUT:  "řez „%s“",
-            STATUS_FOUND_CUTS: "řezy (%s): %s",
-            STATUS_CUT_NAME:   "„%s“",
-            STATUS_NO_CUT:     "řez nenalezen",
             STATUS_MARKS_ONLY: "pouze značky",
             PANEL_OUTPUT:      "Nastavení výstupu",
             BTN_RESET:         "Výchozí",

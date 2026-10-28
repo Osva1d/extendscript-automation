@@ -27,11 +27,13 @@ ZSM.UI = {
         // labels change text while the dialog is open and keep their first
         // width. Sized for the widest text either can hold, cs and en,
         // measured in Illustrator 30.8.2 (measureString in the label's own
-        // font, 2026-10-24, engine-facts): the finding with 99 999,9 ×
-        // 99 999,9 mm, „CUTCONTOUR“ (detectCutColor keeps the document's case)
-        // and 1:99,9 is 425 px (en 424); the widest reason, a duplicate
-        // „CUTCONTOUR“ row, 418 px. The window is this plus its margins; a
-        // user's longer colour name or scale truncates at the end.
+        // font, 2026-10-24 and 2026-10-28, engine-facts): the widest text is
+        // now the reason for a duplicate „CUTCONTOUR“ row, 418 px; the widest
+        // finding (99 999,9 × 99 999,9 mm, 1:99,9, pouze značky) is 390 px
+        // (en 374) since it names no cut colour. 425 is the earlier width of
+        // a finding with a cut colour, kept: 7 px of slack and the measured
+        // dialog sizes stay valid. A longer colour name in the reason
+        // truncates at the end.
         STATUS_W:     425,
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
@@ -82,7 +84,6 @@ ZSM.UI = {
             swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
             detectedColor: ZSM.Draw.detectCutColor(),
-            cutColors:     ZSM.Draw.detectCutColors(),
             drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1,
             artboard:      this.activeArtboardSize(),
             artwork:       null
@@ -559,14 +560,6 @@ ZSM.UI = {
         stReason.preferredSize.width = M.STATUS_W;  // [deviation] see M
         ZSM.FieldPaint.text(stReason, "ERR");
         stReason.visible = false;
-
-        // The cut colour the script found in the document, "" for none:
-        // detectCutColor falls back to the registration swatch when no known
-        // cut spot exists, and registration cannot be a cut colour.
-        var docCut = (canonColor(docData.detectedColor) === "[Registration]") ? "" : (docData.detectedColor || "");
-        // Every known cut colour, for the finding; older docData (tests) carry
-        // only detectedColor.
-        var docCuts = docData.cutColors || (docCut ? [docCut] : []);
 
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
@@ -1235,7 +1228,6 @@ ZSM.UI = {
                     marksOnly: marksOnlyOn,
                     artboard:  docData.artboard,
                     artwork:   docData.artwork,
-                    cutColors: docCuts,
                     scale:     parseNum(etScale)   // valid here: allValid includes the field
                 });
                 stFound.visible  = true;
@@ -1406,12 +1398,10 @@ ZSM.UI = {
      * found in the document. The mode; the artboard (Fixed) or the artwork
      * (Auto-fit, SUMMA) at real size — × N, as every value in the dialog is
      * real size — left out when unknown; the scale when not 1:1, written as
-     * the field writes it; then every known cut colour found (with two or more
-     * the count of all first, then two names), or that none was, or "marks only" when the mapping
-     * is off.
-     * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork,
-     *     cutColors, scale}; artboard / artwork {w, h} in document mm or null,
-     *     cutColors the names found ([] for none), scale the valid N of 1:N.
+     * the field writes it; "marks only" when the mapping is off.
+     * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork, scale};
+     *     artboard / artwork {w, h} in document mm or null, scale the valid N
+     *     of 1:N.
      * @returns {string}
      */
     foundText: function (st) {
@@ -1423,25 +1413,10 @@ ZSM.UI = {
             parts.push(L.format(st.fixed ? L.STATUS_FOUND_ARTBOARD : L.STATUS_FOUND_ARTWORK,
                 ZSM.UI.formatSize(size.w * n), ZSM.UI.formatSize(size.h * n)));
         }
-        // The scale before the cut colours: the label truncates at its end,
-        // and a long list of colours must never hide the scale.
         if (n !== 1) parts.push("1:" + ZSM.Numbers.format(n));
-        if (st.marksOnly) {
-            parts.push(L.STATUS_MARKS_ONLY);
-        } else {
-            var cuts = st.cutColors || [];
-            if (cuts.length === 0) {
-                parts.push(L.STATUS_NO_CUT);
-            } else if (cuts.length === 1) {
-                parts.push(L.format(L.STATUS_FOUND_CUT, cuts[0]));
-            } else {
-                // The count of all first (truncation hides the end), then at
-                // most two names.
-                var named = [];
-                for (var i = 0; i < cuts.length && i < 2; i++) named.push(L.format(L.STATUS_CUT_NAME, cuts[i]));
-                parts.push(L.format(L.STATUS_FOUND_CUTS, cuts.length, named.join(", ")));
-            }
-        }
+        // The cut colours are not repeated here: the mapping rows show them,
+        // with „(chybí)" for one the document lacks (user, 2026-10-28).
+        if (st.marksOnly) parts.push(L.STATUS_MARKS_ONLY);
         return parts.join(" · ");
     },
 
