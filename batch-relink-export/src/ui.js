@@ -126,14 +126,27 @@ BRE.UI = {
                 }
                 if (defaultIdx > 0) break;
             }
-            // The preset chosen last time wins while it still exists.
+            presetDDL.selection = defaultIdx;
+        }
+        // The preset chosen last time wins while it still exists. One this
+        // Illustrator lacks shows as "(chybí)" instead of a silent switch to
+        // the default (extendscript-ui-standards §12.3); Run refuses it.
+        if (saved.preset) {
+            var savedIdx = -1;
             for (var ri = 0; ri < pdfPresets.length; ri++) {
                 if (pdfPresets[ri] === saved.preset) {
-                    defaultIdx = ri;
+                    savedIdx = ri;
                     break;
                 }
             }
-            presetDDL.selection = defaultIdx;
+            if (savedIdx >= 0) {
+                presetDDL.selection = savedIdx;
+            } else {
+                var missing = presetDDL.add("item", saved.preset + "  " + l.DDL_MISSING_SUFFIX);
+                missing.breMissing = true;
+                missing.breValue = saved.preset;
+                presetDDL.selection = missing;
+            }
         }
 
         // --- Panel 3: options (optional toggles, separated from settings) ---
@@ -223,9 +236,14 @@ BRE.UI = {
                 alert(l.ERR_OUTPUT_IS_SOURCE);
                 return;
             }
-            var preset = presetDDL.selection ? presetDDL.selection.text : "";
+            var presetItem = presetDDL.selection;
+            var preset = presetItem ? presetItem.text : "";
             if (!preset) {
                 alert(l.ERR_PRESET);
+                return;
+            }
+            if (presetItem.breMissing) {
+                alert(l.format(l.ERR_PDF_PRESET_MISSING, presetItem.breValue));
                 return;
             }
             var namingPattern = namingInput.text;

@@ -23,6 +23,15 @@ mají Grommet Marks, Zünd & Summa Marks i Tile Export.
   „Přeskočit hotové výstupy", jako v Tile Exportu. Krátké popisky „Výstup:"
   a „Vzor:" zůstaly kvůli úzkému sloupci popisků.
 
+### Opraveno
+
+- **Chybějící zapamatovaný preset se potichu nevymění.** Když si dialog
+  pamatoval PDF preset, který v Illustratoru už není (smazaný, přejmenovaný
+  nebo z jiného počítače), předvybral bez upozornění výchozí `[Kvalitní tisk]`.
+  Teď ho seznam ukáže jako „název  (chybí)" a Spustit s ním neprojde: hláška
+  řekne, že s ním export PDF neuloží, a dialog zůstane otevřený, dokud se
+  nevybere jiný preset — stejně jako v Tile Exportu.
+
 ## [1.1.0] — 2026-10-03
 
 ### Přidáno

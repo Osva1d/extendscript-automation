@@ -64,6 +64,10 @@ soubor kratší) a prázdnou cílovou složku.
   vzor, preset a „Otevřít složku" jsou z minula; zdroj je prázdný
   a „Přeskočit hotové výstupy" vypnuté. Okno má stejnou šířku jako při prvním
   spuštění — dlouhá cesta se do pole nevejde celá.
+- [ ] **1.8 Chybějící preset (§12.3).** V `settings.json` přepiš `preset` na
+  název, který Illustrator nemá, a spusť skript → seznam ukáže „název  (chybí)";
+  Spustit → „PDF preset „…" v tomto Illustratoru není…" a dialog zůstane
+  otevřený. Po výběru jiného presetu dávka proběhne.
 
 ---
 
@@ -165,7 +169,8 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 | druhé spuštění | šablona, výstup (i s diakritikou v cestě), vzor, preset a „Otevřít složku" z minula, zdroj prázdný; výstup s uloženým `[PDF/X-4:2008]` je PDF 1.6 s PDF/X |
 | zapamatované dlouhé cesty (72 i 133 znaků) | okno 460 × 478 px jako bez nastavení; pole cest 180 px, vzor, náhled názvu a preset 280 px — pole se nenatahují podle textu |
-| ručně upravený soubor s nastavením (číslo místo cesty, neexistující preset) | špatné hodnoty výchozí, ostatní z minula, bez hlášky |
+| ručně upravený soubor s nastavením (číslo místo cesty) | špatná hodnota výchozí, ostatní z minula, bez hlášky |
+| zapamatovaný preset, který Illustrator nemá | v seznamu „název  (chybí)"; Spustit → „PDF preset „…" v tomto Illustratoru není a export by s ním PDF neuložil. Vyberte jiný preset.", dialog zůstane otevřený; po výběru jiného presetu dávka proběhne a uloží se nový |
 | poškozený soubor s nastavením | výchozí hodnoty, bez hlášky; běh soubor přepíše platným |
 | nastavení nejde zapsat | „Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje." a dávka proběhne |
 | předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v náhledu, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
