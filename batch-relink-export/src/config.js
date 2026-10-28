@@ -7,7 +7,7 @@ var BRE = BRE || {};
 
 BRE.Config = {
     scriptName: "Batch Relink Export",
-    version: "1.1.0",
+    version: "1.2.0",
     debug: false,
 
     // The window title; the dialogs' layout values live in BRE.UI.M.

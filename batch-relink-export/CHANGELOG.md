@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Nevydáno]
+## [1.2.0] — 2026-10-28
 
 Rodinný jazyk sady: BRE přebírá kánon `extendscript-ui-standards` §12, který
 vzešel z auditu společného jazyka
