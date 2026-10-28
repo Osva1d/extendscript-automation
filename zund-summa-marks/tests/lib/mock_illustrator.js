@@ -5,6 +5,13 @@
  *   - Read-only traversal: getBounds, _measureLayer, _getEffectiveBounds
  *   - Mutation: layer add/remove, item creation (ellipse/rectangle/add),
  *     item move, name changes — sufficient for testing render() side effects
+ *   - Inherited stroke style: a path takes strokeDashes / strokeCap from the
+ *     document's default stroke (spec.defaultStroke = {dashes, cap}), as a
+ *     scripted path does in Illustrator (docs/extendscript-engine-facts.md
+ *     "Nová cesta dědí výchozí styl tahu"). Joins and miter limit not modeled.
+ *   - doc.XMPString: a plain readable and writable string, the packet of a
+ *     new document (XMP_PACKET, an RDF without a drawing scale) unless
+ *     spec.xmp gives another — enough for ZSM.DrawingScale to read and write.
  *
  * NOT modeled:
  *   - C++ crash semantics
@@ -29,6 +36,12 @@
     "use strict";
 
     var nextId = 1;
+
+    // The XMP packet of a new document: an RDF with Illustrator's own
+    // description and no drawing scale, so DrawingScale.save has where to write.
+    var XMP_PACKET = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        + '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreatorTool>Adobe Illustrator</xmp:CreatorTool>'
+        + "</rdf:Description></rdf:RDF></x:xmpmeta>";
 
     // ===== Helpers =====
     function arrayRemove(arr, item) {
@@ -267,6 +280,11 @@
         this.fillOverprint = false;
         this.strokeOverprint = false;
         this.strokeWidth = spec.strokeWidth || 0;
+        // Dashes and caps are inherited from the document's default stroke.
+        var docDef = findDoc(parent);
+        var inherited = docDef && docDef._defaultStroke;
+        this.strokeDashes = inherited ? inherited.dashes.slice() : [];
+        this.strokeCap = inherited ? inherited.cap : "BUTTENDCAP";
         this.note = spec.note || "";
         this.closed = !!spec.closed;
         this._points = spec.points || null;   // [[x, y], ...] for pathPoints
@@ -405,6 +423,10 @@
         this.scaleFactor = spec.scaleFactor || 1;
         this._layers = [];
         this._mutationLog = [];   // append-only operation log
+        // Style new paths inherit (set before the layers, which may hold paths).
+        this._defaultStroke = spec.defaultStroke
+            ? { dashes: spec.defaultStroke.dashes.slice(), cap: spec.defaultStroke.cap }
+            : null;
 
         var self = this;
         (spec.layers || []).forEach(function (l) {
@@ -451,6 +473,7 @@
         this.selection = null;
         this.activeLayer = this._layers[0] || null;
         this.rulerOrigin = [0, 0];
+        this.XMPString = (spec.xmp !== undefined) ? spec.xmp : XMP_PACKET;
     }
     Object.defineProperty(MockDocument.prototype, "layers", {
         get: function () {
@@ -509,7 +532,8 @@
     var origGlobals = {};
     function install() {
         var keys = ["app", "Layer", "GroupItem", "PathItem", "CompoundPathItem",
-                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor", "ColorModel"];
+                    "ZOrderMethod", "ElementPlacement", "CMYKColor", "SpotColor", "ColorModel",
+                    "StrokeCap"];
         for (var i = 0; i < keys.length; i++) {
             origGlobals[keys[i]] = global[keys[i]];
         }
@@ -542,6 +566,7 @@
             this.cyan = this.magenta = this.yellow = this.black = 0;
         };
         global.ColorModel = { SPOT: "SPOT", PROCESS: "PROCESS", REGISTRATION: "REGISTRATION" };
+        global.StrokeCap = { BUTTENDCAP: "BUTTENDCAP", ROUNDENDCAP: "ROUNDENDCAP", PROJECTINGENDCAP: "PROJECTINGENDCAP" };
         global.SpotColor = function () {
             this.typename = "SpotColor";
             this.spot = null;
@@ -562,6 +587,7 @@
         install: install,
         uninstall: uninstall,
         buildDoc: buildDoc,
+        XMP_PACKET: XMP_PACKET,
         MockLayer: MockLayer,
         MockPathItem: MockPathItem,
         MockGroupItem: MockGroupItem,

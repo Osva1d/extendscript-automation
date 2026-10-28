@@ -4,6 +4,148 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.2.0] — 2026-10-28
+
+Čistý tah, měřítko kresby z dokumentu a jazyk společný všem nástrojům
+([návrh](../docs/specs/2026-10-23-zund-summa-marks-1.2.0-design.md)). Kódy
+v závorkách odkazují na audity společného jazyka
+([2026-10-14](../docs/reports/2026-10-14-audit-spolecneho-jazyka.md),
+[2026-10-17](../docs/reports/2026-10-17-dodatecny-audit-spolecneho-jazyka.md)).
+
+### Přidáno
+
+- **Měřítko kresby patří dokumentu (P12).** V panelu Nastavení výstupu je
+  jeden řádek **Měřítko kresby 1:**, stejně jako v Grommet Marks a Tile
+  Exportu. Pole se
+  při otevření vyplní měřítkem, které si pamatuje dokument; dokument bez
+  měřítka začne na 1. Hodnoty v dialogu se dál zadávají ve skutečné velikosti.
+  Platí číslo od 1 do 100, i desetinné (1:2,5); cokoli jiného pole zčervená
+  a Generovat zašedne. Dřív platila jen celá čísla 1–10: „2,5“ tiše běželo
+  jako 1:2 a překlep „1O“ jako 1:1. Do předvoleb ani do posledního běhu se
+  měřítko neukládá a přepnutí režimu, výběr předvolby ani tlačítko Výchozí ho
+  nemění — dřív se po zakázce 1:10 další zakázka 1:1 otevřela v 1:10 a značky
+  vyšly desetkrát menší, když jste to přehlédli. Dokument si měřítko pamatuje
+  ve stejném klíči jako Tile Export a Grommet Marks: dokument, kterému
+  měřítko zapsal Tile Export, otevře Zünd & Summa Marks s tímto měřítkem
+  a obráceně (ověřeno s vydaným Tile Exportem 1.1.0). Do dokumentu se zapíše
+  až po běhu, který kreslil, a jen když se změnilo; odmítnutý běh nechá
+  dokument beze změny. V měřítku 1:1 vycházejí polohy i velikosti značek,
+  pruhu a linek stejně jako v 1.1.0, v 1:10 přesně desetinové (změřeno
+  v Illustratoru).
+- **Stavový řádek říká, co skript v dokumentu našel (J8).** Šedý řádek nad
+  tlačítky ukazuje režim, ve Fixed velikost artboardu ve skutečné velikosti
+  (artboard × měřítko), měřítko, když není 1:1, a při zapnutém Pouze značky
+  „pouze značky“: `ZUND · artboard 1 560 × 3 050 mm · 1:10`. Řezové barvy
+  neopakuje — ty ukazují řádky mapování, chybějící s „(chybí)“.
+  Dřív opakoval nastavení dialogu a „vrstvy: N“ počítalo řádky mapování, ne
+  vrstvy v dokumentu. V režimu Dle grafiky a v SUMMA rozměr grafiky
+  neuvádí: změřit grafiku před otevřením dialogu trvá na velkém dokumentu
+  sekundy (20 000 cest 4 s, změřeno) a dialog by se o tolik později otevřel
+  i pro Storno.
+
+### Změněno
+
+- **Dokument z 1.1.0 v měřítku je potřeba jednou zadat.** Dokument kreslený
+  ve verzi 1.1.0 v měřítku ho v sobě nemá a otevře se
+  v 1:1 — vidět je to v poli; měřítko jiné než 1:1 je navíc v titulku a ve
+  stavovém řádku. Zadejte měřítko jednou do pole, po Generovat si ho dokument
+  pamatuje. Měřítko uložené v předvolbách a v posledním běhu verze 1.1.0 se
+  ignoruje a při dalším uložení ze souboru nastavení zmizí.
+- **Zpět vrací značky a artboard, ne měřítko.** Běh ZUND s mapováním vrátí
+  dva kroky Zpět (Cmd+Z) — nejdřív značky a vrstvy, pak artboard —, běh SUMMA
+  s mapováním a ořezovými linkami čtyři, poslední z nich artboard; další krok
+  už vrací vaši úpravu z doby před spuštěním (změřeno přes Úpravy › Zpět
+  volané skriptem, běh z menu Soubor › Skripty ověřuje ruční test). Zápis
+  měřítka do dokumentu v žádném z těch kroků není: po Zpět zůstane
+  v dokumentu měřítko vráceného běhu a další dialog ho nabídne (přepište
+  pole; dokument bez měřítka dostanete zadáním 1 a jedním Generovat).
+- **Čísla v polích se čtou jedním způsobem (N1, P1, N6).** Pole, živá
+  kontrola, Generovat, Uložit i přepnutí režimu čtou číslo stejně jako Tile
+  Export a Grommet Marks: desetinná čárka i tečka, mezery okolo. `1O5`,
+  `1 000`, `20 mm`, `1e3`, `0x10` i `.5` jsou neplatné pole. Dřív živá
+  kontrola četla „1O5“ jako 1 a pole nezčervenalo (zastavil ho až alert),
+  „0x10“ v poli s minimem 0 prošlo a nakreslilo se 16 mm a Uložit nebo
+  přepnutí režimu tiše uložilo „1O5“ jako 1. Desetinná čárka zůstane čárkou:
+  „2,5“ se po dalším otevření ukáže zase jako „2,5“, ne „2.5“, a meze
+  v hláškách se píšou s čárkou („0,1–50“).
+- **Uložit a Uložit jako… jsou šedé, dokud je některé pole neplatné (N3)**,
+  takže předvolba nikdy neuloží hodnotu, kterou další otevření nepřečte;
+  důvod ukáže stavový řádek. Zašedlá Mezera od grafiky (Dle artboardu) se
+  uloží s hodnotou, kterou nese.
+- **Předvolby se chovají jako v ostatních nástrojích (P5, J3).** Hvězdička
+  stojí jen u aktivní předvolby a po přepnutí na jinou zmizí i u té předchozí
+  (dřív u ní zůstala). [Výchozí] jsou tovární hodnoty režimu, který máte
+  otevřený: v SUMMA už nemá trvale „*“ a jeho výběr ze seznamu i ↺ nechají
+  dialog v SUMMA (dřív přepnuly do ZUND). Věty jsou jako v ostatních
+  nástrojích: „Název nové předvolby:“, „Předvolba „…“ už existuje.
+  Přepsat?“ s názvem předvolby, prázdný nebo mezerový název hlásí „Zadejte
+  název předvolby.“. ↺ stojí ve vlastní skupině vedle seznamu a Uložit,
+  Uložit jako… a Smazat mají přirozenou šířku (dřív 92 px, na „Uložit jako…“
+  nestačilo).
+- **Slovník Zünd parametrů jako v Tile Exportu (J1).** Rozteč značek se
+  jmenuje **Max. rozteč značek**, Velikost Zünd **Průměr značky**, Barva
+  značek (Spot) **Barva značek**; nápověda odsazení orientační značky říká,
+  že jde o mezeru mezi okraji značek. „artboard“ se píše malým písmenem:
+  zdroj se jmenuje **Dle artboardu (Fixed)**.
+- **Hlášky jako v ostatních nástrojích (J5, J6).** Blokující chyba začíná
+  `CHYBA:` (dřív ji neměla vyhrazená vrstva, prázdný dokument, řádek vrstvy
+  bez názvu ani validace), upozornění po běhu `UPOZORNĚNÍ:`; názvy stojí
+  v „…“ (dřív ‘…’) a žádná hláška nekončí vykřičníkem. Validace říká
+  „Mezera od okraje: zadejte číslo od 0 do 1000 mm.“ pro překlep i pro
+  hodnotu mimo rozsah. Bez dokumentu: „Před spuštěním skriptu otevřete
+  dokument.“ Neočekávaná chyba má šablonu rodiny: co se stalo (s řádkem
+  česky), v jakém stavu může být dokument a komu hlášku poslat. Pád při
+  kreslení radí vrátit změny několika kroky Zpět (Cmd+Z) a připomene, že
+  změna artboardu je samostatný krok — dřívější rada Soubor › Vrátit by
+  zahodila i neuloženou práci z doby před spuštěním. Hláška prázdného
+  dokumentu a příliš velkého artboardu končí větou „Dokument nebyl
+  změněn.“ Registrační barva se v textech jmenuje slovy. Neuložené nastavení
+  po Generovat říká následek: „…příště se dialog otevře s předchozími
+  hodnotami. Značky se vykreslí.“ Oslovení a podpis (J2, J4) byly podle
+  kánonu už v 1.1.0.
+- **Důvod šedého Generovat je červený se symbolem ✗ (J7)**, ne jantarový
+  s ⚠: u jednoho neplatného pole jeho jméno a povolený rozsah, u víc polí
+  jejich počet.
+- **Dialog je 465 px široký (dřív 448 px) a o 3 px vyšší:** ZUND 720 px,
+  SUMMA 756 px (1.1.0: 717 a 753 px), česky i anglicky stejně; změřeno
+  v Illustratoru bez zobrazení okna. Šířku určuje stavový řádek, který se
+  zakládá pro nejdelší text, jaký může ukázat (425 px), panel předvoleb je
+  vyšší o tlačítko ↺ v přirozené výšce. S osmi řádky mapování měří dialog
+  923 px (SUMMA 932 px), skoro stejně jako 1.1.0 (920 a 932 px), a na menší
+  displej se nevejde.
+- Úvodní kurzor v režimu Dle artboardu míří na první pole, do kterého jde
+  psát (dřív na zašedlou Mezeru od grafiky).
+
+### Opraveno
+
+- **OPOS pruh a ořezové linky mají vždy plný tah (P3).** Když byla
+  naposledy vybraná čárkovaná cesta (perforace), nakreslil skript pruh jako
+  řetěz zaoblených článků o 3 mm delší a ořezové linky čárkované; zrušení
+  výběru styl nevrátí. Pruh i linky si teď nastaví plný tah s rovnými konci.
+  Ověřeno v Illustratoru s vybranou čárkovanou cestou s kulatými konci: pruh
+  je plný a viditelně stejně dlouhý jako grafika (PNG prohlédnuté). Značky
+  Zünd a Summa tah nemají a netýkalo se jich to.
+- **Cizí obsah ve vrstvě Regmarks zůstane.** Když vrstva Regmarks neměla
+  podvrstvu Zünd ani Summa, skript smazal celý její obsah — i značky v PDF
+  plátu, které Tile Export exportoval v režimu Zünd (ten je kreslí přímo do
+  vrstvy Regmarks), nebo vlastní obsah.
+  Teď mění jen své podvrstvy „Zünd“ a „Summa“ a na konci běhu upozorní,
+  kolik cizích objektů ve vrstvě zůstalo. Ve staré zakázce z doby před 1.0.0
+  zůstanou staré značky vedle nových; upozornění řekne kde.
+- **Skrytá vrstva Trim se ohlásí**, když ji skript zviditelní, jako Regmarks
+  a mapované vrstvy (dřív bez hlášky).
+- **Nepodařené odstranění staré podvrstvy se ohlásí.** Dřív ho spolkl tichý
+  catch a skript přidal druhou podvrstvu stejného jména se starými značkami
+  pod novými. Teď ho počítá jako chybu kreslení a druhou podvrstvu nezaloží.
+  Výstup Summa, který se po běhu ZUND nepodaří odstranit, skript také ohlásí.
+- **Registrační barva se najde i za nečitelným vzorníkem.** Vzorník, jehož
+  barvu nejde přečíst, ukončil hledání a značky vyšly ve 100 % K bez hlášky.
+  Oprava je ve sdíleném modulu; Grommet Marks a Tile Export ji dostanou od
+  svého příštího buildu.
+- **Důvod „barva je přiřazena více vrstvám“ se ve stavovém řádku vejde
+  celý.** V 1.1.0 se uřízl (anglicky o 80 px); s barvou „CUTCONTOUR“ je to
+  nejširší důvod, jaký řádek ukazuje.
+
 ## [1.1.0] — 2026-10-03
 
 Opravy z code review 2026-09-26

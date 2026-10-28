@@ -42,6 +42,7 @@ global.alert = function () {};
 
 // Load production code
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
 buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 
@@ -347,16 +348,30 @@ runProp("intermediates lie ON segment (vertical)",
 // =====================================================
 console.log("\n=== Property 5: validateNumber boundary correctness ===");
 
+// Field text in the grammar validateNumber reads: a whole part, an optional
+// fraction, a decimal comma or dot. The generators build it from integers —
+// String(fc.double) would also give "5e-324", which the field rightly rejects.
+function decimalText(whole, frac, sep) {
+    return (frac === null) ? String(whole) : whole + sep + frac;
+}
+var fracArb = fc.option(fc.integer({ min: 0, max: 9999 }), { nil: null });
+var sepArb  = fc.constantFrom(",", ".");
+
 runProp("valid range (min <= n <= max) returns the number",
     fc.property(
         fc.integer({ min: 0, max: 100 }),
         fc.integer({ min: 100, max: 200 }),
-        fc.double({ min: 0, max: 100, noNaN: true, noDefaultInfinity: true }),
-        function (min, max, val) {
-            // Constrain val to [min, max]
-            var clamped = Math.max(min, Math.min(max, val));
-            var result = ZSM.Utils.validateNumber(String(clamped), min, max, "Test");
-            return result !== null && Math.abs(result - clamped) < 1e-9;
+        fc.integer({ min: 0, max: 10000 }),
+        fracArb,
+        sepArb,
+        function (min, max, pos, frac, sep) {
+            // whole part anywhere in [min, max]; a fraction only below max,
+            // so the value stays inside the range.
+            var whole = min + Math.floor((max - min) * pos / 10000);
+            if (whole === max) { frac = null; }
+            var expected = Number(decimalText(whole, frac, "."));
+            var result = ZSM.Utils.validateNumber(decimalText(whole, frac, sep), min, max, "Test");
+            return result !== null && Math.abs(result - expected) < 1e-9;
         }
     )
 );
@@ -364,9 +379,12 @@ runProp("valid range (min <= n <= max) returns the number",
 runProp("below min returns null",
     fc.property(
         fc.integer({ min: 10, max: 100 }),
-        fc.double({ min: -1000, max: 9, noNaN: true, noDefaultInfinity: true }),
-        function (min, valBelow) {
-            var result = ZSM.Utils.validateNumber(String(valBelow), min, 1000, "Test");
+        fc.integer({ min: -1000, max: 9 }),
+        fracArb,
+        sepArb,
+        function (min, whole, frac, sep) {
+            // whole <= 9 < min, and the fraction moves the value away from min
+            var result = ZSM.Utils.validateNumber(decimalText(whole, frac, sep), min, 1000, "Test");
             return result === null;
         }
     )
@@ -375,9 +393,11 @@ runProp("below min returns null",
 runProp("above max returns null",
     fc.property(
         fc.integer({ min: 10, max: 100 }),
-        fc.double({ min: 101, max: 10000, noNaN: true, noDefaultInfinity: true }),
-        function (max, valAbove) {
-            var result = ZSM.Utils.validateNumber(String(valAbove), 0, max, "Test");
+        fc.integer({ min: 101, max: 10000 }),
+        fracArb,
+        sepArb,
+        function (max, whole, frac, sep) {
+            var result = ZSM.Utils.validateNumber(decimalText(whole, frac, sep), 0, max, "Test");
             return result === null;
         }
     )

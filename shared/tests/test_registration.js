@@ -20,6 +20,11 @@ function assert(cond, msg) {
     if (cond) { pass++; } else { fail++; console.log("  FAIL: " + msg); }
 }
 
+function assertEq(a, b, msg) {
+    total++;
+    if (a === b) { pass++; } else { fail++; console.log("  FAIL: " + msg + " | got=" + a + " expected=" + b); }
+}
+
 function spotSwatch(name, colorType) {
     return { name: name, color: { typename: "SpotColor", spot: { colorType: colorType }, tag: name } };
 }
@@ -74,6 +79,50 @@ assert(!threw, "no exception escapes");
 assert(logged.length >= 1, "the failure is logged");
 var oddColor = { swatches: [{ name: "x", color: null }, { name: "y", color: { typename: "SpotColor" } }] };
 assert(R.swatch(oddColor) === null, "a swatch with no colour or no spot is skipped");
+
+console.log("\n=== an unreadable swatch does not end the search ===");
+// Measured in Node on zund-summa-marks and on this module: one try around the
+// whole loop meant a swatch whose colour cannot be read, placed before the
+// registration swatch, ended the search silently — the marks came out 100 % K.
+function unreadableSwatch(name) {
+    var sw = { name: name };
+    Object.defineProperty(sw, "color", { get: function () { throw new Error("colour unreadable"); } });
+    return sw;
+}
+var withBroken = { swatches: [
+    unreadableSwatch("Broken"),
+    spotSwatch("[Registrační]", ColorModel.REGISTRATION),
+    plainSwatch("Bílá", "CMYKColor")
+]};
+logged.length = 0;
+assert(R.swatch(withBroken) === withBroken.swatches[1], "the registration swatch behind an unreadable one is found");
+assert(R.name(withBroken) === "[Registrační]", "its localized name");
+assert(R.color(withBroken).tag === "[Registrační]", "its colour, not 100 % black");
+assertEq(logged.length, 3, "one log line per lookup that met the unreadable swatch");
+assert(logged[0].indexOf("colour unreadable") >= 0, "the log line carries the reason");
+
+var twoBroken = { swatches: [
+    unreadableSwatch("Broken 1"),
+    unreadableSwatch("Broken 2"),
+    spotSwatch("[Registration]", ColorModel.REGISTRATION)
+]};
+logged.length = 0;
+assert(R.swatch(twoBroken) === twoBroken.swatches[2], "two unreadable swatches in front: still found");
+assertEq(logged.length, 2, "one log line for each unreadable swatch");
+
+var onlyBroken = { swatches: [unreadableSwatch("Broken"), plainSwatch("Bílá", "CMYKColor")] };
+logged.length = 0;
+assert(R.swatch(onlyBroken) === null, "no readable registration swatch: none");
+assert(R.color(onlyBroken).black === 100, "then 100 % black, the fallback");
+assertEq(logged.length, 2, "logged, never silent");
+
+var brokenBehind = { swatches: [
+    spotSwatch("[Registration]", ColorModel.REGISTRATION),
+    unreadableSwatch("Broken")
+]};
+logged.length = 0;
+assert(R.swatch(brokenBehind) === brokenBehind.swatches[0], "an unreadable swatch behind registration is never reached");
+assertEq(logged.length, 0, "and costs no log line");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

@@ -116,17 +116,19 @@ pro svůj namespace:
 |---|---|---|
 | `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE |
 | `cut_marks.js` | `buildCutMarks(NS)` | ZSM, TE |
-| `numbers.js` | `buildNumbers(NS)` | TE |
-| `field_paint.js` | `buildFieldPaint(NS)` | TE |
-| `registration.js` | `buildRegistration(NS)` | TE |
-| `drawing_scale.js` | `buildDrawingScale(NS)` | TE |
+| `numbers.js` | `buildNumbers(NS)` | GM, ZSM, TE |
+| `field_paint.js` | `buildFieldPaint(NS)` | GM, ZSM, TE |
+| `registration.js` | `buildRegistration(NS)` | GM, ZSM, TE |
+| `drawing_scale.js` | `buildDrawingScale(NS)` | GM, ZSM, TE |
 | `progress.js` | `buildProgress(NS)` | TE |
 | `summary.js` | `buildSummary(NS)` | TE |
 
-Čtyři vznikly 2026-10-17 z kódu tile-exportu, `progress.js` a `summary.js`
-2026-10-20 z batch-relink-exportu; TE je používá od 1.2.0, ostatní nástroje
-je napojí ve svých vláknech (`decisions.md`). Moduly bez vlastního uživatele testuje
-`shared/tests/` (`npm run test:shared`).
+Čtyři vznikly 2026-10-17 z kódu tile-exportu a používá je GM od 1.4.0, TE od
+1.2.0 a ZSM od 1.2.0; `progress.js` a `summary.js` vznikly 2026-10-20
+z batch-relink-exportu a používá je TE od 1.2.0. Zdrojem pravdy je
+`tools/build.sh` každého nástroje (přehled v `decisions.md`, „Konzumenti
+sdíleného jádra“). Sdílené moduly testuje `shared/tests/` (`npm run
+test:shared`), protože změna v nich platí pro všechny nástroje najednou.
 
 **Kritérium sdílení: „oprav jednou platí i tam."** Textová podobnost nestačí —
 `storage`, `validation` a `utils` zůstávají lokální, protože jejich divergence je

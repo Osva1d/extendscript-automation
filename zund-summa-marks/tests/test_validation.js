@@ -26,16 +26,19 @@ global.alert = function (msg) { alertCalls.push(msg); };
 
 // Minimal locale (with format() for validateNumber alerts)
 var L_EN = {
-    ERR_MUST_BE_NUMBER: "%s must be a number",
-    ERR_OUT_OF_RANGE:   "%s must be between %s and %s",
-    GAP_ZO:        "Outer gap",
-    GAP_GZ:        "Inner gap",
-    MAX_DIST:      "Max distance",
-    MARK_SIZE_Z:   "Zünd size",
-    MARK_SIZE_S:   "Summa size",
-    ORIENT_DIST:   "Orient distance",
-    FEED_TOP:      "Feed top",
-    FEED_BOT:      "Feed bottom",
+    ERROR_PREFIX:       "ERR: ",
+    ERR_MUST_BE_NUMBER: "%s: enter a number from %s to %s.",
+    ERR_OUT_OF_RANGE:   "%s: enter a number from %s to %s.",
+    // Labels as the dialog has them: a trailing colon, the scale's with its ratio.
+    GAP_ZO:        "Outer gap:",
+    GAP_GZ:        "Inner gap:",
+    MAX_DIST:      "Max distance:",
+    MARK_SIZE_Z:   "Zünd size:",
+    MARK_SIZE_S:   "Summa size:",
+    ORIENT_DIST:   "Orient distance:",
+    FEED_TOP:      "Feed top:",
+    FEED_BOT:      "Feed bottom:",
+    LBL_SCALE:     "Drawing scale 1:",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -50,6 +53,7 @@ ZSM.L = L_EN;
 // ===== LOAD PRODUCTION CODE =====
 var utilsPath = path.join(__dirname, "..", "src", "lib", "utils.js");
 eval(fs.readFileSync(utilsPath, "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 var validationPath = path.join(__dirname, "..", "src", "lib", "validation.js");
 eval(fs.readFileSync(validationPath, "utf8"));
 
@@ -130,10 +134,11 @@ for (var i = 0; i < requiredRuleFields.length; i++) {
     assert(typeof ZSM.Validation.rules[f].label === "string", "Rule '" + f + "' has label");
 }
 
-// scaleN-specific schema asserts (Phase 2)
+// The drawing scale 1:N (spec 1.2.0 §5.1): 1 to 100, decimal, the field's label
 assert(ZSM.Validation.rules.scaleN.min === 1, "scaleN.min === 1");
-assert(ZSM.Validation.rules.scaleN.max === 10, "scaleN.max === 10");
-assert(ZSM.Validation.rules.scaleN.integer === true, "scaleN.integer === true");
+assert(ZSM.Validation.rules.scaleN.max === 100, "scaleN.max === 100");
+assert(ZSM.Validation.rules.scaleN.integer === undefined, "scaleN takes decimals (no integer flag)");
+assertEq(ZSM.Validation.rules.scaleN.label, "LBL_SCALE", "scaleN names the field LBL_SCALE");
 
 
 // =====================================================
@@ -362,41 +367,67 @@ assertEq(r.settings.orientDist, 100, "SUMMA: orientDist from prev (100)");
 
 
 // =====================================================
-// TEST 11: scaleN (Phase 2) — boundary + integer-only
+// TEST 11: the drawing scale 1:N — 1 to 100, decimal (spec 1.2.0 §5.1)
 // =====================================================
-console.log("\n=== TEST 11: scaleN boundary + integer ===");
+// The scale was an integer 1–10 read with parseInt: "2,5" ran as 1:2 and the
+// typo "1O" as 1:1. It now reads like every other field (ZSM.Numbers.parse),
+// takes decimals, and N < 1 is invalid — the family draws it as 1:1
+// (getEffectiveSF) and the canon forbids a silent substitute.
+console.log("\n=== TEST 11: drawing scale 1–100, decimal ===");
+function scaleOf(v) { return ZSM.Validation.validate(rawZund({ scaleN: v }), fullPrev(), L_EN); }
+/** The validated scale, or null when the run is refused. */
+function scaleValue(v) { var r = scaleOf(v); return r.valid ? r.settings.scaleN : null; }
+
+assertEq(scaleValue("2,5"), 2.5, "scaleN '2,5' -> 2.5");
+assertEq(scaleValue("2.5"), 2.5, "scaleN '2.5' -> 2.5");
+assertEq(scaleValue("1"), 1, "scaleN '1' -> 1 (the minimum, real size)");
+assertEq(scaleValue("100"), 100, "scaleN '100' -> 100 (the maximum)");
+assertEq(scaleValue("10"), 10, "scaleN '10' -> 10");
+assertEq(scaleValue(10), 10, "scaleN 10 (a number) -> 10");
+
 alertCalls = [];
+assert(!scaleOf("0,5").valid, "scaleN '0,5' invalid (N < 1 is never drawn as 1:1 silently)");
+assert(!scaleOf("101").valid, "scaleN '101' invalid (above 100)");
+assert(!scaleOf("1O").valid, "scaleN '1O' invalid (a typo, not 1)");
+assert(!scaleOf("0").valid, "scaleN '0' invalid");
+assert(!scaleOf("-1").valid, "scaleN '-1' invalid");
+assert(!scaleOf("").valid, "scaleN '' invalid (the field is required)");
+assertEq(alertCalls.length, 6, "each invalid scale gives exactly one alert (got " + alertCalls.length + ")");
 
-// Valid integer values in range
-assert(ZSM.Validation.validate(rawZund({ scaleN: 1 }),  fullPrev(), L_EN).valid, "scaleN=1 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 2 }),  fullPrev(), L_EN).valid, "scaleN=2 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 5 }),  fullPrev(), L_EN).valid, "scaleN=5 valid");
-assert(ZSM.Validation.validate(rawZund({ scaleN: 10 }), fullPrev(), L_EN).valid, "scaleN=10 (max) valid");
 
-// Out of range
+// =====================================================
+// TEST 12: the alert names the field without its colon, in mm — the scale without its ratio and unit (spec 1.2.0 §9.3, R5)
+// =====================================================
+// "Mezera od okraje: musí být číslo!" had the label's colon in the middle of
+// the sentence; "Měřítko kresby 1:" would have read "Měřítko kresby 1:: ... mm".
+console.log("\n=== TEST 12: validation alerts ===");
+assertEq(ZSM.Validation.plainLabel("Outer gap:"), "Outer gap", "plainLabel: a trailing colon goes");
+assertEq(ZSM.Validation.plainLabel("Drawing scale 1:"), "Drawing scale", "plainLabel: the scale's ratio goes with its colon");
+assertEq(ZSM.Validation.plainLabel("Měřítko kresby 1: "), "Měřítko kresby", "plainLabel: spaces around are ignored");
+assertEq(ZSM.Validation.plainLabel("Panel"), "Panel", "plainLabel: a label without a colon is kept");
+assertEq(ZSM.Validation.plainLabel("GAP_ZO"), "GAP_ZO", "plainLabel: the key fallback is kept");
+
 alertCalls = [];
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 0 }),  fullPrev(), L_EN).valid, "scaleN=0 below min");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 11 }), fullPrev(), L_EN).valid, "scaleN=11 above max");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: -1 }), fullPrev(), L_EN).valid, "scaleN=-1 invalid");
+r = ZSM.Validation.validate(rawZund({ gapOuter: "abc" }), fullPrev(), L_EN);
+assertEq(alertCalls.length, 1, "a typo in a field: one alert");
+assertEq(alertCalls[0], "ERR: Outer gap: enter a number from 0 to 1000 mm.", "...with one prefix, the field name, the range in mm");
+assertEq(r.errors[0].label, "Outer gap:", "...the error record keeps the label as the dialog shows it");
 
-// Integer-only: decimals must fail (use a value that's IN-range as decimal but not integer)
 alertCalls = [];
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 2.5 }), fullPrev(), L_EN).valid, "scaleN=2.5 invalid (not integer)");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: 5.1 }), fullPrev(), L_EN).valid, "scaleN=5.1 invalid (not integer)");
+ZSM.Validation.validate(rawZund({ markSizeZ: "99" }), fullPrev(), L_EN);
+assertEq(alertCalls[0], "ERR: Zünd size: enter a number from 0.1 to 50 mm.", "out of range: the same sentence");
 
-// String inputs (UI sends numbers, but validation should still cope)
-assert(ZSM.Validation.validate(rawZund({ scaleN: "10" }), fullPrev(), L_EN).valid, "scaleN='10' string valid");
-assert(!ZSM.Validation.validate(rawZund({ scaleN: "abc" }), fullPrev(), L_EN).valid, "scaleN='abc' invalid");
-
-// Settings preserved when valid
-var rOk = ZSM.Validation.validate(rawZund({ scaleN: 10 }), fullPrev(), L_EN);
-assertEq(rOk.settings.scaleN, 10, "scaleN=10: settings.scaleN === 10");
-
-// Fallback to prev when scaleN missing in raw (backward compat for old presets)
 alertCalls = [];
-var prevWithScale = fullPrev(); prevWithScale.scaleN = 5;
-var rFallback = ZSM.Validation.validate(rawZund(), prevWithScale, L_EN);  // no scaleN in raw
-assertEq(rFallback.settings.scaleN, 5, "scaleN missing in raw → fallback to prev.scaleN=5");
+ZSM.Validation.validate(rawZund({ scaleN: "500" }), fullPrev(), L_EN);
+assertEq(alertCalls.length, 1, "scale out of range: one alert");
+assertEq(alertCalls[0], "ERR: Drawing scale: enter a number from 1 to 100.", "...without \"1:\" after the name, without \"mm\"");
+alertCalls = [];
+ZSM.Validation.validate(rawZund({ scaleN: "1O" }), fullPrev(), L_EN);
+assertEq(alertCalls[0], "ERR: Drawing scale: enter a number from 1 to 100.", "scale typo: the same sentence");
+for (var ai = 0; ai < alertCalls.length; ai++) {
+    assert(alertCalls[ai].indexOf(": :") === -1 && alertCalls[ai].indexOf("::") === -1 && alertCalls[ai].indexOf("!") === -1,
+        "alert " + ai + ": no second colon, no exclamation mark");
+}
 
 
 // =====================================================

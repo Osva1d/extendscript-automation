@@ -5,7 +5,7 @@
  *
  * Coverage:
  *   - mm2pt / pt2mm conversions (roundtrip + edge cases)
- *   - validateNumber (range, decimals, comma decimal, NaN, infinity)
+ *   - validateNumber (range, decimals, comma decimal, NaN, infinity, strict grammar)
  *   - presetEquals (deep compare, type coercion, layers array, exotic values)
  *
  * Usage: node tests/test_utils.js
@@ -21,8 +21,11 @@ var ZSM = {};
 var alertCalls = [];
 global.alert = function (msg) { alertCalls.push(msg); };
 ZSM.L = {
-    ERR_MUST_BE_NUMBER: "%s must be a number",
-    ERR_OUT_OF_RANGE:   "%s must be between %s and %s",
+    ERROR_PREFIX:       "ERR: ",
+    // The locale's shape (spec 1.2.0 §9.3): field, min, max; the unit rides on the max.
+    ERR_MUST_BE_NUMBER: "%s: enter a number from %s to %s.",
+    ERR_OUT_OF_RANGE:   "%s: enter a number from %s to %s.",
+    DEC_SEP:            ",",   // cs locale: limits in the alert read "0,1", not "0.1"
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -36,6 +39,8 @@ ZSM.L = {
 // ===== LOAD PRODUCTION CODE =====
 var utilsPath = path.join(__dirname, "..", "src", "lib", "utils.js");
 eval(fs.readFileSync(utilsPath, "utf8"));
+// validateNumber reads through the shared ZSM.Numbers, bound the way the build does.
+require("./lib/load_shared.js")(ZSM, ["numbers"]);
 
 
 // ===== TEST FRAMEWORK =====
@@ -96,13 +101,13 @@ alertCalls = [];
 // NaN inputs
 assert(ZSM.Utils.validateNumber("abc", 0, 10, "Test") === null, "validateNumber: 'abc' → null");
 assert(alertCalls.length === 1, "validateNumber: 'abc' triggers 1 alert");
-assert(/must be a number/.test(alertCalls[0]), "validateNumber: 'abc' alert message correct");
+assert(/enter a number/.test(alertCalls[0]), "validateNumber: 'abc' alert message correct");
 
 // Out of range
 alertCalls = [];
 assert(ZSM.Utils.validateNumber("-1", 0, 10, "Test") === null, "validateNumber: -1 below min → null");
 assert(alertCalls.length === 1, "validateNumber: out of range triggers alert");
-assert(/between/.test(alertCalls[0]), "validateNumber: out-of-range message correct");
+assert(/enter a number from 0 to 10 mm\./.test(alertCalls[0]), "validateNumber: out-of-range message correct");
 
 alertCalls = [];
 assert(ZSM.Utils.validateNumber("11", 0, 10, "Test") === null, "validateNumber: 11 above max → null");
@@ -114,8 +119,8 @@ assert(ZSM.Utils.validateNumber("", 0, 10, "Test") === null, "validateNumber: ''
 // Whitespace-only (post-fix: treated as invalid)
 alertCalls = [];
 assert(ZSM.Utils.validateNumber("   ", 0, 10, "Test") === null, "validateNumber: whitespace-only → null");
-assert(alertCalls.length === 1, "validateNumber: whitespace-only triggers 'must be a number' alert");
-assert(/must be a number/.test(alertCalls[0]), "validateNumber: whitespace alert message correct");
+assert(alertCalls.length === 1, "validateNumber: whitespace-only triggers the 'enter a number' alert");
+assert(/enter a number/.test(alertCalls[0]), "validateNumber: whitespace alert message correct");
 
 // Multiple commas (invalid)
 alertCalls = [];
@@ -125,9 +130,49 @@ assert(ZSM.Utils.validateNumber("1,2,3", 0, 10, "Test") === null, "validateNumbe
 alertCalls = [];
 assert(ZSM.Utils.validateNumber(Infinity, 0, 10, "Test") === null, "validateNumber: Infinity > max → null");
 
-// Scientific notation
+// Strict grammar (shared ZSM.Numbers.parse): a decimal comma or dot, spaces
+// around ignored. Exponent, hex, ".5", "5.", a typo, units, a thousands
+// space and an empty field are "must be a number" — never another number.
+var typos = ["1e2", "0x10", ".5", "5.", "1O5", "1 000", "20 mm", ""];
+for (var ti = 0; ti < typos.length; ti++) {
+    alertCalls = [];
+    assert(ZSM.Utils.validateNumber(typos[ti], 0, 1000, "Test") === null,
+        "validateNumber: '" + typos[ti] + "' → null");
+    assert(alertCalls.length === 1 && /enter a number/.test(alertCalls[0]),
+        "validateNumber: '" + typos[ti] + "' → 'enter a number' alert");
+}
+
+var readable = [["2,5", 2.5], [" 2,5 ", 2.5], ["2.5", 2.5], ["+2,5", 2.5]];
+for (var ri = 0; ri < readable.length; ri++) {
+    alertCalls = [];
+    assert(ZSM.Utils.validateNumber(readable[ri][0], 0, 10, "Test") === readable[ri][1],
+        "validateNumber: '" + readable[ri][0] + "' → " + readable[ri][1]);
+    assert(alertCalls.length === 0, "validateNumber: '" + readable[ri][0] + "' no alert");
+}
+
+// The limits in the out-of-range alert are written as the field is: with the
+// locale's decimal separator, the way ZSM.Numbers.format writes them.
 alertCalls = [];
-assert(ZSM.Utils.validateNumber("1e2", 0, 200, "Test") === 100, "validateNumber: '1e2' → 100");
+assert(ZSM.Utils.validateNumber("0,05", 0.1, 50, "Test") === null, "validateNumber: 0,05 below 0,1 → null");
+assert(alertCalls.length === 1 && /from 0,1 to 50 mm\./.test(alertCalls[0]),
+    "validateNumber: range alert names the limits as '0,1' and '50 mm' (got: " + alertCalls[0] + ")");
+
+// The alert is a blocking error: one prefix, the name as given, no second colon,
+// no exclamation mark (spec 1.2.0 §9.3); the unit is mm unless the field has none.
+alertCalls = [];
+ZSM.Utils.validateNumber("abc", 0, 1000, "Gap from edge");
+ZSM.Utils.validateNumber("2000", 0, 1000, "Gap from edge");
+assert(alertCalls[0] === "ERR: Gap from edge: enter a number from 0 to 1000 mm.", "validateNumber: not a number → prefix, name, range in mm (got: " + alertCalls[0] + ")");
+assert(alertCalls[1] === alertCalls[0], "validateNumber: out of range → the same sentence");
+assert(alertCalls[0].indexOf(": :") === -1 && alertCalls[0].indexOf("!") === -1, "validateNumber: no second colon, no exclamation mark");
+alertCalls = [];
+ZSM.Utils.validateNumber("500", 1, 100, "Drawing scale", "");
+ZSM.Utils.validateNumber("x", 1, 100, "Drawing scale", "");
+assert(alertCalls[0] === "ERR: Drawing scale: enter a number from 1 to 100.", "validateNumber: unit \"\" → no unit after the limits (got: " + alertCalls[0] + ")");
+assert(alertCalls[1] === alertCalls[0], "validateNumber: no unit when it is not a number either");
+alertCalls = [];
+ZSM.Utils.validateNumber("500", 1, 100, "Angle", "°");
+assert(alertCalls[0] === "ERR: Angle: enter a number from 1 to 100 °.", "validateNumber: another unit follows the upper limit (got: " + alertCalls[0] + ")");
 
 
 // =====================================================
@@ -168,7 +213,7 @@ assert(ZSM.Utils.presetEquals(a, a) === true, "presetEquals: same reference → 
 console.log("\n=== TEST 6: presetEquals single-field diff ===");
 var fields = ["mode", "gapInner", "gapOuter", "maxDist", "feedTop", "feedBottom",
               "drawRed", "useArtboardBounds", "markSizeZ", "markSizeS",
-              "orientDist", "markColor", "scaleN"];
+              "orientDist", "markColor"];
 for (var fi = 0; fi < fields.length; fi++) {
     var orig = makeBaseline();
     var modified = makeBaseline();
@@ -180,6 +225,14 @@ for (var fi = 0; fi < fields.length; fi++) {
     assert(ZSM.Utils.presetEquals(orig, modified) === false,
            "presetEquals: diff in '" + k + "' → false");
 }
+
+
+// The drawing scale belongs to the document, not to a preset (spec 1.2.0 §5.2):
+// a preset saved at 1:10 by 1.1.0 must not show "*" in a 1:1 document.
+var scaled = makeBaseline();
+scaled.scaleN = 10;
+assert(ZSM.Utils.presetEquals(makeBaseline(), scaled) === true,
+       "presetEquals: objects differing only in scaleN → true (the scale is not a preset value)");
 
 
 // =====================================================

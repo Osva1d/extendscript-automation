@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: Registration (shared) — the document's registration swatch, by type
-// Part of: shared core (no consumer yet; manipulating-illustrator-items §2)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
+//          manipulating-illustrator-items §2)
 //
 // Namespace-neutral factory: buildRegistration(NS) registers NS.Registration
 // on the namespace object passed in. A tool's build cats this file and
@@ -14,9 +15,9 @@
 // the Swatches panel is not fixed: where index 1 holds White, a tool trusting
 // the position draws marks the cutter's camera cannot see. tile-export got
 // this fix first, zund-summa-marks the same one on 2026-10-03, and
-// grommet-marks still reads swatches[1] — the "fix once, holds there too"
-// criterion docs/decisions.md asks for. Taken from tile-export's
-// TE.Draw.getRegistrationName.
+// grommet-marks read swatches[1] until it took this module in 1.4.0 — the
+// "fix once, holds there too" criterion docs/decisions.md asks for. Taken
+// from tile-export's TE.Draw.getRegistrationName.
 // ------------------------------------------------------------------------
 function buildRegistration(NS) {
     function log(msg) {
@@ -35,17 +36,26 @@ function buildRegistration(NS) {
          * @returns {Swatch|null} The swatch, or null when the document has none.
          */
         swatch: function (doc) {
+            var sw, n, i, c;
             try {
-                var sw = doc.swatches, i, c;
-                for (i = 0; i < sw.length; i++) {
+                sw = doc.swatches;
+                n = sw.length;
+            } catch (e) {
+                log("Registration.swatch: swatches unreadable: " + e.message);
+                return null;
+            }
+            for (i = 0; i < n; i++) {
+                // One swatch whose colour cannot be read must not end the
+                // search: the registration swatch may sit behind it.
+                try {
                     c = sw[i].color;
                     if (c && c.typename === "SpotColor" && c.spot &&
                             c.spot.colorType === ColorModel.REGISTRATION) {
                         return sw[i];
                     }
+                } catch (e2) {
+                    log("Registration.swatch: swatch " + i + " unreadable: " + e2.message);
                 }
-            } catch (e) {
-                log("Registration.swatch: swatches unreadable: " + e.message);
             }
             return null;
         },

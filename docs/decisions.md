@@ -195,7 +195,7 @@ dál bere z aktivního dokumentu, což je v něm správně. Zünd Summa Marks se
 tile-exportu nezapojuje jako druhý běh, ale přes tohle sdílené jádro
 (rozhodnuto s uživatelem, `docs/reports/2026-09-25-maskovani-platu.md` §8).
 
-## Sdílené jádro rozšířeno o čtyři moduly bez konzumenta (2026-10-17)
+## Sdílené jádro rozšířeno o čtyři moduly, tehdy bez konzumenta (2026-10-17)
 
 Z dodatečného auditu společného jazyka
 ([report](reports/2026-10-17-dodatecny-audit-spolecneho-jazyka.md) §4–§5).
@@ -207,11 +207,12 @@ jednou platí i tam" na doložené opravě, ne na textové podobnosti:
 |---|---|---|
 | `numbers.js` — `parse`, `format` | GM a TE opravily tutéž třídu překlepů každý zvlášť a jinak; GM a ZSM přes `Number()` berou `0x10` jako 16 | audit N1 (změřeno), zápis čísla zpět do pole s tečkou ve všech třech (N6) |
 | `field_paint.js` — `field`, `text`, `COLORS` | tři kopie obarvení pole (GM `paintField`, ZSM `markFieldValidity`, TE `paintField`) se stejnou opravou výchozího pera | podmínka „až ji převezme TE" z auditu 2026-10-14 §6 splněna |
-| `registration.js` — `swatch`, `name`, `color` | oprava „podle typu, ne podle pozice" udělaná dvakrát (TE, ZSM 2026-10-03), GM ji nemá | P4 |
+| `registration.js` — `swatch`, `name`, `color` | oprava „podle typu, ne podle pozice" udělaná dvakrát (TE, ZSM 2026-10-03), GM ji neměla (má ji od 1.4.0 přes modul) | P4 |
 | `drawing_scale.js` — `read`, `write`, `load`, `save` | měřítko kresby je jedna hodnota dokumentu pro všechny nástroje (varianta C) a oprava přejmenovaného prefixu (N43) se nemá psát znovu | rozhodnutí 2026-10-17 |
 
-**Zatím je nepoužívá žádný nástroj** — rozhodnutí uživatele: moduly ano,
-napojení v jejich vláknech. U TE by šlo o refaktor beze změny chování, u GM
+**Tehdy je nepoužíval žádný nástroj** — rozhodnutí uživatele: moduly ano,
+napojení v jejich vláknech (kdo je používá dnes, viz „Konzumenti sdíleného
+jádra“ níž). U TE by šlo o refaktor beze změny chování, u GM
 a ZSM o změnu chování (gramatika čísel, čárka v polích, registrace v GM), která
 patří do jejich dalších verzí. Nástroj, který modul převezme, smaže svou kopii
 — dvě kopie téhož kódu jsou přesně to, čemu modul brání.
@@ -227,7 +228,7 @@ dávají na stejných vstupech totéž.
 TE už zapsal, tak nepotřebují migraci.
 
 **Bilance sdíleného jádra:** 7 modulů — `json2.js`, `ui_state.js`,
-`cut_marks.js` a čtyři nové bez konzumenta.
+`cut_marks.js` a čtyři nové, k 2026-10-17 bez konzumenta.
 
 ## Průběh a souhrn běhu do sdíleného jádra (2026-10-20)
 
@@ -247,3 +248,23 @@ XMP měřítka v `TE.Doc`).
 
 **Bilance sdíleného jádra:** 9 modulů; TE používá všechny kromě `json2.js`,
 který je prostý polyfill a builduje se první.
+
+## Konzumenti sdíleného jádra (2026-10-24)
+
+Čtyři moduly z 2026-10-17 už mají všechny tři nástroje, kterým byly určené;
+každý při převzetí smazal svou kopii. Zdrojem pravdy je `tools/build.sh`
+každého nástroje.
+
+| modul | grommet-marks | tile-export | zund-summa-marks | batch-relink-export |
+|---|---|---|---|---|
+| `json2.js` | ✓ | ✓ | ✓ | ✓ |
+| `ui_state.js` | ✓ | ✓ | ✓ | — |
+| `cut_marks.js` | — | ✓ | ✓ | — |
+| `numbers.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
+| `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
+| `registration.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
+| `drawing_scale.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
+| `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | — (převezme ve svém vlákně) |
+
+Hlavičky modulů v `shared/lib/` jmenují své konzumenty; sdílené testy
+(`npm run test:shared`) zůstávají, protože modul mění chování všem najednou.

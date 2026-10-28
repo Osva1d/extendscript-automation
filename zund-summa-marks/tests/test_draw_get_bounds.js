@@ -54,6 +54,7 @@ ZSM.Config = {
 };
 // Load utils (mm2pt, log) — adds ZSM.Utils to our ZSM
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 // Load bounds (must come before draw.js — draw delegates getBounds to ZSM.Bounds)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "bounds.js"), "utf8"));
 // Load draw.js — adds ZSM.Draw to same ZSM

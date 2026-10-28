@@ -34,6 +34,7 @@ SUITES=(
     "tests/test_draw_get_bounds.js"
     "tests/test_draw_render.js"
     "tests/test_e2e_workflow.js"
+    "tests/test_main.js"
     "tests/test_ui_layout.js"
     "tests/test_properties.js"
 )

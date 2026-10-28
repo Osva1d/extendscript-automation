@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: ZSM.UI — ScriptUI dialog, preset logic, event handling
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation
+// Depends on: ZSM.Config, ZSM.Draw, ZSM.Storage, ZSM.UIState, ZSM.Validation,
+//             ZSM.Numbers, ZSM.FieldPaint, ZSM.DrawingScale (shared)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -14,14 +15,26 @@ ZSM.UI = {
     //  • COLOR_DD (spot-dropdown right-edge axis, N5) stays separate from VALUE_GROUP
     //  • LABEL_COL and COLOR_DD are two DIFFERENT axes — never unify them
     M: {
-        LABEL_COL:    178,   // label column (hdrLayer, ddLayer, addRow.st, addColorRow.st)
+        LABEL_COL:    178,   // label column (hdrLayer, ddLayer, addRow.st, addColorRow.st, stScale)
         COLOR_DD:     112,   // colour dropdown width (ddColor, addColorRow.ddl-with-swatch)
         VALUE_GROUP:  130,   // value sub-group (addRow.vg, addColorRow.ddl-no-swatch)
-        NUM_FIELD:    56,    // numeric edittext (addRow.et)
+        NUM_FIELD:    56,    // numeric edittext (addRow.et, etScale)
         ET_LAYER:     152,   // layer-name edittext (< LABEL_COL, N6)
         SWATCH:       16,    // colour swatch square
-        LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj/scale spacer)
-        PRESET_BTN:   92,    // preset action buttons
+        LABEL_COL_W:  72,    // output-panel left column (Režim/Zdroj)
+        REVERT_BTN:   30,    // [deviation] ↺ is one glyph; the native 80 px would dwarf the preset row
+        // [deviation] live text (canon §4, reason 2): the status line's two
+        // labels change text while the dialog is open and keep their first
+        // width. Sized for the widest text either can hold, cs and en,
+        // measured in Illustrator 30.8.2 (measureString in the label's own
+        // font, 2026-10-24 and 2026-10-28, engine-facts): the widest text is
+        // now the reason for a duplicate „CUTCONTOUR“ row, 418 px; the widest
+        // finding (99 999,9 × 99 999,9 mm, 1:99,9, pouze značky) is 390 px
+        // (en 374) since it names no cut colour. 425 is the earlier width of
+        // a finding with a cut colour, kept: 7 px of slack and the measured
+        // dialog sizes stay valid. A longer colour name in the reason
+        // truncates at the end.
+        STATUS_W:     425,
         RADIO:        70,    // mode radios
         SP_PANEL:     10,    // panel spacing (window, pGeo, pFeed, pLay)
         SP_GROUP:     8,     // group spacing (preset, mode, source, buttons …)
@@ -58,11 +71,22 @@ ZSM.UI = {
         // does both). Computed here at show() entry so the mode-switch loop
         // below reuses the same docData on every iteration without re-querying
         // the DOM. Runs in front of any UI construction.
+        // drawingScale: N of 1:N the document remembers (none stored = 1). A
+        // mode switch writes the field back here, so the reopened dialog shows
+        // what the user typed — the scale is the document's, not a preset's.
+        // artboard / artwork: what the status line reports at rest (spec 1.2.0
+        // §7). The artwork's size would take ZSM.Bounds.get, which clears the
+        // selection in Auto-fit — before the dialog that drops the user's
+        // selection even on Cancel — so it stays null and the line leaves the
+        // size out in Auto-fit and SUMMA.
         var docData = {
             swatches:      ZSM.Draw.getSwatchNames(),
             swatchRGB:     ZSM.Draw.getSwatchRGBMap(),
             layers:        ZSM.Draw.getLayerNames(),
-            detectedColor: ZSM.Draw.detectCutColor()
+            detectedColor: ZSM.Draw.detectCutColor(),
+            drawingScale:  ZSM.DrawingScale.load(app.activeDocument) || 1,
+            artboard:      this.activeArtboardSize(),
+            artwork:       null
         };
 
         // [Default] holds factory values only: Save never writes it (it turns
@@ -98,7 +122,11 @@ ZSM.UI = {
      *
      * @param {string} mode    - "ZUND" or "SUMMA"
      * @param {Object} pData   - Preset wrapper (mutated in place on OK/Save)
-     * @param {Object} docData - {swatches, layers, detectedColor}
+     * @param {Object} docData - {swatches, layers, detectedColor, drawingScale,
+     *        artboard, artwork}
+     *        drawingScale = the scale field's start value (number; NaN for a
+     *        typo carried through a mode switch, shown as an empty field);
+     *        artboard, artwork = {w, h} in document mm or null (see show())
      * @returns {Object|null}
      */
     buildDialog: function (mode, pData, docData) {
@@ -108,6 +136,14 @@ ZSM.UI = {
         var self = this;
         var isZ = (mode === "ZUND");
         var isS = (mode === "SUMMA");
+
+        // [Default] is the factory values of THIS dialog's mode. show() builds
+        // the Zünd ones, so in a SUMMA dialog it read "modified" for good (the
+        // modes differ) and a ↺ or a pick of it jumped to Zünd. The factory
+        // object carries the values of both modes, so only its mode tag moves.
+        if (pData.presets[c.PRESET_KEY_DEFAULT]) {
+            pData.presets[c.PRESET_KEY_DEFAULT].mode = mode;
+        }
 
         // Resolve initial values: [Last Settings] → active preset → defaults
         var sData = pData.presets["[Last Settings]"]
@@ -150,7 +186,7 @@ ZSM.UI = {
         pPreset.margins = 12;
         pPreset.spacing = M.SP_GROUP;
 
-        // Row 1: label + dropdown (full width)
+        // Row 1: label, list, revert. The list takes the row's slack.
         var grpPresetTop = pPreset.add("group");
         grpPresetTop.alignment = ["fill", "top"];
         grpPresetTop.spacing   = M.SP_GROUP;
@@ -164,22 +200,26 @@ ZSM.UI = {
         // edits. Compact icon-only button (N7) so it no longer crowds the preset
         // dropdown; the helpTip carries the meaning. Enabled only when the preset
         // has unsaved changes (gated in refreshModifiedIndicator). Distinct from
-        // Reset/Defaults (which loads factory defaults).
-        var btnRevert = grpPresetTop.add("button", undefined, "↺");
-        btnRevert.preferredSize = [30, 24];
-        btnRevert.alignment = ["right", "center"];
+        // Reset/Defaults (which loads factory defaults) — except on [Default],
+        // where "as saved" IS the factory values (btnRevert.onClick).
+        // In a group of its own: ScriptUI shares a row's slack among ALL its
+        // controls, so a bare button grows with the list (canon 9, engine-facts).
+        var grpRevert = grpPresetTop.add("group");
+        grpRevert.alignment = ["right", "center"];
+        var btnRevert = grpRevert.add("button", undefined, l.BTN_REVERT);
+        btnRevert.preferredSize.width = M.REVERT_BTN;   // [deviation] see M
         btnRevert.helpTip = l.TIP_REVERT;
 
-        // Row 2: action buttons. "Defaults" (factory reset, N8) sits on the left
-        // — it's a different class of action from the per-preset Save/Save As/
-        // Delete cluster on the right, so it gets its own visual slot instead of
-        // being hidden behind a [Default] dropdown pick (low discoverability).
+        // Row 2: action buttons, all at their native widths. "Defaults" (factory
+        // reset, N8) sits on the left — it's a different class of action from the
+        // per-preset Save/Save As/Delete cluster on the right, so it gets its own
+        // visual slot instead of being hidden behind a [Default] dropdown pick
+        // (low discoverability).
         var grpPresetBtns = pPreset.add("group");
         grpPresetBtns.alignment = ["fill", "top"];
         grpPresetBtns.spacing = M.SP_GROUP;
 
         var btnReset = grpPresetBtns.add("button", undefined, l.BTN_RESET);
-        btnReset.preferredSize.width = 80;
         btnReset.alignment = ["left", "center"];
         btnReset.helpTip = l.TIP_RESET;
 
@@ -187,19 +227,15 @@ ZSM.UI = {
         grpPresetBtnsR.alignment = ["right", "center"];
         grpPresetBtnsR.spacing = M.SP_GROUP;
 
-        // Uniform width so the three buttons line up evenly (text-based widths
-        // made them ragged: "Uložit" vs "Uložit jako…" vs "Smazat").
-        var PRESET_BTN_W = M.PRESET_BTN;
+        // Native widths: the 92 px these once had is too narrow for "Uložit jako…",
+        // which needs 103 (UI audits 2026-09-28/29, canon 9).
         var btnSave = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE);
-        btnSave.preferredSize.width = PRESET_BTN_W;
         btnSave.helpTip = l.TIP_SAVE;
 
         var btnSaveAs = grpPresetBtnsR.add("button", undefined, l.BTN_SAVE_AS);
-        btnSaveAs.preferredSize.width = PRESET_BTN_W;
         btnSaveAs.helpTip = l.TIP_SAVE_AS;
 
         var btnDel = grpPresetBtnsR.add("button", undefined, l.BTN_DEL);
-        btnDel.preferredSize.width = PRESET_BTN_W;
         btnDel.helpTip = l.TIP_DEL;
 
         // =================================================================
@@ -257,114 +293,33 @@ ZSM.UI = {
             rbFixed.helpTip = l.TIP_SRC_FIXED;
         }
 
-        // --- Scale row (Phase 2): 72px spacer + checkbox + 1:N field ---
-        // Scale describes the document, but lives in the merged Output panel now.
-        // Derived state: scaleN > 1 → checkbox checked, field enabled.
-        // scaleN === 1 → checkbox unchecked, field disabled at "1".
-        // Single source of truth: scaleN value (no extra checkbox state stored).
+        // --- Drawing scale 1:N (spec 1.2.0 §5.1) ---
+        // One decimal field, as in grommet-marks and tile-export. It starts
+        // from the document (docData.drawingScale) and only the document keeps
+        // it: presets, the last run, a mode switch and the Defaults button
+        // never change it. Built like an addRow row (label column, NUM_FIELD)
+        // without the unit, so the field shares the geometry fields' axis.
         var grpScale = pOutput.add("group");
-        grpScale.orientation   = "row";
-        grpScale.alignChildren = ["left", "center"];
-        grpScale.spacing       = 10;   // breathing room between checkbox and the ratio
+        var stScale = grpScale.add("statictext", undefined, l.LBL_SCALE);
+        stScale.preferredSize.width = M.LABEL_COL;
+        stScale.helpTip = l.TIP_SCALE;
+        var etScale = grpScale.add("edittext", undefined, ZSM.Numbers.format(docData.drawingScale));
+        etScale.preferredSize.width = M.NUM_FIELD;
+        etScale.helpTip = l.TIP_SCALE;
 
-        // Leading spacer (LABEL_COL_W) aligns the checkbox's left edge with the
-        // radios above. A statictext carries the width reliably (groups ignore it).
-        var stScaleSpacer = grpScale.add("statictext", undefined, "");
-        stScaleSpacer.preferredSize.width = LABEL_COL_W;
-
-        var cbScale = grpScale.add("checkbox", undefined, l.SCALE_CHECKBOX);
-        cbScale.helpTip = l.TIP_SCALE_CHECKBOX;
-
-        // "1:" hugs its field as one unit (tight spacing) instead of floating
-        // with equal gaps on both sides.
-        var grpRatio = grpScale.add("group");
-        grpRatio.orientation   = "row";
-        grpRatio.alignChildren = ["left", "center"];
-        grpRatio.spacing       = 3;
-
-        var stScaleLabel = grpRatio.add("statictext", undefined, l.SCALE_FIELD_LABEL);
-        stScaleLabel.helpTip = l.TIP_SCALE_FIELD;
-
-        var etScale = grpRatio.add("edittext", undefined, "1");
-        etScale.preferredSize.width = M.NUM_FIELD;   // same axis as addRow's numeric fields
-        etScale.helpTip = l.TIP_SCALE_FIELD;
-
-        /** Enable/disable the ratio field AND its "1:" label together, so the
-         *  whole "1:N" unit greys out as one when scaling is off. */
-        function setScaleEnabled(on) {
-            etScale.enabled      = on;
-            stScaleLabel.enabled = on;
-        }
-
-        // Sync UI to initial scaleN value
-        var initScaleN = parseInt(sData.scaleN, 10);
-        if (isNaN(initScaleN) || initScaleN < 1) initScaleN = 1;
-        if (initScaleN > 1) {
-            cbScale.value   = true;
-            etScale.text    = String(initScaleN);
-            setScaleEnabled(true);
-        } else {
-            cbScale.value   = false;
-            etScale.text    = "1";
-            setScaleEnabled(false);
-        }
-
-        /** Read current scaleN from the UI controls (clean integer 1..10). */
-        function readScaleN() {
-            if (!cbScale.value) return 1;
-            var n = parseInt(etScale.text, 10);
-            if (isNaN(n) || n < 1) return 1;
-            if (n > 10) return 10;
-            return n;
-        }
-
-        /** Apply title suffix when scaling is active. */
+        /** Title suffix " — 1:N" while the field holds a valid scale other
+         *  than 1:1 — the scale the run would use, written like the field. */
         function applyTitleSuffix() {
-            var n = readScaleN();
-            var baseTitle = c.ui.title || "";
-            // Strip any previous suffix " — 1:N"
-            var base = baseTitle.replace(/\s*—\s*1:\d+\s*$/, "");
-            try {
-                w.text = (n > 1) ? (base + " — 1:" + n) : base;
-            } catch (e) {}
+            var n = parseNum(etScale), r = ZSM.Validation.rules.scaleN;
+            var scaled = (n >= r.min && n <= r.max && n !== 1);   // NaN fails both bounds
+            w.text = scaled ? (c.ui.title + " — 1:" + ZSM.Numbers.format(n)) : c.ui.title;
         }
         applyTitleSuffix();   // initial
 
-        cbScale.onClick = function () {
-            if (cbScale.value) {
-                setScaleEnabled(true);
-                // Auto-suggest "10" when activating from "1"
-                var cur = parseInt(etScale.text, 10);
-                if (isNaN(cur) || cur <= 1) etScale.text = "10";
-            } else {
-                setScaleEnabled(false);
-                etScale.text = "1";
-            }
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-        };
-
-        // onChange (commit, focus leaves the field) vs onChanging (every
-        // keystroke) MUST differ here: the auto-uncheck on "1" may only run on
-        // commit. If it ran per keystroke, typing "12" would disable the field
-        // after the first "1" — mid-typing lockout. liveValidateAll paints the
-        // field red / gates Generate for out-of-range values (e.g. 50).
-        etScale.onChange = function () {
-            var n = parseInt(etScale.text, 10);
-            // Auto-uncheck when user explicitly commits 1
-            if (n === 1) {
-                cbScale.value   = false;
-                setScaleEnabled(false);
-            }
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
-        etScale.onChanging = function () {
-            applyTitleSuffix();
-            refreshModifiedIndicator();
-            liveValidateAll();
-        };
+        // Not a preset value, so no modified-indicator refresh: the live check
+        // paints the field, gates Generate / Save / Save As and the status line.
+        etScale.onChanging = function () { applyTitleSuffix(); liveValidateAll(); };
+        etScale.onChange   = etScale.onChanging;
 
         // =================================================================
         // Panel: Gap / Geometry (mode-specific rows)
@@ -581,15 +536,30 @@ ZSM.UI = {
         // Copyright footer per extendscript-ui-standards §5: dynamic string
         // composed from constants (never hardcoded), enabled=false greys it
         // intentionally to visually distinguish from active controls.
-        // Status line (V2) — explains *why* Generate is disabled and names the
-        // offending field + its valid range. Sits directly above the footer so
-        // the cause and the greyed button are seen together. Updated by
-        // liveValidateAll; empty (reserved space) while everything is valid.
+        // Status line (spec 1.2.0 §7, canon 12.3) — at rest what the script
+        // found in the document, else why Generate is grey. Sits directly above
+        // the footer so the cause and the greyed button are seen together. Two
+        // statictexts in one stack, exactly one visible (grommet-marks 1.4.0
+        // §13); liveValidateAll() decides which:
+        //  - stFound, the finding: disabled and NEVER painted — the host's
+        //    greyed look. Illustrator reads a control's own pen back as null
+        //    before show(), so a pen given back after a reason would be a guess.
+        //  - stReason, the reason: enabled so its colour shows, painted ERR once,
+        //    here; it only ever shows reasons, so nothing is given back.
+        // Both keep their first width (canon §1), hence M.STATUS_W.
         var grpStatus = w.add("group");
-        grpStatus.alignment = ["fill", "top"];
-        var stStatus = grpStatus.add("statictext", undefined, "", { truncate: "end" });
-        stStatus.preferredSize.width = 340;
-        stStatus.alignment = ["fill", "center"];
+        grpStatus.orientation   = "stack";
+        grpStatus.alignment     = ["fill", "top"];
+        grpStatus.alignChildren = ["fill", "top"];
+        grpStatus.spacing       = 0;
+        grpStatus.margins       = 0;
+        var stFound = grpStatus.add("statictext", undefined, "", { truncate: "end" });
+        stFound.preferredSize.width = M.STATUS_W;   // [deviation] see M
+        stFound.enabled = false;
+        var stReason = grpStatus.add("statictext", undefined, "", { truncate: "end" });
+        stReason.preferredSize.width = M.STATUS_W;  // [deviation] see M
+        ZSM.FieldPaint.text(stReason, "ERR");
+        stReason.visible = false;
 
         var grpFooterCopy = w.add("group");
         grpFooterCopy.alignment = ["fill", "top"];
@@ -613,9 +583,12 @@ ZSM.UI = {
         // Internal helpers
         // =================================================================
 
-        /** Parse a numeric edittext value (comma-safe). */
+        /**
+         * Reads a numeric edittext through the family's one reading: a decimal
+         * comma or dot, anything else NaN (never a prefix of it).
+         */
         function parseNum(et) {
-            return parseFloat(et.text.replace(/,/g, "."));
+            return ZSM.Numbers.parse(et.text);
         }
 
         /**
@@ -656,7 +629,10 @@ ZSM.UI = {
 
             return {
                 mode:              mode,
-                gapInner:          isZ ? parseNum(rGapGZ.inp) : prev.gapInner,
+                // A greyed gapInner (Fixed source) carries the previous value, as
+                // the OK handler does: the live check skips it, so a typo left
+                // there would be saved as NaN (null) otherwise.
+                gapInner:          (isZ && rGapGZ.inp.enabled) ? parseNum(rGapGZ.inp) : prev.gapInner,
                 gapOuter:          parseNum(rGapZO.inp),
                 maxDist:           parseNum(rMaxD.inp),
                 feedTop:           isS ? parseNum(rFT.inp)    : prev.feedTop,
@@ -667,7 +643,9 @@ ZSM.UI = {
                 markSizeS:         isS ? parseNum(rMarkSize.inp) : prev.markSizeS,
                 orientDist:        isZ ? parseNum(rOrientDist.inp) : prev.orientDist,
                 markColor:         markColorSel,
-                scaleN:            readScaleN(),
+                // The run's scale (NaN while the field is wrong); presetEquals
+                // ignores it and Storage.save leaves it out of the file.
+                scaleN:            parseNum(etScale),
                 marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
@@ -687,8 +665,10 @@ ZSM.UI = {
             rbSumma.value = isS;
 
             // Shared controls
-            rGapZO.inp.text = String(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
-            rMaxD.inp.text  = String(obj.maxDist   !== undefined ? obj.maxDist   : 500);
+            // Numbers go into the fields with the locale's separator, unrounded;
+            // null (a damaged preset) is an empty field the live check names.
+            rGapZO.inp.text = ZSM.Numbers.format(obj.gapOuter  !== undefined ? obj.gapOuter  : 0);
+            rMaxD.inp.text  = ZSM.Numbers.format(obj.maxDist   !== undefined ? obj.maxDist   : 500);
             ZSM.UI.selectDDL(rColor.ddl, obj.markColor || "[Registration]");
             if (rColor.refresh) rColor.refresh();
 
@@ -696,34 +676,22 @@ ZSM.UI = {
             if (isZ) {
                 rbFixed.value   = !!obj.useArtboardBounds;
                 rbAuto.value    = !obj.useArtboardBounds;
-                rGapGZ.inp.text = String(obj.gapInner  !== undefined ? obj.gapInner  : 5);
+                rGapGZ.inp.text = ZSM.Numbers.format(obj.gapInner  !== undefined ? obj.gapInner  : 5);
                 applySourceState();
-                rMarkSize.inp.text = String(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
-                rOrientDist.inp.text = String(obj.orientDist !== undefined ? obj.orientDist : 100);
+                rMarkSize.inp.text = ZSM.Numbers.format(obj.markSizeZ !== undefined ? obj.markSizeZ : 5);
+                rOrientDist.inp.text = ZSM.Numbers.format(obj.orientDist !== undefined ? obj.orientDist : 100);
             }
 
             // SUMMA-specific
             if (isS) {
-                rFT.inp.text    = String(obj.feedTop    !== undefined ? obj.feedTop    : 70);
-                rFB.inp.text    = String(obj.feedBottom !== undefined ? obj.feedBottom : 50);
+                rFT.inp.text    = ZSM.Numbers.format(obj.feedTop    !== undefined ? obj.feedTop    : 70);
+                rFB.inp.text    = ZSM.Numbers.format(obj.feedBottom !== undefined ? obj.feedBottom : 50);
                 chRed.value     = !!obj.drawRed;
-                rMarkSize.inp.text = String(obj.markSizeS !== undefined ? obj.markSizeS : 3);
+                rMarkSize.inp.text = ZSM.Numbers.format(obj.markSizeS !== undefined ? obj.markSizeS : 3);
             }
 
-            // Scale (Phase 2) — sync checkbox + field from scaleN value.
-            var newScaleN = parseInt(obj.scaleN, 10);
-            if (isNaN(newScaleN) || newScaleN < 1) newScaleN = 1;
-            if (newScaleN > 10) newScaleN = 10;
-            if (newScaleN > 1) {
-                cbScale.value   = true;
-                etScale.text    = String(newScaleN);
-                setScaleEnabled(true);
-            } else {
-                cbScale.value   = false;
-                etScale.text    = "1";
-                setScaleEnabled(false);
-            }
-            applyTitleSuffix();
+            // The drawing scale field is left alone: it is the document's
+            // (spec 1.2.0 §5.2), whatever obj.scaleN an old preset carries.
 
             // Rebuild layer rows
             while (layContainer.children.length > 0) {
@@ -802,24 +770,44 @@ ZSM.UI = {
             btnDel.enabled = (pData.activePreset !== c.PRESET_KEY_DEFAULT);
         }
 
+        // False while a number field the live check covers (active mode,
+        // enabled fields) is invalid: Save and Save As are grey then, so a
+        // preset is never saved over a typo. Set by liveValidateAll; read
+        // here so a refresh that comes after the check (a preset load, a
+        // checkbox, a colour pick) cannot give Save back.
+        var numbersOk = true;
+
         /**
-         * Refresh the active dropdown item's text + Save button state.
+         * The one place that decides Save and Save As: Save needs an unsaved
+         * change and valid numbers, Save As only valid numbers.
+         * @param {boolean} modified - Whether the UI differs from the active preset.
+         */
+        function applySaveGate(modified) {
+            try { btnSave.enabled   = modified && numbersOk; } catch (e) {}
+            try { btnSaveAs.enabled = numbersOk; } catch (e) {}
+        }
+
+        /**
+         * Refresh the asterisk + the Save / Revert states.
          * Lighter than updatePresetList(); call from input onChange handlers.
+         * Relabels EVERY item, not only the active one: switching away from an
+         * edited preset would otherwise leave its " *" behind.
          */
         function refreshModifiedIndicator() {
             var modified = isModified();
-            try { btnSave.enabled   = modified; } catch (e) {}
+            applySaveGate(modified);
             try { btnRevert.enabled = modified; } catch (e) {}
 
-            if (!ddPreset.selection) return;
-            var idx = ddPreset.selection.index;
-            var key = sortedKeys[idx];
-            if (key !== pData.activePreset) return;
-            var displayText = (key === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : key;
-            if (modified) displayText += " *";
-            try { ddPreset.items[idx].text = displayText; } catch (e) {
-                // Some ScriptUI versions don't allow direct mutation
-                updatePresetList();
+            for (var j = 0; j < sortedKeys.length && j < ddPreset.items.length; j++) {
+                var key = sortedKeys[j];
+                var displayText = (key === c.PRESET_KEY_DEFAULT) ? l.PRESET_DEFAULT : key;
+                if (modified && key === pData.activePreset) displayText += " *";
+                if (ddPreset.items[j].text === displayText) continue;
+                try { ddPreset.items[j].text = displayText; } catch (e) {
+                    // Some ScriptUI versions don't allow direct mutation
+                    updatePresetList();
+                    return;
+                }
             }
         }
 
@@ -886,18 +874,22 @@ ZSM.UI = {
          */
         btnSaveAs.onClick = function () {
             var raw = prompt(l.PROMPT_SAVE_AS, "");
-            if (raw === null || raw === "") return;
+            if (raw === null) return;   // cancelled
 
-            // Pre-validate to give a localized alert for reserved names
-            // (UIState.saveAs returns "invalid-name" but no alert).
-            var clean = ZSM.UIState.validatePresetName(raw);
-            if (!clean) {
+            // Pre-validate to give a localized alert (UIState.saveAs returns
+            // "invalid-name" for both cases but shows nothing): an empty or
+            // whitespace-only name is not a reserved one (canon 12.4).
+            if (!/\S/.test(raw)) {
+                alert(l.ERR_ENTER_NAME);
+                return;
+            }
+            if (!ZSM.UIState.validatePresetName(raw)) {
                 alert(l.ERR_RESERVED_NAME);
                 return;
             }
 
             var r = ZSM.UIState.saveAs(pData, raw, getUIValues(), function (existingName) {
-                return confirm(l.ERR_PRESET_EXISTS);
+                return confirm(l.format(l.CONFIRM_OVERWRITE_PRESET, existingName));
             });
             if (!r.ok) return;
             updatePresetList();
@@ -909,17 +901,17 @@ ZSM.UI = {
             // Guard reserved preset before prompting (no point confirming a
             // delete that will be rejected anyway).
             if (pData.activePreset === c.PRESET_KEY_DEFAULT) {
-                alert(l.ERR_PRESET_DEL_DEF);
+                alert(l.ERR_CANNOT_DELETE_DEFAULT);
                 return;
             }
             // Destructive + persisted to disk immediately → require explicit
             // confirmation (extendscript-ui-standards §10, ui-ux-principles §5).
-            if (!confirm(ZSM.L.format(l.CONFIRM_DEL_PRESET, pData.activePreset))) {
+            if (!confirm(l.format(l.CONFIRM_DELETE_PRESET, pData.activePreset))) {
                 return;
             }
             var r = ZSM.UIState.deleteActive(pData);
             if (!r.ok) {
-                if (r.reason === "reserved") alert(l.ERR_PRESET_DEL_DEF);
+                if (r.reason === "reserved") alert(l.ERR_CANNOT_DELETE_DEFAULT);
                 return;
             }
             updatePresetList();
@@ -934,8 +926,14 @@ ZSM.UI = {
          * Revert restores exactly what the selected preset holds on disk, so the
          * user can undo experimental edits without re-picking the preset. Enabled
          * only when modified (see refreshModifiedIndicator). Does NOT persist.
+         * On [Default] "as saved" is the factory values, so it is the Defaults
+         * button (btnReset): the dialog keeps its mode.
          */
         btnRevert.onClick = function () {
+            if (pData.activePreset === c.PRESET_KEY_DEFAULT) {
+                btnReset.onClick();
+                return;
+            }
             var preset = pData.presets[pData.activePreset];
             if (!preset) return;
             loadPreset(preset);
@@ -974,6 +972,8 @@ ZSM.UI = {
 
             // Preserve window position across mode switch
             docData._lastBounds = w.bounds;
+            // ...and the scale field: the reopened dialog starts from it
+            docData.drawingScale = parseNum(etScale);
 
             switchTarget = newMode;
             w.close(2); // code 2 = mode switch (not OK, not Cancel)
@@ -1006,12 +1006,16 @@ ZSM.UI = {
             // Every row carries a colour (defaults to [Registration]); a row with
             // a colour but a blank/whitespace name is an incomplete mapping that
             // render would silently drop. Block with a clear message so the user
-            // names it or removes the row (symmetric to ERR_LAY_COLOR). Skipped
-            // in marks-only mode — the mapping is ignored there.
+            // names it or removes the row. Skipped in marks-only mode — the
+            // mapping is ignored there.
             if (!cbMarksOnly.value) {
                 for (var lc = 0; lc < layers.length; lc++) {
                     if ((layers[lc].name || "").replace(/^\s+|\s+$/g, "") === "") {
-                        alert(ZSM.L.format(ZSM.L.ERR_LAY_NAME, layers[lc].color));
+                        // The colour as the list shows it: layers[].color holds the
+                        // canonical token "[Registration]", the list the document's
+                        // own swatch name ("[Registrační]" in a Czech install).
+                        ZSM.Utils.error(ZSM.L.format(ZSM.L.ERR_LAY_NAME,
+                            ZSM.UI.ddlValue(layRows[lc].ddColor) || layers[lc].color));
                         return;
                     }
                 }
@@ -1036,8 +1040,9 @@ ZSM.UI = {
                 drawRed:           isS ? !!chRed.value       : undefined,
                 useArtboardBounds: isZ ? !!rbFixed.value     : false,
                 markColor:         markColorSel,
-                // scaleN: derived from checkbox + field state (1 when unchecked)
-                scaleN:            readScaleN(),
+                // The drawing scale field: validated like the others, carried to
+                // the run in [Last Settings], never written to the settings file.
+                scaleN:            etScale.text,
                 marksOnly:         cbMarksOnly.value,
                 layers:            layers
             };
@@ -1095,10 +1100,9 @@ ZSM.UI = {
         //   - disable the Generate button if ANY visible numeric field is
         //     invalid (so the user can't submit an unprocessable value).
         //
-        // graphics.foregroundColor is wrapped in try/catch — Adobe's API
-        // can throw on certain Illustrator versions and graphics objects
-        // not yet "realised". Failure to colour is non-fatal: the
-        // OK-disable still works and protects from bad input.
+        // The painting is ZSM.FieldPaint.field (shared); it never throws —
+        // a host that refuses the pen leaves the field as it is, and the
+        // OK-disable still protects from bad input.
         //
         // Mode-specific fields (rGapGZ etc.) are conditionally added so
         // the numericRows array only contains rows that exist for the
@@ -1115,42 +1119,13 @@ ZSM.UI = {
         }
         numericRows.push({ row: rGapZO, rule: ZSM.Validation.rules.gapOuter });
         numericRows.push({ row: rMaxD,  rule: ZSM.Validation.rules.maxDist  });
-        // Scale field (1:N) — without this an out-of-range N (e.g. 50) would be
-        // silently clamped to 10 by readScaleN with no visual signal. Wrapped in
-        // {inp:} to match the row shape; skipped automatically when the checkbox
-        // is off (the field is disabled then).
+        // The drawing scale field, wrapped in {inp:} to match the row shape.
         numericRows.push({ row: { inp: etScale }, rule: ZSM.Validation.rules.scaleN });
 
         function isValueInRange(et, rule) {
-            var raw = String(et.text || "").replace(/,/g, ".");
-            var n   = parseFloat(raw);
+            var n = ZSM.Numbers.parse(et.text);
             if (isNaN(n)) return false;
             return (n >= rule.min && n <= rule.max);
-        }
-
-        function markFieldValidity(et, valid) {
-            // Try to repaint the edittext. Wrapped because Adobe's graphics
-            // API can throw "no graphics yet" until the window is realised
-            // and on some legacy versions doesn't support newPen at all.
-            try {
-                var g = et.graphics;
-                if (!g || !g.newPen) return;
-                // Capture the field's DEFAULT foreground pen once (after graphics
-                // is realised). "Valid" must restore that theme default — forcing
-                // black [0,0,0] is wrong on Illustrator's dark UI (text vanishes)
-                // and visually fails to clear the red. Light-grey is a safe
-                // fallback if the default pen can't be read.
-                if (et._zsmDefPen === undefined) {
-                    et._zsmDefPen = g.foregroundColor || null;
-                }
-                if (valid) {
-                    g.foregroundColor = et._zsmDefPen
-                        ? et._zsmDefPen
-                        : g.newPen(g.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                } else {
-                    g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, [0.90, 0.20, 0.20, 1.0], 1);
-                }
-            } catch (e) { /* graphics not ready or unsupported — ignored */ }
         }
 
         function liveValidateAll() {
@@ -1159,6 +1134,7 @@ ZSM.UI = {
             // so guard against the not-yet-wired state — it re-runs after init.
             if (!numericRows) return true;
             var allValid = true;
+            var numbersAllOk = true;
             var invalidCount = 0;
             var firstMsg = "";
             for (var i = 0; i < numericRows.length; i++) {
@@ -1166,22 +1142,22 @@ ZSM.UI = {
                 if (!nr.row || !nr.row.inp) continue;
                 // Skip disabled rows (e.g. gapInner is disabled in Fixed mode)
                 if (!nr.row.inp.enabled) {
-                    markFieldValidity(nr.row.inp, true);
+                    ZSM.FieldPaint.field(nr.row.inp, true);
                     continue;
                 }
                 var ok = isValueInRange(nr.row.inp, nr.rule);
-                markFieldValidity(nr.row.inp, ok);
+                ZSM.FieldPaint.field(nr.row.inp, ok);
                 if (!ok) {
                     allValid = false;
+                    numbersAllOk = false;
                     invalidCount++;
                     if (!firstMsg) {
-                        // scaleN's rule label is the bare "1:" ratio prefix — swap
-                        // it for the checkbox caption so the message reads sensibly.
+                        // The label without its colon — and the scale's without
+                        // its ratio: "Drawing scale 1:" names "Drawing scale".
                         var lblKey = nr.rule && nr.rule.label;
-                        if (lblKey === "SCALE_FIELD_LABEL") lblKey = "SCALE_CHECKBOX";
-                        var lbl = (lblKey && l[lblKey]) ? l[lblKey] : "";
-                        lbl = String(lbl).replace(/:\s*$/, "");
-                        firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl, nr.rule.min, nr.rule.max);
+                        var lbl = ZSM.Validation.plainLabel((lblKey && l[lblKey]) ? l[lblKey] : "");
+                        firstMsg = ZSM.L.format(l.STATUS_RANGE, lbl,
+                            ZSM.Numbers.format(nr.rule.min), ZSM.Numbers.format(nr.rule.max));
                     }
                 }
             }
@@ -1196,9 +1172,9 @@ ZSM.UI = {
             for (var li = 0; li < layRows.length; li++) {
                 var etL = layRows[li].etLayer;
                 if (!etL) continue;
-                if (marksOnlyOn) { markFieldValidity(etL, true); continue; }
+                if (marksOnlyOn) { ZSM.FieldPaint.field(etL, true); continue; }
                 var nameOk = String(etL.text || "").replace(/^\s+|\s+$/g, "") !== "";
-                markFieldValidity(etL, nameOk);
+                ZSM.FieldPaint.field(etL, nameOk);
                 if (!nameOk) {
                     allValid = false;
                     invalidCount++;
@@ -1235,49 +1211,34 @@ ZSM.UI = {
 
             try { btnOk.enabled = allValid; } catch (e) {}
 
-            // Status line. When everything is valid it no longer sits empty (N1) —
-            // it shows a subtle, default-coloured context summary (mode · scale ·
-            // layer count) so the reserved row carries meaning. When invalid it
-            // turns amber; with more than one bad field it aggregates the count
-            // (N3) instead of naming only the first. Graphics access is wrapped —
-            // Adobe's API can throw before the control is realised.
-            try {
-                var msg, amber;
-                if (allValid) {
-                    amber = false;
-                    var ctx = mode;
-                    var sN  = readScaleN();
-                    if (sN > 1) ctx += " · 1:" + sN;
-                    var marksOnlyCtx = false;
-                    try { marksOnlyCtx = cbMarksOnly.value; } catch (emc) {}
-                    msg = marksOnlyCtx
-                        ? ZSM.L.format(l.STATUS_OK_MARKS, ctx)
-                        : ZSM.L.format(l.STATUS_OK, ctx, layRows.length);
-                } else {
-                    amber = true;
-                    msg = (invalidCount > 1)
-                        ? ("\u26A0 " + ZSM.L.format(l.STATUS_RANGE_MULTI, invalidCount))
-                        : ("\u26A0 " + (firstMsg || l.STATUS_INVALID));
-                }
-                stStatus.text = msg;
-                var sg = stStatus.graphics;
-                if (sg && sg.newPen) {
-                    // Capture the realised default pen once. It is often null on
-                    // first read, so the valid branch must NOT gate on it — it has
-                    // to set an explicit pen every time, otherwise the amber pen
-                    // from a previous error state is never overwritten and the
-                    // status text stays orange after the error clears (matches the
-                    // per-field fallback at the geometry rows).
-                    if (stStatus._zsmDefPen === undefined) stStatus._zsmDefPen = sg.foregroundColor || null;
-                    if (!amber) {
-                        sg.foregroundColor = stStatus._zsmDefPen
-                            ? stStatus._zsmDefPen
-                            : sg.newPen(sg.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
-                    } else {
-                        sg.foregroundColor = sg.newPen(sg.PenType.SOLID_COLOR, [0.96, 0.60, 0.38, 1.0], 1);
-                    }
-                }
-            } catch (e) {}
+            // Save and Save As follow the numbers (spec 6.3, canon 12.4). Set
+            // here, not only in refreshModifiedIndicator: the handlers call that
+            // BEFORE this check, so Save would trail the field by one keystroke.
+            numbersOk = numbersAllOk;
+            applySaveGate(isModified());
+
+            // Status line, last, so it follows the button: why Generate is grey
+            // while it is (✗, canon 12.6; with more than one problem the count,
+            // N3), else what the script found. Text and visibility only — the
+            // pens were set once where the two labels are made.
+            if (allValid) {
+                stFound.text = self.foundText({
+                    mode:      mode,
+                    fixed:     isZ && rbFixed.value,
+                    marksOnly: marksOnlyOn,
+                    artboard:  docData.artboard,
+                    artwork:   docData.artwork,
+                    scale:     parseNum(etScale)   // valid here: allValid includes the field
+                });
+                stFound.visible  = true;
+                stReason.visible = false;
+            } else {
+                stReason.text = "✗ " + ((invalidCount > 1)
+                    ? ZSM.L.format(l.STATUS_RANGE_MULTI, invalidCount)
+                    : (firstMsg || l.STATUS_INVALID));
+                stReason.visible = true;
+                stFound.visible  = false;
+            }
 
             return allValid;
         }
@@ -1373,10 +1334,14 @@ ZSM.UI = {
             w.location = [docData._lastBounds.x, docData._lastBounds.y];
         }
 
-        // Initial keyboard focus on the first editable geometry field so Tab
-        // walks the dialog in creation order (N9: explicit, predictable focus
-        // start instead of relying on the platform default).
-        try { (isZ ? rGapGZ : rGapZO).inp.active = true; } catch (e) {}
+        // Initial keyboard focus on the first geometry field the operator can
+        // type in, so Tab walks the dialog in creation order (N9: explicit,
+        // predictable focus start instead of relying on the platform default).
+        // In Fixed the gap from graphics is greyed — the focus goes to the
+        // next field, not to one that cannot take it.
+        try { ((isZ && rGapGZ.inp.enabled) ? rGapGZ : rGapZO).inp.active = true; } catch (eFocus) {
+            ZSM.Utils.log("initial focus skipped — " + eFocus.message);
+        }
 
         w.show();
 
@@ -1410,6 +1375,69 @@ ZSM.UI = {
     },
 
     /**
+     * The active artboard's size in document millimetres, Large Canvas
+     * included (ZSM.Utils.getSF), for the status line. The drawing scale is
+     * applied there, because its field can change while the dialog is open.
+     * Reads artboardRect only: the selection and the document stay as they are.
+     * @returns {Object|null} {w, h}, or null when the artboard cannot be read.
+     */
+    activeArtboardSize: function () {
+        try {
+            var abs = app.activeDocument.artboards;
+            var r = abs[abs.getActiveArtboardIndex()].artboardRect;
+            var sf = ZSM.Utils.getSF();
+            return { w: ZSM.Utils.pt2mm(r[2] - r[0]) * sf, h: ZSM.Utils.pt2mm(r[1] - r[3]) * sf };
+        } catch (e) {
+            ZSM.Utils.log("activeArtboardSize: " + e.message);
+            return null;
+        }
+    },
+
+    /**
+     * The status line at rest (spec 1.2.0 §7, canon 12.3): what the script
+     * found in the document. The mode; the artboard (Fixed) or the artwork
+     * (Auto-fit, SUMMA) at real size — × N, as every value in the dialog is
+     * real size — left out when unknown; the scale when not 1:1, written as
+     * the field writes it; "marks only" when the mapping is off.
+     * @param {Object} st - {mode, fixed, marksOnly, artboard, artwork, scale};
+     *     artboard / artwork {w, h} in document mm or null, scale the valid N
+     *     of 1:N.
+     * @returns {string}
+     */
+    foundText: function (st) {
+        var L = ZSM.L;
+        var n = st.scale || 1;
+        var parts = [st.mode === "SUMMA" ? L.MODE_SUMMA : L.MODE_ZUND];
+        var size = st.fixed ? st.artboard : st.artwork;
+        if (size) {
+            parts.push(L.format(st.fixed ? L.STATUS_FOUND_ARTBOARD : L.STATUS_FOUND_ARTWORK,
+                ZSM.UI.formatSize(size.w * n), ZSM.UI.formatSize(size.h * n)));
+        }
+        if (n !== 1) parts.push("1:" + ZSM.Numbers.format(n));
+        // The cut colours are not repeated here: the mapping rows show them,
+        // with „(chybí)" for one the document lacks (user, 2026-10-28).
+        if (st.marksOnly) parts.push(L.STATUS_MARKS_ONLY);
+        return parts.join(" · ");
+    },
+
+    /**
+     * A size for the status line, in mm: to a tenth, with the locale's
+     * decimal separator and the thousands grouped by THOU_SEP — "1 560" in
+     * Czech, as spec 1.2.0 §7 writes it, "1,560" in English. Display only: a
+     * field never shows a grouped number, which it would read as invalid
+     * (canon 12.3, "1 000").
+     * @param {number} mm - Length in millimetres.
+     * @returns {string}
+     */
+    formatSize: function (mm) {
+        var text = ZSM.Numbers.format(Math.round(mm * 10) / 10);
+        var cut = text.indexOf(ZSM.L.DEC_SEP || ".");
+        var whole = (cut < 0) ? text : text.substring(0, cut);
+        var rest = (cut < 0) ? "" : text.substring(cut);
+        return whole.replace(/\B(?=(\d{3})+$)/g, ZSM.L.THOU_SEP || "") + rest;
+    },
+
+    /**
      * Adds a labeled edittext row with a "mm" suffix.
      * @param {Object} parent - ScriptUI container.
      * @param {string} label  - Row label.
@@ -1432,7 +1460,7 @@ ZSM.UI = {
         vg.alignChildren = ["left", "center"];
         vg.spacing       = 6;
         vg.preferredSize.width = M.VALUE_GROUP;
-        var et = vg.add("edittext", undefined, String(value));
+        var et = vg.add("edittext", undefined, ZSM.Numbers.format(value));
         et.preferredSize.width = M.NUM_FIELD;
         if (tip) et.helpTip = tip;
         vg.add("statictext", undefined, "mm");

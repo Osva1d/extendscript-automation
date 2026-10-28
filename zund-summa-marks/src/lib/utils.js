@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: ZSM.Utils — mm/pt conversion, validateNumber, log(), error()
 // Part of: Illustrator Zund & Summa Marks
-// Depends on: ZSM.Config, ZSM.L
+// Depends on: ZSM.Config, ZSM.L, ZSM.Numbers (shared; call time, in validateNumber)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -56,27 +56,31 @@ ZSM.Utils = {
 
     /**
      * Validates a numerical input within a range.
-     * Normalizes Czech decimal separator (comma → dot) before parsing.
-     * Returns null and shows alert if invalid; keeps dialog open.
+     * Reads the text with the shared ZSM.Numbers.parse: a decimal comma or dot,
+     * anything else ("1e2", "0x10", ".5", "1O5", empty) is not a number.
+     * Returns null and shows an error alert if invalid; keeps dialog open.
+     * Both failures say the same: "<name>: enter a number from <min> to <max>
+     * mm." (spec 1.2.0 §9.3) — the operator needs the range either way.
      * @param {string|number} val - The value to validate.
      * @param {number} min - Minimum allowed value (inclusive).
      * @param {number} max - Maximum allowed value (inclusive).
-     * @param {string} name - Display name used in error messages.
+     * @param {string} name - Display name used in the message, without a colon.
+     * @param {string} [unit] - Unit after the upper limit; "mm" when omitted,
+     *     "" for a field without one (the drawing scale).
      * @returns {number|null} Validated number or null if invalid.
      */
-    validateNumber: function (val, min, max, name) {
-        // Normalize: comma → dot (CZ locale), trim whitespace
-        var str = String(val).replace(/,/g, ".").replace(/^\s+|\s+$/g, "");
-        // JS quirk: Number("") === 0 and Number("  ") === 0, NOT NaN.
-        // Treat empty/whitespace-only strings as invalid to prevent
-        // silent 0-substitution when user clears a UI field.
-        var n = (str === "") ? NaN : Number(str);
-        if (isNaN(n)) {
-            alert(ZSM.L.format(ZSM.L.ERR_MUST_BE_NUMBER, name));
-            return null;
-        }
-        if (n < min || n > max) {
-            alert(ZSM.L.format(ZSM.L.ERR_OUT_OF_RANGE, name, min, max));
+    validateNumber: function (val, min, max, name, unit) {
+        // One reading for the family (shared ZSM.Numbers.parse): a decimal
+        // comma or dot, spaces around ignored. "1e2", "0x10", ".5", "1O5",
+        // "20 mm" and an empty field are NaN — an empty field is invalid
+        // here, every ZSM field is required — never a different number.
+        var n = ZSM.Numbers.parse(val);
+        if (isNaN(n) || n < min || n > max) {
+            // Limits written the way the field is: the locale's decimal separator.
+            var u = (unit === undefined) ? "mm" : unit;
+            var hi = ZSM.Numbers.format(max) + (u ? " " + u : "");
+            var template = isNaN(n) ? ZSM.L.ERR_MUST_BE_NUMBER : ZSM.L.ERR_OUT_OF_RANGE;
+            ZSM.Utils.error(ZSM.L.format(template, name, ZSM.Numbers.format(min), hi));
             return null;
         }
         return n;
@@ -121,7 +125,8 @@ ZSM.Utils = {
      *
      * Compares fixed schema fields (mode, gaps, sizes, color, etc.)
      * plus layers[] array (name+color per row). Extra fields outside
-     * the schema are ignored.
+     * the schema are ignored — scaleN among them: the drawing scale
+     * belongs to the document, not to a preset (spec 1.2.0 §5.2).
      *
      * @param {Object} a - First settings object.
      * @param {Object} b - Second settings object.
@@ -132,7 +137,7 @@ ZSM.Utils = {
         var keys = ["mode", "gapInner", "gapOuter", "maxDist",
                     "feedTop", "feedBottom", "drawRed", "useArtboardBounds",
                     "markSizeZ", "markSizeS", "orientDist", "markColor",
-                    "scaleN", "marksOnly"];
+                    "marksOnly"];
         for (var i = 0; i < keys.length; i++) {
             if (String(a[keys[i]]) !== String(b[keys[i]])) return false;
         }

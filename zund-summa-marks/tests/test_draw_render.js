@@ -41,11 +41,11 @@ Mock.install();
 var ZSM = {};
 ZSM.L = {
     ERROR_PREFIX: "ERR: ",
-    ERR_RENDER_CRITICAL: "render error: %s",
+    ERR_RENDER_CRITICAL: "render error: %s (line %s)",
     ERR_ARTBOARD_TOO_LARGE: "artboard too large %s %s",
     ERR_GEOMETRY_INVALID: "geometry invalid",
     WARN_SUMMA_REMOVED: "summa removed",
-    ERR_GENERIC: "err: %s",
+    WARN_SUMMA_NOT_REMOVED: "summa NOT removed",
     ERR_COLOR_MISSING: "missing color %s %s",
     WARN_PREFIX: "WARN: ",
     WARN_LAYERS_UNHIDDEN: "unhidden %s",
@@ -54,6 +54,7 @@ ZSM.L = {
     WARN_PATHS_SKIPPED: "skipped %s %s %s %s",
     WARN_REG_ROUTING: "regskip %s",
     WARN_TRIM_FOREIGN: "trimforeign",
+    WARN_REGMARKS_FOREIGN: "regforeign %s",
     ERR_MARKS_ORIENT: "marks orient %s %s",
     ERR_MARKS_OVERLAP: "marks overlap %s %s",
     ERR_MARKS_OUTSIDE: "marks outside %s",
@@ -80,6 +81,7 @@ ZSM.Config = {
 global.alert = function () {};
 
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers", "registration"]);   // shared: ZSM.Numbers, ZSM.Registration, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
 buildCutMarks(ZSM);   // shared factory — must run after ZSM.Utils and ZSM.Config
 // Load bounds before draw — draw.getBounds delegates to ZSM.Bounds.get
@@ -290,31 +292,38 @@ assert(bounds === null, "Empty doc: getBounds returns null");
 
 
 // =====================================================
-// TEST 7: Pre-existing Regmarks with legacy items → cleared on first run
+// TEST 7: Pre-existing Regmarks with items of its own → kept, and reported
 // =====================================================
-console.log("\n=== TEST 7: Legacy Regmarks cleanup ===");
+// Since 1.2.0 the script touches nothing in Regmarks outside its own sublayers
+// "Zünd" and "Summa" (spec §4.3). The pre-1.0.0 rule that cleared the layer
+// also deleted Tile Export's marks and an operator's own content.
+console.log("\n=== TEST 7: Items on Regmarks outside the script's sublayers are kept ===");
+var alerts7 = [], origAlert7 = global.alert;
+global.alert = function (m) { alerts7.push(String(m)); };
 doc = setupDoc({
     layers: [
         { name: "Regmarks", items: [
-            { type: "path", bounds: [-50, 200, 200, -50] }   // legacy mark
+            { type: "path", bounds: [-50, 200, 200, -50] }   // an old mark of unknown origin
         ]},
         { name: "Layer 1", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
     ]
 });
 settings = makeSettings({ mode: "ZUND" });
 bounds = ZSM.Draw.getBounds(settings);
-// Bounds should NOT include the legacy mark (it's on Regmarks, skipped)
-assertEq(bounds[0], 0, "Legacy: bounds L=0 (Regmarks legacy mark skipped)");
-assertEq(bounds[2], 100, "Legacy: bounds R=100");
+// Bounds should NOT include the old mark (it's on Regmarks, skipped)
+assertEq(bounds[0], 0, "Foreign: bounds L=0 (Regmarks item skipped)");
+assertEq(bounds[2], 100, "Foreign: bounds R=100");
 
 geo = ZSM.Core.calculateAll(settings, bounds);
 ZSM.Draw.render(geo, settings);
 
 regmarks = findLayer(doc, "Regmarks");
-// Legacy items should be cleared (Zünd sublayer takes over)
-assert(regmarks._items.length === 0, "Legacy: Regmarks direct items cleared");
+assertEq(regmarks._items.length, 1, "Foreign: the Regmarks direct item is kept");
 zundSub = findSublayer(regmarks, "Zünd");
-assert(zundSub !== null, "Legacy: Zünd sublayer created after cleanup");
+assert(zundSub !== null, "Foreign: Zünd sublayer created beside it");
+assert(alerts7.join("\n").indexOf("regforeign 1") >= 0,
+    "Foreign: the operator is told how many objects were left (got: " + alerts7.join(" | ") + ")");
+global.alert = origAlert7;
 
 
 // =====================================================
@@ -1250,6 +1259,413 @@ assertEq(ZSM.Draw.getRegistrationName(), "[Registration]",
 var col35 = ZSM.Draw.getCol("[Registration]");
 assert(col35.typename === "CMYKColor" && col35.black === 100,
     "marks then fall back to 100 % K, not to White");
+
+
+// =====================================================
+// TEST 36: the OPOS bar and the trim lines ignore an inherited dashed style
+// =====================================================
+// A path made by a script takes its dashes and caps from the document's default
+// stroke, and selecting a dashed die-line sets that default (measured, AI 30.8.1
+// and 30.8.2: the bar and trim lines came out dashed with round caps, and the
+// bar's visibleBounds grew past its true length). Selection is not touched here,
+// so the mock document simply starts with such a default.
+console.log("\n=== TEST 36: bar and trim lines ignore an inherited dashed style ===");
+function dashedDefaultDoc() {
+    return setupDoc({
+        defaultStroke: { dashes: [8, 4], cap: StrokeCap.ROUNDENDCAP },
+        layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(150), 0] }] }]
+    });
+}
+function plainButt(item) {
+    return item.strokeDashes.length === 0 && item.strokeCap === StrokeCap.BUTTENDCAP;
+}
+var probe36 = dashedDefaultDoc();
+var fresh36 = probe36._layers[0].pathItems.add();
+assert(fresh36.strokeDashes.length === 2 && fresh36.strokeCap === StrokeCap.ROUNDENDCAP,
+    "precondition: a new path inherits the dashed, round-cap default");
+
+var doc36 = dashedDefaultDoc();
+var s36 = makeSettings({ mode: "SUMMA", drawRed: true });
+ZSM.Draw.render(ZSM.Core.calculateAll(s36, ZSM.Draw.getBounds(s36)), s36);
+var summa36 = findSublayer(findLayer(doc36, "Regmarks"), "Summa");
+var bars36 = summa36._items.filter(function (it) { return it._points && it._points.length === 2; });
+var squares36 = summa36._items.filter(function (it) { return !it._points; });
+assertEq(bars36.length, 1, "SUMMA: one OPOS bar");
+assert(bars36.length === 1 && plainButt(bars36[0]),
+    "OPOS bar: no dashes, butt caps (got " + JSON.stringify(bars36[0] && bars36[0].strokeDashes)
+    + " " + (bars36[0] && bars36[0].strokeCap) + ")");
+assert(bars36.length === 1 && bars36[0].stroked === true, "OPOS bar: stroked");
+var trim36 = findLayer(doc36, "Trim")._items;
+assertEq(trim36.length, 2, "SUMMA: two trim lines");
+for (var t36 = 0; t36 < trim36.length; t36++) {
+    assert(plainButt(trim36[t36]), "trim line " + t36 + ": no dashes, butt caps (got "
+        + JSON.stringify(trim36[t36].strokeDashes) + " " + trim36[t36].strokeCap + ")");
+    assert(trim36[t36].stroked === true, "trim line " + t36 + ": stroked");
+}
+assertEq(squares36.length, 4, "SUMMA: four square marks");
+for (var q36 = 0; q36 < squares36.length; q36++) {
+    assert(squares36[q36].stroked === false, "square mark " + q36 + " stays unstroked");
+}
+
+var docZ36 = dashedDefaultDoc();
+var sZ36 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZ36, ZSM.Draw.getBounds(sZ36)), sZ36);
+var circles36 = findSublayer(findLayer(docZ36, "Regmarks"), "Zünd")._items;
+assertEq(circles36.length, 5, "ZUND: five circle marks");
+for (var c36 = 0; c36 < circles36.length; c36++) {
+    assert(circles36[c36].stroked === false, "circle mark " + c36 + " stays unstroked");
+}
+
+
+// =====================================================
+// TEST 37: an unreadable swatch in front of registration does not turn the marks black
+// =====================================================
+// getRegistrationName had one try around the whole swatch loop, so a swatch
+// whose colour cannot be read, placed before the registration swatch, ended
+// the search: the name fell back to the English default, which names nothing
+// on a Czech install, and the marks came out 100 % K without a word. The
+// search now lives in shared/lib/registration.js, which skips such a swatch.
+console.log("\n=== TEST 37: registration found behind an unreadable swatch ===");
+var REG37 = { typename: "SpotColor", tint: 100,
+    spot: { name: "[Registrační]", colorType: ColorModel.REGISTRATION } };
+var broken37 = { name: "Broken" };
+Object.defineProperty(broken37, "color", { get: function () { throw new Error("colour unreadable"); } });
+var doc37 = setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+doc37.swatches = swatchList([{ name: "[Žádná]" }, broken37, { name: "[Registrační]", color: REG37 },
+                             { name: "Bílá", color: WHITE35 }]);
+assertEq(ZSM.Draw.getRegistrationName(), "[Registrační]",
+    "the unreadable swatch does not end the search");
+assert(ZSM.Draw.registrationColor() === REG37, "registrationColor is the registration colour, not 100 % K");
+assert(ZSM.Draw.getCol("[Registration]") === REG37,
+    "the canonical token resolves to the registration colour on a Czech install");
+var s37 = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(s37, ZSM.Draw.getBounds(s37)), s37);
+var circles37 = findSublayer(findLayer(doc37, "Regmarks"), "Zünd")._items;
+assertEq(circles37.length, 5, "ZUND: five circle marks");
+for (var c37 = 0; c37 < circles37.length; c37++) {
+    assert(circles37[c37].fillColor === REG37, "circle mark " + c37 + " is painted in the registration colour");
+}
+
+
+// =====================================================
+// TEST 38: render() says whether it drew (spec 1.2.0 §5.2)
+// =====================================================
+// main.js stores the drawing scale in the document only after a run that drew:
+// a refusal promises "the document was not changed", the scale included. Every
+// way out of render() answers: true after drawing, false when it stopped.
+console.log("\n=== TEST 38: render() returns whether it drew ===");
+var alerts38 = [], origAlert38 = global.alert;
+global.alert = function (m) { alerts38.push(String(m)); };
+function render38(spec, sOver, tweakGeo) {
+    var d = setupDoc(spec);
+    var s38 = makeSettings(sOver || { mode: "ZUND" });
+    var g38 = ZSM.Core.calculateAll(s38, ZSM.Draw.getBounds(s38));
+    if (tweakGeo) tweakGeo(g38);
+    alerts38 = [];
+    return { drew: ZSM.Draw.render(g38, s38), doc: d, alerts: alerts38.slice() };
+}
+var art38 = function (wMm) { return { layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, ZSM.Utils.mm2pt(wMm), 0] }] }] }; };
+
+var ok38 = render38(art38(120));
+assertEq(ok38.drew, true, "a run that drew returns true");
+assert(findLayer(ok38.doc, "Regmarks") !== null, "...and the marks are there");
+
+var orient38 = render38(art38(90));   // the orientation mark lands on a corner mark (ERR_MARKS_ORIENT)
+assertEq(orient38.drew, false, "a mark conflict (ERR_MARKS_ORIENT) returns false");
+assert(orient38.alerts.join("\n").indexOf("marks orient") >= 0, "...after its message");
+assert(findLayer(orient38.doc, "Regmarks") === null, "...and nothing was drawn");
+
+// The numbers in the message are written the way a field writes them (Czech "12,3").
+(function () {
+    var origFind = ZSM.Core.findMarkConflict, origSep = ZSM.L.DEC_SEP;
+    ZSM.Core.findMarkConflict = function () { return { type: "overlap", dist: 12.34 }; };
+    ZSM.L.DEC_SEP = ",";
+    try {
+        var dec38 = render38(art38(120), { mode: "ZUND", markSizeZ: 2.5 });
+        assert(dec38.alerts.join("\n").indexOf("marks overlap 12,3 2,5") >= 0,
+            "ERR_MARKS_* numbers use the locale's decimal separator (got: " + dec38.alerts.join("|") + ")");
+    } finally {
+        ZSM.Core.findMarkConflict = origFind; ZSM.L.DEC_SEP = origSep;
+    }
+})();
+
+var nan38 = render38(art38(120), null, function (g) { g.marksZ[0].cx = NaN; });
+assertEq(nan38.drew, false, "invalid geometry returns false");
+
+var big38 = render38({ layers: [{ name: "Art", items: [{ type: "path", bounds: [-8160, 100, 8160, 0] }] }] });
+assertEq(big38.drew, false, "an artboard Illustrator refuses returns false");
+assert(big38.alerts.join("\n").indexOf("artboard too large") >= 0, "...after its message");
+
+var origGetLay38 = ZSM.Draw.getLay;
+ZSM.Draw.getLay = function () { throw new Error("layer gone"); };
+var crash38;
+try { crash38 = render38(art38(120)); } finally { ZSM.Draw.getLay = origGetLay38; }
+assertEq(crash38.drew, null, "an unexpected error inside the drawing returns null (not false: the document may be changed, not a refusal)");
+assert(crash38.alerts.join("\n").indexOf("render error: layer gone") >= 0, "...after the render error message");
+
+// The crash alert: ONE prefix (the second one, "Critical error", is gone from the
+// locale), the message and the line of the error, "?" when the thrown value has none.
+function crashAlert38(thrown) {
+    var o = ZSM.Draw.getLay;
+    ZSM.Draw.getLay = function () { throw thrown; };
+    try { return render38(art38(120)); } finally { ZSM.Draw.getLay = o; }
+}
+var errLine38 = new Error("layer gone"); errLine38.line = 42;
+var withLine38 = crashAlert38(errLine38);
+assertEq(withLine38.alerts.length, 1, "a crash: exactly one alert");
+assertEq(withLine38.alerts[0], "ERR: render error: layer gone (line 42)", "...ERROR_PREFIX once, the message, the line");
+var noLine38 = crashAlert38(new Error("layer gone"));
+assertEq(noLine38.alerts[0], "ERR: render error: layer gone (line ?)", "...a thrown value without a line says \"?\"");
+assertEq(noLine38.drew, null, "...and still returns null");
+global.alert = origAlert38;
+
+
+// =====================================================
+// TEST 39: Regmarks keeps what the script did not create (spec 1.2.0 §4.3)
+// =====================================================
+// ZUND → SUMMA → ZUND over a Regmarks layer with 3 objects of its own and a
+// sublayer "Moje": the script replaces only its sublayers "Zünd" and "Summa",
+// everything else stays, and every run says how many objects it left (the
+// sublayer counts as one; what is inside it and the script's own marks do not).
+console.log("\n=== TEST 39: foreign content in Regmarks survives ZUND → SUMMA → ZUND ===");
+var alerts39 = [], origAlert39 = global.alert;
+global.alert = function (m) { alerts39.push(String(m)); };
+function run39(mode) {
+    var s39 = makeSettings({ mode: mode });
+    alerts39.length = 0;
+    ZSM.Draw.render(ZSM.Core.calculateAll(s39, ZSM.Draw.getBounds(s39)), s39);
+    return alerts39.join("\n");
+}
+function foreignCount39(text) {
+    var m39 = /regforeign (\d+)/.exec(text);
+    return m39 ? Number(m39[1]) : null;
+}
+var doc39 = setupDoc({
+    layers: [
+        { name: "Regmarks", items: [
+            { type: "path", bounds: [-50, 200, 200, -50] },
+            { type: "path", bounds: [10, 20, 30, 0] },
+            { type: "path", bounds: [40, 60, 70, 50] }
+        ], sublayers: [
+            { name: "Moje", items: [{ type: "path", bounds: [5, 5, 9, 1] }] }
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var reg39 = findLayer(doc39, "Regmarks");
+var kept39 = reg39._items.slice();
+var moje39 = findSublayer(reg39, "Moje");
+function foreignIntact39(label) {
+    var same = reg39._items.length === 3;
+    for (var k = 0; same && k < 3; k++) same = reg39._items[k] === kept39[k];
+    assert(same, label + ": the 3 objects on Regmarks are the same objects");
+    assert(findSublayer(reg39, "Moje") === moje39 && countItems(moje39, "PathItem") === 1,
+        label + ": the sublayer 'Moje' and its object are intact");
+}
+
+var text39 = run39("ZUND");
+foreignIntact39("ZUND");
+var zund39a = findSublayer(reg39, "Zünd");
+assert(zund39a !== null && countItems(zund39a, "PathItem") === 5, "ZUND: the Zünd sublayer with 5 marks was created");
+assertEq(foreignCount39(text39), 4, "ZUND: told 4 objects were left (3 + the sublayer; got: " + text39 + ")");
+
+text39 = run39("SUMMA");
+foreignIntact39("SUMMA");
+assert(findSublayer(reg39, "Summa") !== null, "SUMMA: the Summa sublayer was created");
+assert(findSublayer(reg39, "Zünd") === zund39a, "SUMMA: Zünd left as it was");
+assertEq(foreignCount39(text39), 4, "SUMMA: told 4 again — the script's own sublayers and marks do not count (got: " + text39 + ")");
+
+text39 = run39("ZUND");
+foreignIntact39("ZUND again");
+var zund39b = findSublayer(reg39, "Zünd");
+assert(zund39b !== null && zund39b !== zund39a && countItems(zund39b, "PathItem") === 5,
+    "ZUND again: Zünd replaced by a fresh sublayer with 5 marks");
+assert(findSublayer(reg39, "Summa") === null, "ZUND again: the invalidated Summa sublayer is gone");
+assert(text39.indexOf("summa removed") >= 0, "ZUND again: the Summa removal is reported");
+assertEq(foreignCount39(text39), 4, "ZUND again: still told 4 (got: " + text39 + ")");
+
+// Nothing foreign → no notice (a clean document stays quiet)
+setupDoc({ layers: [{ name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }] });
+text39 = run39("ZUND") + run39("SUMMA") + run39("ZUND");
+assertEq(foreignCount39(text39), null, "clean Regmarks: no notice about foreign objects (got: " + text39 + ")");
+global.alert = origAlert39;
+
+
+// =====================================================
+// TEST 40: a hidden Trim layer is reported as unhidden (spec 1.2.0 §4.4)
+// =====================================================
+// getLay reported Regmarks and the mapped layers; Trim was made visible
+// without a word.
+console.log("\n=== TEST 40: hidden Trim layer is named in the unhidden notice ===");
+var alerts40 = [], origAlert40 = global.alert;
+global.alert = function (m) { alerts40.push(String(m)); };
+function run40(layers, mode) {
+    var d40 = setupDoc({ layers: layers });
+    var s40 = makeSettings({ mode: mode || "SUMMA", drawRed: true });
+    alerts40.length = 0;
+    ZSM.Draw.render(ZSM.Core.calculateAll(s40, ZSM.Draw.getBounds(s40)), s40);
+    return { doc: d40, text: alerts40.join("\n") };
+}
+var art40 = { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] };
+
+var r40 = run40([{ name: "Trim", visible: false, items: [] }, art40]);
+assert(findLayer(r40.doc, "Trim").visible === true, "hidden Trim: made visible");
+assertEq(countItems(findLayer(r40.doc, "Trim"), "PathItem"), 2, "hidden Trim: the 2 trim lines are drawn");
+assert(r40.text.indexOf("unhidden Trim") >= 0, "hidden Trim: the notice names it (got: " + r40.text + ")");
+
+r40 = run40([{ name: "Regmarks", visible: false, items: [] }, { name: "Trim", visible: false, items: [] }, art40]);
+assert(r40.text.indexOf("unhidden Regmarks, Trim") >= 0,
+    "hidden Regmarks and Trim: one notice names both (got: " + r40.text + ")");
+
+// An operator's own hidden "Trim" layer: unhidden and the foreign object kept — both are said
+r40 = run40([{ name: "Trim", visible: false, items: [
+    { type: "path", bounds: [0, 50, 50, 0], strokeSpot: "Cut", stroked: true, filled: false }
+]}, art40]);
+assert(r40.text.indexOf("unhidden Trim") >= 0 && r40.text.indexOf("trimforeign") >= 0,
+    "hidden Trim with a foreign object: unhidden and foreign both reported (got: " + r40.text + ")");
+
+r40 = run40([{ name: "Trim", items: [] }, art40]);
+assert(r40.text.indexOf("unhidden") < 0, "visible Trim: no unhidden notice (got: " + r40.text + ")");
+r40 = run40([art40]);
+assert(r40.text.indexOf("unhidden") < 0, "Trim created by the run: no unhidden notice (got: " + r40.text + ")");
+global.alert = origAlert40;
+
+
+// =====================================================
+// TEST 41: a sublayer that cannot be removed is an error, not a second sublayer (spec 1.2.0 §4.4)
+// =====================================================
+// remove() of the old Zünd/Summa sublayer failed inside a silent catch: the
+// run went on, added a second sublayer with the same name, and the old marks
+// stayed under the new ones. Now the failure is counted as a drawing failure
+// (K12) and the run draws nothing into a sublayer that still holds the old set.
+console.log("\n=== TEST 41: failed removal of the old sublayer ===");
+var alerts41 = [], origAlert41 = global.alert;
+global.alert = function (m) { alerts41.push(String(m)); };
+function run41(subName, mode, drawRed) {
+    var d41 = setupDoc({ layers: [
+        { name: "Regmarks", sublayers: [
+            { name: subName, items: [{ type: "path", bounds: [-20, 120, -15, 115] }] }   // the old mark
+        ]},
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]});
+    var reg41 = findLayer(d41, "Regmarks");
+    var old41 = findSublayer(reg41, subName);
+    old41.remove = function () { throw new Error("remove refused"); };
+    var s41 = makeSettings({ mode: mode, drawRed: !!drawRed });
+    alerts41.length = 0;
+    var ret41 = ZSM.Draw.render(ZSM.Core.calculateAll(s41, ZSM.Draw.getBounds(s41)), s41);
+    return { doc: d41, reg: reg41, old: old41, text: alerts41.join("\n"), ret: ret41 };
+}
+
+var r41 = run41("Zünd", "ZUND");
+assertEq(r41.reg._sublayers.length, 1, "ZUND: no second sublayer next to the one that would not go");
+assert(findSublayer(r41.reg, "Zünd") === r41.old, "ZUND: the old sublayer is the only Zünd");
+assertEq(countItems(r41.old, "PathItem"), 1, "ZUND: nothing was mixed into the old sublayer");
+assert(r41.text.indexOf("ERR: marks failed 5") >= 0,
+    "ZUND: reported like any other drawing failure, counting the 5 marks not drawn (got: " + r41.text + ")");
+
+r41 = run41("Summa", "SUMMA", true);
+assertEq(r41.reg._sublayers.length, 1, "SUMMA: no second sublayer next to the one that would not go");
+assertEq(countItems(r41.old, "PathItem"), 1, "SUMMA: nothing was mixed into the old sublayer");
+assert(r41.text.indexOf("ERR: marks failed 5") >= 0,
+    "SUMMA: reported, counting the 4 marks and the OPOS bar not drawn (got: " + r41.text + ")");
+assertEq(countItems(findLayer(r41.doc, "Trim"), "PathItem"), 2, "SUMMA: the rest of the run goes on — trim lines are drawn");
+assertEq(r41.ret, true, "SUMMA: render still answers true (the document was changed, the run reached its end)");
+global.alert = origAlert41;
+
+
+// =====================================================
+// TEST 42 (R6): a Summa output the Zünd run cannot remove is said, not swallowed
+// =====================================================
+// removeSummaOutput() logged a failing remove() into the debug console only and
+// its outer catch was empty: the operator was left with Summa marks inside the
+// new Zünd set (OPOS needs them outermost) and no word about it. Now the
+// failure is logged AND joins the run's warnings; the outer catch logs too.
+console.log("\n=== TEST 42 (R6): removeSummaOutput failures are reported ===");
+var alerts42 = [], origAlert42 = global.alert, logs42 = [];
+global.alert = function (m) { alerts42.push(String(m)); };
+var origLog42 = ZSM.Utils.log;
+ZSM.Utils.log = function (m) { logs42.push(String(m)); };
+function summaThenZund42(breakIt) {
+    var d42 = setupDoc({ layers: [
+        { name: "Cut", items: [{ type: "path", spot: "Cut", bounds: [10, 90, 90, 10] }] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]});
+    var sS42 = makeSettings({ mode: "SUMMA", drawRed: true });
+    ZSM.Draw.render(ZSM.Core.calculateAll(sS42, ZSM.Draw.getBounds(sS42)), sS42);
+    var sub42 = findSublayer(findLayer(d42, "Regmarks"), "Summa");
+    if (breakIt) sub42.remove = function () { throw new Error("remove refused"); };
+    alerts42.length = 0; logs42.length = 0;
+    return { doc: d42, sub: sub42 };
+}
+
+// 1. Called by itself with a warnings array: false, a log line, a warning.
+var a42 = summaThenZund42(true);
+var warn42 = [];
+assertEq(ZSM.Draw.removeSummaOutput(warn42), false, "a remove() that throws: removeSummaOutput answers false");
+assert(logs42.join("\n").indexOf("remove refused") >= 0, "...and logs why");
+assertEq(warn42.length, 1, "...and adds one warning to the run's list");
+assertEq(warn42[0], ZSM.L.WARN_SUMMA_NOT_REMOVED, "...the 'Summa output could not be removed' notice");
+assert(findSublayer(findLayer(a42.doc, "Regmarks"), "Summa") === a42.sub, "...the Summa sublayer is still there");
+assert(findLayer(a42.doc, "Trim") !== null, "...and so is the Trim layer (it goes only together with the Summa set)");
+
+// 2. Without an array (an older caller) it still answers and logs, without throwing.
+logs42.length = 0;
+var noArr42 = "not called", threw42 = false;
+try { noArr42 = ZSM.Draw.removeSummaOutput(); } catch (eNoArr) { threw42 = true; }
+assertEq(threw42, false, "no warnings array: no throw");
+assertEq(noArr42, false, "...still answers false");
+assert(logs42.join("\n").indexOf("remove refused") >= 0, "...and still logs why (got: " + logs42.join(" | ") + ")");
+
+// 3. Through render(): the end-of-run alert carries the notice, the Zünd marks are drawn.
+var b42 = summaThenZund42(true);
+var sZ42 = makeSettings({ mode: "ZUND" });
+var drew42 = ZSM.Draw.render(ZSM.Core.calculateAll(sZ42, ZSM.Draw.getBounds(sZ42)), sZ42);
+assertEq(drew42, true, "a ZUND run over a Summa sublayer that will not go: the run draws");
+assert(alerts42.join("\n").indexOf("summa NOT removed") >= 0,
+    "...and the end-of-run notice says the Summa output stayed (got: " + alerts42.join(" | ") + ")");
+assert(alerts42.join("\n").indexOf("summa removed") < 0,
+    "...never the 'removed' notice for a set that was not removed");
+assert(alerts42.join("\n").indexOf("WARN: ") === 0, "...as a warning (one WARN_PREFIX)");
+assertEq(countItems(findSublayer(findLayer(b42.doc, "Regmarks"), "Zünd"), "PathItem"), 5, "...the Zünd marks are drawn");
+
+// 4. The regular path is unchanged: removed, the old notice, no new one.
+var c42 = summaThenZund42(false);
+var sZ42b = makeSettings({ mode: "ZUND" });
+ZSM.Draw.render(ZSM.Core.calculateAll(sZ42b, ZSM.Draw.getBounds(sZ42b)), sZ42b);
+assert(alerts42.join("\n").indexOf("summa removed") >= 0 && alerts42.join("\n").indexOf("NOT") < 0,
+    "a Summa set that goes: the 'removed' notice only (got: " + alerts42.join(" | ") + ")");
+
+// 5. The outer catch logs: the document itself unreachable.
+var origActive42 = global.app.activeDocument;
+Object.defineProperty(global.app, "activeDocument", { configurable: true, get: function () { throw new Error("no document"); } });
+logs42.length = 0;
+var outer42;
+try { outer42 = ZSM.Draw.removeSummaOutput(); } finally {
+    Object.defineProperty(global.app, "activeDocument", { configurable: true, writable: true, value: origActive42 });
+}
+assertEq(outer42, false, "an unreachable document: answers false");
+assert(logs42.join("\n").indexOf("no document") >= 0, "...and the outer catch logs it (got: " + logs42.join(" | ") + ")");
+
+ZSM.Utils.log = origLog42;
+global.alert = origAlert42;
+
+
+// =====================================================
+// TEST 43 (spec 1.2.0 §7): every known cut colour in the document is found
+// =====================================================
+// The status line said only the first known cut colour detectCutColor found,
+// so a document with Thru-cut and Kiss-cut read as "řez „Thru-cut“". The line
+// now lists every known cut spot, in detectCutColor's priority order;
+// detectCutColor keeps answering the first one (it seeds [Výchozí]).
+console.log("\n=== TEST 43 (spec 1.2.0 §7): detectCutColors lists every known cut spot ===");
+setupDoc({ spots: [{ name: "Kiss-cut" }, { name: "Bílá" }, { name: "Thru-cut" }, { name: "cut" }], layers: [] });
+assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), JSON.stringify(["Thru-cut", "Kiss-cut", "cut"]),
+    "known cut spots in priority order, the document's own case, others left out");
+assertEq(ZSM.Draw.detectCutColor(), "Thru-cut", "detectCutColor still answers the first one");
+setupDoc({ spots: [{ name: "Bílá" }], layers: [] });
+assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), "[]", "no known cut spot: an empty list");
+assertEq(ZSM.Draw.detectCutColor(), ZSM.Draw.getRegistrationName(), "...and detectCutColor keeps its registration fallback");
 
 
 // =====================================================

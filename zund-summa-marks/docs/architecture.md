@@ -46,6 +46,10 @@ src/
 
 ../shared/lib/            ← sdílené jádro, viz ../../docs/decisions.md
 ├── json2.js              JSON polyfill
+├── numbers.js            buildNumbers(ZSM) → ZSM.Numbers — parse(), format(): jedno čtení a zápis čísel v polích
+├── field_paint.js        buildFieldPaint(ZSM) → ZSM.FieldPaint — červené pole, barvy stavového řádku
+├── registration.js       buildRegistration(ZSM) → ZSM.Registration — registrační barva podle typu
+├── drawing_scale.js      buildDrawingScale(ZSM) → ZSM.DrawingScale — měřítko kresby v XMP dokumentu
 ├── ui_state.js           buildUIState(ZSM) → ZSM.UIState — přechody presetů
 └── cut_marks.js          buildCutMarks(ZSM) → ZSM.Core — calculateAll(), addSteps() — PURE MATH, žádný DOM
 ```
@@ -56,16 +60,18 @@ src/
 - `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`) protože jsou sdílené mezi bounds výpočtem a render-side `movePaths()`/`beginSession()`. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
 
 **Invariant — efektivní měřítko (`ZSM.Utils.getEffectiveSF(s)`):**
-Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt". Skládá Adobe Large Canvas `scaleFactor` × manuální `s.scaleN` (1–10). **Každé** místo, které převádí rozměry (pozice i velikosti značek), MUSÍ jít přes tento helper — `ZSM.Core` (matematika v `cut_marks.js`) i `draw.js` (render). Historicky draw.js použil syrový `getSF()` bez `scaleN`, takže se v 1:10 workflow škálovaly pozice, ale ne velikosti značek (oprava v26.4.0). Regrese hlídána v `tests/test_draw_render.js` (TEST 16).
+Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt". Skládá Adobe Large Canvas `scaleFactor` × měřítko kresby `s.scaleN` (1–100, desetinné; viz invariant níž). **Každé** místo, které převádí rozměry (pozice i velikosti značek), MUSÍ jít přes tento helper — `ZSM.Core` (matematika v `cut_marks.js`) i `draw.js` (render). Historicky draw.js použil syrový `getSF()` bez `scaleN`, takže se v 1:10 workflow škálovaly pozice, ale ne velikosti značek (oprava v26.4.0). Regrese hlídána v `tests/test_draw_render.js` (TEST 16).
+
+**Invariant — měřítko kresby patří dokumentu (od 1.2.0):** `s.scaleN` je hodnota běhu, ne předvolby. `UI.show()` ji čte z dokumentu přes sdílené `ZSM.DrawingScale.load()` (XMP, stejný klíč jako tile-export a grommet-marks; nic uloženého = 1), pole ji drží přes přepnutí režimu i výběr předvolby, `presetEquals` ji ignoruje a `Storage.save` ji do souboru nezapíše (`fileCopy`). `main.js` ji uloží `ZSM.DrawingScale.save()` jen po `render() === true` a jen když se liší od přečtené. Zápis do XMP není v kroku Zpět.
 
 **Invariant — barva nikdy auto-vytvořena:** `getCol` resolvuje existující swatch, jinak fallback `[Registration]` (+ varování v render). NIKDY netvoří náhradní spot — tichá mutace dokumentu + arbitrární barva jsou v prepressu nebezpečné. Viz `getCol` / `registrationColor` / `swatchExists`.
 
 **Load order (NELZE měnit; zdroj pravdy je `tools/build.sh`):**
 ```
-../shared/lib/json2.js → locale.js → lib/utils.js → lib/validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → lib/storage.js → ../shared/lib/cut_marks.js (buildCutMarks(ZSM)) → lib/bounds.js → draw.js → ui.js → main.js
+../shared/lib/json2.js → locale.js → ../shared/lib/numbers.js, field_paint.js, registration.js, drawing_scale.js (build…(ZSM) po každém) → lib/utils.js → lib/validation.js → ../shared/lib/ui_state.js (buildUIState(ZSM)) → config.js → lib/storage.js → ../shared/lib/cut_marks.js (buildCutMarks(ZSM)) → lib/bounds.js → draw.js → ui.js → main.js
 ```
 
-`locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy). `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`). `cut_marks.js` musí být po `utils.js` a `config.js` (factory čte `ZSM.Utils` a `ZSM.Config`).
+`locale.js` musí být před vším co volá `ZSM.L.*` (tj. mezi všemi moduly co dělají user-facing zprávy); `numbers.js` čte `ZSM.L.DEC_SEP` až při volání, čtyři sdílené moduly za `locale.js` potřebují jen namespace. `bounds.js` musí být před `draw.js` (delegace `getBounds`). `storage.js` musí být po `config.js` (volá `ZSM.Config.getDefaults()`). `cut_marks.js` musí být po `utils.js` a `config.js` (factory čte `ZSM.Utils` a `ZSM.Config`).
 
 **Build:**
 ```bash
@@ -83,6 +89,7 @@ Sjednocené pravidlo pro error handling napříč moduly:
 - **File I/O failures** (`ZSM.Storage.save`, `ZSM.Storage.load`, settings file write): **vždy log + user-facing alert**. Uživatel musí vědět, že se nastavení neuložilo. Příklad: `ZSM.Utils.log("Storage.save failed: " + e.message); alert(ZSM.L.ERR_WRITE_SETTINGS + ...)` v ui.js click handlerech a v main.js.
 - **DOM hazards** (`doc.layers[i].locked = false`, `layer.remove()`, `app.redraw()`, mutace na artifact layers, čtení geometricBounds z corrupt items): **log + graceful fallback, žádný alert**. Uživatel netuší, co je locked layer; alert by ho jen zmátl. Použití: `try { ... } catch (e) { ZSM.Utils.log("context: " + e.message); }` nebo prázdný catch tam, kde je fallback (continue/return) zřejmý ze struktury (např. cleanup smyčky, defensive `try { redraw } catch {}`).
 - **Catastrophic failure** (uncaught error v `main.js` outer try/catch): user dostane `ERR_CRITICAL` alert s chybovou zprávou + řádkem.
+- **`render()` odpovídá třemi hodnotami** (od 1.2.0): `true` = kreslilo (i když se část nepodařila — hlášeno), `false` = odmítnuto před první změnou (`main.js` vrátí počátek pravítek, hláška říká „Dokument nebyl změněn.“), `null` = pád uprostřed kreslení (`ERR_RENDER_CRITICAL`; počátek zůstane, měřítko se neuloží).
 
 `ZSM.Utils.log()` je gated přes `ZSM.Config.debug` — produkční dist tedy nezaplaví uživatele console output, ale developer při ladění vidí celý trace.
 
@@ -105,7 +112,7 @@ Sjednocené pravidlo pro error handling napříč moduly:
     markSizeS:         3,                // mm — strana Summa značky
     orientDist:        100,              // mm — odsazení orientační značky (ZUND)
     markColor:         "[Registration]", // string — přímá barva značek
-    scaleN:            1,                // 1–10 — práce v měřítku 1:N (1 = vypnuto)
+    scaleN:            1,                // 1–100 — měřítko kresby běhu; jen v objektu běhu, do souboru se neukládá
     marksOnly:         false,            // bool — jen značky, vrstvy beze změny
     layers: [
         { name: "Cut", color: "[Registration]" }
@@ -161,7 +168,8 @@ Draw.getBounds(settings)     → [L, T, R, B] v points
     ↓
 Core.calculateAll(settings, bounds)  → geometry
     ↓
-Draw.render(geometry, settings)      → Illustrator DOM
+Draw.render(geometry, settings)      → true | false | null (Illustrator DOM)
+DrawingScale.save(doc, N)    → jen po true a jen při změně měřítka
 Draw.endSession()            → obnoví zámky a viditelnost vrstev
 ```
 
@@ -212,11 +220,14 @@ specifické pro ZSM.
 | Přesun cest na vrstvy | `src/draw.js` → `movePaths()` |
 | Barvu ze swatche | `src/draw.js` → `getCol()` |
 | Dialog a presety | `src/ui.js` → `ZSM.UI.show()` → `ZSM.UI.buildDialog(mode, ...)` |
+| Stavový řádek (nález / důvod šedého Generovat) | `src/ui.js` → `ZSM.UI.foundText()`, `liveValidateAll()`, šířka `ZSM.UI.M.STATUS_W` (změřená) |
+| Čtení a zápis čísel v polích | `../shared/lib/numbers.js` → `ZSM.Numbers` |
+| Měřítko kresby v dokumentu | `../shared/lib/drawing_scale.js` → `ZSM.DrawingScale` |
 | Lokalizaci | `src/locale.js` |
 | Ukládání nastavení | `src/lib/storage.js` → `ZSM.Storage` |
 | Build systém | `tools/build.sh` |
 
-`cut_marks.js` sdílí tile-export — po změně pusť i jeho testy (`npm test` v `tile-export/`).
+`cut_marks.js` sdílí tile-export — po změně pusť i jeho testy (`npm test` v `tile-export/`). `numbers.js`, `field_paint.js`, `registration.js` a `drawing_scale.js` sdílí i grommet-marks a tile-export; mají vlastní testy (`npm run test:shared` v kořeni repa).
 
 ---
 

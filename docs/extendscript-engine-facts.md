@@ -796,6 +796,162 @@ Export 1.1.0 (`TE.Doc.loadDrawingScale`) a naopak — automatický průchod K1.
 **Neměřeno:** zalomení hlášky `ERR_CRITICAL`, běh přes Soubor › Skripty,
 zobrazený dialog Tile Exportu s měřítkem z GM (klíč je tentýž).
 
+### Čistý tah, měřítko kresby, Zpět a rozměry dialogu zund-summa-marks 1.2.0 (naměřeno 2026-10-24, AI 30.8.2)
+
+Sondy přes sestavený `dist/illustrator-zund-summa-marks.jsx` z větve
+`feat/zund-summa-marks-1.2.0` (vydaná 1.1.0 a vydaný Tile Export 1.1.0 pro
+srovnání, jen ke čtení). Moduly se nahrály `eval` uvnitř funkce, takže každý
+`var ZSM = ZSM || {}` vznikl nový a lokální; `alert`, `confirm` a `prompt`
+zachycené, `Window` obalené tak, že `show()` a `close()` instance nic
+nezobrazí a dialog „klikne“ sonda (Generovat přes `onClick`, jen když je
+povolené), soubor nastavení přesměrovaný do složky sondy. Každý běh skriptu ve
+vlastním volání `ai-eval.sh`, před každým zvlášť kontrola
+`app.documents.length`, jen vlastní dokumenty. Illustrator 30.8.2,
+`cs_CZ`, `$.version` 4.5.6.
+
+**Čistý tah (P3).** Vybraná cesta s čárkami `[8,4]`, kulatými konci a spoji
+(`doc.defaultStrokeDashes` před během `[8,4]`, `defaultStrokeCap` ROUND), běh
+SUMMA s ořezovými linkami: OPOS pruh `strokeDashes` `[]`, BUTT, 8,504 pt,
+délka geometrická i viditelná 566,93 pt (200 mm, šířka grafiky — dřív
+viditelně o 8,5 pt delší); obě ořezové linky `[]`, BUTT, 1 pt, geometricky
+i viditelně stejně dlouhé. Perforace operátora si čárky nechala. PNG
+prohlédnuté: pruh plný s rovnými konci, linky plné.
+
+**Měřítko 1:10 proti 1:1.** Grafika 600 × 300 mm v dokumentu 1000 × 800 mm
+a táž desetkrát menší v dokumentu 100 × 80 mm s polem „10“; výchozí hodnoty,
+Pouze značky. Polohy vztažené k levému hornímu rohu grafiky, × 10:
+
+| běh | objektů | největší odchylka 1:10 × 10 od 1:1 (poloha / rozměr / tah / artboard) |
+|---|---|---|
+| ZUND, Dle grafiky | 7 značek | 9·10⁻¹² / 1·10⁻¹¹ / 0 / 1·10⁻¹¹ pt |
+| SUMMA s ořezovými linkami | 4 značky, pruh, 2 linky | 3·10⁻⁵ / 1·10⁻¹¹ / 4·10⁻⁷ / 3·10⁻⁵ pt |
+
+Značka Zünd 5 → 0,5 mm, Summa 3 → 0,3 mm, pruh 8,504 → 0,850 pt, linky
+1 → 0,1 pt. Táž grafika v 1:1 dala ve vydané 1.1.0 a v 1.2.0 **shodné**
+záznamy (polohy, rozměry, tahy i artboard, ZUND i SUMMA).
+
+**Měřítko z Tile Exportu.** Vydaný Tile Export 1.1.0 (`TE.Doc.saveDrawingScale`)
+zapsal do dokumentu 800 × 600 mm měřítko 10 (`<te:drawingScale>10</…>`,
+jmenný prostor `…/ns/tile-export/1.0/`), dokument uložen a zavřen. Po otevření:
+pole „10“, titulek „Zünd & Summa Marks v… — 1:10“, stavový řádek „ZUND ·
+artboard 8 000 × 6 000 mm · pouze značky · 1:10“. Běh bez zásahu do pole
+`DrawingScale.save` nezavolal a prvek v paketu zůstal stejný. Běh s polem „4“
+zapsal 4 jednou a Tile Export 1.1.0 přečetl 4.
+
+**Zpět: `app.undo()` a příkaz menu Zpět se liší.** Dokument otevřený ze
+souboru (historie Zpět začíná prázdná), úprava operátora (posun grafiky
+o 10 mm) a běh ZUND Dle grafiky s mapováním Cut ← Cut; každý krok Zpět
+samostatné volání:
+
+| běh | `app.undo()` | `app.executeMenuCommand("undo")` |
+|---|---|---|
+| ZUND s mapováním | 1:2,5 i 1:1: 1: značky a vrstvy · 2: jen počátek pravítek · 3: **úprava operátora**; artboard zvětšený ani po 5. kroku (1:2,5) | 1:1: 1: značky a vrstvy · 2: **artboard** (i s počátkem pravítek) · 3: úprava operátora |
+| SUMMA s mapováním a ořezovými linkami, 1:2,5 | — | 1: linky · 2: vrstva Trim · 3: značky, pruh, vrstvy · 4: **artboard** · 5: úprava operátora |
+
+Vydaná 1.1.0 se s `app.undo()` chovala stejně (tři kroky, artboard zůstal).
+V dokumentu založeném skriptem (historie obsahuje založení) vrátil
+`app.undo()` artboard až čtvrtým krokem, **po** akci z doby před během.
+Sondy, které měří Zpět, proto mají volat příkaz menu, ne `app.undo()`;
+tabulka výš („Změnu artboardu spolu s jinými změnami Zpět nevrátí“) byla
+měřená `app.undo()`. Klávesa Cmd+Z po běhu z menu Soubor › Skripty neměřena
+(ruční test ZSM, oddíl 3).
+
+**Měřítko a Zpět.** Zápis měřítka (2,5) v žádném z kroků Zpět není, ani
+s `app.undo()`, ani s příkazem menu: po vrácení celého běhu i úpravy
+operátora zůstalo v paketu 2,5 (jako grommet-marks 1.4.0).
+
+**Odmítnutý běh vrací počátek pravítek** (ruling R4). Počátek posunutý na
+[100, 50]: běh odmítnutý kolizí značek (Dle artboardu, artboard 100 × 100 mm,
+„CHYBA: Značka by přesahovala artboard o 10 mm… Dokument nebyl změněn.“)
+i odmítnutý prázdný dokument (Dle grafiky) nechaly počátek [100, 50]
+a dokument beze změny. Běh, který kreslil, nechal počátek v rohu artboardu
+([0, 0]), jak je zamýšleno.
+
+**Cizí obsah ve vrstvě Regmarks.** Regmarks se 4 objekty přímo ve vrstvě
+a podvrstvou „Zünd“ se 3 starými značkami: běh nechal 4 objekty, podvrstvu
+nahradil novou s 5 značkami a ohlásil „objektů: 4“ — `layer.pageItems` jsou
+jen přímí potomci (mock v Node je vrací rekurzivně, proto filtr přes
+`parent`).
+
+**Měření grafiky před dialogem by nebylo levné.** `ZSM.Bounds.get` v režimu
+Dle grafiky, nejlepší ze tří, dokument s obdélníky ve dvou vrstvách, skupinách
+a ořezových skupinách:
+
+| cest v dokumentu | ZUND | SUMMA |
+|---|---|---|
+| 1 006 | 15 ms | 15 ms |
+| 5 026 | 246 ms | 245 ms |
+| 20 101 | 3 949 ms | 3 959 ms |
+
+Čtyřikrát víc cest, šestnáctkrát delší měření — roste kvadraticky (nejspíš
+čtení `layer.pageItems[i]` z velké kolekce, viz „Velká pole“ výš). Totéž
+měření bez `doc.selection = null` trvá stejně, dává stejné hranice a výběr
+nechá (3 vybrané objekty i potom 3); ZUND a SUMMA se liší (podvrstva Zünd se
+počítá jen v SUMMA), takže by se měřilo pro každý režim zvlášť. Dialog by se
+na 20 000 cestách otevřel o 4–8 s později i pro Storno; stavový řádek proto
+v Dle grafiky a SUMMA rozměr grafiky neuvádí (`docData.artwork` zůstává
+`null`). Sám běh to měření platí jednou (4 s na 20 000 cestách). Ostatní
+dotazy před dialogem (vzorníky, vrstvy, řezová barva, artboard) pod 1 ms.
+
+**Rozměry dialogu** (px, `window.size` po `layout.layout(true)`; dialog
+sestavený `buildDialog` má výšku o `RELAYOUT_PAD` 10 px větší, 730 a 766;
+stavy přepínané jako člověk — přepínače, zaškrtávátko, + Přidat, přepnutí
+režimu):
+
+| stav | 1.2.0 CS | 1.2.0 EN | 1.1.0 CS i EN |
+|---|---|---|---|
+| ZUND Dle grafiky / Dle artboardu / Pouze značky, 1 řádek mapování | 465 × 720 | 465 × 720 | 448 × 717 |
+| SUMMA / Pouze značky, 1 řádek | 465 × 756 | 465 × 756 | 448 × 753 |
+| SUMMA, 8 řádků mapování | 465 × 932 | 465 × 932 | 448 × 932 |
+| ZUND, 8 řádků mapování | 465 × 923 | 465 × 923 | 448 × 920 |
+| ZUND, Měřítko kresby 99,9 | šířka beze změny | šířka beze změny | — |
+
+Výška +3 px proti 1.1.0 je panel předvoleb (96 místo 93): ↺ ve vlastní
+skupině má přirozenou výšku 27 px místo 24 (SUMMA s osmi řádky vyšla v obou
+verzích 932). S osmi řádky mapování přesahuje dialog strop rodiny (~850 px)
+stejně jako 1.1.0; každý řádek mapování přidá 25–29 px. Tlačítka: ↺ 30 px, Výchozí 80, Uložit 80, **Uložit jako… 103** (text
+75 px), Smazat 80, Storno 80, Generovat 88; EN Save As… 85. Popisky
+v pevném sloupci 178 px se vejdou (nejdelší „Odsazení orientační značky:“
+164 px, „Měřítko kresby 1:“ 102 px, EN „Drawing scale 1:“ 97 px); kontrola
+všech statictextů, tlačítek a zaškrtávátek nenašla žádný uříznutý text.
+
+**Stavový řádek: `M.STATUS_W` změřen.** Do 2026-10-23 odhad 415 px podle
+modelu písma. `graphics.measureString` v písmu popisku (oba popisky stejné):
+
+| text | CS | EN |
+|---|---|---|
+| ZUND · artboard 99 999,9 × 99 999,9 mm · řez „CUTCONTOUR“ · 1:99,9 | **425** | 424 |
+| totéž s „CutContour“ | 409 | 408 |
+| totéž s „grafika“ (kdyby se měřila grafika) | 415 | 418 |
+| ✗ Barva „CUTCONTOUR“ je přiřazena více vrstvám — odeberte duplicitu. | 418 | 391 |
+| ✗ Odsazení orientační značky — povolený rozsah 10–2000. | 346 | — |
+| reálný nález 1:10, artboard 15 600 × 30 500 mm, „CUTCONTOUR“ | 391 | — |
+
+`detectCutColor` vrací název barvy, jak ho má dokument, takže „CUTCONTOUR“
+velkými písmeny je reálný případ — a duplicitní řádek vznikne hned po
+„+ Přidat“, který nový řádek předvyplní touž řezovou barvou. Šířka je teď
+425 px a dialog 465 px. V 1.1.0 se tentýž důvod uřízl (414 px v 408 px, EN
+„Colour CUTCONTOUR is mapped to more than one layer…“ 489 px).
+
+Doměřeno 2026-10-28 (stejná metoda, kalibrace: první řádek tabulky znovu
+425 px): řádek nálezu bez řezové barvy — `ZUND · artboard 99 999,9 ×
+99 999,9 mm · 1:99,9` 298 px (EN 298), s „pouze značky“ 390 px (EN „marks
+only“ 374). Varianty se seznamem barev ze Vzorníku, které uživatel odmítl:
+`… 1 560 × 3 050 mm · řezy ve Vzorníku: „Thru-cut“, „Kiss-cut“, „Cut“`
+492 px, s „Vzorník:“ 440 px, čtyři barvy a 1:10 až 630 px. Nejširší text
+řádku je teď důvod duplicitní „CUTCONTOUR“ (418 px).
+
+**Most: `saveAs` a `-1712`.** Z osmi volání, která dokument uložila do
+`.ai` (`saveAs` s `IllustratorSaveOptions`), pět skončilo na straně
+AppleScriptu timeoutem `-1712` (60–200 s), přestože skript doběhl: soubor
+existoval a dokument byl zavřený nebo otevřený podle skriptu. Jednou při
+timeoutu 60 s soubor nevznikl a dokument byl zavřený; s timeoutem 300 s
+stejné volání doběhlo normálně. Po timeoutu nejdřív čtecí dotaz (jak píše
+oddíl „Provozní poznámky k mostu“).
+
+**Neměřeno:** dialog zobrazený na obrazovce (vzhled, barvy, 13" displej —
+ruční test ZSM oddíl 6), Cmd+Z po běhu z menu Soubor › Skripty.
+
 ### Pozor na menu příkazy s dialogem
 
 `executeMenuCommand("Expand3")` otevře modální okno `Objekt ▸ Rozdělit…`.
@@ -1113,6 +1269,12 @@ krokem, jindy ani tak.
 **Důsledek:** změna artboardu patří do vlastního kroku, tedy mezi dvě
 `app.redraw()` (poslední řádek tabulky).
 
+*Doměřeno 2026-10-24 (AI 30.8.2):* `app.undo()` a příkaz menu Zpět
+(`app.executeMenuCommand("undo")`) se po běhu zund-summa-marks liší — `app.undo()`
+změnu artboardu nevrátil vůbec, příkaz menu ji vrátil jako samostatný krok.
+Tabulka i odstavec výš jsou měřené `app.undo()`; podrobnosti v oddílu
+„Čistý tah, měřítko kresby, Zpět a rozměry dialogu zund-summa-marks 1.2.0“.
+
 ### Kolekce na úrovni dokumentu se aktualizují až po `app.redraw()`
 
 Uvnitř jednoho skriptu:
@@ -1229,8 +1391,8 @@ Výchozí styl se mění výběrem:
 | `cesta.selected = true` | `[8,4]` | ROUNDENDCAP |
 
 Značky vytvořené potom (režim „Vybraná cesta") byly čárkované — registrační
-kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší a stav po zrušení
-výběru neměřen.
+kruh i bílé halo; PDF vykreslené a prohlédnuté. Výběr myší neměřen; stav po
+zrušení výběru viz „Doměřeno 2026-10-19" níže.
 
 Doměřeno 2026-09-29 (AI 30.8.2): po výběru cesty s `[8,4]`, posunem čárek 3,
 kulatými konci, kulatým spojem, limitem úhlu 9, průhledností 50 a režimem
@@ -1240,6 +1402,17 @@ u nové skupiny taky ne.
 
 **Důsledek:** cesta ze skriptu, na jejímž vzhledu záleží, si musí
 `strokeDashes = []`, `strokeCap` a `strokeJoin` nastavit výslovně.
+
+Doměřeno 2026-10-19 (AI 30.8.2) na zund-summa-marks: **`doc.selection = null`
+výchozí styl nevrátí.** Po výběru cesty s `[8,4]` a kulatými konci zůstalo
+`[8,4]` s kulatými konci výchozím i po zrušení výběru; OPOS pruh nakreslený
+potom byl čárkovaný s kulatými konci a jeho `visibleBounds` měla 508,5 pt
+místo 500 pt (pruh silný 8,5 pt; PNG prohlédnuté). Zrušit výběr tedy není
+oprava — styl si musí nastavit cesta sama (`ZSM.Draw._plainStroke`).
+Dvě drobnosti ze stejného měření: přiřazení `strokeColor` zapne `stroked`
+a přiřazení `fillColor` zapne `filled` (výslovné `stroked = true` je pojistka);
+`doc.defaultStrokeDashes = [6,3]` se bez výběru tiše neprovede — bez chyby
+a bez účinku.
 
 Doměřeno 2026-10-20 (AI 30.8.2) na tile-exportu: s vybranou čárkovanou cestou
 `[12,6]` s kulatými konci a spoji vyšly ve stejném dokumentu čárkované

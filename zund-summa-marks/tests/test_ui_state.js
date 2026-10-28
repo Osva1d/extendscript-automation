@@ -31,6 +31,7 @@ global.alert = function () {};
 
 // Load Utils (needed for presetEquals)
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
+require("./lib/load_shared.js")(ZSM, ["numbers"]);   // shared: ZSM.Numbers, bound the way the build does
 eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "ui_state.js"), "utf8"));
 buildUIState(ZSM);   // shared core module — bind to ZSM
 
