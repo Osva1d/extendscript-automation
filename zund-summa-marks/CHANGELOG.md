@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [1.2.0] — 2026-10-28
 
 Čistý tah, měřítko kresby z dokumentu a jazyk společný všem nástrojům
 ([návrh](../docs/specs/2026-10-23-zund-summa-marks-1.2.0-design.md)). Kódy
