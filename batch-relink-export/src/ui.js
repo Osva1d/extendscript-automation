@@ -7,6 +7,44 @@ var BRE = BRE || {};
 
 BRE.UI = {
 
+    // The dialogs' layout values in one place (extendscript-ui-standards
+    // §4.1). Each one departs from ScriptUI's native sizing and says why.
+    M: {
+        // Alignment axis: the main dialog's labels share this right edge.
+        LABEL_COL: 96,
+        // Cap of Vybrat…: in a fill row the slack would otherwise widen the
+        // button (the "fat button" symptom); it goes to the field instead.
+        BROWSE_BTN: 90,
+        // Floor of a fill field, so it never collapses below a useful width.
+        FIELD_MIN: 180,
+        // Natural width of the path, pattern and name-preview fields, in
+        // characters: 20 = 176 px, under FIELD_MIN, so fill decides the width.
+        // Without it a field is as wide as its text, and remembered paths
+        // widened the dialog (753 px for the real job's paths instead of 460).
+        FIELD_CHARS: 20,
+        // Rhythm of the main dialog and its panels, kept as the dialog was
+        // laid out and measured; native is 15/15 and 15-10/10.
+        DIALOG_MARGINS: 20,
+        DIALOG_SPACING: 12,
+        PANEL_MARGINS: 15,
+        PANEL_SPACING: 10,
+        // Buttons and footer items closer together than native 10.
+        BUTTON_SPACING: 8,
+        // Preview: one width for its lines — the bold verdict, the info block
+        // (explicit lines, so its height follows the text) and the header —
+        // so they line up; the details box scrolls past its size.
+        PREVIEW_W: 500,
+        PREVIEW_MARGINS: 20,
+        PREVIEW_SPACING: 10,
+        PREVIEW_DETAILS: [480, 160],
+        DETAILS_MARGINS: 15,
+        // Status rows of the preview: the symbol close to its text, the rows
+        // close to each other, indented a little under the header.
+        ROW_SPACING: 7,
+        ROWS_SPACING: 3,
+        ROWS_MARGINS: [4, 2, 0, 2]
+    },
+
     // ---------------------------------------------------------------------
     // Main dialog
     // ---------------------------------------------------------------------
@@ -22,14 +60,13 @@ BRE.UI = {
     show: function (saved) {
         var c = BRE.Config;
         var l = BRE.L;
+        var M = BRE.UI.M;
 
         var dialog = new Window("dialog", c.ui.title);
         dialog.orientation = "column";
         dialog.alignChildren = ["fill", "top"];
-        dialog.margins = c.ui.dialogMargins;
-        dialog.spacing = c.ui.dialogSpacing;
-        // Fixed width anchors the fill-width fields (they have no fixed size now).
-        dialog.preferredSize.width = c.ui.dialogWidth;
+        dialog.margins = M.DIALOG_MARGINS;
+        dialog.spacing = M.DIALOG_SPACING;
 
         // Forward declaration — defined once previewST / namingInput exist.
         var refreshPreview;
@@ -38,8 +75,8 @@ BRE.UI = {
         var inputPanel = dialog.add("panel", undefined, l.PANEL_INPUT);
         inputPanel.orientation = "column";
         inputPanel.alignChildren = ["fill", "top"];
-        inputPanel.margins = c.ui.panelMargins;
-        inputPanel.spacing = c.ui.panelSpacing;
+        inputPanel.margins = M.PANEL_MARGINS;
+        inputPanel.spacing = M.PANEL_SPACING;
 
         var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
             false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN, l.BROWSE_TEMPLATE,
@@ -56,28 +93,28 @@ BRE.UI = {
         var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
         configPanel.orientation = "column";
         configPanel.alignChildren = ["fill", "top"];
-        configPanel.margins = c.ui.panelMargins;
-        configPanel.spacing = c.ui.panelSpacing;
+        configPanel.margins = M.PANEL_MARGINS;
+        configPanel.spacing = M.PANEL_SPACING;
 
         // Naming pattern (field fills the width)
         var namingGrp = configPanel.add("group");
         namingGrp.alignment = ["fill", "center"];
         namingGrp.alignChildren = ["left", "center"];
         var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
-        namingST.preferredSize.width = c.ui.labelWidth;
+        namingST.preferredSize.width = M.LABEL_COL;
         namingST.helpTip = l.TIP_NAMING;
         var namingInput = namingGrp.add("edittext", undefined, saved.pattern);
         // Fill to the panel's right edge — same line as panel-1's buttons.
         namingInput.alignment = ["fill", "center"];
-        namingInput.minimumSize.width = c.ui.fieldMinWidth;
-        namingInput.characters = c.ui.fieldChars;
+        namingInput.minimumSize.width = M.FIELD_MIN;
+        namingInput.characters = M.FIELD_CHARS;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
         var legendGrp = configPanel.add("group");
         legendGrp.alignChildren = ["left", "center"];
         var legendPad = legendGrp.add("statictext", undefined, "");
-        legendPad.preferredSize.width = c.ui.labelWidth;
+        legendPad.preferredSize.width = M.LABEL_COL;
         var legendST = legendGrp.add("statictext", undefined, l.NAMING_LEGEND);
         legendST.enabled = false;
 
@@ -86,11 +123,11 @@ BRE.UI = {
         previewGrp.alignment = ["fill", "center"];
         previewGrp.alignChildren = ["left", "center"];
         var previewLbl = previewGrp.add("statictext", undefined, l.LBL_PREVIEW);
-        previewLbl.preferredSize.width = c.ui.labelWidth;
+        previewLbl.preferredSize.width = M.LABEL_COL;
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
         previewST.alignment = ["fill", "center"];
-        previewST.minimumSize.width = c.ui.fieldMinWidth;
-        previewST.characters = c.ui.fieldChars;
+        previewST.minimumSize.width = M.FIELD_MIN;
+        previewST.characters = M.FIELD_CHARS;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -101,11 +138,11 @@ BRE.UI = {
         presetGrp.alignment = ["fill", "center"];
         presetGrp.alignChildren = ["left", "center"];
         var presetST = presetGrp.add("statictext", undefined, l.LBL_PRESET);
-        presetST.preferredSize.width = c.ui.labelWidth;
+        presetST.preferredSize.width = M.LABEL_COL;
         presetST.helpTip = l.TIP_PRESET;
         var presetDDL = presetGrp.add("dropdownlist", undefined, []);
         presetDDL.alignment = ["fill", "center"];
-        presetDDL.minimumSize.width = c.ui.fieldMinWidth;
+        presetDDL.minimumSize.width = M.FIELD_MIN;
         presetDDL.helpTip = l.TIP_PRESET;
 
         var pdfPresets = [];
@@ -153,8 +190,8 @@ BRE.UI = {
         var optionsPanel = dialog.add("panel", undefined, l.PANEL_OPTIONS);
         optionsPanel.orientation = "column";
         optionsPanel.alignChildren = ["left", "top"];
-        optionsPanel.margins = c.ui.panelMargins;
-        optionsPanel.spacing = c.ui.panelSpacing;
+        optionsPanel.margins = M.PANEL_MARGINS;
+        optionsPanel.spacing = M.PANEL_SPACING;
 
         var skipCB = optionsPanel.add("checkbox", undefined, l.CB_SKIP);
         skipCB.helpTip = l.TIP_SKIP;
@@ -166,7 +203,7 @@ BRE.UI = {
         // --- Footer: greyed copyright (left) + buttons (right), one row ---
         var footerGrp = dialog.add("group");
         footerGrp.alignment = ["fill", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = M.BUTTON_SPACING;
         var stCopy = footerGrp.add("statictext", undefined,
             "© 2025–2026 Ladislav Osvald · v" + c.version);
         stCopy.enabled = false;
@@ -175,7 +212,7 @@ BRE.UI = {
         footerSpacer.alignment = ["fill", "center"];
         var btnGrp = footerGrp.add("group");
         btnGrp.alignment = ["right", "center"];
-        btnGrp.spacing = 8;
+        btnGrp.spacing = M.BUTTON_SPACING;
         btnGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var runBtn = btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
 
@@ -318,6 +355,7 @@ BRE.UI = {
      */
     showPreview: function (config, slotCount, scan) {
         var l = BRE.L;
+        var M = BRE.UI.M;
 
         var sampleName = BRE.Core.buildOutputName(
             config.namingPattern, 0, config.pdfFiles.length,
@@ -328,8 +366,8 @@ BRE.UI = {
         var dlg = new Window("dialog", l.PREVIEW_TITLE);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 20;
-        dlg.spacing = 10;
+        dlg.margins = M.PREVIEW_MARGINS;
+        dlg.spacing = M.PREVIEW_SPACING;
 
         // One-line verdict (bold): processable / total / with a warning / blocked.
         // Processable includes the short and unreadable sheets, so they are
@@ -338,7 +376,7 @@ BRE.UI = {
         var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
             String(scan.processable), l.count("VERDICT_OF", total),
             String(scan.processable - scan.counts.ok), String(total - scan.processable)));
-        verdictST.preferredSize.width = 500;
+        verdictST.preferredSize.width = M.PREVIEW_W;
         try {
             var vf = verdictST.graphics.font;
             verdictST.graphics.font = ScriptUI.newFont(vf.name, "Bold", vf.size);
@@ -349,18 +387,18 @@ BRE.UI = {
             + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
 
         var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
-        infoST.preferredSize.width = 500;
+        infoST.preferredSize.width = M.PREVIEW_W;
 
         // --- Pre-flight scan summary: header + one status-dot row per count ---
         var c = scan.counts;
         var headerST = dlg.add("statictext", undefined, l.format(l.SCAN_HEADER, String(slotCount)));
-        headerST.preferredSize.width = 500;
+        headerST.preferredSize.width = M.PREVIEW_W;
 
         var rowsGrp = dlg.add("group");
         rowsGrp.orientation = "column";
         rowsGrp.alignChildren = ["left", "center"];
-        rowsGrp.spacing = 3;
-        rowsGrp.margins = [4, 2, 0, 2];
+        rowsGrp.spacing = M.ROWS_SPACING;
+        rowsGrp.margins = M.ROWS_MARGINS;
 
         // The family's status symbols and colours (extendscript-ui-standards
         // §12.6): ✓ OK, ⚠ processed with a warning, ✗ blocked.
@@ -369,7 +407,7 @@ BRE.UI = {
             if (!force && n === 0) return;
             var g = rowsGrp.add("group");
             g.alignChildren = ["left", "center"];
-            g.spacing = 7;
+            g.spacing = M.ROW_SPACING;
             var sym = g.add("statictext", undefined, SYMBOLS[kind]);
             BRE.FieldPaint.text(sym, kind);
             g.add("statictext", undefined, l.format(str, String(n)));
@@ -397,20 +435,20 @@ BRE.UI = {
         if (details.length > 0) {
             var detPanel = dlg.add("panel", undefined, l.LOG_DETAILS);
             detPanel.alignChildren = ["fill", "fill"];
-            detPanel.margins = 15;
+            detPanel.margins = M.DETAILS_MARGINS;
             var detBox = detPanel.add("edittext", undefined, details.join("\n"),
                 { multiline: true, scrolling: true, "readonly": true });
-            detBox.preferredSize = [480, 160];
+            detBox.preferredSize = M.PREVIEW_DETAILS;
         }
 
         if (scan.processable === 0) {
             var noneST = dlg.add("statictext", undefined, l.SCAN_NONE);
-            noneST.preferredSize.width = 500;
+            noneST.preferredSize.width = M.PREVIEW_W;
         }
 
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = M.BUTTON_SPACING;
         footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var okBtn = footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
         if (scan.processable === 0) okBtn.enabled = false;
@@ -487,25 +525,25 @@ BRE.UI = {
      */
     _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, prompt, onPick) {
         var l = BRE.L;
-        var c = BRE.Config;
+        var M = BRE.UI.M;
 
         var grp = parent.add("group");
         grp.orientation = "row";
         grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
-        st.preferredSize.width = c.ui.labelWidth;
+        st.preferredSize.width = M.LABEL_COL;
         if (tipField) st.helpTip = tipField;
         // Field fills the row; the button is capped so the slack goes to the
         // field (not the button), giving every row one shared right edge.
         var et = grp.add("edittext", undefined, "");
         et.alignment = ["fill", "center"];
-        et.minimumSize.width = c.ui.fieldMinWidth;
-        et.characters = c.ui.fieldChars;
+        et.minimumSize.width = M.FIELD_MIN;
+        et.characters = M.FIELD_CHARS;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
-        btn.preferredSize.width = c.ui.browseBtnWidth;
-        btn.maximumSize.width = c.ui.browseBtnWidth;
+        btn.preferredSize.width = M.BROWSE_BTN;
+        btn.maximumSize.width = M.BROWSE_BTN;
         if (tipBtn) btn.helpTip = tipBtn;
         btn.onClick = function () {
             var sel;

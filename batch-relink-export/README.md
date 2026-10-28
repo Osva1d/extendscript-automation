@@ -68,11 +68,11 @@ Automaticky se odebírá jen tehdy, když šablona ukazuje strany 1 až N každo
 ```
 src/
 ├── locale.js   # BRE.L — lokalizace cs/en
-├── config.js   # BRE.Config — verze, UI konstanty, výchozí vzor pojmenování
+├── config.js   # BRE.Config — verze, titulek okna, výchozí vzor pojmenování
 ├── storage.js  # BRE.Storage — zapamatované nastavení dialogu
 ├── pdf.js      # BRE.Pdf — počet stran PDF, pomocné PDF pro zjištění strany pozice
 ├── core.js     # BRE.Core — session mgmt, relink, verifikace, sken, pojmenování
-├── ui.js       # BRE.UI — dialog, náhled, progress, souhrn
+├── ui.js       # BRE.UI — dialog, náhled, napojení sdíleného průběhu a souhrnu; blok metrik BRE.UI.M
 └── main.js    # Entry point — smyčka zpracování
 ```
 
