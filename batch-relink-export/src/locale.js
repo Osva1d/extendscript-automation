@@ -14,7 +14,7 @@ BRE.L = (function () {
     var strings = {
         en: {
             // --- Errors ---
-            ERR_CRITICAL:       "The script stopped on an unexpected error: %s\n\nSend this message to whoever maintains the script (line %s).",
+            ERR_CRITICAL:       "The script stopped on an unexpected error: %s (line %s).\n\nSend this message to the script's maintainer.",
             ERR_TEMPLATE:       "The template was not found or is not an .ai file. Choose it with Browse…",
             ERR_TEMPLATE_OPEN:  "The template could not be opened — try opening it in Illustrator by hand.\n\nIllustrator says: %s",
             ERR_TEMPLATE_EMPTY: "Choose the template.",
@@ -24,17 +24,19 @@ BRE.L = (function () {
             ERR_OUTPUT_ASK:     "Output folder does not exist. Create it?",
             ERR_OUTPUT_FAIL:    "Failed to create output folder.",
             ERR_OUTPUT_IS_SOURCE: "The output folder is the source folder. The next run would read the outputs as source PDFs — choose another output folder.",
-            ERR_PRESET:         "You must select a PDF Preset.",
+            ERR_PRESET:         "You must select a PDF preset.",
+            ERR_PDF_PRESET_MISSING: "PDF preset \"%s\" is not in this Illustrator, and the export could not save with it. Choose another preset.",
+            DDL_MISSING_SUFFIX: "(missing)",
             ERR_NO_PDF:         "No PDF files found in the selected folder.",
             ERR_NO_LINKS:       "No linked objects found in the template.",
             ERR_NO_RELINK:      "No template position could be relinked — the sheet was not exported.",
             ERR_PROCESS:        "The sheet was not exported because of an error: %s",
-            ERR_RELINK_VERIFY:  "Relink verification failed for item %s: expected '%s', got '%s'.",
+            ERR_RELINK_VERIFY:  "Relink verification failed for item %s: expected \"%s\", got \"%s\".",
             ERR_PAGE_SIZE:      "Position %s: the source page is %s × %s mm, the template expects %s × %s mm. The source PDF has another page size (or no TrimBox) — check the template and the source.",
             DEC_SEP:            ".",
             ERR_HIDDEN_LAYER:   "Hidden position not relinked (it does not print) — layer \"%s\".",
             ERR_RELINK_ITEM:    "Failed to relink item %s: %s",
-            ERR_NAMING_PATTERN: "The pattern must contain {n} (sheet number), otherwise the outputs would overwrite each other.",
+            ERR_NAMING_PATTERN: "The name pattern must contain {n} (sheet number), otherwise the outputs would overwrite each other.",
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
             WARN_PAGE_MAP:      "Extra positions were not removed automatically: the template does not show pages 1–%s exactly once each.",
@@ -48,16 +50,19 @@ BRE.L = (function () {
             PANEL_OPTIONS:      "Options",
 
             // --- UI: Labels (short — narrow label column, full text in helpTip) ---
-            LBL_TEMPLATE:       "Template (.ai)",
-            LBL_SOURCE:         "Source (PDF)",
-            LBL_OUTPUT:         "Output",
-            LBL_NAMING:         "Pattern",
-            LBL_PRESET:         "PDF Preset",
+            LBL_TEMPLATE:       "Template (.ai):",
+            LBL_SOURCE:         "Source (PDF):",
+            LBL_OUTPUT:         "Output:",
+            LBL_NAMING:         "Pattern:",
+            LBL_PRESET:         "PDF preset:",
             LBL_PREVIEW:        "Name preview:",
             NAMING_LEGEND:      "{n} index · {template} template · {source} source",
             SAMPLE_TEMPLATE:    "template",
             SAMPLE_SOURCE:      "source",
-            PREVIEW_VERDICT:    "%s of %s sheets can be processed (%s with a warning) · %s blocked",
+            PREVIEW_VERDICT:    "%s %s can be processed (%s with a warning) · %s blocked",
+            VERDICT_OF_1:       "of %s sheet",
+            VERDICT_OF_2:       "of %s sheets",
+            VERDICT_OF_5:       "of %s sheets",
 
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
@@ -67,8 +72,8 @@ BRE.L = (function () {
             BTN_CONTINUE:       "Continue",
 
             // --- UI: Checkboxes ---
-            CB_SKIP:            "Skip existing files",
-            CB_OPEN_FOLDER:     "Open output folder when done",
+            CB_SKIP:            "Skip finished outputs",
+            CB_OPEN_FOLDER:     "Open the output folder when done",
 
             // --- UI: Help Tips ---
             TIP_TEMPLATE:       "Illustrator template file (.ai) with linked PDF",
@@ -77,14 +82,15 @@ BRE.L = (function () {
             TIP_SOURCE_BTN:     "Select source folder",
             TIP_OUTPUT:         "Destination folder for exported PDF files",
             TIP_OUTPUT_BTN:     "Select output folder",
-            TIP_NAMING:         "Output filename pattern. {n} = number, {template} = template name, {source} = source PDF name",
+            TIP_NAMING:         "Name pattern for the outputs. {n} = number, {template} = template name, {source} = source PDF name",
             TIP_PRESET:         "PDF quality profile for export",
             TIP_SKIP:           "Skip a sheet whose output already exists and is newer than both its source and the template",
-            TIP_OPEN:           "Open output folder in system file manager after completion",
+            TIP_OPEN:           "Open the output folder in Finder when done",
 
             // --- UI: File Dialogs ---
-            BROWSE_FOLDER:      "Select folder:",
-            BROWSE_FILE:        "Select file:",
+            BROWSE_TEMPLATE:    "Choose the template (.ai):",
+            BROWSE_SOURCE:      "Choose the source folder with the PDFs:",
+            BROWSE_OUTPUT:      "Choose the output folder:",
 
             // --- Preview ---
             PREVIEW_TITLE:      "Processing Preview",
@@ -115,43 +121,45 @@ BRE.L = (function () {
 
             // --- Log ---
             LOG_TITLE:          "Processing Result",
-            LOG_SUCCESS:        "Successful",
-            LOG_ERRORS:         "Errors",
-            LOG_SKIPPED:        "Skipped",
-            LOG_BLOCKED:        "Blocked",
-            LOG_REMOVED:        "Removed positions",
-            LOG_MANUAL_LABEL:   "Needs manual cleanup",
+            LOG_SUCCESS:        "Successful:",
+            LOG_ERRORS:         "Errors:",
+            LOG_SKIPPED:        "Skipped (finished):",
+            LOG_BLOCKED:        "Blocked:",
+            LOG_REMOVED:        "Removed positions:",
+            LOG_MANUAL_LABEL:   "Needs manual cleanup:",
             LOG_MANUAL:         "%s extra position(s) could not be removed and show page 1 again — remove them by hand before printing",
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
             LOG_CANCELLED:      "Cancelled by user after processing %s of %s files.",
-            SKIP_MSG:           "Skipped (file exists)",
+            SKIP_MSG:           "Skipped (finished output)",
             LOG_REDONE:         "The output existed but is older than its source or the template — created again."
         },
 
         cs: {
             // --- Chyby ---
-            ERR_CRITICAL:       "Skript se zastavil kvůli neočekávané chybě: %s\n\nPošlete tuto hlášku správci skriptu (řádek %s).",
+            ERR_CRITICAL:       "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nPošlete tuto hlášku správci skriptu.",
             ERR_TEMPLATE:       "Šablona se nenašla nebo nemá příponu .ai. Vyberte ji tlačítkem Vybrat…",
             ERR_TEMPLATE_OPEN:  "Šablonu se nepodařilo otevřít — zkuste ji otevřít v Illustratoru ručně.\n\nHláška Illustratoru: %s",
             ERR_TEMPLATE_EMPTY: "Vyberte šablonu.",
             ERR_SOURCE_EMPTY:   "Vyberte zdrojovou složku.",
-            ERR_OUTPUT_EMPTY:   "Vyberte výstupní složku.",
+            ERR_OUTPUT_EMPTY:   "Vyberte cílovou složku.",
             ERR_SOURCE:         "Zdrojová složka neexistuje.",
-            ERR_OUTPUT_ASK:     "Výstupní složka neexistuje. Vytvořit?",
-            ERR_OUTPUT_FAIL:    "Nepodařilo se vytvořit výstupní složku.",
-            ERR_OUTPUT_IS_SOURCE: "Výstupní složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdrojová PDF — zvolte jinou výstupní složku.",
-            ERR_PRESET:         "Musíte vybrat PDF Preset.",
+            ERR_OUTPUT_ASK:     "Cílová složka neexistuje. Vytvořit?",
+            ERR_OUTPUT_FAIL:    "Nepodařilo se vytvořit cílovou složku.",
+            ERR_OUTPUT_IS_SOURCE: "Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdrojová PDF — zvolte jinou cílovou složku.",
+            ERR_PRESET:         "Musíte vybrat PDF preset.",
+            ERR_PDF_PRESET_MISSING: "PDF preset „%s“ v tomto Illustratoru není a export by s ním PDF neuložil. Vyberte jiný preset.",
+            DDL_MISSING_SUFFIX: "(chybí)",
             ERR_NO_PDF:         "Ve vybrané složce nebyly nalezeny žádné PDF soubory.",
             ERR_NO_LINKS:       "V šabloně nebyly nalezeny žádné propojené objekty.",
             ERR_NO_RELINK:      "Žádnou pozici šablony se nepodařilo přelinkovat — arch se nevyexportoval.",
             ERR_PROCESS:        "Arch se nevyexportoval kvůli chybě: %s",
-            ERR_RELINK_VERIFY:  "Ověření relinku selhalo pro položku %s: očekáváno '%s', nalezeno '%s'.",
+            ERR_RELINK_VERIFY:  "Ověření relinku selhalo pro položku %s: očekáváno „%s“, nalezeno „%s“.",
             ERR_PAGE_SIZE:      "Pozice %s: strana zdroje má %s × %s mm, šablona počítá s %s × %s mm. Zdrojové PDF má jiný formát stránky (nebo nemá TrimBox) — zkontrolujte šablonu a zdroj.",
             DEC_SEP:            ",",
             ERR_HIDDEN_LAYER:   "Skrytá pozice se nepřelinkovala (netiskne se) — vrstva „%s“.",
             ERR_RELINK_ITEM:    "Nepodařilo se relinkovat položku %s: %s",
-            ERR_NAMING_PATTERN: "Vzor musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly.",
+            ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly.",
             ERR_RELINK_FAILED:  "Export přeskočen — pozic, které se nepodařilo relinkovat: %s.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
             WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
@@ -165,16 +173,19 @@ BRE.L = (function () {
             PANEL_OPTIONS:      "Možnosti",
 
             // --- UI: Popisky (krátké — úzký sloupec, plný text v helpTipu) ---
-            LBL_TEMPLATE:       "Šablona (.ai)",
-            LBL_SOURCE:         "Zdroj (PDF)",
-            LBL_OUTPUT:         "Výstup",
-            LBL_NAMING:         "Vzor",
-            LBL_PRESET:         "PDF Preset",
+            LBL_TEMPLATE:       "Šablona (.ai):",
+            LBL_SOURCE:         "Zdroj (PDF):",
+            LBL_OUTPUT:         "Výstup:",
+            LBL_NAMING:         "Vzor:",
+            LBL_PRESET:         "PDF preset:",
             LBL_PREVIEW:        "Náhled názvu:",
             NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
             SAMPLE_TEMPLATE:    "sablona",
             SAMPLE_SOURCE:      "zdroj",
-            PREVIEW_VERDICT:    "%s z %s archů lze zpracovat (%s s upozorněním) · %s blokováno",
+            PREVIEW_VERDICT:    "%s %s lze zpracovat (%s s upozorněním) · %s blokováno",
+            VERDICT_OF_1:       "z %s archu",
+            VERDICT_OF_2:       "z %s archů",
+            VERDICT_OF_5:       "z %s archů",
 
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
@@ -184,8 +195,8 @@ BRE.L = (function () {
             BTN_CONTINUE:       "Pokračovat",
 
             // --- UI: Checkboxy ---
-            CB_SKIP:            "Přeskočit existující soubory",
-            CB_OPEN_FOLDER:     "Po dokončení otevřít výstupní složku",
+            CB_SKIP:            "Přeskočit hotové výstupy",
+            CB_OPEN_FOLDER:     "Po dokončení otevřít cílovou složku",
 
             // --- UI: Nápovědy ---
             TIP_TEMPLATE:       "Soubor šablony Illustrator (.ai) s propojeným PDF",
@@ -193,15 +204,16 @@ BRE.L = (function () {
             TIP_SOURCE:         "Složka obsahující zdrojové PDF soubory",
             TIP_SOURCE_BTN:     "Vybrat zdrojovou složku",
             TIP_OUTPUT:         "Cílová složka pro exportované PDF",
-            TIP_OUTPUT_BTN:     "Vybrat výstupní složku",
-            TIP_NAMING:         "Vzor názvu výstupu. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
+            TIP_OUTPUT_BTN:     "Vybrat cílovou složku",
+            TIP_NAMING:         "Vzor pojmenování výstupů. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
             TIP_PRESET:         "Profil kvality PDF pro export",
             TIP_SKIP:           "Přeskočí arch, jehož výstup už existuje a je novější než zdroj i šablona",
-            TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
+            TIP_OPEN:           "Po dokončení otevře cílovou složku ve Finderu",
 
             // --- UI: Dialogy souborů ---
-            BROWSE_FOLDER:      "Vyberte složku:",
-            BROWSE_FILE:        "Vyberte soubor:",
+            BROWSE_TEMPLATE:    "Vyberte šablonu (.ai):",
+            BROWSE_SOURCE:      "Vyberte zdrojovou složku s PDF:",
+            BROWSE_OUTPUT:      "Vyberte cílovou složku:",
 
             // --- Náhled ---
             PREVIEW_TITLE:      "Náhled zpracování",
@@ -232,17 +244,17 @@ BRE.L = (function () {
 
             // --- Log ---
             LOG_TITLE:          "Výsledek zpracování",
-            LOG_SUCCESS:        "Úspěšně",
-            LOG_ERRORS:         "Chyby",
-            LOG_SKIPPED:        "Přeskočeno",
-            LOG_BLOCKED:        "Blokováno",
-            LOG_REMOVED:        "Odebrané pozice",
-            LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu",
+            LOG_SUCCESS:        "Úspěšně:",
+            LOG_ERRORS:         "Chyby:",
+            LOG_SKIPPED:        "Přeskočeno (hotové):",
+            LOG_BLOCKED:        "Blokováno:",
+            LOG_REMOVED:        "Odebrané pozice:",
+            LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu:",
             LOG_MANUAL:         "Pozic navíc, které se nepodařilo odebrat: %s. Ukazují znovu stranu 1 — před tiskem je odstraňte ručně.",
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",
-            SKIP_MSG:           "Přeskočeno (soubor existuje)",
+            SKIP_MSG:           "Přeskočeno (hotový výstup)",
             LOG_REDONE:         "Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu."
         }
     };
@@ -256,6 +268,16 @@ BRE.L = (function () {
         return template.replace(/%s/g, function () {
             return idx < args.length ? String(args[idx++]) : "%s";
         });
+    };
+
+    // Czech plural: BRE.L.count("VERDICT_OF", n) -> "z 1 archu" / "z 3 archů".
+    // Every counted key exists in both tables with _1, _2 and _5 forms
+    // (extendscript-ui-standards §5, §12.1).
+    active.count = function (base, n) {
+        var suffix = "_5";
+        if (n === 1) suffix = "_1";
+        else if (n >= 2 && n <= 4) suffix = "_2";
+        return active.format(active[base + suffix], n);
     };
 
     return active;

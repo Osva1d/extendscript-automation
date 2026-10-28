@@ -7,6 +7,44 @@ var BRE = BRE || {};
 
 BRE.UI = {
 
+    // The dialogs' layout values in one place (extendscript-ui-standards
+    // §4.1). Each one departs from ScriptUI's native sizing and says why.
+    M: {
+        // Alignment axis: the main dialog's labels share this right edge.
+        LABEL_COL: 96,
+        // Cap of Vybrat…: in a fill row the slack would otherwise widen the
+        // button (the "fat button" symptom); it goes to the field instead.
+        BROWSE_BTN: 90,
+        // Floor of a fill field, so it never collapses below a useful width.
+        FIELD_MIN: 180,
+        // Natural width of the path, pattern and name-preview fields, in
+        // characters: 20 = 176 px, under FIELD_MIN, so fill decides the width.
+        // Without it a field is as wide as its text, and remembered paths
+        // widened the dialog (753 px for the real job's paths instead of 460).
+        FIELD_CHARS: 20,
+        // Rhythm of the main dialog and its panels, kept as the dialog was
+        // laid out and measured; native is 15/15 and 15-10/10.
+        DIALOG_MARGINS: 20,
+        DIALOG_SPACING: 12,
+        PANEL_MARGINS: 15,
+        PANEL_SPACING: 10,
+        // Buttons and footer items closer together than native 10.
+        BUTTON_SPACING: 8,
+        // Preview: one width for its lines — the bold verdict, the info block
+        // (explicit lines, so its height follows the text) and the header —
+        // so they line up; the details box scrolls past its size.
+        PREVIEW_W: 500,
+        PREVIEW_MARGINS: 20,
+        PREVIEW_SPACING: 10,
+        PREVIEW_DETAILS: [480, 160],
+        DETAILS_MARGINS: 15,
+        // Status rows of the preview: the symbol close to its text, the rows
+        // close to each other, indented a little under the header.
+        ROW_SPACING: 7,
+        ROWS_SPACING: 3,
+        ROWS_MARGINS: [4, 2, 0, 2]
+    },
+
     // ---------------------------------------------------------------------
     // Main dialog
     // ---------------------------------------------------------------------
@@ -22,14 +60,13 @@ BRE.UI = {
     show: function (saved) {
         var c = BRE.Config;
         var l = BRE.L;
+        var M = BRE.UI.M;
 
         var dialog = new Window("dialog", c.ui.title);
         dialog.orientation = "column";
         dialog.alignChildren = ["fill", "top"];
-        dialog.margins = c.ui.dialogMargins;
-        dialog.spacing = c.ui.dialogSpacing;
-        // Fixed width anchors the fill-width fields (they have no fixed size now).
-        dialog.preferredSize.width = c.ui.dialogWidth;
+        dialog.margins = M.DIALOG_MARGINS;
+        dialog.spacing = M.DIALOG_SPACING;
 
         // Forward declaration — defined once previewST / namingInput exist.
         var refreshPreview;
@@ -38,16 +75,16 @@ BRE.UI = {
         var inputPanel = dialog.add("panel", undefined, l.PANEL_INPUT);
         inputPanel.orientation = "column";
         inputPanel.alignChildren = ["fill", "top"];
-        inputPanel.margins = c.ui.panelMargins;
-        inputPanel.spacing = c.ui.panelSpacing;
+        inputPanel.margins = M.PANEL_MARGINS;
+        inputPanel.spacing = M.PANEL_SPACING;
 
         var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
-            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN,
+            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN, l.BROWSE_TEMPLATE,
             function () { if (refreshPreview) refreshPreview(); });
         var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE,
-            true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
+            true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN, l.BROWSE_SOURCE);
         var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
-            true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
+            true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN, l.BROWSE_OUTPUT);
         // Last run's paths. The source changes with every job — not remembered.
         templatePath.text = saved.template;
         outputPath.text = saved.output;
@@ -56,28 +93,28 @@ BRE.UI = {
         var configPanel = dialog.add("panel", undefined, l.PANEL_CONFIG);
         configPanel.orientation = "column";
         configPanel.alignChildren = ["fill", "top"];
-        configPanel.margins = c.ui.panelMargins;
-        configPanel.spacing = c.ui.panelSpacing;
+        configPanel.margins = M.PANEL_MARGINS;
+        configPanel.spacing = M.PANEL_SPACING;
 
         // Naming pattern (field fills the width)
         var namingGrp = configPanel.add("group");
         namingGrp.alignment = ["fill", "center"];
         namingGrp.alignChildren = ["left", "center"];
         var namingST = namingGrp.add("statictext", undefined, l.LBL_NAMING);
-        namingST.preferredSize.width = c.ui.labelWidth;
+        namingST.preferredSize.width = M.LABEL_COL;
         namingST.helpTip = l.TIP_NAMING;
         var namingInput = namingGrp.add("edittext", undefined, saved.pattern);
         // Fill to the panel's right edge — same line as panel-1's buttons.
         namingInput.alignment = ["fill", "center"];
-        namingInput.minimumSize.width = c.ui.fieldMinWidth;
-        namingInput.characters = c.ui.fieldChars;
+        namingInput.minimumSize.width = M.FIELD_MIN;
+        namingInput.characters = M.FIELD_CHARS;
         namingInput.helpTip = l.TIP_NAMING;
 
         // Visible token legend (lifted out of the helpTip)
         var legendGrp = configPanel.add("group");
         legendGrp.alignChildren = ["left", "center"];
         var legendPad = legendGrp.add("statictext", undefined, "");
-        legendPad.preferredSize.width = c.ui.labelWidth;
+        legendPad.preferredSize.width = M.LABEL_COL;
         var legendST = legendGrp.add("statictext", undefined, l.NAMING_LEGEND);
         legendST.enabled = false;
 
@@ -86,11 +123,11 @@ BRE.UI = {
         previewGrp.alignment = ["fill", "center"];
         previewGrp.alignChildren = ["left", "center"];
         var previewLbl = previewGrp.add("statictext", undefined, l.LBL_PREVIEW);
-        previewLbl.preferredSize.width = c.ui.labelWidth;
+        previewLbl.preferredSize.width = M.LABEL_COL;
         var previewST = previewGrp.add("statictext", undefined, "", { truncate: "middle" });
         previewST.alignment = ["fill", "center"];
-        previewST.minimumSize.width = c.ui.fieldMinWidth;
-        previewST.characters = c.ui.fieldChars;
+        previewST.minimumSize.width = M.FIELD_MIN;
+        previewST.characters = M.FIELD_CHARS;
         try {
             var pf = previewST.graphics.font;
             previewST.graphics.font = ScriptUI.newFont(pf.name, "Bold", pf.size);
@@ -101,11 +138,11 @@ BRE.UI = {
         presetGrp.alignment = ["fill", "center"];
         presetGrp.alignChildren = ["left", "center"];
         var presetST = presetGrp.add("statictext", undefined, l.LBL_PRESET);
-        presetST.preferredSize.width = c.ui.labelWidth;
+        presetST.preferredSize.width = M.LABEL_COL;
         presetST.helpTip = l.TIP_PRESET;
         var presetDDL = presetGrp.add("dropdownlist", undefined, []);
         presetDDL.alignment = ["fill", "center"];
-        presetDDL.minimumSize.width = c.ui.fieldMinWidth;
+        presetDDL.minimumSize.width = M.FIELD_MIN;
         presetDDL.helpTip = l.TIP_PRESET;
 
         var pdfPresets = [];
@@ -126,22 +163,35 @@ BRE.UI = {
                 }
                 if (defaultIdx > 0) break;
             }
-            // The preset chosen last time wins while it still exists.
+            presetDDL.selection = defaultIdx;
+        }
+        // The preset chosen last time wins while it still exists. One this
+        // Illustrator lacks shows as "(chybí)" instead of a silent switch to
+        // the default (extendscript-ui-standards §12.3); Run refuses it.
+        if (saved.preset) {
+            var savedIdx = -1;
             for (var ri = 0; ri < pdfPresets.length; ri++) {
                 if (pdfPresets[ri] === saved.preset) {
-                    defaultIdx = ri;
+                    savedIdx = ri;
                     break;
                 }
             }
-            presetDDL.selection = defaultIdx;
+            if (savedIdx >= 0) {
+                presetDDL.selection = savedIdx;
+            } else {
+                var missing = presetDDL.add("item", saved.preset + "  " + l.DDL_MISSING_SUFFIX);
+                missing.breMissing = true;
+                missing.breValue = saved.preset;
+                presetDDL.selection = missing;
+            }
         }
 
         // --- Panel 3: options (optional toggles, separated from settings) ---
         var optionsPanel = dialog.add("panel", undefined, l.PANEL_OPTIONS);
         optionsPanel.orientation = "column";
         optionsPanel.alignChildren = ["left", "top"];
-        optionsPanel.margins = c.ui.panelMargins;
-        optionsPanel.spacing = c.ui.panelSpacing;
+        optionsPanel.margins = M.PANEL_MARGINS;
+        optionsPanel.spacing = M.PANEL_SPACING;
 
         var skipCB = optionsPanel.add("checkbox", undefined, l.CB_SKIP);
         skipCB.helpTip = l.TIP_SKIP;
@@ -153,7 +203,7 @@ BRE.UI = {
         // --- Footer: greyed copyright (left) + buttons (right), one row ---
         var footerGrp = dialog.add("group");
         footerGrp.alignment = ["fill", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = M.BUTTON_SPACING;
         var stCopy = footerGrp.add("statictext", undefined,
             "© 2025–2026 Ladislav Osvald · v" + c.version);
         stCopy.enabled = false;
@@ -162,7 +212,7 @@ BRE.UI = {
         footerSpacer.alignment = ["fill", "center"];
         var btnGrp = footerGrp.add("group");
         btnGrp.alignment = ["right", "center"];
-        btnGrp.spacing = 8;
+        btnGrp.spacing = M.BUTTON_SPACING;
         btnGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var runBtn = btnGrp.add("button", undefined, l.BTN_RUN, { name: "ok" });
 
@@ -223,9 +273,14 @@ BRE.UI = {
                 alert(l.ERR_OUTPUT_IS_SOURCE);
                 return;
             }
-            var preset = presetDDL.selection ? presetDDL.selection.text : "";
+            var presetItem = presetDDL.selection;
+            var preset = presetItem ? presetItem.text : "";
             if (!preset) {
                 alert(l.ERR_PRESET);
+                return;
+            }
+            if (presetItem.breMissing) {
+                alert(l.format(l.ERR_PDF_PRESET_MISSING, presetItem.breValue));
                 return;
             }
             var namingPattern = namingInput.text;
@@ -300,6 +355,7 @@ BRE.UI = {
      */
     showPreview: function (config, slotCount, scan) {
         var l = BRE.L;
+        var M = BRE.UI.M;
 
         var sampleName = BRE.Core.buildOutputName(
             config.namingPattern, 0, config.pdfFiles.length,
@@ -310,17 +366,17 @@ BRE.UI = {
         var dlg = new Window("dialog", l.PREVIEW_TITLE);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 20;
-        dlg.spacing = 10;
+        dlg.margins = M.PREVIEW_MARGINS;
+        dlg.spacing = M.PREVIEW_SPACING;
 
         // One-line verdict (bold): processable / total / with a warning / blocked.
         // Processable includes the short and unreadable sheets, so they are
         // counted apart — "OK" for them read as if nothing needed a look.
         var total = config.pdfFiles.length;
         var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
-            String(scan.processable), String(total),
+            String(scan.processable), l.count("VERDICT_OF", total),
             String(scan.processable - scan.counts.ok), String(total - scan.processable)));
-        verdictST.preferredSize.width = 500;
+        verdictST.preferredSize.width = M.PREVIEW_W;
         try {
             var vf = verdictST.graphics.font;
             verdictST.graphics.font = ScriptUI.newFont(vf.name, "Bold", vf.size);
@@ -331,35 +387,36 @@ BRE.UI = {
             + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
 
         var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
-        infoST.preferredSize.width = 500;
+        infoST.preferredSize.width = M.PREVIEW_W;
 
         // --- Pre-flight scan summary: header + one status-dot row per count ---
         var c = scan.counts;
         var headerST = dlg.add("statictext", undefined, l.format(l.SCAN_HEADER, String(slotCount)));
-        headerST.preferredSize.width = 500;
+        headerST.preferredSize.width = M.PREVIEW_W;
 
         var rowsGrp = dlg.add("group");
         rowsGrp.orientation = "column";
         rowsGrp.alignChildren = ["left", "center"];
-        rowsGrp.spacing = 3;
-        rowsGrp.margins = [4, 2, 0, 2];
+        rowsGrp.spacing = M.ROWS_SPACING;
+        rowsGrp.margins = M.ROWS_MARGINS;
 
-        var GREEN = [0.36, 0.60, 0.34], AMBER = [0.79, 0.64, 0.23],
-            RED = [0.76, 0.31, 0.25], GREY = [0.60, 0.60, 0.58];
-        function addCountRow(n, str, rgb, force) {
+        // The family's status symbols and colours (extendscript-ui-standards
+        // §12.6): ✓ OK, ⚠ processed with a warning, ✗ blocked.
+        var SYMBOLS = { OK: "\u2713", WARN: "\u26a0", ERR: "\u2717" };
+        function addCountRow(n, str, kind, force) {
             if (!force && n === 0) return;
             var g = rowsGrp.add("group");
             g.alignChildren = ["left", "center"];
-            g.spacing = 7;
-            var dot = g.add("statictext", undefined, "●");  // ●
-            BRE.UI._color(dot, rgb);
+            g.spacing = M.ROW_SPACING;
+            var sym = g.add("statictext", undefined, SYMBOLS[kind]);
+            BRE.FieldPaint.text(sym, kind);
             g.add("statictext", undefined, l.format(str, String(n)));
         }
-        addCountRow(c.ok, l.SCAN_OK, GREEN, true);
-        addCountRow(c.partial, l.SCAN_PARTIAL, AMBER, false);
-        addCountRow(c.under, l.SCAN_UNDER, AMBER, false);
-        addCountRow(c.unreadable, l.SCAN_UNREADABLE, GREY, false);
-        addCountRow(c.over, l.SCAN_OVER, RED, false);
+        addCountRow(c.ok, l.SCAN_OK, "OK", true);
+        addCountRow(c.partial, l.SCAN_PARTIAL, "WARN", false);
+        addCountRow(c.under, l.SCAN_UNDER, "WARN", false);
+        addCountRow(c.unreadable, l.SCAN_UNREADABLE, "WARN", false);
+        addCountRow(c.over, l.SCAN_OVER, "ERR", false);
 
         // --- Per-file anomaly details (everything except "ok") ---
         var details = [];
@@ -378,20 +435,20 @@ BRE.UI = {
         if (details.length > 0) {
             var detPanel = dlg.add("panel", undefined, l.LOG_DETAILS);
             detPanel.alignChildren = ["fill", "fill"];
-            detPanel.margins = 15;
+            detPanel.margins = M.DETAILS_MARGINS;
             var detBox = detPanel.add("edittext", undefined, details.join("\n"),
                 { multiline: true, scrolling: true, "readonly": true });
-            detBox.preferredSize = [480, 160];
+            detBox.preferredSize = M.PREVIEW_DETAILS;
         }
 
         if (scan.processable === 0) {
             var noneST = dlg.add("statictext", undefined, l.SCAN_NONE);
-            noneST.preferredSize.width = 500;
+            noneST.preferredSize.width = M.PREVIEW_W;
         }
 
         var footerGrp = dlg.add("group");
         footerGrp.alignment = ["right", "center"];
-        footerGrp.spacing = 8;
+        footerGrp.spacing = M.BUTTON_SPACING;
         footerGrp.add("button", undefined, l.BTN_CANCEL, { name: "cancel" });
         var okBtn = footerGrp.add("button", undefined, l.BTN_CONTINUE, { name: "ok" });
         if (scan.processable === 0) okBtn.enabled = false;
@@ -400,144 +457,56 @@ BRE.UI = {
     },
 
     // ---------------------------------------------------------------------
-    // Progress palette
+    // Progress palette and summary — the shared modules progress.js and
+    // summary.js (extendscript-ui-standards §12.5); BRE hands them its texts.
     // ---------------------------------------------------------------------
 
     /**
-     * Creates and shows a progress palette. The batch is stopped by holding
-     * Esc: a palette button gets no clicks while the script runs — Illustrator
-     * does not dispatch them, however the loop redraws or waits — but the
-     * keyboard state can be read (both measured, AI 30.8.2).
+     * Creates and shows the progress palette (BRE.Progress). The batch stops
+     * on held Esc, after the file in progress.
      * @param {number} total - Total number of files.
      * @returns {Object} { isCancelled(), poll(), update(i, name), finish(), close() }
      */
     createProgress: function (total) {
         var l = BRE.L;
-
-        var dlg = new Window("palette", l.PROGRESS_TITLE, undefined, { closeButton: false });
-        dlg.orientation = "column";
-        dlg.alignChildren = ["fill", "top"];
-        dlg.margins = 15;
-        dlg.spacing = 10;
-
-        var statusText = dlg.add("statictext", undefined, l.PROGRESS_INIT);
-        statusText.preferredSize.width = 450;
-        var bar = dlg.add("progressbar", undefined, 0, total);
-        bar.preferredSize.width = 450;
-
-        var cancelled = false;
-        var stopHint = dlg.add("statictext", undefined, l.PROGRESS_STOP_HINT);
-        stopHint.preferredSize.width = 450;
-        stopHint.justify = "center";
-
-        // Latches a stop request while Esc is held. The loop acts on it
-        // between files, so the file in progress is finished.
-        function poll() {
-            if (cancelled) return;
-            try {
-                if (ScriptUI.environment.keyboardState.keyName === "Escape") {
-                    cancelled = true;
-                    stopHint.text = l.PROGRESS_STOPPING;
-                    dlg.update();
-                }
-            } catch (e) {}
-        }
-
-        dlg.show();
-
-        return {
-            isCancelled: function () {
-                poll();
-                return cancelled;
-            },
-            poll: poll,
-            update: function (index, fileName) {
-                // Keep the status line from overflowing on long names.
-                var nm = fileName;
-                if (nm.length > 38) nm = nm.substr(0, 18) + "…" + nm.substr(nm.length - 17);
-                statusText.text = l.format(l.PROGRESS_FILE,
-                    nm, String(index + 1), String(total));
-                bar.value = index;
-                dlg.update();
-                poll();
-            },
-            finish: function () {
-                bar.value = total;
-                dlg.update();
-            },
-            close: function () {
-                try { dlg.close(); } catch (e) {}
-            }
-        };
+        return BRE.Progress.create(total, {
+            title: l.PROGRESS_TITLE,
+            init: l.PROGRESS_INIT,
+            item: l.PROGRESS_FILE,
+            hint: l.PROGRESS_STOP_HINT,
+            stopping: l.PROGRESS_STOPPING
+        });
     },
 
-    // ---------------------------------------------------------------------
-    // Summary log
-    // ---------------------------------------------------------------------
-
     /**
-     * Shows a summary dialog after processing completes.
+     * Shows the summary after processing (BRE.Summary). A stopped batch gets
+     * the cancellation note and never "all OK".
      * @param {Object} results - { success, errors, skipped, blocked, removed,
      *        manual, cancelled, total, log }
      */
     showSummary: function (results) {
         var l = BRE.L;
-
-        var logWin = new Window("dialog", l.LOG_TITLE);
-        logWin.orientation = "column";
-        logWin.alignChildren = ["fill", "top"];
-        logWin.margins = 20;
-        logWin.spacing = 15;
-
-        // Aligned label : value pairs (Errors red when > 0).
-        var RED = [0.76, 0.31, 0.25];
-        var pairsGrp = logWin.add("group");
-        pairsGrp.orientation = "column";
-        pairsGrp.alignChildren = ["left", "center"];
-        pairsGrp.spacing = 3;
-        function addPair(label, val, redIfPositive, force) {
-            if (!force && val === 0) return;
-            var g = pairsGrp.add("group");
-            g.alignChildren = ["left", "center"];
-            g.spacing = 8;
-            var ls = g.add("statictext", undefined, label);
-            ls.preferredSize.width = 150;
-            var vs = g.add("statictext", undefined, String(val));
-            vs.preferredSize.width = 60;
-            if (redIfPositive && val > 0) BRE.UI._color(vs, RED);
-        }
-        addPair(l.LOG_SUCCESS, results.success, false, true);
-        addPair(l.LOG_ERRORS, results.errors, true, true);
-        addPair(l.LOG_SKIPPED, results.skipped, false, true);
-        addPair(l.LOG_BLOCKED, results.blocked, false, false);
-        addPair(l.LOG_REMOVED, results.removed, false, false);
-        addPair(l.LOG_MANUAL_LABEL, results.manual, false, false);
-
+        var note = null;
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
-            var cancST = logWin.add("statictext", undefined,
-                l.format(l.LOG_CANCELLED, String(completed), String(results.total)));
-            cancST.preferredSize.width = 500;
+            note = l.format(l.LOG_CANCELLED, String(completed), String(results.total));
         }
-
-        if (results.log.length > 0) {
-            var detailPanel = logWin.add("panel", undefined, l.LOG_DETAILS);
-            detailPanel.alignChildren = ["fill", "fill"];
-            detailPanel.margins = 15;
-            var logBox = detailPanel.add("edittext", undefined, results.log.join("\n"),
-                { multiline: true, scrolling: true, "readonly": true });
-            logBox.preferredSize = [480, 200];
-        } else if (!results.cancelled) {
-            // A stopped batch is not "all OK" — the rest never ran.
-            logWin.add("statictext", undefined, l.LOG_ALL_OK);
-        }
-
-        var closeGrp = logWin.add("group");
-        closeGrp.alignment = ["right", "center"];
-        closeGrp.spacing = 8;
-        closeGrp.add("button", undefined, l.BTN_CLOSE, { name: "ok" });
-
-        logWin.show();
+        BRE.Summary.show({
+            title: l.LOG_TITLE,
+            pairs: [
+                { label: l.LOG_SUCCESS, value: results.success, always: true },
+                { label: l.LOG_ERRORS, value: results.errors, alert: true, always: true },
+                { label: l.LOG_SKIPPED, value: results.skipped, always: true },
+                { label: l.LOG_BLOCKED, value: results.blocked },
+                { label: l.LOG_REMOVED, value: results.removed },
+                { label: l.LOG_MANUAL_LABEL, value: results.manual }
+            ],
+            note: note,
+            details: results.log,
+            detailsTitle: l.LOG_DETAILS,
+            allOk: l.LOG_ALL_OK,
+            close: l.BTN_CLOSE
+        });
     },
 
     // ---------------------------------------------------------------------
@@ -545,55 +514,43 @@ BRE.UI = {
     // ---------------------------------------------------------------------
 
     /**
-     * Sets a control's text colour. Wrapped in try/catch — colouring is
-     * cosmetic and must never break the dialog if a host build rejects the pen.
-     * @param {Object} ctrl - A ScriptUI control (statictext).
-     * @param {number[]} rgb - [r, g, b] in 0..1.
-     */
-    _color: function (ctrl, rgb) {
-        try {
-            var g = ctrl.graphics;
-            ctrl.graphics.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, rgb, 1);
-        } catch (e) {}
-    },
-
-    /**
      * Adds a labeled file/folder row to a panel. The narrow label shares the
      * field's helpTip (the short label carries the full description there); the
      * field fills the remaining width. The field starts empty — ScriptUI has no
      * greyed placeholder, so a descriptive default would be mistaken for a real
      * path by the validation.
+     * @param {string} prompt - What the file or folder picker asks for.
      * @param {Function} [onPick] - Optional callback fired after a path is picked.
      * @returns {EditText} The text input element.
      */
-    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, onPick) {
+    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, prompt, onPick) {
         var l = BRE.L;
-        var c = BRE.Config;
+        var M = BRE.UI.M;
 
         var grp = parent.add("group");
         grp.orientation = "row";
         grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
         var st = grp.add("statictext", undefined, label);
-        st.preferredSize.width = c.ui.labelWidth;
+        st.preferredSize.width = M.LABEL_COL;
         if (tipField) st.helpTip = tipField;
         // Field fills the row; the button is capped so the slack goes to the
         // field (not the button), giving every row one shared right edge.
         var et = grp.add("edittext", undefined, "");
         et.alignment = ["fill", "center"];
-        et.minimumSize.width = c.ui.fieldMinWidth;
-        et.characters = c.ui.fieldChars;
+        et.minimumSize.width = M.FIELD_MIN;
+        et.characters = M.FIELD_CHARS;
         if (tipField) et.helpTip = tipField;
         var btn = grp.add("button", undefined, l.BTN_BROWSE);
-        btn.preferredSize.width = c.ui.browseBtnWidth;
-        btn.maximumSize.width = c.ui.browseBtnWidth;
+        btn.preferredSize.width = M.BROWSE_BTN;
+        btn.maximumSize.width = M.BROWSE_BTN;
         if (tipBtn) btn.helpTip = tipBtn;
         btn.onClick = function () {
             var sel;
             if (isFolder) {
-                sel = Folder.selectDialog(l.BROWSE_FOLDER);
+                sel = Folder.selectDialog(prompt);
             } else {
-                sel = File.openDialog(l.BROWSE_FILE, ext);
+                sel = File.openDialog(prompt, ext);
             }
             if (sel) {
                 et.text = sel.fsName;

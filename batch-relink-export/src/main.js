@@ -258,7 +258,7 @@
 
     } catch (e) {
         try { app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS; } catch (x) {}
-        alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line)));
+        alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line || "?")));
     } finally {
         BRE.Core.restorePdfPrefs(pdfPrefs);
     }

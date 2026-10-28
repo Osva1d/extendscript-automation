@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: FieldPaint (shared) — the family's status colours on ScriptUI text
-// Part of: shared core (grommet-marks, tile-export, zund-summa-marks;
-//          extendscript-ui-standards §12.3, §12.6)
+// Part of: shared core (grommet-marks, tile-export, zund-summa-marks,
+//          batch-relink-export; extendscript-ui-standards §12.3, §12.6)
 //
 // Namespace-neutral factory: buildFieldPaint(NS) registers NS.FieldPaint on
 // the namespace object passed in. A tool's build cats this file and appends

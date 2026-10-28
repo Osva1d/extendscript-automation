@@ -4,6 +4,48 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.2.0] — 2026-10-28
+
+Rodinný jazyk sady: BRE přebírá kánon `extendscript-ui-standards` §12, který
+vzešel z auditu společného jazyka
+([report](../docs/reports/2026-10-14-audit-spolecneho-jazyka.md)) a který už
+mají Grommet Marks, Zünd & Summa Marks i Tile Export.
+
+### Změněno
+
+- **Popisky polí končí dvojtečkou** — „Šablona (.ai):", „Zdroj (PDF):",
+  „Výstup:", „Vzor:", „PDF preset:", stejně jako v ostatních nástrojích sady
+  a v dialozích Illustratoru. Dvojtečku mají i popisky počtů v souhrnu
+  („Úspěšně:", „Chyby:"…). „PDF Preset" se píše „PDF preset".
+- **Stejné pojmy jako Tile Export.** Nápovědy a hlášky říkají „cílová
+  složka" („Vyberte cílovou složku.", „Po dokončení otevřít cílovou složku")
+  a „vzor pojmenování"; volba „Přeskočit existující soubory" se jmenuje
+  „Přeskočit hotové výstupy", jako v Tile Exportu. Krátké popisky „Výstup:"
+  a „Vzor:" zůstaly kvůli úzkému sloupci popisků.
+- **Okno průběhu a výsledek zpracování jsou sdílené se sadou.** BRE používá
+  moduly `shared/lib/progress.js` a `summary.js`, které z něj vznikly a které
+  má i Tile Export; vlastní kopie zmizely. Texty i chování (zastavení Esc,
+  souhrn bez „Vše proběhlo bez chyb." po zastavení) se nemění, okna mají
+  nativní okraje ScriptUI.
+- **Stavové symboly a barvy sady v náhledu.** Řádky kontroly zdrojů mají
+  ✓ (v pořádku), ⚠ (zpracuje se s upozorněním, i nečitelný počet stran)
+  a ✗ (blokováno) v barvách sady místo barevných teček; počet chyb v souhrnu
+  má červenou sady.
+- **Hlášky podle kánonu sady.** Neočekávaná chyba uvádí řádek hned za chybou
+  („… (řádek 140).") a radí poslat hlášku správci skriptu; názvy v hláškách
+  jsou v českých uvozovkách „…"; verdikt náhledu skloňuje i u jediného archu
+  („1 z 1 archu"). Výběr šablony, zdrojové a cílové složky má každý svou výzvu
+  („Vyberte cílovou složku:") místo společného „Vyberte složku:".
+
+### Opraveno
+
+- **Chybějící zapamatovaný preset se potichu nevymění.** Když si dialog
+  pamatoval PDF preset, který v Illustratoru už není (smazaný, přejmenovaný
+  nebo z jiného počítače), předvybral bez upozornění výchozí `[Kvalitní tisk]`.
+  Teď ho seznam ukáže jako „název  (chybí)" a Spustit s ním neprojde: hláška
+  řekne, že s ním export PDF neuloží, a dialog zůstane otevřený, dokud se
+  nevybere jiný preset — stejně jako v Tile Exportu.
+
 ## [1.1.0] — 2026-10-03
 
 ### Přidáno

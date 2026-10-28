@@ -1,6 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: Summary (shared) — the window a run ends with
-// Part of: shared core (consumed by tile-export; extendscript-ui-standards §12.5)
+// Part of: shared core (consumed by tile-export and batch-relink-export;
+//          extendscript-ui-standards §12.5)
 //
 // Namespace-neutral factory: buildSummary(NS) registers NS.Summary on the
 // namespace object passed in. A tool's build cats this file and appends its
