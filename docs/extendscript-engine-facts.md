@@ -1162,9 +1162,35 @@ musí počítat poměr z masky sám a zvětšovat přes `resize()`.
   dokument vznikl. Posun artboardu ho nehne. Dokument 600 × 300 mm: x −7341 …
   9042, y −7766,6 … 8616,4. Large Canvas má plátno stejně velké ve vnitřních
   jednotkách, ve skutečnosti tedy 57,8 m.
-- DOM ho neukazuje. Najde se bisekcí: `artboards.add()` mimo plátno hází,
-  zhruba sto přidání a odebrání trvá 0,1 s. **Jen než skript cokoli odebere**
-  — odmítnuté přidání pak odebrané vrací, viz následující oddíl.
+- **Ukáže ho prázdná cesta** (opraveno 2026-10-28, AI 30.8.2; dřív tu stálo
+  „DOM ho neukazuje“). `pathItems.add().position` nové prázdné cesty je přesně
+  **pravý dolní roh plátna** `[r, b]`; zbytek dopočítá konstanta:
+  `l = r − 16383`, `t = b + 16383`. Trik je ze sbírky S. Osokina
+  (`MoveArtboards.jsx`, „Thanks to @moodyallen“), jeho přepočet přes `delta`
+  a obdélník 300 × 300 je zbytečná oklika. Shoda s bisekcí na desetinu bodu:
+
+  | dokument | prázdná cesta `[r, b]` | bisekce l, t | čas trik / bisekce |
+  |---|---|---|---|
+  | 600 × 300 mm | 9042, −7766,6 | −7341, 8616,4 | 4 / 50 ms |
+  | 210 × 297 mm | 8490, −7771,1 | −7893, 8611,9 | 1 / 42 ms |
+  | 600 × 300 mm, artboard posunutý o 2000 pt | 9042, −7766,6 | −7341, 8616,4 | 1 / 44 ms |
+  | Large Canvas 6000 × 1000 mm, `scaleFactor` 10 | 9042, −8050,5 | −7341, 8332,5 | — |
+  | testovací soubor ZSM (1560 × 3050 mm, 1353 objektů, 338 masek) | 10 403, −3869,3 | −5980, 12 513,7 | 1 / 441 ms |
+
+  **Bisekce zdražuje s obsahem dokumentu:** v prázdném 42–50 ms, v souboru
+  s 1353 objekty 441 ms, trik v obou 1–4 ms.
+
+  Bisekce ve všech čtyřech naměřila šířku i výšku 16 383; trik ji
+  předpokládá, takže s novou verzí Illustratoru ji přeměřit (viz „Mez
+  artboardu“). Na **zamčené nebo skryté aktivní vrstvě** `doc.pathItems.add()`
+  hází „Target layer cannot be modified“; v dočasné vrstvě
+  (`doc.layers.add().pathItems.add()`) projde a po `remove()` cesty i vrstvy
+  zůstane dokument beze změny. Měřit dál před první změnou dokumentu:
+  odebraná dočasná vrstva je odebrání jako každé jiné, viz následující oddíl.
+- Druhá cesta je bisekce: `artboards.add()` mimo plátno hází, zhruba sto
+  přidání a odebrání trvá 0,1 s (tak měří `TE.Check.canvasBounds`). **Jen než
+  skript cokoli odebere** — odmítnuté přidání pak odebrané vrací, viz
+  následující oddíl.
 - **Za okrajem neplatí `geometricBounds`, kotvy ano** (opraveno 2026-10-11).
   Obdélník 10 × 10 pt posunutý `translate()` celý 40 000 pt za pravý okraj má
   kotvy přesně v cíli (40 295 … 40 305), `geometricBounds` ale hlásí
@@ -1356,6 +1382,39 @@ ořezovou cestou tu **horní**, která ztratí barvu. Spodní hlásí `clipping 
 ale vykreslí se jako běžný obsah.
 
 Viz i „Maskovaná skupina hlásí šířku celého obsahu" výš.
+
+### Maska z compound path (naměřeno 2026-10-28, AI 30.8.2)
+
+Compound path 200 × 200 pt s dírou 100 × 100 nad obsahem 500 × 500 pt:
+
+- **`CompoundPathItem.clipping` je `undefined`**, ne `false` (v typings
+  vlastnost chybí). Příznak nesou dílčí cesty: `pathItems[0].clipping` i
+  `pathItems[1].clipping` jsou `true`. Podmínka `sub.clipping` takovou masku
+  nenajde; dřívější `getVisualBounds` ve skillu `manipulating-illustrator-items`
+  pak vrátil `visibleBounds` celé skupiny, 501 × 501 místo 200 × 200.
+  Compound path jako běžný obsah pod maskou z cesty má
+  `pathItems[0].clipping === false`.
+- **Masku z compound path DOM nevytvoří ani nevypne.** `group.clipped = true`
+  s compound path navrchu hází „The top item in the group must be a path item
+  to create a mask“. Tutéž hlášku hodí i `group.clipped = false` na skupině,
+  kde compound maska už je, a skupina zůstane maskovaná. Maska z cesty se
+  přes `clipped = false` a zpět `true` vypne i zapne bez chyby.
+- **Vytvoří ji `executeMenuCommand("makeMask")`** nad vybraným obsahem a
+  compound path navrchu: skupina `clipped === true`, děti
+  `CompoundPathItem, PathItem`. Uvolnění menu příkazem neměřeno.
+- `executeMenuCommand("compoundPath")` nad dvěma cestami **uvnitř skupiny**:
+  některé z dalších volání (`doc.selection = null`,
+  `group.pathItems.rectangle()` na téže skupině, `move()`) skončilo `MRAP`;
+  které, sonda nezaznamenala. Compound path z cest ve vrstvě a pak `move()`
+  do skupiny funguje.
+- Bez `app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS`
+  běžela první verze sondy přes 90 s (`-1712`), s ním 0,5 s. Nejspíš čekal
+  dialog Illustratoru; který, nevím.
+
+Ověřený vzor hledání masky je ve skillu `manipulating-illustrator-items` §3
+(`isClipPath`): cesta podle `clipping`, compound path podle
+`pathItems[0].clipping`, nikdy podle indexu. Compound path bez `pathItems`
+jako maska neměřena.
 
 ### `pageItem.note`
 
