@@ -34,7 +34,7 @@ BRE.L = (function () {
             DEC_SEP:            ".",
             ERR_HIDDEN_LAYER:   "Hidden position not relinked (it does not print) — layer \"%s\".",
             ERR_RELINK_ITEM:    "Failed to relink item %s: %s",
-            ERR_NAMING_PATTERN: "The pattern must contain {n} (sheet number), otherwise the outputs would overwrite each other.",
+            ERR_NAMING_PATTERN: "The name pattern must contain {n} (sheet number), otherwise the outputs would overwrite each other.",
             ERR_RELINK_FAILED:  "Export skipped: %s position(s) could not be relinked.",
             ERR_REMOVE_FAIL:    "Excess position (page %s) could not be removed.",
             WARN_PAGE_MAP:      "Extra positions were not removed automatically: the template does not show pages 1–%s exactly once each.",
@@ -67,8 +67,8 @@ BRE.L = (function () {
             BTN_CONTINUE:       "Continue",
 
             // --- UI: Checkboxes ---
-            CB_SKIP:            "Skip existing files",
-            CB_OPEN_FOLDER:     "Open output folder when done",
+            CB_SKIP:            "Skip finished outputs",
+            CB_OPEN_FOLDER:     "Open the output folder when done",
 
             // --- UI: Help Tips ---
             TIP_TEMPLATE:       "Illustrator template file (.ai) with linked PDF",
@@ -77,10 +77,10 @@ BRE.L = (function () {
             TIP_SOURCE_BTN:     "Select source folder",
             TIP_OUTPUT:         "Destination folder for exported PDF files",
             TIP_OUTPUT_BTN:     "Select output folder",
-            TIP_NAMING:         "Output filename pattern. {n} = number, {template} = template name, {source} = source PDF name",
+            TIP_NAMING:         "Name pattern for the outputs. {n} = number, {template} = template name, {source} = source PDF name",
             TIP_PRESET:         "PDF quality profile for export",
             TIP_SKIP:           "Skip a sheet whose output already exists and is newer than both its source and the template",
-            TIP_OPEN:           "Open output folder in system file manager after completion",
+            TIP_OPEN:           "Open the output folder in Finder when done",
 
             // --- UI: File Dialogs ---
             BROWSE_FOLDER:      "Select folder:",
@@ -117,7 +117,7 @@ BRE.L = (function () {
             LOG_TITLE:          "Processing Result",
             LOG_SUCCESS:        "Successful:",
             LOG_ERRORS:         "Errors:",
-            LOG_SKIPPED:        "Skipped:",
+            LOG_SKIPPED:        "Skipped (finished):",
             LOG_BLOCKED:        "Blocked:",
             LOG_REMOVED:        "Removed positions:",
             LOG_MANUAL_LABEL:   "Needs manual cleanup:",
@@ -125,7 +125,7 @@ BRE.L = (function () {
             LOG_ALL_OK:         "All completed without errors.",
             LOG_DETAILS:        "Error and warning details",
             LOG_CANCELLED:      "Cancelled by user after processing %s of %s files.",
-            SKIP_MSG:           "Skipped (file exists)",
+            SKIP_MSG:           "Skipped (finished output)",
             LOG_REDONE:         "The output existed but is older than its source or the template — created again."
         },
 
@@ -136,11 +136,11 @@ BRE.L = (function () {
             ERR_TEMPLATE_OPEN:  "Šablonu se nepodařilo otevřít — zkuste ji otevřít v Illustratoru ručně.\n\nHláška Illustratoru: %s",
             ERR_TEMPLATE_EMPTY: "Vyberte šablonu.",
             ERR_SOURCE_EMPTY:   "Vyberte zdrojovou složku.",
-            ERR_OUTPUT_EMPTY:   "Vyberte výstupní složku.",
+            ERR_OUTPUT_EMPTY:   "Vyberte cílovou složku.",
             ERR_SOURCE:         "Zdrojová složka neexistuje.",
-            ERR_OUTPUT_ASK:     "Výstupní složka neexistuje. Vytvořit?",
-            ERR_OUTPUT_FAIL:    "Nepodařilo se vytvořit výstupní složku.",
-            ERR_OUTPUT_IS_SOURCE: "Výstupní složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdrojová PDF — zvolte jinou výstupní složku.",
+            ERR_OUTPUT_ASK:     "Cílová složka neexistuje. Vytvořit?",
+            ERR_OUTPUT_FAIL:    "Nepodařilo se vytvořit cílovou složku.",
+            ERR_OUTPUT_IS_SOURCE: "Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdrojová PDF — zvolte jinou cílovou složku.",
             ERR_PRESET:         "Musíte vybrat PDF preset.",
             ERR_NO_PDF:         "Ve vybrané složce nebyly nalezeny žádné PDF soubory.",
             ERR_NO_LINKS:       "V šabloně nebyly nalezeny žádné propojené objekty.",
@@ -151,7 +151,7 @@ BRE.L = (function () {
             DEC_SEP:            ",",
             ERR_HIDDEN_LAYER:   "Skrytá pozice se nepřelinkovala (netiskne se) — vrstva „%s“.",
             ERR_RELINK_ITEM:    "Nepodařilo se relinkovat položku %s: %s",
-            ERR_NAMING_PATTERN: "Vzor musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly.",
+            ERR_NAMING_PATTERN: "Vzor pojmenování musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly.",
             ERR_RELINK_FAILED:  "Export přeskočen — pozic, které se nepodařilo relinkovat: %s.",
             ERR_REMOVE_FAIL:    "Přebytečnou pozici (strana %s) se nepodařilo odebrat.",
             WARN_PAGE_MAP:      "Pozice navíc se neodebraly automaticky: šablona neukazuje strany 1–%s každou právě jednou.",
@@ -184,8 +184,8 @@ BRE.L = (function () {
             BTN_CONTINUE:       "Pokračovat",
 
             // --- UI: Checkboxy ---
-            CB_SKIP:            "Přeskočit existující soubory",
-            CB_OPEN_FOLDER:     "Po dokončení otevřít výstupní složku",
+            CB_SKIP:            "Přeskočit hotové výstupy",
+            CB_OPEN_FOLDER:     "Po dokončení otevřít cílovou složku",
 
             // --- UI: Nápovědy ---
             TIP_TEMPLATE:       "Soubor šablony Illustrator (.ai) s propojeným PDF",
@@ -193,11 +193,11 @@ BRE.L = (function () {
             TIP_SOURCE:         "Složka obsahující zdrojové PDF soubory",
             TIP_SOURCE_BTN:     "Vybrat zdrojovou složku",
             TIP_OUTPUT:         "Cílová složka pro exportované PDF",
-            TIP_OUTPUT_BTN:     "Vybrat výstupní složku",
-            TIP_NAMING:         "Vzor názvu výstupu. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
+            TIP_OUTPUT_BTN:     "Vybrat cílovou složku",
+            TIP_NAMING:         "Vzor pojmenování výstupů. {n} = číslo, {template} = název šablony, {source} = název zdrojového PDF",
             TIP_PRESET:         "Profil kvality PDF pro export",
             TIP_SKIP:           "Přeskočí arch, jehož výstup už existuje a je novější než zdroj i šablona",
-            TIP_OPEN:           "Po dokončení otevře výstupní složku v systému",
+            TIP_OPEN:           "Po dokončení otevře cílovou složku ve Finderu",
 
             // --- UI: Dialogy souborů ---
             BROWSE_FOLDER:      "Vyberte složku:",
@@ -234,7 +234,7 @@ BRE.L = (function () {
             LOG_TITLE:          "Výsledek zpracování",
             LOG_SUCCESS:        "Úspěšně:",
             LOG_ERRORS:         "Chyby:",
-            LOG_SKIPPED:        "Přeskočeno:",
+            LOG_SKIPPED:        "Přeskočeno (hotové):",
             LOG_BLOCKED:        "Blokováno:",
             LOG_REMOVED:        "Odebrané pozice:",
             LOG_MANUAL_LABEL:   "Vyžaduje ruční úpravu:",
@@ -242,7 +242,7 @@ BRE.L = (function () {
             LOG_ALL_OK:         "Vše proběhlo bez chyb.",
             LOG_DETAILS:        "Detaily chyb a varování",
             LOG_CANCELLED:      "Zrušeno uživatelem po zpracování %s z %s souborů.",
-            SKIP_MSG:           "Přeskočeno (soubor existuje)",
+            SKIP_MSG:           "Přeskočeno (hotový výstup)",
             LOG_REDONE:         "Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu."
         }
     };

@@ -17,6 +17,11 @@ mají Grommet Marks, Zünd & Summa Marks i Tile Export.
   „Výstup:", „Vzor:", „PDF preset:", stejně jako v ostatních nástrojích sady
   a v dialozích Illustratoru. Dvojtečku mají i popisky počtů v souhrnu
   („Úspěšně:", „Chyby:"…). „PDF Preset" se píše „PDF preset".
+- **Stejné pojmy jako Tile Export.** Nápovědy a hlášky říkají „cílová
+  složka" („Vyberte cílovou složku.", „Po dokončení otevřít cílovou složku")
+  a „vzor pojmenování"; volba „Přeskočit existující soubory" se jmenuje
+  „Přeskočit hotové výstupy", jako v Tile Exportu. Krátké popisky „Výstup:"
+  a „Vzor:" zůstaly kvůli úzkému sloupci popisků.
 
 ## [1.1.0] — 2026-10-03
 

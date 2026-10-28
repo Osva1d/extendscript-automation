@@ -30,7 +30,7 @@ Pro test prvního spuštění (bod 1.1) soubor přejmenuj a po testu vrať.
 
 Připrav si reálnou zakázku: šablonu s pozicemi umístěnými z vícestránkového
 PDF, zdrojovou složku s PDF rozdělenými po N stranách (N = počet pozic, poslední
-soubor kratší) a prázdnou výstupní složku.
+soubor kratší) a prázdnou cílovou složku.
 
 ---
 
@@ -40,21 +40,21 @@ soubor kratší) a prázdnou výstupní složku.
   souboru s nastavením) je vzor předvyplněný `{n}_{template}_{source}`
   a náhled názvu ukazuje `01_sablona_zdroj.pdf` (B8). Předvybraný PDF preset
   je `[Kvalitní tisk]` (B9).
-  Nápověda u „Přeskočit existující soubory" říká, že se přeskočí jen výstup
+  Nápověda u „Přeskočit hotové výstupy" říká, že se přeskočí jen výstup
   novější než zdroj i šablona.
 - [ ] **1.2 Klávesnice.** Esc zavře dialog jako Storno, Enter spustí Spustit.
-  Enter s prázdným polem Výstup ukáže „Vyberte výstupní složku." a dialog
+  Enter s prázdným polem Výstup ukáže „Vyberte cílovou složku." a dialog
   zůstane otevřený — jestli Enter volá kontrolu jako kliknutí na Spustit,
   ověřené není.
 - [ ] **1.3 Výstup do zdrojové složky (B8).** Stejná složka jako Zdroj i Výstup →
-  hláška „Výstupní složka je stejná jako zdrojová…", dialog zůstane otevřený
+  hláška „Cílová složka je stejná jako zdrojová…", dialog zůstane otevřený
   a nic se nezapíše. Podsložka zdrojové složky jako Výstup projde.
 - [ ] **1.4 Náhled (T2).** Dávka s kratším posledním souborem → tučný verdikt
   „… archů lze zpracovat (1 s upozorněním) · 0 blokováno", celý čitelný.
   Dávka, kde je každý soubor delší než počet pozic → Pokračovat je vypnuté;
   zkus i Enter — jestli vypnuté tlačítko spustí, ověřené není.
 - [ ] **1.5 Storno.** Storno v hlavním dialogu, u dotazu na otevřenou šablonu
-  i v náhledu → ve výstupní složce nic nepřibude a otevřené dokumenty zůstanou.
+  i v náhledu → v cílové složce nic nepřibude a otevřené dokumenty zůstanou.
 - [ ] **1.6 Chyba nezavře dialog (A3, A4).** Spustit s vyplněnými cestami
   a vzorem bez `{n}` → hláška, dialog zůstane otevřený se všemi poli. Oprav
   vzor a znovu Spustit → dávka se spustí.
@@ -62,7 +62,7 @@ soubor kratší) a prázdnou výstupní složku.
   presetem dílny (třeba pass4press), vlastním vzorem a vypnutým „Otevřít
   složku". Spusť skript znovu, i po restartu Illustratoru → šablona, výstup,
   vzor, preset a „Otevřít složku" jsou z minula; zdroj je prázdný
-  a „Přeskočit existující" vypnuté. Okno má stejnou šířku jako při prvním
+  a „Přeskočit hotové výstupy" vypnuté. Okno má stejnou šířku jako při prvním
   spuštění — dlouhá cesta se do pole nevejde celá.
 
 ---
@@ -87,8 +87,8 @@ soubor kratší) a prázdnou výstupní složku.
   uvede oba rozměry v mm.
 - [ ] **2.7 Logo (B4).** Šablona s propojeným logem nebo značkami jako
   souborem → logo zůstane logem, počet pozic v náhledu ho nezahrnuje.
-- [ ] **2.8 Přeskočit existující (B8).** Dávku zastav po dvou arších, spusť
-  znovu se zaškrtnutým „Přeskočit existující" → hotové archy se přeskočí.
+- [ ] **2.8 Přeskočit hotové výstupy (B8).** Dávku zastav po dvou arších, spusť
+  znovu se zaškrtnutým „Přeskočit hotové výstupy" → hotové archy se přeskočí.
   Pak změň a ulož šablonu a spusť znovu → archy se vytvoří znovu se záznamem
   „Výstup už existoval, ale je starší…".
 - [ ] **2.9 Chyby Illustratoru (A10).** Ověřené jen s podvrženou chybou,
@@ -97,7 +97,7 @@ soubor kratší) a prázdnou výstupní složku.
     `.ai`) → hláška „Šablonu se nepodařilo otevřít — zkuste ji otevřít
     v Illustratoru ručně." s hláškou Illustratoru; Illustrator přitom nesmí
     ukázat vlastní okno a zaseknout se;
-  - výstupní složka bez práva zápisu → u každého archu „Arch se nevyexportoval
+  - cílová složka bez práva zápisu → u každého archu „Arch se nevyexportoval
     kvůli chybě: …" a dávka doběhne do souhrnu.
 - [ ] **2.10 Předvolba importu PDF (B10).** Umísti (Soubor › Umístit, bez
   možností importu) vícestránkové PDF do prázdného dokumentu a všimni si
@@ -155,11 +155,11 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | 2 strany na 4 pozice | náhled „…: stran 2, pozic navíc 2 — odeberou se z archu.", souhrn „Odebrané pozice 2" |
 | šablona se stranou 1 dvakrát, 2 strany | „Pozice navíc se neodebraly automaticky…", „Pozic navíc, které se nepodařilo odebrat: 2. Ukazují znovu stranu 1…" |
 | 5 stran na 4 pozice | náhled „…: stran 5 > pozic 4 — BUDE PŘESKOČENO…", souhrn „Přeskočeno: stran je více než pozic (5 > 4)…" |
-| výstup = zdroj | „Výstupní složka je stejná jako zdrojová…", dialog zůstane otevřený |
-| prázdné pole Šablona, Zdroj, Výstup | „Vyberte šablonu." / „Vyberte zdrojovou složku." / „Vyberte výstupní složku.", dialog zůstane otevřený s vyplněnými poli |
-| vzor bez `{n}` a výstupní složka, která ještě neexistuje | hláška o vzoru, složka se nevytvoří; po opravě dotaz na vytvoření a běh |
+| výstup = zdroj | „Cílová složka je stejná jako zdrojová…", dialog zůstane otevřený |
+| prázdné pole Šablona, Zdroj, Výstup | „Vyberte šablonu." / „Vyberte zdrojovou složku." / „Vyberte cílovou složku.", dialog zůstane otevřený s vyplněnými poli |
+| vzor bez `{n}` a cílová složka, která ještě neexistuje | hláška o vzoru, složka se nevytvoří; po opravě dotaz na vytvoření a běh |
 | šablona jiného typu (PDF) | „Šablona se nenašla nebo nemá příponu .ai. Vyberte ji tlačítkem Vybrat…" |
-| vzor bez `{n}` | „Vzor musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly." |
+| vzor bez `{n}` | „Vzor pojmenování musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly." |
 | zdroj s nečitelným počtem stran | „…: počet stran nejde zjistit (poškozené nebo šifrované PDF?). Ověřte, že nemá víc stran než pozic…" |
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
@@ -174,7 +174,7 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte složku:" (T8).
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
-jednou spadl při dávce se zaškrtnutým „Přeskočit existující" (bez crash
+jednou spadl při dávce se zaškrtnutým „Přeskočit hotové výstupy" (bez crash
 reportu; tentýž běh pak prošel) a jednou zamrzl na deadlocku uvnitř aplikace,
 3 s po dávce s neúplným archem (skript už neběžel). Příčina není známá, kód se
 kvůli tomu neměnil. Když se to zopakuje, zapiš podle sekce 7, u kterého souboru
@@ -194,7 +194,7 @@ Nahlas, s čím skript běžel (šablona, počet souborů, preset), co vyšlo a 
 | „Nečitelný počet stran" u běžného PDF | struktura PDF, kterou parser nezná | to PDF (nebo aspoň `pdfinfo`) |
 | arch odmítnutý kvůli rozměru, ač sedí | TrimBox zdroje nebo šablony | `pdfinfo -box` zdroje |
 | Illustrator dlouho nereaguje | sken velkých PDF | počet a velikost zdrojů |
-| Illustrator spadne nebo zamrzne během dávky či krátce po ní | neznámá, sledováno (sekce 6) | u kterého souboru paleta byla; pád, nebo zamrznutí (točící se kolečko); jestli dávka měla neúplný arch nebo zaškrtnuté „Přeskočit existující"; čas; soubor `Adobe Illustrator_…` z `/Library/Logs/DiagnosticReports` |
+| Illustrator spadne nebo zamrzne během dávky či krátce po ní | neznámá, sledováno (sekce 6) | u kterého souboru paleta byla; pád, nebo zamrznutí (točící se kolečko); jestli dávka měla neúplný arch nebo zaškrtnuté „Přeskočit hotové výstupy"; čas; soubor `Adobe Illustrator_…` z `/Library/Logs/DiagnosticReports` |
 
 ---
 

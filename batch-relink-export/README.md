@@ -38,14 +38,14 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Pojmenování výstupů** přes vzor s placeholdery (viz níže).
 - **Náhled** před zpracováním (přeskočí se, když je dávka bez anomálií).
 - **Zastavení dávky** podržením klávesy Esc — rozpracovaný soubor se dokončí, souhrn uvede, kolik souborů se zpracovalo.
-- **Skip existing** — přeskočí archy, jejichž výstup už existuje a je novější než zdroj i šablona (pokračování přerušené dávky). Starší výstup — třeba jiné zakázky se stejnou šablonou — se vytvoří znovu.
-- **Zapamatované nastavení** — dialog se otevře s poslední šablonou, výstupní složkou, vzorem, PDF presetem a volbou „Po dokončení otevřít výstupní složku". Zdrojová složka se mění se zakázkou a „Přeskočit existující" je rozhodnutí pro jeden běh, proto se nepamatují. Soubor: `~/Library/Application Support/batch-relink-export/settings.json`; bez něj se dialog otevře s výchozími hodnotami.
+- **Přeskočit hotové výstupy** — přeskočí archy, jejichž výstup už existuje a je novější než zdroj i šablona (pokračování přerušené dávky). Starší výstup — třeba jiné zakázky se stejnou šablonou — se vytvoří znovu.
+- **Zapamatované nastavení** — dialog se otevře s poslední šablonou, cílovou složkou, vzorem pojmenování, PDF presetem a volbou „Po dokončení otevřít cílovou složku". Zdrojová složka se mění se zakázkou a „Přeskočit hotové výstupy" je rozhodnutí pro jeden běh, proto se nepamatují. Soubor: `~/Library/Application Support/batch-relink-export/settings.json`; bez něj se dialog otevře s výchozími hodnotami.
 - Ignoruje macOS systémové soubory (`._*`, tečkové) ve zdrojové složce.
 - Lokalizace **cs/en** (auto-detekce dle Illustratoru).
 
 ## Vzor pojmenování
 
-Pole „Vzor pojmenování" v dialogu podporuje placeholdery (musí obsahovat aspoň `{n}`):
+Pole „Vzor:" (vzor pojmenování) v dialogu podporuje placeholdery (musí obsahovat aspoň `{n}`):
 
 | Placeholder | Význam |
 |---|---|
@@ -79,7 +79,7 @@ src/
 - Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`; jako první vloží sdílený JSON polyfill `../shared/lib/json2.js`).
 - Verze je v `package.json`; `tools/build.sh` ji ověřuje proti `src/config.js` (parity guard).
 - **Ruční testy** před vydáním: [`docs/manual-test.md`](docs/manual-test.md).
-- **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do výstupní složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (vrstva, clip-group, propojený soubor) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
+- **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do cílové složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (vrstva, clip-group, propojený soubor) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.
 ---
 
 ## Changelog
