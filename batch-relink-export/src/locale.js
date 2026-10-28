@@ -14,7 +14,7 @@ BRE.L = (function () {
     var strings = {
         en: {
             // --- Errors ---
-            ERR_CRITICAL:       "The script stopped on an unexpected error: %s\n\nSend this message to whoever maintains the script (line %s).",
+            ERR_CRITICAL:       "The script stopped on an unexpected error: %s (line %s).\n\nSend this message to the script's maintainer.",
             ERR_TEMPLATE:       "The template was not found or is not an .ai file. Choose it with Browse…",
             ERR_TEMPLATE_OPEN:  "The template could not be opened — try opening it in Illustrator by hand.\n\nIllustrator says: %s",
             ERR_TEMPLATE_EMPTY: "Choose the template.",
@@ -31,7 +31,7 @@ BRE.L = (function () {
             ERR_NO_LINKS:       "No linked objects found in the template.",
             ERR_NO_RELINK:      "No template position could be relinked — the sheet was not exported.",
             ERR_PROCESS:        "The sheet was not exported because of an error: %s",
-            ERR_RELINK_VERIFY:  "Relink verification failed for item %s: expected '%s', got '%s'.",
+            ERR_RELINK_VERIFY:  "Relink verification failed for item %s: expected \"%s\", got \"%s\".",
             ERR_PAGE_SIZE:      "Position %s: the source page is %s × %s mm, the template expects %s × %s mm. The source PDF has another page size (or no TrimBox) — check the template and the source.",
             DEC_SEP:            ".",
             ERR_HIDDEN_LAYER:   "Hidden position not relinked (it does not print) — layer \"%s\".",
@@ -59,7 +59,10 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} index · {template} template · {source} source",
             SAMPLE_TEMPLATE:    "template",
             SAMPLE_SOURCE:      "source",
-            PREVIEW_VERDICT:    "%s of %s sheets can be processed (%s with a warning) · %s blocked",
+            PREVIEW_VERDICT:    "%s %s can be processed (%s with a warning) · %s blocked",
+            VERDICT_OF_1:       "of %s sheet",
+            VERDICT_OF_2:       "of %s sheets",
+            VERDICT_OF_5:       "of %s sheets",
 
             // --- UI: Buttons ---
             BTN_BROWSE:         "Browse…",
@@ -85,8 +88,9 @@ BRE.L = (function () {
             TIP_OPEN:           "Open the output folder in Finder when done",
 
             // --- UI: File Dialogs ---
-            BROWSE_FOLDER:      "Select folder:",
-            BROWSE_FILE:        "Select file:",
+            BROWSE_TEMPLATE:    "Choose the template (.ai):",
+            BROWSE_SOURCE:      "Choose the source folder with the PDFs:",
+            BROWSE_OUTPUT:      "Choose the output folder:",
 
             // --- Preview ---
             PREVIEW_TITLE:      "Processing Preview",
@@ -133,7 +137,7 @@ BRE.L = (function () {
 
         cs: {
             // --- Chyby ---
-            ERR_CRITICAL:       "Skript se zastavil kvůli neočekávané chybě: %s\n\nPošlete tuto hlášku správci skriptu (řádek %s).",
+            ERR_CRITICAL:       "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nPošlete tuto hlášku správci skriptu.",
             ERR_TEMPLATE:       "Šablona se nenašla nebo nemá příponu .ai. Vyberte ji tlačítkem Vybrat…",
             ERR_TEMPLATE_OPEN:  "Šablonu se nepodařilo otevřít — zkuste ji otevřít v Illustratoru ručně.\n\nHláška Illustratoru: %s",
             ERR_TEMPLATE_EMPTY: "Vyberte šablonu.",
@@ -150,7 +154,7 @@ BRE.L = (function () {
             ERR_NO_LINKS:       "V šabloně nebyly nalezeny žádné propojené objekty.",
             ERR_NO_RELINK:      "Žádnou pozici šablony se nepodařilo přelinkovat — arch se nevyexportoval.",
             ERR_PROCESS:        "Arch se nevyexportoval kvůli chybě: %s",
-            ERR_RELINK_VERIFY:  "Ověření relinku selhalo pro položku %s: očekáváno '%s', nalezeno '%s'.",
+            ERR_RELINK_VERIFY:  "Ověření relinku selhalo pro položku %s: očekáváno „%s“, nalezeno „%s“.",
             ERR_PAGE_SIZE:      "Pozice %s: strana zdroje má %s × %s mm, šablona počítá s %s × %s mm. Zdrojové PDF má jiný formát stránky (nebo nemá TrimBox) — zkontrolujte šablonu a zdroj.",
             DEC_SEP:            ",",
             ERR_HIDDEN_LAYER:   "Skrytá pozice se nepřelinkovala (netiskne se) — vrstva „%s“.",
@@ -178,7 +182,10 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
             SAMPLE_TEMPLATE:    "sablona",
             SAMPLE_SOURCE:      "zdroj",
-            PREVIEW_VERDICT:    "%s z %s archů lze zpracovat (%s s upozorněním) · %s blokováno",
+            PREVIEW_VERDICT:    "%s %s lze zpracovat (%s s upozorněním) · %s blokováno",
+            VERDICT_OF_1:       "z %s archu",
+            VERDICT_OF_2:       "z %s archů",
+            VERDICT_OF_5:       "z %s archů",
 
             // --- UI: Tlačítka ---
             BTN_BROWSE:         "Vybrat…",
@@ -204,8 +211,9 @@ BRE.L = (function () {
             TIP_OPEN:           "Po dokončení otevře cílovou složku ve Finderu",
 
             // --- UI: Dialogy souborů ---
-            BROWSE_FOLDER:      "Vyberte složku:",
-            BROWSE_FILE:        "Vyberte soubor:",
+            BROWSE_TEMPLATE:    "Vyberte šablonu (.ai):",
+            BROWSE_SOURCE:      "Vyberte zdrojovou složku s PDF:",
+            BROWSE_OUTPUT:      "Vyberte cílovou složku:",
 
             // --- Náhled ---
             PREVIEW_TITLE:      "Náhled zpracování",
@@ -260,6 +268,16 @@ BRE.L = (function () {
         return template.replace(/%s/g, function () {
             return idx < args.length ? String(args[idx++]) : "%s";
         });
+    };
+
+    // Czech plural: BRE.L.count("VERDICT_OF", n) -> "z 1 archu" / "z 3 archů".
+    // Every counted key exists in both tables with _1, _2 and _5 forms
+    // (extendscript-ui-standards §5, §12.1).
+    active.count = function (base, n) {
+        var suffix = "_5";
+        if (n === 1) suffix = "_1";
+        else if (n >= 2 && n <= 4) suffix = "_2";
+        return active.format(active[base + suffix], n);
     };
 
     return active;

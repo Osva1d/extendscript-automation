@@ -31,6 +31,11 @@ mají Grommet Marks, Zünd & Summa Marks i Tile Export.
   ✓ (v pořádku), ⚠ (zpracuje se s upozorněním, i nečitelný počet stran)
   a ✗ (blokováno) v barvách sady místo barevných teček; počet chyb v souhrnu
   má červenou sady.
+- **Hlášky podle kánonu sady.** Neočekávaná chyba uvádí řádek hned za chybou
+  („… (řádek 140).") a radí poslat hlášku správci skriptu; názvy v hláškách
+  jsou v českých uvozovkách „…"; verdikt náhledu skloňuje i u jediného archu
+  („1 z 1 archu"). Výběr šablony, zdrojové a cílové složky má každý svou výzvu
+  („Vyberte cílovou složku:") místo společného „Vyberte složku:".
 
 ### Opraveno
 

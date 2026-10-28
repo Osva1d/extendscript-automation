@@ -42,12 +42,12 @@ BRE.UI = {
         inputPanel.spacing = c.ui.panelSpacing;
 
         var templatePath = this._addFileRow(inputPanel, l.LBL_TEMPLATE,
-            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN,
+            false, "*.ai", l.TIP_TEMPLATE, l.TIP_TEMPLATE_BTN, l.BROWSE_TEMPLATE,
             function () { if (refreshPreview) refreshPreview(); });
         var sourcePath = this._addFileRow(inputPanel, l.LBL_SOURCE,
-            true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN);
+            true, undefined, l.TIP_SOURCE, l.TIP_SOURCE_BTN, l.BROWSE_SOURCE);
         var outputPath = this._addFileRow(inputPanel, l.LBL_OUTPUT,
-            true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN);
+            true, undefined, l.TIP_OUTPUT, l.TIP_OUTPUT_BTN, l.BROWSE_OUTPUT);
         // Last run's paths. The source changes with every job — not remembered.
         templatePath.text = saved.template;
         outputPath.text = saved.output;
@@ -336,7 +336,7 @@ BRE.UI = {
         // counted apart — "OK" for them read as if nothing needed a look.
         var total = config.pdfFiles.length;
         var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
-            String(scan.processable), String(total),
+            String(scan.processable), l.count("VERDICT_OF", total),
             String(scan.processable - scan.counts.ok), String(total - scan.processable)));
         verdictST.preferredSize.width = 500;
         try {
@@ -481,10 +481,11 @@ BRE.UI = {
      * field fills the remaining width. The field starts empty — ScriptUI has no
      * greyed placeholder, so a descriptive default would be mistaken for a real
      * path by the validation.
+     * @param {string} prompt - What the file or folder picker asks for.
      * @param {Function} [onPick] - Optional callback fired after a path is picked.
      * @returns {EditText} The text input element.
      */
-    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, onPick) {
+    _addFileRow: function (parent, label, isFolder, ext, tipField, tipBtn, prompt, onPick) {
         var l = BRE.L;
         var c = BRE.Config;
 
@@ -509,9 +510,9 @@ BRE.UI = {
         btn.onClick = function () {
             var sel;
             if (isFolder) {
-                sel = Folder.selectDialog(l.BROWSE_FOLDER);
+                sel = Folder.selectDialog(prompt);
             } else {
-                sel = File.openDialog(l.BROWSE_FILE, ext);
+                sel = File.openDialog(prompt, ext);
             }
             if (sel) {
                 et.text = sel.fsName;

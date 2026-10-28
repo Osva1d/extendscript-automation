@@ -71,6 +71,10 @@ soubor kratší) a prázdnou cílovou složku.
   název, který Illustrator nemá, a spusť skript → seznam ukáže „název  (chybí)";
   Spustit → „PDF preset „…" v tomto Illustratoru není…" a dialog zůstane
   otevřený. Po výběru jiného presetu dávka proběhne.
+- [ ] **1.9 Výzvy výběru (T8).** Vybrat… u Šablony, Zdroje a Výstupu → okno
+  výběru říká „Vyberte šablonu (.ai):", „Vyberte zdrojovou složku s PDF:"
+  a „Vyberte cílovou složku:". Jestli macOS výzvu v okně výběru ukáže,
+  ověřené není.
 
 ---
 
@@ -169,6 +173,9 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | vzor bez `{n}` | „Vzor pojmenování musí obsahovat {n} (pořadí archu), jinak by se výstupy přepisovaly." |
 | zdroj s nečitelným počtem stran | „…: počet stran nejde zjistit (poškozené nebo šifrované PDF?). Ověřte, že nemá víc stran než pozic…" |
 | existující výstup starší než zdroj | „Výstup už existoval, ale je starší než zdroj nebo šablona — vytvořen znovu." |
+| dávka o jednom souboru s upozorněním | verdikt „1 z 1 archu lze zpracovat (1 s upozorněním) · 0 blokováno" |
+| neočekávaná chyba mimo zpracování archu | „Skript se zastavil kvůli neočekávané chybě: … (řádek N). Pošlete tuto hlášku správci skriptu." |
+| Vybrat… u šablony, zdroje a výstupu | výzvy „Vyberte šablonu (.ai):", „Vyberte zdrojovou složku s PDF:", „Vyberte cílovou složku:" |
 | dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 | druhé spuštění | šablona, výstup (i s diakritikou v cestě), vzor, preset a „Otevřít složku" z minula, zdroj prázdný; výstup s uloženým `[PDF/X-4:2008]` je PDF 1.6 s PDF/X |
 | zapamatované dlouhé cesty (72 i 133 znaků) | okno 460 × 478 px jako bez nastavení; pole cest 180 px, vzor, náhled názvu a preset 280 px — pole se nenatahují podle textu |
@@ -178,8 +185,9 @@ Hlášky dnešní verze (česky), jak je dal běh s headless dialogy:
 | nastavení nejde zapsat | „Nastavení dialogu se nepodařilo uložit — příště se dialog otevře bez něj. Dávka pokračuje." a dávka proběhne |
 | předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v náhledu, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
 
-**Známé, vědomě neopravené** (minor z review): v detailu chyby zůstává anglická hláška Illustratoru (T5); titulek okna je
-anglicky a výběr zdroje i výstupu má stejnou výzvu „Vyberte složku:" (T8).
+**Známé, vědomě neopravené** (minor z review): v detailu chyby zůstává
+anglická hláška Illustratoru (T5). Titulek okna nese anglický název nástroje
+jako ve zbytku sady (kánon §12.7).
 
 **Sledováno — pád a zamrznutí Illustratoru.** 2026-09-28 Illustrator 30.8.2
 jednou spadl při dávce se zaškrtnutým „Přeskočit hotové výstupy" (bez crash
