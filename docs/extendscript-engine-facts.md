@@ -1851,7 +1851,7 @@ Bodový text bez viditelného znaku je svislá štěrbina s nulovou šířkou: `
 - `doc.textFrames` se **nezpožďuje** do `app.redraw()` (3 nové texty hned vidět), na rozdíl od `doc.pathItems` výš. Proč se liší, neměřeno.
 - `selection` je seřazený odpředu dozadu. Vybraná celá skupina se hlásí jako `GroupItem`. **Když je ve skupině vybrané všechno, hlásí se skupina:** vybraný jediný text ve vnořené skupině G2 › G3 se v `selection` objevil jako `G2`. Text vybraný přímo je `TextFrame`.
 - `doc.selectObjectsOnActiveArtboard()` vybere objekty nejvyšší úrovně (skupinu jako skupinu), i ty jen napůl na artboardu, a vynechá zamčené a skryté. Mění výběr uživatele.
-- Skriptem vybraný úsek textu se v `selection` hlásí jako `[TextFrame]` (M2). Co vrací `selection`, když má uživatel kurzor v textu, je zatím neměřeno (probe `batch-text-edit/tests/probes/probe_cursor_selection.jsx` čeká na ruční běh).
+- Skriptem vybraný úsek textu se v `selection` hlásí jako `[TextFrame]` (M2). **Když je uživatel v textu (editační režim), `selection` není pole, ale jediný objekt `TextRange`** (naměřeno 2026-10-29 s uživatelem, `batch-text-edit/tests/probes/probe_cursor_selection.jsx`): kurzor bez označení `length` 0 a `contents` „“, označené 3 znaky `length` 3, Cmd+A celý text; `parent` je `Story`, čtení nehází. Text vybraný jako objekt je pole `[TextFrame]`. Editační režim tedy pozná `selection.typename === "TextRange"`. Spuštění přes Soubor › Skripty, které může editační režim ukončit, neměřeno.
 
 ### Regulární výrazy a řetězce v enginu (rešerše §7.4, P1; Batch Text Edit Task 5)
 

@@ -92,7 +92,7 @@ The whole run takes about 3 s and returns one JSON string (non-ASCII escaped). E
 | # | fact | answer | consequence |
 |---|---|---|---|
 | 1 | `uuid` | exists as a string on GroupItem, PathItem, CompoundPathItem and TextFrame; stable; unique in one document | Task 9 keys elements and texts by `uuid`; no object-identity fallback needed |
-| 2 | cursor in a text | PENDING (user) | Task 9 reads `selection` defensively until measured |
+| 2 | cursor in a text | `selection` is one `TextRange` object (not an array) | text editing = `typename === "TextRange"` |
 | 3 | linked frames | `tf.story.textFrames.length > 1` | skip such frames; `nextFrame` is not usable |
 | 4 | overflow | the spec's line-sum rule is wrong for any text with a paragraph break; use the walk rule | Task 9 implements the walk rule |
 | 5 | clip-group mask | the group's bounds are the content's; the mask child gives the bounds | element centre from the mask child |
@@ -105,7 +105,16 @@ Type `string` on all four types and on children in a group and subpaths of a com
 
 ### 2. Cursor in a text
 
-PENDING. `probe_cursor_selection.jsx` only reads `doc.selection` and `app.selection`. The controller runs it with the user in four states: text object selected, cursor in the text, 3 characters selected, all characters selected. Record the four JSON results here.
+Measured 2026-10-29 with the user (Illustrator 30.8.2), `probe_cursor_selection.jsx` run through `tools/ai-eval.sh` on a scratch document holding one point text „Hello world 123“. The probe only reads.
+
+| state | `doc.selection` | `typename` | array | `length` | `contents` |
+|---|---|---|---|---|---|
+| A: text selected as an object (Esc after typing) | `[TextFrame]` | — (array) | yes | 1 | item: „Hello world 123“ |
+| B: cursor blinking in the text, nothing marked | one `TextRange` | `TextRange` | no | 0 | `""` |
+| C: 3 characters marked | one `TextRange` | `TextRange` | no | 3 | „123“ |
+| D: Cmd+A inside the text | one `TextRange` | `TextRange` | no | 15 | „Hello world 123“ |
+
+`app.selection` reports the same as `doc.selection`. In text editing the selection is a single `TextRange` object, never an array, and its `parent` is the `Story`; reading it did not throw. So `selection.typename === "TextRange"` (equivalently: the selection is not an array) identifies text editing exactly; `BTE.Scope.isTextEditing` already treats a non-array selection as editing. Not measured: starting the script from File › Scripts, which may itself end text editing before the script runs (then the selection is the text object and nothing is refused).
 
 ### 3. Linked frames
 
