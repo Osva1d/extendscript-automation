@@ -18,11 +18,19 @@ BTE.L = (function () {
         en: {
             DEC_SEP:             ".",
             ERR_NO_DOC:          "Open a document before running the script.",
+            ERR_FIND_EMPTY:      "Enter what to look for.",
+            ERR_BAD_REGEX:       "The regular expression is not valid. Check the brackets and special characters.",
+            ERR_LOOKBEHIND:      "A pattern with \"(?<\" (lookbehind, named group) is not supported by Illustrator and would find nothing. Rewrite the pattern without it.",
+            WARN_NOTHING_FOUND:  "Found nothing, changes nothing.",
             ERR_CRITICAL:        "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer."
         },
         cs: {
             DEC_SEP:             ",",
             ERR_NO_DOC:          "Před spuštěním skriptu otevřete dokument.",
+            ERR_FIND_EMPTY:      "Zadejte, co hledat.",
+            ERR_BAD_REGEX:       "Regulární výraz není platný. Zkontrolujte závorky a speciální znaky.",
+            ERR_LOOKBEHIND:      "Výraz s „(?<“ (lookbehind, pojmenovaná skupina) Illustrator nepodporuje a nic by nenašel. Přepište výraz jinak.",
+            WARN_NOTHING_FOUND:  "Nic nenašel, nic nezmění.",
             ERR_CRITICAL:        "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu."
         }
     };
