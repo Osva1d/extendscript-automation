@@ -154,7 +154,8 @@ function sheet(mode, cols, rowsN, perSheet) {
     c = BTE.Scope.collect(d, "selection");
     h.eq(ids(c.texts), b.uuid, "text selected inside a group: only that text");
     h.eq(c.texts[0].group.id, g.uuid, "text selected inside a group: still gets its group");
-    h.eq(JSON.stringify(c.texts[0].group.bounds), JSON.stringify([0, 300, 300, 0]), "text selected inside a group: group bounds");
+    // a plain group covers the union of its children, the unselected text included
+    h.eq(JSON.stringify(c.texts[0].group.bounds), JSON.stringify([80, 205, 120, 95]), "text selected inside a group: group bounds");
     h.eq(c.texts[0].tie, 1, "text selected inside a group: tie from doc.textFrames");
     h.assert(a.uuid !== b.uuid, "uuids differ");
 })();
@@ -187,8 +188,13 @@ function sheet(mode, cols, rowsN, perSheet) {
     h.assert(t.uuid !== p.uuid, "uuids differ");
 })();
 
-// ---- cursor in a text (fact 2 not measured: read defensively) --------------
+// ---- cursor in a text (fact 2: one TextRange object, not an array) ---------
 
+// the three measured editing states: cursor (length 0), 3 and 15 characters marked
+h.eq(BTE.Scope.isTextEditing(M.textRange(0)), true, "isTextEditing: measured cursor, TextRange of length 0");
+h.eq(BTE.Scope.isTextEditing(M.textRange(3)), true, "isTextEditing: measured 3 characters marked");
+h.eq(BTE.Scope.isTextEditing(M.textRange(15)), true, "isTextEditing: measured Cmd+A inside the text");
+h.eq(BTE.Scope.isTextEditing([{ typename: "TextFrame" }]), false, "isTextEditing: measured text selected as an object");
 h.eq(BTE.Scope.isTextEditing([]), false, "isTextEditing: empty array");
 h.eq(BTE.Scope.isTextEditing(null), false, "isTextEditing: null");
 h.eq(BTE.Scope.isTextEditing(undefined), false, "isTextEditing: undefined");
@@ -356,7 +362,48 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     M.path(g, [100, 200, 200, 100]);
     t = M.text(g, "a", box(150, 150, 20, 10));
     c = BTE.Scope.collect(d, "document");
-    h.eq(JSON.stringify(byId(c.texts, t.uuid).group.bounds), JSON.stringify([0, 300, 300, 0]), "plain group: its own bounds");
+    h.eq(JSON.stringify(byId(c.texts, t.uuid).group.bounds), JSON.stringify([100, 200, 200, 100]), "plain group: the union of its children");
+})();
+
+// Ruling R24, measured: a plain group's own geometricBounds include the
+// clipped-away content of a clip group inside it. The element is what shows:
+// a clip group child counts with its mask, a plain group child with the union
+// of its own children, every other child with its bounds (hidden ones too).
+(function () {
+    var d = M.doc(), L = d.layers[0], outer, g, clip, inner, t, t2, c;
+    // as in probe_scope.jsx part groupbounds: text + clip group (600 x 600 content, 100 x 100 mask)
+    outer = M.group(L, [100, 1400, 950, 800]);
+    t2 = M.text(outer, "outer text", [900, 1310, 950, 1297]);
+    g = M.group(outer, [100, 1400, 700, 800]);
+    t = M.text(g, "{n}", [100, 1310, 113, 1297]);
+    clip = M.group(g, [100, 1400, 700, 800], { clipped: true });
+    M.path(clip, [100, 1400, 700, 800]);
+    M.path(clip, [500, 1000, 600, 900], { clipping: true });
+    c = BTE.Scope.collect(d, "document");
+    h.eq(JSON.stringify(byId(c.texts, t.uuid).group.bounds), JSON.stringify([100, 1310, 600, 900]),
+        "group bounds: a clip group child counts with its mask, not its hidden content");
+    h.eq(JSON.stringify(byId(c.texts, t2.uuid).group.bounds), JSON.stringify([100, 1310, 950, 900]),
+        "group bounds: a plain group child counts with its own union, recursively");
+
+    // a compound mask in a nested clip group, and a hidden child that still counts
+    d = M.doc();
+    g = M.group(d.layers[0], [0, 1000, 1000, 0]);
+    t = M.text(g, "a", [10, 20, 30, 10]);
+    inner = M.group(g, [0, 1000, 1000, 0], { clipped: true });
+    M.compound(inner, [[450, 450, 550, 350], [400, 500, 600, 300]], { clipping: true });
+    M.path(inner, [0, 1000, 1000, 0]);
+    M.path(g, [700, 900, 800, 800]).hidden = true;
+    c = BTE.Scope.collect(d, "document");
+    h.eq(JSON.stringify(byId(c.texts, t.uuid).group.bounds), JSON.stringify([10, 900, 800, 10]),
+        "group bounds: compound mask of a child clip group, hidden child included");
+
+    // an empty group child adds nothing
+    d = M.doc();
+    g = M.group(d.layers[0], [0, 1000, 1000, 0]);
+    t = M.text(g, "a", [10, 20, 30, 10]);
+    M.group(g, [0, 0, 0, 0]);
+    c = BTE.Scope.collect(d, "document");
+    h.eq(JSON.stringify(byId(c.texts, t.uuid).group.bounds), JSON.stringify([10, 20, 30, 10]), "group bounds: an empty child group adds nothing");
 })();
 
 (function () {
@@ -385,6 +432,20 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     got = ids(s);
     h.eq(got, [closed.uuid, inGroup.uuid, comp.uuid].join(","), "shapes: closed non-mask paths (also in groups) and non-mask compounds");
     h.eq(JSON.stringify(s[2].bounds), JSON.stringify([400, 300, 500, 200]), "shapes: compound bounds are its own");
+})();
+
+(function () {
+    // Ruling R23: a closed guide (bleed or safe-area rectangle) is not a shape
+    var d = M.doc(), L = d.layers[0], s, p;
+    var guide = M.path(L, [0, 1000, 1000, 0], { guides: true });
+    var cut = M.path(L, [100, 300, 300, 100]);
+    s = BTE.Scope.shapes(d);
+    h.eq(ids(s), cut.uuid, "guides: a closed guide is not a shape");
+    M.text(L, "a", box(500, 800, 40, 10));
+    M.text(L, "b", box(500, 600, 40, 10));
+    p = BTE.Scope.prepare(d, "document");
+    h.eq(p.elements.length, 2, "guides: loose texts under a guide rectangle stay apart");
+    h.assert(guide.uuid !== cut.uuid, "uuids differ");
 })();
 
 (function () {
@@ -443,6 +504,47 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     h.assert(throwsMsg(function () { BTE.Scope.prepare(d, "document", "diagonal"); }) !== null, "order: unknown mode throws");
 })();
 
+// ---- reorder (ruling R22): a Pořadí change without reading the DOM ---------
+
+(function () {
+    // 3 x 2 grid of two-text groups; a locked text skipped so skipped/textCount show
+    var d = M.doc(), L = d.layers[0], names = ["A", "B", "C", "D", "E", "F"], i, g, cx, cy, p, q, back, before, reads;
+    for (i = 0; i < 6; i++) {
+        cx = (i % 3) * 300 + 150;
+        cy = 1000 - Math.floor(i / 3) * 300 - 150;
+        g = M.group(L, box(cx, cy, 300, 300));
+        M.text(g, names[i] + "1", box(cx, cy + 40, 60, 10));
+        M.text(g, names[i] + "2", box(cx, cy - 40, 60, 10));
+    }
+    M.text(g, "locked", box(cx, cy, 60, 10), { editable: false });
+    p = BTE.Scope.prepare(d, "document", "rows");
+    h.eq(rows(p.state), "A1+A2 | B1+B2 | C1+C2 | D1+D2 | E1+E2 | F1+F2", "reorder: start by rows");
+    before = JSON.stringify({ state: p.state, keys: p.elements, skipped: p.skipped, textCount: p.textCount });
+    reads = d.reads.selection;
+    q = BTE.Scope.reorder(p, "cols");
+    h.eq(rows(q.state), "A1+A2 | D1+D2 | B1+B2 | E1+E2 | C1+C2 | F1+F2", "reorder: rows to cols");
+    for (i = 0; i < q.elements.length; i++) {
+        h.eq(q.tfs[i][0].contents + "+" + q.tfs[i][1].contents, q.state[i].join("+"), "reorder: tfs row " + i + " follows state");
+        h.eq(q.elements[i].textIds.join(","), q.tfs[i][0].uuid + "," + q.tfs[i][1].uuid, "reorder: element " + i + " follows its rows");
+    }
+    h.eq(JSON.stringify(q.skipped), JSON.stringify({ locked: 1, overflow: 0, linked: 0 }), "reorder: skipped unchanged");
+    h.eq(q.textCount, 12, "reorder: textCount unchanged");
+    h.eq(q.cursorInText, false, "reorder: cursorInText unchanged");
+    h.eq(JSON.stringify({ state: p.state, keys: p.elements, skipped: p.skipped, textCount: p.textCount }), before, "reorder: input not mutated");
+    h.assert(q.state !== p.state && q.state[0] !== p.state[0] && q.tfs[0] !== p.tfs[0] && q.skipped !== p.skipped,
+        "reorder: no rows shared with the input");
+    back = BTE.Scope.reorder(q, "rows");
+    h.eq(rows(back.state), rows(p.state), "reorder: cols back to rows gives the prepare order");
+    h.eq(JSON.stringify(BTE.Scope.reorder(p, "cols").elements), JSON.stringify(BTE.Scope.prepare(d, "document", "cols").elements),
+        "reorder: the same order as prepare with that order");
+    h.eq(d.reads.selection, reads, "reorder: no DOM read");
+    h.assert(throwsMsg(function () { BTE.Scope.reorder(p, "diagonal"); }) !== null, "reorder: unknown mode throws");
+
+    q = BTE.Scope.reorder({ elements: [], state: [], tfs: [], skipped: { locked: 0, overflow: 0, linked: 0 }, cursorInText: true, textCount: 0 }, "cols");
+    h.eq(q.elements.length + q.state.length + q.tfs.length, 0, "reorder: empty prepared");
+    h.eq(q.cursorInText, true, "reorder: cursorInText kept on an empty result");
+})();
+
 (function () {
     // texts in one element: top to bottom, then left to right
     var d = M.doc(), L = d.layers[0], g, p;
@@ -478,8 +580,10 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     M.text(L, "on 2", box(2500, 500, 40, 10));
     M.text(L, "locked on 1", box(500, 300, 40, 10), { editable: false });
     M.text(L, "locked on 2", box(2500, 300, 40, 10), { editable: false });
-    // a group straddling the edge: its centre (2100) is on artboard 2
+    // a group straddling the edge: its background puts the centre (2100) on
+    // artboard 2, while the text's own centre (1950) is off it
     g = M.group(L, [1900, 600, 2300, 400]);
+    M.path(g, [1900, 600, 2300, 400]);
     M.text(g, "straddling", box(1950, 500, 40, 10));
     c = BTE.Scope.collect(d, "artboard");
     h.eq(c.texts.length, 3, "artboard: collect returns all document texts");
@@ -501,6 +605,26 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     msg = String(throwsMsg(function () { BTE.Scope.collect(d, "document"); }));
     h.assert(/DOM gone/.test(msg), "a DOM error keeps its message: " + msg);
     h.assert(/text 2/.test(msg), "a DOM error names the text: " + msg);
+})();
+
+(function () {
+    // the collection read itself (doc.textFrames[i]) carries context too
+    var d = M.doc(), L = d.layers[0], msg;
+    M.text(L, "fine", box(50, 50, 20, 10));
+    M.text(L, "gone", box(50, 150, 20, 10));
+    Object.defineProperty(d.textFrames, "1", { get: function () { throw new Error("No such element"); } });
+    msg = String(throwsMsg(function () { BTE.Scope.collect(d, "document"); }));
+    h.assert(/No such element/.test(msg) && /text 2/.test(msg), "doc.textFrames[i] failing names the text: " + msg);
+})();
+
+(function () {
+    // and so does reading a selected object's typename
+    var d = M.doc(), L = d.layers[0], bad = {}, msg;
+    M.text(L, "x", box(50, 50, 20, 10));
+    Object.defineProperty(bad, "typename", { get: function () { throw new Error("object gone"); } });
+    d.selection = [L.pageItems[0], bad];
+    msg = String(throwsMsg(function () { BTE.Scope.collect(d, "selection"); }));
+    h.assert(/object gone/.test(msg) && /selected object 2/.test(msg), "selection typename failing names the object: " + msg);
 })();
 
 h.done();

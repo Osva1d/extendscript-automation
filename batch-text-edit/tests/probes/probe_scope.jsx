@@ -8,38 +8,55 @@
 //              (12 x 20, pitch 312 pt) in the three structures of spec 4.2 -
 //              prefab groups, prefab groups inside sheet groups of 12, and
 //              loose texts - plus 500 loose prefabs (1000 loose texts), the
-//              same with about 10 000 paths, a selection, an artboard and a
-//              document of edge cases. Every prefab: a code text above the
+//              same with about 10 000 paths, a selection, an artboard, a
+//              document of edge cases and the bounds of a plain group around
+//              a clip group (ruling R24). Every prefab: a code text above the
 //              centre, a number below it, a clip group with the graphic (mask
 //              circle 290 pt over a 312 pt square) and a 283 pt cut circle on
 //              the same layer. Reports element count, texts per element, the
 //              order, the skipped counts and the time of prepare (and of its
 //              parts). Creates one document per run and closes only that
 //              one, unsaved. Nothing is written to the user's documents.
-// Usage:       The probe needs the real modules in front of it and one part
-//              name. From the repo root, with 0 open documents:
+// Usage:       The probe needs a header line and the real modules in front
+//              of it. From the repo root, with 0 open documents (it refuses
+//              to run otherwise):
 //                  P=batch-text-edit
-//                  { echo 'var PART = "group";'
+//                  { echo 'var BTE = undefined; var BTE_PROBE_FRESH = true;'
+//                    echo 'var PART = "group"; var PARTS_FIRST = false;'
 //                    cat shared/lib/json2.js $P/src/lib/utils.js $P/src/order.js \
 //                        $P/src/element.js $P/src/scope.js $P/tests/probes/probe_scope.jsx
 //                  } > "$TMPDIR/probe_scope_run.jsx"
 //                  tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
-//              Parts: group, sheets, loose, select, artboard, loose1000,
-//              loose10k, mixed. One part per run. Optional: prepend
-//              var LOG_PATH = "..."; for the progress log (default
-//              Folder.temp/bte_probe_scope.log), and var PARTS_FIRST = true;
-//              to time the parts of prepare before prepare itself (the first
-//              read of a fresh document is the slow one).
+//              The header resets BTE, which the engine keeps between runs,
+//              so the modules that follow load fresh. Parts: group, sheets,
+//              loose, select, artboard, loose1000, loose10k, mixed,
+//              groupbounds. One part per run. PARTS_FIRST = true times the
+//              parts of prepare before prepare itself (the first read of a
+//              fresh document is the slow one). Optional: var LOG_PATH =
+//              "..."; for the progress log (default
+//              Folder.temp/bte_probe_scope.log).
 // ------------------------------------------------------------------------
 (function () {
+    // Never next to the user's work: run only with no document open. The
+    // marker is dropped here too, so a refused run leaves nothing to reuse.
+    if (app.documents.length !== 0) {
+        if (typeof BTE_PROBE_FRESH === "boolean") { BTE_PROBE_FRESH = false; }
+        return "PRERUSENO: otevrene dokumenty";
+    }
+
+    var fresh = (typeof BTE_PROBE_FRESH === "boolean") && BTE_PROBE_FRESH;
     var part = (typeof PART === "string") ? PART : "";
-    var logPath = (typeof LOG_PATH === "string") ? LOG_PATH : Folder.temp.fsName + "/bte_probe_scope.log";
+    var logPath = (typeof LOG_PATH === "string" && LOG_PATH !== "") ? LOG_PATH : Folder.temp.fsName + "/bte_probe_scope.log";
     var partsFirst = (typeof PARTS_FIRST === "boolean") && PARTS_FIRST;
     // The engine keeps globals from one run to the next (measured: a
-    // PARTS_FIRST set in one run was still true in the next), so the flags
-    // are reset once read.
+    // PARTS_FIRST set in one run was still true in the next), so every flag
+    // is reset once read, and BTE counts only when the run's header reset it
+    // and set BTE_PROBE_FRESH: a BTE left over from an earlier run is never
+    // used.
+    if (typeof BTE_PROBE_FRESH === "boolean") { BTE_PROBE_FRESH = false; }
     if (typeof PART === "string") { PART = ""; }
     if (typeof PARTS_FIRST === "boolean") { PARTS_FIRST = false; }
+    if (typeof LOG_PATH === "string") { LOG_PATH = ""; }
     var PITCH = 312, CUT = 283, MASK = 290;
     var out = { part: part, app: app.version, notes: [] };
     var d = null;
@@ -251,6 +268,54 @@
             reviewFocusRow: "{n} free", clipBounds: [400, 250, 500, 150] };
     }
 
+    // Ruling R24: do a plain group's bounds include the hidden content of a
+    // clip group inside it? And a hidden child? Also what BTE.Scope reports.
+    function groupBoundsPart() {
+        var L, G2, G, T, T2, C, content, mask, H, shown, hid, p, i, r = {};
+        function union(list) {
+            var u = list[0].slice(), k;
+            for (k = 1; k < list.length; k++) {
+                u[0] = Math.min(u[0], list[k][0]); u[1] = Math.max(u[1], list[k][1]);
+                u[2] = Math.max(u[2], list[k][2]); u[3] = Math.min(u[3], list[k][3]);
+            }
+            return u;
+        }
+        d = app.documents.add(DocumentColorSpace.RGB, 1500, 1500);
+        L = d.layers[0];
+        // G2 (plain) > { G (plain) > { T, C (clip: content 600 x 600, mask 100 x 100 off-centre) }, T2 }
+        G2 = L.groupItems.add();
+        T2 = point(G2, 900, 1300, "outer text");
+        G = G2.groupItems.add();
+        T = point(G, 100, 1300, "{n}");
+        C = G.groupItems.add();
+        content = C.pathItems.rectangle(1400, 100, 600, 600);     // x 100..700, y 800..1400
+        mask = C.pathItems.rectangle(1000, 500, 100, 100);        // x 500..600, y 900..1000
+        C.clipped = true;
+        // H (plain) > { a shown square, a hidden square }
+        H = L.groupItems.add();
+        shown = H.pathItems.rectangle(500, 1000, 100, 100);       // x 1000..1100, y 400..500
+        hid = H.pathItems.rectangle(300, 1300, 100, 100);         // x 1300..1400, y 200..300
+        hid.hidden = true;
+        app.redraw();
+        r.text = T.geometricBounds;
+        r.content = content.geometricBounds;
+        r.mask = mask.geometricBounds;
+        r.clipGroup = { geometric: C.geometricBounds, visible: C.visibleBounds };
+        r.plainGroup = { geometric: G.geometricBounds, visible: G.visibleBounds };
+        r.unionTextMask = union([T.geometricBounds, mask.geometricBounds]);
+        r.unionTextContent = union([T.geometricBounds, content.geometricBounds]);
+        r.outerGroup = { geometric: G2.geometricBounds, visible: G2.visibleBounds };
+        r.outerUnionWithMask = union([T2.geometricBounds, r.unionTextMask]);
+        r.hiddenChildGroup = { geometric: H.geometricBounds, visible: H.visibleBounds,
+            shown: shown.geometricBounds, hidden: hid.geometricBounds };
+        p = BTE.Scope.prepare(d, "document");
+        r.scopeElements = [];
+        for (i = 0; i < p.elements.length; i++) {
+            r.scopeElements.push({ key: p.elements[i].key.charAt(0), texts: ascii(p.state[i].join(" | ")), bounds: p.elements[i].bounds });
+        }
+        out.groupBounds = r;
+    }
+
     function j(v) {
         var a = [], k, i;
         if (v === null) { return "null"; }
@@ -265,8 +330,8 @@
         return "{" + a.join(",") + "}";
     }
 
-    if (typeof BTE === "undefined" || !BTE.Scope) {
-        return "probe_scope: load the modules first (see Usage in the header)";
+    if (!fresh || typeof BTE === "undefined" || !BTE.Scope) {
+        return "probe_scope: run it behind the header in Usage (resets BTE, sets BTE_PROBE_FRESH, then the modules)";
     }
     log("start, documents=" + app.documents.length);
     try {
@@ -278,6 +343,7 @@
         else if (part === "loose10k") { sheetPart("none", 20, 25, 16, "document"); }
         else if (part === "artboard") { artboardPart(); }
         else if (part === "mixed") { mixedPart(); }
+        else if (part === "groupbounds") { groupBoundsPart(); }
         else { out.notes.push("unknown PART \"" + part + "\""); }
     } catch (e) {
         out.FAILED = e.message + " (line " + e.line + ")";

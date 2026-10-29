@@ -22,13 +22,14 @@
  *        opts.kind "point" (default) | "area" | "path"; opts.editable
  *        (default true); opts.visible = how many characters the frame shows
  *        (area/path text; fewer than contents.length = overflow)
- *   path(parent, bounds, opts)     opts.closed (default true), opts.clipping
+ *   path(parent, bounds, opts)     opts.closed (default true), opts.clipping,
+ *                                  opts.guides
  *   compound(parent, subBounds, opts)  subBounds: bounds of each subpath, in
  *        pageItems order; opts.clipping marks every subpath as a mask; the
  *        compound's own bounds are the union of the subpaths
  *   link(a, b)                     threads two text frames into one story
- *   textRange()                    what a selection might be while the cursor
- *                                  is in a text (fact 2 is not measured yet)
+ *   textRange(length)              the selection while text is being edited:
+ *                                  one TextRange, not an array (fact 2)
  *
  * Counter: d.reads.selection counts reads of doc.selection, so a test can
  * prove that Scope did not touch it.
@@ -160,7 +161,8 @@ function path(parent, bounds, opts) {
         parent: parent,
         geometricBounds: bounds,
         closed: o.closed !== false,
-        clipping: o.clipping === true
+        clipping: o.clipping === true,
+        guides: o.guides === true
     };
     if (parent.typename !== "CompoundPathItem") { parent.pageItems.push(p); }
     parent.pathItems.push(p);
@@ -191,8 +193,10 @@ function link(a, b) {
     b.story = story;
 }
 
-function textRange() {
-    return { typename: "TextRange", length: 0 };
+// As measured (findings.md, Task 8 fact 2): one TextRange object, not an
+// array; length 0 for a blinking cursor, the marked count otherwise.
+function textRange(length) {
+    return { typename: "TextRange", length: length || 0 };
 }
 
 module.exports = {

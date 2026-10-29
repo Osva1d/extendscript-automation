@@ -32,7 +32,8 @@ BTE.Scope = {
      * For "artboard" only the elements whose centre lies on the active
      * artboard are kept, and a skipped text counts only when the element it
      * would belong to is one of them. A skipped text never changes the
-     * elements: an element left without texts is dropped.
+     * elements: an element left without texts is dropped. Another order
+     * later comes from reorder(), without reading the document again.
      *
      * @param {Document} doc - The document.
      * @param {string} kind - "selection", "artboard" or "document".
@@ -55,8 +56,8 @@ BTE.Scope = {
             cursorInText: c.cursorInText,
             textCount: 0
         };
-        var recById = {}, loose = false, shapes = [], kept = [], byKey = {};
-        var els, keys, el, textIds, tie, rec, row, tfRow, i, j;
+        var recById = {}, loose = false, shapes = [];
+        var els, el, textIds, tie, rec, row, tfRow, i, j;
 
         if (pool.length === 0) { return out; }
 
@@ -70,9 +71,12 @@ BTE.Scope = {
         els = BTE.Element.build(pool, shapes);
         if (onBoard) { els = BTE.Element.inRect(els, BTE.Scope.activeArtboardRect(doc)); }
 
+        // Skipped texts leave their elements; an element left empty goes too.
         for (i = 0; i < els.length; i++) {
             el = els[i];
             textIds = [];
+            row = [];
+            tfRow = [];
             tie = -1;
             for (j = 0; j < el.textIds.length; j++) {
                 rec = recById[el.textIds[j]];
@@ -81,29 +85,46 @@ BTE.Scope = {
                     continue;
                 }
                 textIds.push(rec.id);
+                row.push(rec.contents);
+                tfRow.push(rec.tf);
                 if (tie < 0 || rec.tie < tie) { tie = rec.tie; }
             }
             if (textIds.length > 0) {
-                el = { key: el.key, textIds: textIds, bounds: el.bounds, tie: tie };
-                kept.push(el);
-                byKey[el.key] = el;
+                out.elements.push({ key: el.key, textIds: textIds, bounds: el.bounds, tie: tie });
+                out.state.push(row);
+                out.tfs.push(tfRow);
+                out.textCount += row.length;
             }
         }
+        return BTE.Scope.reorder(out, mode);
+    },
 
-        keys = BTE.Order.sort(kept, mode);
+    /**
+     * The same prepared scope in another order, without reading the
+     * document: the dialog calls it when Pořadí changes (prepare() only when
+     * Rozsah does, spec 6.2). Rows of `state` and `tfs` move with their
+     * element. The input is not changed; the result shares the element
+     * objects and the TextFrames with it, not the arrays.
+     * @param {Object} prepared - From prepare() (or reorder()).
+     * @param {string} order - "rows" or "cols".
+     * @returns {Object} The same shape as prepare() returns.
+     * @throws {Error} For an unknown order (BTE.Order.sort).
+     */
+    reorder: function (prepared, order) {
+        var keys = BTE.Order.sort(prepared.elements, order);
+        var at = {}, s = prepared.skipped, i, k;
+        var out = {
+            elements: [], state: [], tfs: [],
+            skipped: { locked: s.locked, overflow: s.overflow, linked: s.linked },
+            cursorInText: prepared.cursorInText,
+            textCount: prepared.textCount
+        };
+        for (i = 0; i < prepared.elements.length; i++) { at[prepared.elements[i].key] = i; }
         for (i = 0; i < keys.length; i++) {
-            el = byKey[keys[i]];
-            row = [];
-            tfRow = [];
-            for (j = 0; j < el.textIds.length; j++) {
-                rec = recById[el.textIds[j]];
-                row.push(rec.contents);
-                tfRow.push(rec.tf);
-            }
-            out.elements.push(el);
-            out.state.push(row);
-            out.tfs.push(tfRow);
-            out.textCount += row.length;
+            k = at[keys[i]];
+            out.elements.push(prepared.elements[k]);
+            out.state.push(prepared.state[k].slice());
+            out.tfs.push(prepared.tfs[k].slice());
         }
         return out;
     },
@@ -124,10 +145,10 @@ BTE.Scope = {
      *     skipped: {locked: number, overflow: number, linked: number},
      *     skippedTexts: Array.<Object>}}
      *     tie is the index in doc.textFrames; group is the lowest group
-     *     above the text (bounds of the mask for a clip group), null for a
-     *     text directly in a layer. skippedTexts are records of the same
-     *     shape plus `reason` ("locked", "overflow", "linked"); their
-     *     contents are not read.
+     *     above the text with the bounds it covers on the page
+     *     (groupBounds()), null for a text directly in a layer. skippedTexts
+     *     are records of the same shape plus `reason` ("locked", "overflow",
+     *     "linked"); their contents are not read.
      * @throws {Error} For an unknown kind, or when the DOM fails.
      */
     collect: function (doc, kind) {
@@ -138,7 +159,7 @@ BTE.Scope = {
             skippedTexts: []
         };
         var groups = {};
-        var all, n, sel, picked, ties, i;
+        var all, n, sel, picked, ties, tf, i;
 
         if (kind !== "selection" && kind !== "artboard" && kind !== "document") {
             throw new Error("BTE.Scope.collect: unknown kind \"" + kind + "\"");
@@ -151,7 +172,14 @@ BTE.Scope = {
         }
 
         if (kind !== "selection") {
-            for (i = 0; i < n; i++) { BTE.Scope.take(all[i], i, groups, out); }
+            for (i = 0; i < n; i++) {
+                try {
+                    tf = all[i];
+                } catch (e) {
+                    throw new Error("BTE.Scope: reading text " + (i + 1) + " of the document failed: " + e.message);
+                }
+                BTE.Scope.take(tf, i, groups, out);
+            }
             return out;
         }
 
@@ -177,18 +205,26 @@ BTE.Scope = {
 
     /**
      * Whether a selection is text being edited (a cursor or selected
-     * characters) rather than objects. How Illustrator reports a cursor in a
-     * text is not measured yet (findings.md, Task 8 fact 2), so anything that
-     * is not an array of page items counts as editing.
+     * characters) rather than objects. Measured (findings.md, Task 8 fact 2):
+     * while editing, the selection is one TextRange object, not an array
+     * (length 0 for a blinking cursor); objects come as an array. Anything
+     * that is not an array of page items counts as editing.
      * @param {*} sel - doc.selection.
      * @returns {boolean} False for null, an empty array or page items only.
+     * @throws {Error} When reading an item's typename fails.
      */
     isTextEditing: function (sel) {
-        var i;
+        var i, type;
         if (sel === null || sel === undefined) { return false; }
         if (!BTE.Utils.isArray(sel)) { return true; }
         for (i = 0; i < sel.length; i++) {
-            if (!sel[i] || !BTE.Scope.PAGE_ITEMS.hasOwnProperty(sel[i].typename)) { return true; }
+            if (!sel[i]) { return true; }
+            try {
+                type = sel[i].typename;
+            } catch (e) {
+                throw new Error("BTE.Scope: reading selected object " + (i + 1) + " failed: " + e.message);
+            }
+            if (!BTE.Scope.PAGE_ITEMS.hasOwnProperty(type)) { return true; }
         }
         return false;
     },
@@ -313,14 +349,46 @@ BTE.Scope = {
      *     directly in a layer.
      */
     groupOf: function (tf, groups) {
-        var p = tf.parent, id, bounds;
+        var p = tf.parent, id;
         if (p.typename !== "GroupItem") { return null; }
         id = p.uuid;
         if (!groups.hasOwnProperty(id)) {
-            bounds = (p.clipped === true) ? BTE.Scope.maskBounds(p) : null;
-            groups[id] = { id: id, bounds: bounds || p.geometricBounds };
+            groups[id] = { id: id, bounds: BTE.Scope.groupBounds(p) || p.geometricBounds };
         }
         return groups[id];
+    },
+
+    /**
+     * What a group covers on the page. A clip group covers its mask. A plain
+     * group covers the union of its children, where a child clip group
+     * counts with its mask and a child plain group with its own union: the
+     * group's own geometricBounds include the clipped-away content of a clip
+     * group inside it (measured, findings.md, Task 9, ruling R24). Hidden
+     * children count, as they do in Illustrator's own bounds.
+     * @param {GroupItem} g - The group.
+     * @returns {?Array.<number>} null for a group with nothing in it.
+     */
+    groupBounds: function (g) {
+        var kids, n, i, k, b, u = null;
+        if (g.clipped === true) { return BTE.Scope.maskBounds(g) || g.geometricBounds; }
+        kids = g.pageItems;
+        n = kids.length;
+        // One new array per group, grown in place: fewer objects, fewer
+        // garbage-collection pauses.
+        for (i = 0; i < n; i++) {
+            k = kids[i];
+            b = (k.typename === "GroupItem") ? BTE.Scope.groupBounds(k) : k.geometricBounds;
+            if (!b) { continue; }
+            if (u === null) {
+                u = [b[0], b[1], b[2], b[3]];
+            } else {
+                if (b[0] < u[0]) { u[0] = b[0]; }
+                if (b[1] > u[1]) { u[1] = b[1]; }
+                if (b[2] > u[2]) { u[2] = b[2]; }
+                if (b[3] < u[3]) { u[3] = b[3]; }
+            }
+        }
+        return u;
     },
 
     /**
@@ -355,9 +423,11 @@ BTE.Scope = {
 
     /**
      * The shapes a loose text can belong to (spec 4.2 rule 2): closed paths
-     * that are not masks and not subpaths of a compound path, then compound
-     * paths that are not masks, anywhere in the document. Bounds are read
-     * once here; BTE.Element compares in plain JS.
+     * that are not masks, not guides and not subpaths of a compound path,
+     * then compound paths that are not masks, anywhere in the document. A
+     * guide rectangle (bleed, safe area) would otherwise merge every loose
+     * text inside it (ruling R23). Bounds are read once here; BTE.Element
+     * compares in plain JS.
      *
      * Walks layers, sublayers and groups through their typed collections
      * instead of reading doc.pathItems: indexing a document-level collection
@@ -374,7 +444,7 @@ BTE.Scope = {
             var list = c.pathItems, m = list.length, k, p;
             for (k = 0; k < m; k++) {
                 p = list[k];
-                if (p.closed === true && p.clipping !== true) {
+                if (p.closed === true && p.clipping !== true && p.guides !== true) {
                     paths.push({ id: p.uuid, bounds: p.geometricBounds });
                 }
             }
