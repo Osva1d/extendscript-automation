@@ -89,6 +89,11 @@ BTE.L = (function () {
             NOTE_WHERE_RESET:    "Step %s: the Where field was not valid and the default choice replaced it.",
             NOTE_NO_STEPS:       "No step was left; a Number step was added.",
             NOTE_UNREADABLE:     "The presets file could not be read; the saved presets were not loaded.",
+            // Write stopped by a DOM error: element (first %s), texts written so
+            // far (second %s, picks the form).
+            ERR_WRITE_AT_1:      "Writing stopped at element %s; %s text was written. Undo (Cmd+Z) reverts the whole run.",
+            ERR_WRITE_AT_2:      "Writing stopped at element %s; %s texts were written. Undo (Cmd+Z) reverts the whole run.",
+            ERR_WRITE_AT_5:      "Writing stopped at element %s; %s texts were written. Undo (Cmd+Z) reverts the whole run.",
             ERR_CRITICAL:        "The script stopped on an unexpected error: %s (line %s).\n\nThe document may be partly changed — check it, or undo the changes (Cmd+Z). Send this message to the script's maintainer."
         },
         cs: {
@@ -165,6 +170,11 @@ BTE.L = (function () {
             NOTE_WHERE_RESET:    "Krok %s: pole Kde bylo neplatné a nahradila ho výchozí volba.",
             NOTE_NO_STEPS:       "Žádný krok nezbyl, přidán krok Číslovat.",
             NOTE_UNREADABLE:     "Soubor s předvolbami nešel přečíst, uložené předvolby se nenačetly.",
+            // Zápis zastavený chybou DOM: prvek (první %s), dosud zapsané texty
+            // (druhé %s, podle něj tvar).
+            ERR_WRITE_AT_1:      "Zápis se zastavil u prvku %s, zapsán %s text. Zpět (Cmd+Z) vrátí celý běh.",
+            ERR_WRITE_AT_2:      "Zápis se zastavil u prvku %s, zapsány %s texty. Zpět (Cmd+Z) vrátí celý běh.",
+            ERR_WRITE_AT_5:      "Zápis se zastavil u prvku %s, zapsáno %s textů. Zpět (Cmd+Z) vrátí celý běh.",
             ERR_CRITICAL:        "Skript se zastavil kvůli neočekávané chybě: %s (řádek %s).\n\nDokument může být částečně změněný — zkontrolujte ho, případně změny vraťte (Cmd+Z). Pošlete tuto hlášku správci skriptu."
         }
     };
