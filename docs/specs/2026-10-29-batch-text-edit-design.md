@@ -153,7 +153,8 @@ po důvodech:
   menší než `characters.length`“ z rešerše §7.2 je **chybné**, protože
   `lines` nezahrnují zakončení řádku (`\r`, U+0003), takže by hlásilo
   přetečení u každého textu s koncem odstavce. Platí průchod řádky, který
-  za každým řádkem přičte i zakončení (naměřeno 2026-10-29, Task 8,
+  za řádkem přičte i zakončení, ale jen když za ním stojí `\r` nebo U+0003
+  (naměřeno 2026-10-29, Task 8,
   `batch-text-edit/docs/findings.md` §4). Opraveno 2026-10-29.
 - **Navázaný rámeček:** `tf.story.textFrames.length > 1` (naměřeno
   2026-10-29, Task 8; `nextFrame` k tomu použít nejde).
@@ -554,7 +555,6 @@ skupiny po 12, bez skupin):
 - Optimalizace geometrie (mřížka).
 - Zobrazení textů prvku v náhledu a položek seznamu kroků.
 - Plnění a výkon listboxu.
-- Jak přesně poznat navázané rámečky.
 - Kdy zobrazit okno průběhu.
 
 Co by změnilo, co se staví, patří zpět uživateli.
