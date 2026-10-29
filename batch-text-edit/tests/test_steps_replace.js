@@ -43,6 +43,20 @@ h.eq(JSON.stringify(multi.info[0].edits.slice(0, 3)),
     '[{"el":0,"tx":0,"start":0,"length":3,"text":"7"},{"el":0,"tx":0,"start":4,"length":3,"text":"7"},{"el":0,"tx":1,"start":2,"length":3,"text":"7"}]',
     "edits ordered by element, text, position");
 h.eq(multi.info[0].multi.length, 0, "replace reports no multi-match elements");
+// Review Focus: names with regex metacharacters or $ match literally
+h.eq(one("a {$} b", R({kind:"var",text:"{$}"},{replace:"X"})).states[1][0][0], "a X b", "{$} as a variable is literal");
+var dot = one("{x.y} {xzy}", R({kind:"var",text:"{x.y}"},{replace:"X"}));
+h.eq(dot.states[1][0][0], "X {xzy}", "{x.y} does not match {xzy}");
+h.eq(dot.info[0].edits.length, 1, "{x.y} has exactly one edit");
+// matches(): empty matches at the end and between characters, groups, offsets
+var mm = BTE.Steps.matches(new RegExp("x*", "g"), "xxaxb");
+h.eq(mm.length, 2, "x* gives its two non-empty matches and terminates");
+h.eq(mm[0].index + ":" + mm[0][0] + "|" + mm[1].index + ":" + mm[1][0], "0:xx|3:x", "x* match positions");
+var gm = BTE.Steps.matches(new RegExp("(a)|(b)", "g"), "ab");
+h.eq(gm[0].length + "," + gm[0][1] + "," + gm[0][2] + "|" + gm[1][1] + "," + gm[1][2], "3,a,|,b", "groups, non-participating group is empty");
+h.eq(BTE.Steps.matches(new RegExp("a", "g"), "aaa", true).length, 1, "firstOnly keeps one match");
+h.eq(BTE.Steps.matches(new RegExp("a?", "g"), "").length, 0, "empty text, empty pattern: no match");
+h.eq(one("ab", R({kind:"regex",text:"b?"},{replace:"-"})).states[1][0][0], "a-", "optional pattern: empty matches skipped, real one replaced");
 // a variable is always matched case-sensitively, text and regex follow matchCase
 h.eq(one("{Kód} {kód}", R({kind:"var",text:"{kód}"},{replace:"X"})).states[1][0][0], "{Kód} X", "variable is case-sensitive");
 h.eq(one("ABC abc", R({kind:"regex",text:"abc"},{replace:"x"})).states[1][0][0], "x x", "regex case-insensitive by default");

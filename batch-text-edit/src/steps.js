@@ -68,29 +68,41 @@ BTE.Steps = {
     },
 
     /**
-     * Non-empty matches of a compiled regex in one text, in order. Runs
-     * exec in a loop on a fresh RegExp: the engine does not reset lastIndex
-     * reliably between uses, so the compiled one is never executed itself.
-     * An empty match (x*) is skipped by moving one character on; inserting
-     * text is not a v1 feature.
+     * Non-empty matches of a compiled regex in one text, in order. Collected
+     * through String.replace with a function replacer, so the engine's own
+     * loop decides when to stop and nothing here depends on lastIndex: the
+     * engine's lastIndex handling is unmeasured and looks unreliable
+     * (/a/g.test twice returned true, true, research 7.4), and a hand-written
+     * exec loop that relied on it could hang the dialog. A fresh RegExp is
+     * built on every call. The replacer returns the matched text, so the
+     * throwaway result of replace is the input again. The arguments layout
+     * (match, groups..., offset, whole string) and the offset are standard
+     * ES3 15.5.4.11, queued for an engine probe. An empty match (x*) is
+     * skipped; inserting text is not a v1 feature.
      * @param {RegExp} re - Regex from compile().
      * @param {string} s - The text.
-     * @param {boolean} [firstOnly] - Stop after the first non-empty match.
-     * @returns {Array} exec results (m[0], groups, m.index).
+     * @param {boolean} [firstOnly] - Keep only the first non-empty match.
+     * @returns {Array.<Object>} Match objects {0: whole, 1..n: groups, index,
+     *     length}; length is n + 1 like an exec result, and a group that did
+     *     not take part is "".
      */
     matches: function (re, s, firstOnly) {
         var rx = new RegExp(re.source, re.ignoreCase ? "gi" : "g");
         var found = [];
-        var m;
 
-        while ((m = rx.exec(s)) !== null) {
-            if (m[0].length === 0) {
-                rx.lastIndex = m.index + 1;
-                continue;
+        s.replace(rx, function () {
+            var a = arguments;
+            var groups = a.length - 3;
+            var m = { 0: a[0], index: a[a.length - 2], length: groups + 1 };
+            var g;
+
+            if (a[0].length === 0 || (firstOnly && found.length > 0)) { return a[0]; }
+            for (g = 1; g <= groups; g++) {
+                m[g] = (a[g] === undefined || a[g] === null) ? "" : a[g];
             }
             found.push(m);
-            if (firstOnly) { break; }
-        }
+            return a[0];
+        });
         return found;
     },
 
@@ -98,10 +110,10 @@ BTE.Steps = {
      * Expands $-tokens of a regex-mode replacement for one match: $$, $&,
      * $` (text before the match), $' (text after), $1-$99. A group number
      * the pattern does not have stays as written; a group that did not take
-     * part gives an empty string. Plain-text and variable replacements never
-     * come here, their $ is literal.
+     * part is an empty string (matches() has made it one). Plain-text and
+     * variable replacements never come here, their $ is literal.
      * @param {string} tpl - Replacement text as typed.
-     * @param {Array} m - exec result of the match.
+     * @param {Object} m - Match object from matches().
      * @param {string} s - The text the match was found in.
      * @returns {string} The replacement for this match.
      */
@@ -115,11 +127,11 @@ BTE.Steps = {
             if (tok === "'") { return s.substring(m.index + m[0].length); }
             if (tok.length === 2) {
                 n = Number(tok);
-                if (n >= 1 && n <= groups) { return m[n] === undefined ? "" : m[n]; }
+                if (n >= 1 && n <= groups) { return m[n]; }
             }
             n = Number(tok.charAt(0));
             if (n >= 1 && n <= groups) {
-                return (m[n] === undefined ? "" : m[n]) + tok.substring(1);
+                return m[n] + tok.substring(1);
             }
             return all;
         });

@@ -11,9 +11,10 @@ BTE.Vars = {
      * Regex source of one {variable}: braces around one or more characters
      * that are neither a brace, a paragraph break (\r) nor a soft line break
      * (U+0003). Spaces, digits and diacritics are allowed. Kept as a source
-     * string, not a RegExp: the engine does not reset lastIndex reliably
-     * (measured, docs/reports/2026-10-28-text-chain-research.md §7.4), so
-     * every use builds a fresh new RegExp(SOURCE, "g").
+     * string, not a RegExp: the engine's lastIndex handling is unmeasured and
+     * looks unreliable (/a/g.test twice returned true, true,
+     * docs/reports/2026-10-28-text-chain-research.md §7.4), so the code never
+     * depends on it and every use builds a fresh new RegExp(SOURCE, "g").
      * @type {string}
      */
     SOURCE: "\\{[^{}\\r\\u0003]+\\}",
