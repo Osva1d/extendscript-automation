@@ -182,6 +182,15 @@ BTE.Steps = {
     MAX_DIGITS: 20,
 
     /**
+     * Largest whole number the Number step reads or writes: 2^53 - 1. Beyond
+     * it a double no longer holds every integer, so a value would silently
+     * change (...993 becomes ...992), print as "1e+22", or be Infinity (a
+     * 309-digit field), which must never reach a loop or the document.
+     * @type {number}
+     */
+    MAX_SAFE: 9007199254740991,
+
+    /**
      * The step result for a step that failed: the message and no edits.
      * @param {{key: string, args: Array}} error - The message to show.
      * @returns {{error: Object, edits: Array, warns: Array, multi: Array}}
@@ -194,7 +203,8 @@ BTE.Steps = {
     /**
      * Reads one integer field of a step. Text goes through the shared
      * BTE.Numbers.parse (decimal comma or dot, spaces around), then must be a
-     * whole number: 1,5 and 1e3 are refused, 1.0 is the integer 1.
+     * whole number within +-MAX_SAFE: 1,5 and 1e3 are refused, 1.0 is the
+     * integer 1, and a digit run too long for a double (Infinity) is refused.
      * @param {*} raw - The field as typed (string or number).
      * @param {string} label - BTE.L key of the field's label, named in errors.
      * @param {*} blank - Value of a blank field (spaces only, missing);
@@ -210,7 +220,7 @@ BTE.Steps = {
             return { value: blank, error: null };
         }
         v = BTE.Numbers.parse(raw);
-        if (v !== v || Math.floor(v) !== v) {
+        if (!(Math.abs(v) <= BTE.Steps.MAX_SAFE) || Math.floor(v) !== v) {
             return { value: NaN, error: BTE.Steps.msg("ERR_NOT_INTEGER", [label]) };
         }
         if (min !== null && v < min) {
@@ -220,8 +230,23 @@ BTE.Steps = {
     },
 
     /**
-     * Value of the i-th numbered element (spec 5.3): b = i, or i mod reset
-     * when reset is above 0; value = from + step * floor(b / repeats).
+     * How many steps from the first value the i-th numbered element is
+     * (spec 5.3): b = i, or i mod reset when reset is above 0; floor(b /
+     * repeats).
+     * @param {number} i - Position among the elements the step found
+     *     something in, from zero.
+     * @param {number} repeats - How often each value is used, at least 1.
+     * @param {number} reset - Elements after which the series returns to
+     *     the first value; 0 (or less) for never.
+     * @returns {number} Number of increments, 0 or more.
+     */
+    stepsAt: function (i, repeats, reset) {
+        var b = reset > 0 ? i % reset : i;
+        return Math.floor(b / repeats);
+    },
+
+    /**
+     * Value of the i-th numbered element (spec 5.3): from + step * stepsAt.
      * @param {number} i - Position among the elements the step found
      *     something in, from zero.
      * @param {number} from - First value (Od).
@@ -232,8 +257,7 @@ BTE.Steps = {
      * @returns {number} The value.
      */
     valueAt: function (i, from, step, repeats, reset) {
-        var b = reset > 0 ? i % reset : i;
-        return from + step * Math.floor(b / repeats);
+        return from + step * BTE.Steps.stepsAt(i, repeats, reset);
     },
 
     /**
@@ -243,7 +267,9 @@ BTE.Steps = {
      * digits. Format "A" / "a": bijective base 26 (1 = A, 26 = Z, 27 = AA),
      * digits is ignored; a value below 1 has no letters and gives "" (the
      * Number step refuses such values before it formats). Any other format
-     * is read as "1".
+     * is read as "1". A value that is not a whole number within +-MAX_SAFE
+     * (NaN, Infinity, 1e22, 2.5) has no text and gives "" in either format,
+     * so this never loops on Infinity and never prints "1e+22".
      * @param {number} v - A whole number.
      * @param {string} format - "1", "A" or "a".
      * @param {number} digits - Minimum number of digits for format "1".
@@ -251,6 +277,7 @@ BTE.Steps = {
      */
     formatValue: function (v, format, digits) {
         var alphabet, out;
+        if (!(Math.abs(v) <= BTE.Steps.MAX_SAFE) || Math.floor(v) !== v) { return ""; }
         if (format === "A" || format === "a") {
             alphabet = format === "A" ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ" : "abcdefghijklmnopqrstuvwxyz";
             out = "";
@@ -272,7 +299,9 @@ BTE.Steps = {
      * other kinds go through compile() and are case-sensitive.
      * Od, Krok, Číslic, Opakovat and Znovu po are checked before anything is
      * matched: whole numbers, Číslic and Opakovat at least 1, Číslic at most
-     * MAX_DIGITS (Číslic only for the numeric format). Blank Do and Znovu po mean none, blank Opakovat
+     * MAX_DIGITS (Číslic only for the numeric format); every field is a
+     * whole number within +-MAX_SAFE, and a series that would leave that
+     * range fails with ERR_VALUE_RANGE and writes nothing. Blank Do and Znovu po mean none, blank Opakovat
      * means 1. The Do check warns when the last value differs from Do, and
      * names the missing or extra elements when the series is a plain count
      * (repeats 1, no reset, step not 0) that Do falls on.
@@ -335,7 +364,14 @@ BTE.Steps = {
         }
 
         for (k = 0; k < found.length; k++) {
+            // The increments are checked on their own too: a product beyond
+            // 2^53 is already rounded, and adding a negative Od could bring
+            // the sum back in range with a wrong last digit.
+            if (Math.abs(vals.step * BTE.Steps.stepsAt(k, vals.repeats, reset)) > BTE.Steps.MAX_SAFE) {
+                return BTE.Steps.failed(BTE.Steps.msg("ERR_VALUE_RANGE"));
+            }
             v = BTE.Steps.valueAt(k, vals.from, vals.step, vals.repeats, reset);
+            if (Math.abs(v) > BTE.Steps.MAX_SAFE) { return BTE.Steps.failed(BTE.Steps.msg("ERR_VALUE_RANGE")); }
             if (letters && v < 1) { return BTE.Steps.failed(BTE.Steps.msg("ERR_LETTER_BELOW_ONE")); }
             text = BTE.Steps.formatValue(v, step.format, vals.digits);
             hits = found[k].hits;

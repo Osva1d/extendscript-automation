@@ -89,6 +89,54 @@ h.eq(digitsErr("-5").key, "ERR_MIN_ONE", "negative digits keep the minimum error
 h.eq(BTE.Steps.MAX_DIGITS, 20, "cap is MAX_DIGITS = 20");
 h.eq(BTE.Steps.run([["{n}"]], [V({digits:"21", format:"A"})]).info[0].error, null, "digits cap does not apply to letters");
 h.eq(infoOf([["{n}"]], V({from:"x", digits:"21"})).error.key, "ERR_NOT_INTEGER", "fields are checked in order: Od before Číslic");
+// numbers beyond the safe integer range (R15): never written, never looped on
+var SAFE = "9007199254740991";
+var zeros400 = "1"; for (var z = 0; z < 400; z++) zeros400 += "0";
+function errOf(extra, n) {
+    var rows = []; for (var q = 0; q < (n || 1); q++) rows.push(["{n}"]);
+    return BTE.Steps.run(rows, [V(extra)]);
+}
+h.eq(errOf({from: zeros400}).info[0].error.key + errOf({from: zeros400}).info[0].error.args[0], "ERR_NOT_INTEGERFIELD_FROM", "401-digit Od is refused (it parses to Infinity)");
+h.eq(errOf({step: zeros400}).info[0].error.args[0], "FIELD_STEP", "401-digit Krok is refused");
+h.eq(errOf({to: zeros400}).info[0].error.args[0], "FIELD_TO", "401-digit Do is refused");
+h.eq(errOf({repeats: zeros400}).info[0].error.key, "ERR_NOT_INTEGER", "401-digit Opakovat is refused");
+h.eq(errOf({reset: zeros400}).info[0].error.args[0], "FIELD_RESET", "401-digit Znovu po is refused");
+h.eq(errOf({from: "-" + zeros400}).info[0].error.key, "ERR_NOT_INTEGER", "negative 401-digit Od is refused");
+h.eq(errOf({from: "1" + "00000000000000000000000"}).info[0].error.key, "ERR_NOT_INTEGER", "1e22 would be written as 1e+22: refused");
+h.eq(errOf({from: "9007199254740992"}).info[0].error.key, "ERR_NOT_INTEGER", "2^53 is beyond the safe range");
+h.eq(errOf({from: "9007199254740993"}).info[0].error.key, "ERR_NOT_INTEGER", "2^53+1 would silently become ...992: refused");
+h.eq(errOf({from: "-9007199254740992"}).info[0].error.key, "ERR_NOT_INTEGER", "-2^53 is beyond the safe range");
+h.eq(errOf({from: SAFE, digits: "1"}).states[1][0][0], SAFE, "the largest safe Od is fine and written exactly");
+h.eq(errOf({from: "-" + SAFE, digits: "1"}).states[1][0][0], "-" + SAFE, "the smallest safe Od is fine and written exactly");
+h.eq(errOf({from: SAFE}, 2).info[0].error.key, "ERR_VALUE_RANGE", "Od at the limit plus step 1 over 2 elements: value out of range");
+h.eq(errOf({from: SAFE}, 2).info[0].error.args.length, 0, "ERR_VALUE_RANGE has no arguments");
+h.eq(errOf({from: SAFE}, 2).states[1].join("|"), "{n}|{n}", "nothing is written when a value is out of range");
+h.eq(errOf({from: SAFE}, 2).info[0].edits.length, 0, "no edits when a value is out of range");
+h.eq(errOf({from: "-" + SAFE, step: "-1"}, 2).info[0].error.key, "ERR_VALUE_RANGE", "negative side out of range");
+h.eq(errOf({from: "1", step: SAFE}, 2).info[0].error.key, "ERR_VALUE_RANGE", "step as large as the limit, second value out of range");
+h.eq(errOf({from: "1", step: SAFE}, 1).info[0].error, null, "a single element never reaches Krok");
+h.eq(errOf({from: SAFE, repeats: "2", digits: "1"}, 2).states[1].join("|"), SAFE + "|" + SAFE, "repeats keep the value in range");
+h.eq(errOf({from: SAFE, reset: "1", digits: "1"}, 3).states[1].join("|"), SAFE + "|" + SAFE + "|" + SAFE, "reset keeps the value in range");
+h.eq(errOf({from: SAFE, step: "0", digits: "1"}, 3).info[0].error, null, "step 0 never leaves the range");
+// letters: an overflowing series is an error and terminates
+h.eq(errOf({from: SAFE, format: "A"}, 2).info[0].error.key, "ERR_VALUE_RANGE", "letters: out of range is an error, not a loop");
+h.eq(errOf({from: "1", step: SAFE, format: "A"}, 2).info[0].error.key, "ERR_VALUE_RANGE", "letters: huge step is an error");
+h.eq(errOf({from: zeros400, format: "A"}).info[0].error.key, "ERR_NOT_INTEGER", "letters: Infinity never reaches formatValue");
+// the term step * k is exact too: here step * 3 = 2^53 + 1 would round and leave a wrong value in range
+var STEP3 = "3002399751580331";
+h.eq(errOf({from: "-" + SAFE, step: STEP3, digits: "1"}, 4).info[0].error.key, "ERR_VALUE_RANGE", "inexact term is refused even when the sum would be in range");
+h.eq(errOf({from: "-" + SAFE, step: STEP3, digits: "1"}, 3).states[1].join("|"), "-9007199254740991|-6004799503160660|-3002399751580329", "values up to the limit are exact");
+// formatValue never loops on a value that has no text
+h.eq(BTE.Steps.formatValue(Infinity, "A", 3), "", "Infinity has no letters (and terminates)");
+h.eq(BTE.Steps.formatValue(-Infinity, "a", 3), "", "-Infinity has no letters");
+h.eq(BTE.Steps.formatValue(NaN, "A", 3), "", "NaN has no letters");
+h.eq(BTE.Steps.formatValue(Infinity, "1", 3), "", "Infinity has no digits");
+h.eq(BTE.Steps.formatValue(NaN, "1", 3), "", "NaN has no digits");
+h.eq(BTE.Steps.formatValue(1e22, "1", 3), "", "1e22 is not written as 1e+22");
+h.eq(BTE.Steps.formatValue(2.5, "1", 3), "", "a fraction has no text");
+h.eq(BTE.Steps.formatValue(2.5, "A", 3), "", "a fraction has no letters");
+h.eq(BTE.Steps.formatValue(9007199254740991, "1", 1), SAFE, "the limit itself formats exactly");
+h.eq(BTE.Steps.formatValue(-9007199254740991, "1", 1), "-" + SAFE, "the negative limit formats exactly");
 // field validation: keys, argument names, order
 function err(extra) { return infoOf([["{n}"]], V(extra)).error; }
 h.eq(err({from:"x"}).key + err({from:"x"}).args[0], "ERR_NOT_INTEGER" + "FIELD_FROM", "from names its label key");
