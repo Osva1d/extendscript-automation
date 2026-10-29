@@ -264,4 +264,23 @@ From the repo root, with 0 documents open:
     } > "$TMPDIR/probe_scope_run.jsx"
     tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
 
-Parts: `group`, `sheets`, `loose`, `select`, `artboard`, `loose1000`, `loose10k`, `mixed`. Building loose10k takes about 35–60 s. The result is one JSON string; the progress log goes to `Folder.temp/bte_probe_scope.log` unless `LOG_PATH` is set.
+Parts: `group`, `sheets`, `loose`, `select`, `artboard`, `loose1000`, `loose10k`, `mixed`, `groupbounds`. Building loose10k takes about 35–60 s. The result is one JSON string; the progress log goes to `Folder.temp/bte_probe_scope.log` unless `LOG_PATH` is set.
+
+### What a plain group covers (ruling R24)
+
+Part `groupbounds` of `probe_scope.jsx`. Structure: outer plain group > { text, plain group > { text `{n}`, clip group: 600 × 600 content square, 100 × 100 mask off-centre } }.
+
+| item | geometricBounds |
+|---|---|
+| text `{n}` | [100, 1310.04, 113.48, 1297] |
+| content | [100, 1400, 700, 800] |
+| mask | [500, 1000, 600, 900] |
+| clip group | [100, 1400, 700, 800] (the content, fact 5) |
+| plain group (text + clip group) | [100, 1400, 700, 800]: text ∪ content, not text ∪ mask [100, 1310.04, 600, 900] |
+| outer plain group | [100, 1400, 949.14, 800], the content again |
+
+`visibleBounds` are the same ± 0.5 (stroke). A plain group's own bounds therefore include the clipped-away content of any clip group inside it. A hidden child counts too: a group of a shown square [1000, 500, 1100, 400] and a hidden one [1300, 300, 1400, 200] reports [1000, 500, 1400, 200].
+
+So `BTE.Scope.groupBounds` takes, for a clip group, its mask. For a plain group it takes the union of its children: a child clip group counts with its mask, a child plain group with its own union, every other child with its bounds, hidden ones included. After the change, `prepare` reports [100, 1310.04, 600, 900] for the `{n}` element and [100, 1310.04, 949.14, 900] for the outer one. Cost: grouped scopes of 240 prefabs went from 64–71 ms to 247–340 ms on the first call (timings of this round were noisier: building the probe documents took 5–50 s against 0.2–4 s before). Closed guides (`guides === true`) are no longer shapes (ruling R23); reading the flag added nothing measurable (shapes 181 → 190 ms warm for 9500 paths).
+
+The probe refuses to run with a document open, and it uses `BTE` only behind its own header (`var BTE = undefined; var BTE_PROBE_FRESH = true;`), because the engine keeps globals from one run to the next. Re-run with `PART = "groupbounds"`.

@@ -211,10 +211,13 @@ Ověřit, neměřeno.
 
 ### 4.3 Pořadí
 
-- **Střed prvku** je střed jeho hranic. Pro skupinu `geometricBounds`;
-  u ořezové skupiny hranice masky, kvůli pasti s maskou z compound path
-  (průzkum inspirace, I2). Pro geometrický prvek hranice tvaru, pro
-  samotný text hranice textu.
+- **Střed prvku** je střed jeho hranic. U ořezové skupiny hranice masky
+  (vlastní `geometricBounds` ořezové skupiny jsou hranice obsahu, naměřeno).
+  U obyčejné skupiny sjednocení hranic jejích dětí, kde ořezová skupina
+  přispívá maskou a vnořená skupina svým sjednocením, protože vlastní
+  `geometricBounds` obyčejné skupiny zahrnují i obsah skrytý maskou
+  (naměřeno 2026-10-29, Task 9, `batch-text-edit/docs/findings.md`).
+  Pro geometrický prvek hranice tvaru, pro samotný text hranice textu.
 - **Po řádcích** (výchozí): prvky se rozdělí do řádků podle středu Y.
   Nový řádek začne, když se střed liší o víc než polovinu mediánu výšky
   prvků. Řádky jdou shora dolů, v řádku zleva doprava. Shlukování je
