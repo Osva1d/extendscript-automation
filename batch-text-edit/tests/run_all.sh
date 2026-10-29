@@ -31,6 +31,7 @@ SUITES=(
     "tests/test_steps_case.js"
     "tests/test_order.js"
     "tests/test_element.js"
+    "tests/test_scope.js"
     "tests/test_locale.js"
     "tests/test_ui_model.js"
     "tests/test_presets.js"
