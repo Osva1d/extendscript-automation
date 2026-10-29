@@ -190,3 +190,69 @@ A point text with no visible character is a zero-width sliver one or two lines h
 | text in a nested group G1 > G2 | true | false / false |
 
 `tf.locked` and `tf.hidden` show only the object's own flags, so inherited state (c to i) is visible through `editable` alone. All 12 texts are in `doc.textFrames`.
+
+## Scope probe (Task 9)
+
+Measured 2026-10-29 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_scope.jsx`. It runs the real `BTE.Scope.prepare` on a document it builds itself and closes that document unsaved. Every prefab is a 312 pt box with a code text above the centre and a number below it, a clip group holding the graphic (290 pt mask circle over a 312 pt square) and a 283 pt cut circle on the same layer. One part per run.
+
+### Elements and times
+
+`prepare` time is the first call on the freshly built document. Parts were timed afterwards (warm).
+
+| part | structure | elements × texts | prepare | parts (collect / shapes / build / sort) |
+|---|---|---|---|---|
+| group | 240 prefab groups | 240 × 2 | 64 ms | 18 / not read / 28 / 7 |
+| sheets | the same inside 20 sheet groups of 12 | 240 × 2 | 71 ms | 16 / not read / 31 / 6 |
+| loose | 240 prefabs, no prefab group | 240 × 2 (cut circles) | 182 ms | 13 / 7 (480 shapes) / 90 / 7 |
+| select | sheets; selection = all 260 top-level items | 240 × 2 | 97 ms | 29 / not read / 34 / 7 |
+| artboard | groups; active artboard over 6 × 10 prefabs, cutting columns 7 and rows 11 through their centres | 60 × 2 (document scope: 240) | 72 ms | — |
+| loose1000 | 500 loose prefabs: 1000 texts, 1500 paths | 500 × 2 | 505 ms | 35 / 19 (1000) / 279 / 27 |
+| loose10k | the same plus 16 circles of 60 pt per prefab: 9500 paths | 500 × 2 | 2539 ms | 46 / 181 (9000) / 811 / 28 |
+
+In every structure the elements come out in row order of the grid (element k sits at prefab k). With the parts timed first on loose10k (cold), the parts took 147 / 1079 / 1458 / 29 ms; `prepare` afterwards took 1029 ms. The spec target of 2 s for 1000 loose texts and 10 000 paths holds warm, not on the first read of a fresh document.
+
+Edge cases (part `mixed`), all as expected:
+
+- Skipped: 3 locked (locked text, text in a locked group, text on a hidden layer), 1 overflow, 2 linked.
+- A group with one locked and one editable text is one element whose row holds only `{n} free`.
+- A text in a clip group gets the mask's bounds `[400,250,500,150]`, not the content's.
+- Point texts `""`, `\r` and U+0003 are passed as their own elements; an area text `ab\rcd\r` that fits is kept.
+
+### Optimisation applied
+
+Before: `BTE.Element.build` compared every loose text with every shape (96.8 s for 1000 texts and 9000 shapes); `BTE.Scope.shapes` read `doc.pathItems` (2.5–3.1 s for 9500 paths); `prepare` on loose10k took 93.4 s in total.
+
+Now: `build` buckets the shapes into a grid of about one cell per shape (one record per shape, one array per cell) and a text searches only the cell under its centre; the result equals the full comparison (300 random cases in `test_element.js`). `shapes` walks layers, sublayers and groups through `pathItems`, `compoundPathItems`, `groupItems` and `layers`; it never enters a compound path, so subpaths are left out by construction. Same 9000 shapes in 0.7–1.0 s.
+
+### Engine facts behind it
+
+- **Array access slows down as an array grows.** 2 million reads of a number array:
+
+  | length | 250 | 500 | 1000 | 1500 | 2000 | 3000 | 4000 | 9000 |
+  |---|---|---|---|---|---|---|---|---|
+  | ms | 188 | 226 | 502 | 892 | 1345 | 2362 | 3435 | 8392 |
+
+  An array of objects behaves the same: 627 ms at 1000, 9123 ms at 9000.
+- **Indexing a document-level collection slows down further in.** Over 3000 paths: `doc.pathItems[i]` for the first 500 indices took 10 ms, for the last 500 39 ms. Reading `closed`, `clipping`, `parent.typename`, `uuid` and `geometricBounds` costs little next to the indexing.
+- **Document-level collections lag until a redraw.** `doc.pathItems.length` was 0 after creating 3000 ellipses in one script, and 3000 after `app.redraw()`; `layer.pathItems` was current at once (confirms `docs/extendscript-engine-facts.md`). The probe calls `app.redraw()` after building.
+- **Garbage-collection pauses dominate the variance.** The same `grid()` call took 121 ms once and 1214 ms the next time. The first `build` on a fresh document took 1.4–1.9 s, a later one 0.44–0.8 s. Copying the bounds into plain arrays changed nothing.
+- **Globals survive between `ai-eval` runs.** A `var PARTS_FIRST = true` from one run was still true in the next, so the probe resets the flags it reads.
+- **The text-kind enum compares with `===`.** `tf.kind === TextType.POINTTEXT` is `true`; `typeof tf.kind` is `"object"`, `String(tf.kind)` is `"TextType.POINTTEXT"`.
+- **`doc.selection` is always a plain array** when no text is being edited: `[object Array]` when nothing is selected, after `doc.selection = null`, and with one text, two texts, or a group plus a text. `tf.selected = true` on a just-created text did not select it; `doc.selection = [items]` does. A child of a selected group reports `selected === false`, so the selection is walked recursively.
+- **Compound subpaths are in `doc.pathItems`** (2 of 2).
+- **Skipped texts can still be read.** `geometricBounds`, `parent` and `story` are readable for locked texts, hidden texts and texts on a hidden layer.
+- **Observed, cause not isolated:** after `d.layers.add()`, a text on the new layer and `visible = false`, `L.textFrames.areaText(L.pathItems.rectangle(...))` on the original visible layer failed with "Target layer cannot be modified". The probe builds the hidden layer last.
+
+### Re-measuring
+
+From the repo root, with 0 documents open:
+
+    tools/ai-eval.sh -t 30 -e 'app.documents.length'     # must print 0
+    P=batch-text-edit
+    { echo 'var PART = "loose10k"; var PARTS_FIRST = false;'
+      cat shared/lib/json2.js $P/src/lib/utils.js $P/src/order.js \
+          $P/src/element.js $P/src/scope.js $P/tests/probes/probe_scope.jsx
+    } > "$TMPDIR/probe_scope_run.jsx"
+    tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
+
+Parts: `group`, `sheets`, `loose`, `select`, `artboard`, `loose1000`, `loose10k`, `mixed`. Building loose10k takes about 35–60 s. The result is one JSON string; the progress log goes to `Folder.temp/bte_probe_scope.log` unless `LOG_PATH` is set.
