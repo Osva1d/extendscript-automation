@@ -284,3 +284,36 @@ Part `groupbounds` of `probe_scope.jsx`. Structure: outer plain group > { text, 
 So `BTE.Scope.groupBounds` takes, for a clip group, its mask. For a plain group it takes the union of its children: a child clip group counts with its mask, a child plain group with its own union, every other child with its bounds, hidden ones included. After the change, `prepare` reports [100, 1310.04, 600, 900] for the `{n}` element and [100, 1310.04, 949.14, 900] for the outer one. Cost: grouped scopes of 240 prefabs went from 64–71 ms to 247–340 ms on the first call (timings of this round were noisier: building the probe documents took 5–50 s against 0.2–4 s before). Closed guides (`guides === true`) are no longer shapes (ruling R23); reading the flag added nothing measurable (shapes 181 → 190 ms warm for 9500 paths).
 
 The probe refuses to run with a document open, and it uses `BTE` only behind its own header (`var BTE = undefined; var BTE_PROBE_FRESH = true;`), because the engine keeps globals from one run to the next. Re-run with `PART = "groupbounds"`.
+
+## Write probe (Task 10)
+
+Measured 2026-10-29 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_write.jsx`. It runs the real `BTE.Scope.prepare`, `BTE.Steps.run`, `BTE.Write.apply` and `BTE.Write.verify` on a document it builds itself, reads every text and the fill colour and size of every character back, and closes only that document, unsaved. One part per run.
+
+| part | what | result |
+|---|---|---|
+| chain | „{kód} {n} Série {série}“ ({kód} red 20 pt, rest black 12 pt) and „Díl {n} {série}“ (the `{` of {n} blue 16 pt, `{s` of {série} green 14 pt, rest black 12 pt); chain Replace {série} → 2026, Number {n} (Číslic 3), Case {kód} upper, Replace {KÓD} → abc | „abc 001 Série 2026“: abc red 20 pt, the rest black 12 pt. „Díl 002 2026“: 002 blue 16 pt, 2026 green 14 pt, the rest unchanged. Every character as expected; `textsWritten` 2, `verify` `[]`, apply 2–4 ms |
+| chain | a locked text, a text in a locked group, a text on a hidden layer, same contents | `editable === false` for all three, none in `tfs`, `skipped.locked` 3, contents and every character's format unchanged |
+| case | „straße {kód} Ab“ with its own format on every character (size 10 + i, colour by i % 3), „ABC“, „x {kód} y“; chain Case {kód} title, Case Celý text upper | „STRASSE {KÓD} AB“, „ABC“, „X {KÓD} Y“; `verify` `[]`; `textsWritten` 2 (the upper case of „ABC“ changes nothing and is not written) |
+| bulk | 240 groups of „{kód}“ (red 14 pt) + „{n}“ (black 10 pt), Replace {kód} → SNB, Number {n} | prepare 408 ms, apply 81 ms for 480 writes, verify 2 ms over 480 texts, 0 differences; 001 … 240 in row order; format kept |
+| edge | „a“ + U+1F600 + „b {n}“ | `contents.length` 8 and `characters.length` 8: a surrogate pair is two characters in both, so the indexes match; Replace {n} → 7 written and verified |
+| edge | `r = tf.characters[1]; r.length = 10` on „abc“ | throws "the value would result in an illegal text range." (no clamping). `writeEdit` checks the range against the text it read first and names the cause |
+
+**changeCaseTo moves formatting when the length changes.** Upper case of „straße …“ with its own format on every character: the letters after the ß keep their own format, but each letter before it takes its left neighbour's (T has s's, R has t's, A has r's, the first S has a's) and the second S has the ß's. The text is right and the check after the write passes, because it compares only text. Only a length-changing letter (ß, ligatures, digraphs) inside a range with mixed formatting is affected; Czech text has none.
+
+**Undo is not measured by this probe.** `app.executeMenuCommand("undo")` inside the probe's own run took back the whole run, the document's setup included (5 texts → 0), although `app.redraw()` closed the setup before the write. That run also stalled Illustrator for about 18 minutes (AppleEvent timeout, "start" in the log and nothing more); the same part without the Undo finishes at once, so the command is the likely cause. Undo inside the running script therefore does not show what Cmd+Z does after a run; that is left to the manual test (spec §7 item 3). The probe no longer calls Undo.
+
+### Re-measuring
+
+From the repo root, with 0 documents open:
+
+    tools/ai-eval.sh -t 30 -e 'app.documents.length'     # must print 0
+    P=batch-text-edit
+    { echo 'var BTE = undefined; var BTE_PROBE_FRESH = true; var PART = "chain";'
+      cat shared/lib/json2.js $P/src/locale.js $P/src/lib/utils.js shared/lib/numbers.js
+      echo 'buildNumbers(BTE);'
+      cat $P/src/vars.js $P/src/steps.js $P/src/order.js $P/src/element.js \
+          $P/src/scope.js $P/src/write.js $P/tests/probes/probe_write.jsx
+    } > "$TMPDIR/probe_write_run.jsx"
+    tools/ai-eval.sh -t 300 "$TMPDIR/probe_write_run.jsx"
+
+Parts: `chain`, `case`, `bulk`, `edge`. Building the bulk document takes about 2 minutes. The result is one JSON string (non-ASCII escaped); the progress log goes to `Folder.temp/bte_probe_write.log` unless `LOG_PATH` is set.
