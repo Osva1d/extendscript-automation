@@ -149,10 +149,14 @@ po důvodech:
 
 - **Zamčené nebo skryté:** `editable === false`. Pokrývá zamčený
   i skrytý objekt, skupinu i vrstvu (naměřeno, rešerše §7.3).
-- **Přetečený odstavcový text:** součet `lines[i].characters.length` je
-  menší než `characters.length` (naměřeno, §7.2).
-- **Navázaný rámeček:** příběh má víc rámečků. Jak to spolehlivě poznat,
-  změří stavitel; `story.textFrames.length` je kandidát, neměřeno.
+- **Přetečený text:** pravidlo „součet `lines[i].characters.length` je
+  menší než `characters.length`“ z rešerše §7.2 je **chybné**, protože
+  `lines` nezahrnují zakončení řádku (`\r`, U+0003), takže by hlásilo
+  přetečení u každého textu s koncem odstavce. Platí průchod řádky, který
+  za každým řádkem přičte i zakončení (naměřeno 2026-10-29, Task 8,
+  `batch-text-edit/docs/findings.md` §4). Opraveno 2026-10-29.
+- **Navázaný rámeček:** `tf.story.textFrames.length > 1` (naměřeno
+  2026-10-29, Task 8; `nextFrame` k tomu použít nejde).
 - **Text v symbolu:** do `doc.textFrames` se nedostane, takže ho nástroj
   ani nevidí. Zmínit v README.
 

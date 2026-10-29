@@ -1766,3 +1766,102 @@ dokud zpracování běží synchronně v jednom skriptu.
 (`keyName === "Escape"`) i Shift (`shiftKey`). Zastavení dávky se dá postavit na
 podržené klávese kontrolované mezi kroky (batch-relink-export to tak dělá).
 Jestli Esc stisknutý během `saveAs` přeruší i samotné ukládání, neměřeno.
+
+## Text: zápis, zámky, přetečení, výběr (naměřeno 2026-10-28 a 2026-10-29, AI 30.8.2)
+
+Zdroj: rešerše [`reports/2026-10-28-text-chain-research.md`](reports/2026-10-28-text-chain-research.md) (sondy P1 až P6, 2026-10-28) a sonda `batch-text-edit/tests/probes/probe_dom.jsx` (Batch Text Edit, Task 8, 2026-10-29). Vše přes `tools/ai-eval.sh` ve vlastních dokumentech, **běh přes Soubor › Skripty neměřen**. „Znovu 2026-10-29“ znamená přeměřeno sondou Task 8.
+
+### Zápis do textu: úsek, ne `contents =` (rešerše T1 až T9)
+
+Text „SNB CZ 001“, „SNB“ červeně 20 pt, zbytek černě 12 pt.
+
+| operace | výsledek |
+|---|---|
+| `tf.contents = "SNB SK 002"` | **celý text červeně 20 pt**, tedy formát prvního znaku |
+| `r = tf.characters[4]; r.length = 2; r.contents = "SK"` | SK černě 12 pt, zbytek beze změny |
+| úsek „001“ → „0123“ (delší) | nové znaky převezmou formát úseku |
+| úsek přes hranici formátů → nový text | celá náhrada ve formátu **prvního** znaku úseku |
+| `tf.insertionPoints[7].characters.add("#")` | formát znaku **před** místem, na pozici 0 formát znaku za ním |
+| `range.remove()` i `range.contents = ""` | smaže, okolí beze změny |
+| text vyprázdněný na `""`, pak `contents = "ABC"` | formát bývalého prvního znaku |
+| `range.changeCaseTo(CaseChangeType.UPPERCASE \| LOWERCASE \| TITLECASE \| SENTENCECASE)` | formát zůstane |
+
+Kdo mění obsah, píše přes úsek. `tf.contents =` smí jen tam, kde se přepisuje celý text a formát prvního znaku vyhovuje. `changeCaseTo` dělá plné mapování Unicode (`straße` → `STRASSE`, mění délku) a úsek bere jako samostatný text; vlastní `toUpperCase`/`toLowerCase` enginu dělají jen jednoduché mapování (`ß` zůstane `ß`). Podrobně `batch-text-edit/docs/findings.md`, oddíl changeCaseTo.
+
+### `characterOffset` čte od 1, zapisuje od 0 (rešerše T2b)
+
+`characters[4].characterOffset` vrátí 5. Zápis `characterOffset = 7` ukázal na znak s indexem 7 od nuly. Nepoužívat.
+
+### Konec odstavce, měkký zlom, speciální znaky (rešerše T7, M4)
+
+Konec odstavce je `\r`. Zapsané `\n` i `\r\n` se uloží jako jediné `\r`. Měkký zlom (Shift+Enter) je znak U+0003 a `paragraphs` ho počítá jako nový odstavec (jedno `\r` a jedno U+0003 dávají 3 odstavce). Tabulátor, pomlčka, NBSP, tenká mezera a měkké dělení projdou zápisem i čtením beze změny. `words` dělí jen podle mezer. Index v řetězci `contents` odpovídá indexu v `characters`, `\r` i U+0003 jsou znaky. Mimo BMP (emoji) neověřeno.
+
+### Zámky a skrytí: zápis projde, `editable` ne (rešerše S1, S2; znovu 2026-10-29)
+
+Zápis `contents`, náhrada úseku i `changeCaseTo` **projdou** do textu zamčeného, skrytého, v zamčené nebo skryté skupině a na zamčené nebo skryté vrstvě. DOM zámky nehlídá. `editable` je jediný test, který stav zahrnuje:
+
+| text | `editable` |
+|---|---|
+| volný, v ořezové skupině, ve vnořené skupině | true |
+| zamčený sám, skrytý sám | false |
+| v zamčené skupině, ve skryté skupině | false |
+| na zamčené vrstvě, na skryté vrstvě | false |
+| na zamčené podvrstvě (rodič odemčený), na skryté podvrstvě | false |
+| na odemčené podvrstvě zamčené vrstvy | false |
+
+`tf.locked` a `tf.hidden` odrážejí jen vlastní příznak objektu. U zděděného stavu jsou obě `false`, takže zděděný zámek ukáže jen `editable`. To není rozpor s oddílem „Skrytá vrstva je pro zápis zamčená“: tam selhává **vytvoření** a **přesun** objektu, změna obsahu existujícího textu zámky ignoruje.
+
+### Přetečení textu: součet řádků nestačí, `lines` neobsahují konec řádku (znovu 2026-10-29)
+
+Vlastnost pro přetečení není. Odstavcový text drží v `contents` a v `characters` celý text včetně skryté části, `lines` jsou jen viditelné řádky (0 řádků, když se nevejde žádný). **`lines[i].characters.length` nezahrnuje zakončení řádku, tedy `\r` ani U+0003.** Pravidlo „součet délek řádků < `characters.length`“ (rešerše §7.2) proto hlásí přetečení u každého textu s koncem odstavce nebo měkkým zlomem, i když se vejde (`ab\rcd`: součet 4, celkem 5; `ab\r`: 2 / 3; `\r`: 0 / 1; zalomený text + `\r`: 79 / 80). Zalomení mezerou nic neztrácí (mezera zůstane v řádku). Přesné pravidlo:
+
+```
+p = 0
+pro každý řádek: p += lines[i].characters.length
+                 když contents.charAt(p) je "\r" nebo U+0003: p += 1
+přetečení  =  p < characters.length
+```
+
+Na 18 textech, které se vejdou, 0 falešných poplachů, 7 ze 7 přetečení zachyceno. Přesné vejití (výška rámečku po 1 pt): verdikt se překlopí jednou (1 řádek od 9 pt, 2 od 23, 3 od 38, 4 od 52, 5 od 67) a zůstane, bez posunu o jedna. Bodový text nikdy nepřetéká (6 případů). Text na cestě: stejné pravidlo funguje (18 viditelných ze 240).
+
+### Navázané rámečky (rešerše T13; znovu 2026-10-29)
+
+`contents`, `characters.length` a `textRange.length` vrací u rámečku ve vláknu jen jeho část. Rámeček vlákna se pozná `tf.story.textFrames.length > 1`: nenavázaný area text 1, bodový text 1, text na cestě 1, dvojice 2 a 2, trojice 3, 3, 3 (i když je druhý rámeček prázdný). **`nextFrame` u area textu není nikdy `null`**: u nenavázaného a u posledního rámečku vrací rámeček samotný (`nextFrame === tf`). `previousFrame` je `null` u prvního a u nenavázaného. U bodového textu obě vlastnosti hází „The requested property is not available for this type of text frame.“ `story` nemá `uuid` a `a.story === b.story` je `false` (různé wrappery), vlákno se seskupí podle `tf.story.textFrames[0].uuid`. Vlákno vytvoří `layer.textFrames.areaText(path, TextOrientation.HORIZONTAL, baseFrame, true)`. Po navázání měl příběh méně znaků, než se přiřadilo (62 a 124 místo 144), proč, neměřeno.
+
+### `uuid` na objektech a textu (znovu 2026-10-29)
+
+`uuid` je `string` na GroupItem, PathItem, CompoundPathItem, TextFrame i na podcestách compound path. Hodnoty jsou malá desítková čísla v pořadí vzniku (`"473"`, `"474"`, …). Dvě čtení se rovnají a hodnota se nezmění po `app.redraw()`, `translate()`, zápisu úseku ani `tf.contents =`. Znovu vzatý wrapper (`layer.groupItems[0]`, `child.parent`, `doc.textFrames[k]`) má stejný `uuid` a `===` vrací `true`. Duplikát (`duplicate()`) i jeho děti dostanou nové `uuid`. V jednom dokumentu se žádné neopakuje (12 objektů). Číslování není globální: ve dvou dokumentech v samostatných bězích začínalo u 473, takže `uuid` platí jen v jednom dokumentu a jednom běhu. Přes uložení a znovuotevření neměřeno. Čtení 400× pod 1 ms (rešerše).
+
+### Meze maskované skupiny (znovu 2026-10-29)
+
+`group.geometricBounds` i `visibleBounds` ořezové skupiny jsou meze **obsahu**, ne masky (obsah 500×500, maska 200×200: `[50,700,550,200]`). Masku nese dítě s `clipping === true`:
+
+- Maska z cesty: `PathItem` s `clipping === true`, v testu `pageItems[0]`. Meze masky jsou jeho `geometricBounds`.
+- Maska z compound path (DOM ji nevytvoří, jen `executeMenuCommand("makeMask")`): dítě je `CompoundPathItem`, jehož vlastní `clipping` je `undefined`, a příznak nesou podcesty. **`pathItems[0]` nemusí být vnější obrys, v testu to byla díra** (`[550,550,650,450]` proti vnějšku `[500,600,700,400]`). Meze masky jsou `geometricBounds` samotné compound path, rovnají se sjednocení podcest. Detekce: `pathItems.length > 0 && pathItems[0].clipping === true`.
+
+Navazuje na oddíl „Maska z compound path“ výš.
+
+### Meze prázdného textu (znovu 2026-10-29)
+
+Bodový text bez viditelného znaku je svislá štěrbina s nulovou šířkou: `""` má šířku 0 a výšku 13,04 pt, `"\r"` i samotný U+0003 šířku 0 a výšku 27,44 pt, s platnou pozicí (ne NaN). Mezera dá šířku 2,54 pt, tři mezery 7,63 pt, „a“ 5,78 pt. Area text má vždy meze rámečku, i prázdný. Prázdné texty zůstávají v `doc.textFrames`.
+
+### `doc.textFrames`, pořadí a výběr (rešerše S1 až S7, M1)
+
+- `doc.textFrames` je seřazený odpředu dozadu (nejvyšší vrstva první), `absoluteZOrderPosition` roste dopředu. `layer.textFrames` vrací jen přímé potomky. Text v symbolu v `doc.textFrames` není, dostupný je až po `symbolItem.breakLink()`.
+- `doc.textFrames` se **nezpožďuje** do `app.redraw()` (3 nové texty hned vidět), na rozdíl od `doc.pathItems` výš. Proč se liší, neměřeno.
+- `selection` je seřazený odpředu dozadu. Vybraná celá skupina se hlásí jako `GroupItem`. **Když je ve skupině vybrané všechno, hlásí se skupina:** vybraný jediný text ve vnořené skupině G2 › G3 se v `selection` objevil jako `G2`. Text vybraný přímo je `TextFrame`.
+- `doc.selectObjectsOnActiveArtboard()` vybere objekty nejvyšší úrovně (skupinu jako skupinu), i ty jen napůl na artboardu, a vynechá zamčené a skryté. Mění výběr uživatele.
+- Skriptem vybraný úsek textu se v `selection` hlásí jako `[TextFrame]` (M2). Co vrací `selection`, když má uživatel kurzor v textu, je zatím neměřeno (probe `batch-text-edit/tests/probes/probe_cursor_selection.jsx` čeká na ruční běh).
+
+### Regulární výrazy a řetězce v enginu (rešerše §7.4, P1; Batch Text Edit Task 5)
+
+- Příznaky `g`, `i`, `m` ano, `y`, `u`, `s` = chyba syntaxe. Lookahead funguje. **Lookbehind `(?<=)` a pojmenovaná skupina `(?<n>)` projdou bez chyby a nic nenajdou.** Vzor s `(?<` odmítnout.
+- **`.` chytá `\r`** (specifikace ne), takže `.+` přeteče přes odstavce. `^` s `m` na `\r` funguje. `\s` chytá NBSP, U+0003 ne.
+- **`\w` a `\b` češtinu neznají:** `č` není `\w`, `\bau\b` najde „au“ uvnitř „čau“. Celá slova jen vlastní hranicí. `/č/i` najde Č.
+- `$1`, `$&`, `` $` ``, `$'`, `$$` a funkce jako náhrada fungují. Callback `replace` dostane `arguments` podle ES3 (shoda, skupiny, pozice, celý řetězec). Nezúčastněná skupina je `undefined`, ne `""`. Neplatný vzor hodí `SyntaxError` s lokalizovanou zprávou, testovat `e.name`.
+- `toUpperCase` a `toLowerCase` zvládnou českou abecedu, `ß` zůstane `ß`. `sort` i `localeCompare` řadí po kódech (c, d, h, č). `normalize` neexistuje.
+- `(2.5).toFixed(0)` je „2“ (specifikace „3“), čísla formátovat celočíselně. `/a/g.test` dvakrát dá true, true (specifikace true, false), nespoléhat na `lastIndex`. `"ab".replace(/x*/g, "-")` dá „-a-b“.
+
+### ScriptUI: `ListItem.checked`, `stack` (rešerše P5)
+
+`ListItem.checked` jde nastavit i číst, před nastavením je `undefined`, ne `false`. Jak zaškrtnutí vypadá a zda ho klik přepne, neověřeno (ruční test). Skupina s `orientation = "stack"` má výšku nejvyššího editoru, přepnutí `visible` výšku okna nezmění. Programový výběr v `listbox` (`lb.selection = 1`) spustí `onChange`.
