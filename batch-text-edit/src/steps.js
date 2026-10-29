@@ -174,6 +174,14 @@ BTE.Steps = {
     },
 
     /**
+     * Largest Číslic (minimum digit count) the Number step accepts for the
+     * numeric format. Larger values are an error, so formatValue never pads
+     * to an absurd width.
+     * @type {number}
+     */
+    MAX_DIGITS: 20,
+
+    /**
      * The step result for a step that failed: the message and no edits.
      * @param {{key: string, args: Array}} error - The message to show.
      * @returns {{error: Object, edits: Array, warns: Array, multi: Array}}
@@ -263,8 +271,8 @@ BTE.Steps = {
      * digits [0-9]+ in the element's texts, in text order (spec 5.3); the
      * other kinds go through compile() and are case-sensitive.
      * Od, Krok, Číslic, Opakovat and Znovu po are checked before anything is
-     * matched: whole numbers, Číslic and Opakovat at least 1 (Číslic only for
-     * the numeric format). Blank Do and Znovu po mean none, blank Opakovat
+     * matched: whole numbers, Číslic and Opakovat at least 1, Číslic at most
+     * MAX_DIGITS (Číslic only for the numeric format). Blank Do and Znovu po mean none, blank Opakovat
      * means 1. The Do check warns when the last value differs from Do, and
      * names the missing or extra elements when the series is a plain count
      * (repeats 1, no reset, step not 0) that Do falls on.
@@ -304,6 +312,11 @@ BTE.Steps = {
             if (specs[k][0] === "digits" && letters) { continue; }
             f = BTE.Steps.intField(step[specs[k][0]], specs[k][1], specs[k][2], specs[k][3]);
             if (f.error) { return BTE.Steps.failed(f.error); }
+            // pad() loops once per digit, so an unbounded Číslic in the live
+            // preview could hang the modal dialog (ruling R13).
+            if (specs[k][0] === "digits" && f.value > BTE.Steps.MAX_DIGITS) {
+                return BTE.Steps.failed(BTE.Steps.msg("ERR_DIGITS_RANGE", [1, BTE.Steps.MAX_DIGITS]));
+            }
             vals[specs[k][0]] = f.value;
         }
         reset = vals.reset === null ? 0 : vals.reset;

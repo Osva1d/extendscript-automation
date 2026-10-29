@@ -77,6 +77,18 @@ h.eq(BTE.Steps.run([["x"]], [N({kind:"var",text:"{r}"},{format:"A",from:"0"})]).
 // digits is not validated for letters; it is for the numeric format
 h.eq(BTE.Steps.run([["{r}"]], [N({kind:"var",text:"{r}"},{format:"A",digits:"0"})]).states[1][0][0], "A", "digits ignored for letters");
 h.eq(BTE.Steps.run([["{r}"]], [N({kind:"var",text:"{r}"},{format:"a",digits:"x"})]).info[0].error, null, "digits not validated for lowercase letters");
+// digits is capped at 20 (R13): padding to an absurd width could hang the live preview
+function digitsErr(d) { return infoOf([["{n}"]], V({digits:d})).error; }
+h.eq(digitsErr("21").key + "," + digitsErr("21").args[0] + "," + digitsErr("21").args[1], "ERR_DIGITS_RANGE,1,20", "digits 21 is out of range");
+h.eq(digitsErr("100000000").key, "ERR_DIGITS_RANGE", "huge digits refused without padding");
+h.eq(digitsErr("20"), null, "digits 20 is fine");
+h.eq(BTE.Steps.run([["{n}"]], [V({digits:"20"})]).states[1][0][0], "00000000000000000001", "digits 20 pads to 20 characters");
+h.eq(BTE.Steps.run([["{n}"]], [V({digits:"20"})]).states[1][0][0].length, 20, "digits 20: 20 characters");
+h.eq(digitsErr("0").key, "ERR_MIN_ONE", "digits 0 keeps the minimum error");
+h.eq(digitsErr("-5").key, "ERR_MIN_ONE", "negative digits keep the minimum error");
+h.eq(BTE.Steps.MAX_DIGITS, 20, "cap is MAX_DIGITS = 20");
+h.eq(BTE.Steps.run([["{n}"]], [V({digits:"21", format:"A"})]).info[0].error, null, "digits cap does not apply to letters");
+h.eq(infoOf([["{n}"]], V({from:"x", digits:"21"})).error.key, "ERR_NOT_INTEGER", "fields are checked in order: Od before Číslic");
 // field validation: keys, argument names, order
 function err(extra) { return infoOf([["{n}"]], V(extra)).error; }
 h.eq(err({from:"x"}).key + err({from:"x"}).args[0], "ERR_NOT_INTEGER" + "FIELD_FROM", "from names its label key");
