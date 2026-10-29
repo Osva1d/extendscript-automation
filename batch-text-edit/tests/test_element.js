@@ -223,6 +223,89 @@ h.eq(BTE.Element.build([], [{ id: 1, bounds: [0, 10, 10, 0] }]).length, 0, "empt
     h.eq(JSON.stringify([texts, shapes]), before, "no mutation: results do not alias input arrays");
 })();
 
+// ---- the position grid gives the same answer as comparing every shape ------
+//
+// Oracle: the rule of spec 4.2 written out over all shapes. Coordinates sit
+// on a coarse lattice, so centres often fall exactly on shape edges and on
+// cell borders, and shapes often share bounds or areas.
+
+function oracleKey(t, shapes) {
+    var cx = (t.bounds[0] + t.bounds[2]) / 2, cy = (t.bounds[1] + t.bounds[3]) / 2;
+    var ta = (t.bounds[2] - t.bounds[0]) * (t.bounds[1] - t.bounds[3]);
+    var best = -1, bestArea = 0, i, b, a;
+    if (t.group) { return "g:" + t.group.id; }
+    for (i = 0; i < shapes.length; i++) {
+        b = shapes[i].bounds;
+        a = (b[2] - b[0]) * (b[1] - b[3]);
+        if (a <= ta || cx < b[0] || cx > b[2] || cy > b[1] || cy < b[3]) { continue; }
+        if (best < 0 || a < bestArea) { best = i; bestArea = a; }
+    }
+    return best < 0 ? "t:" + t.id : "s:" + shapes[best].id;
+}
+
+(function () {
+    var seed = 12345, cases = 300, bad = 0, firstBad = "", k, i, n, m, shapes, texts, els, got, want, x, y, w, hh;
+    // Park-Miller: the product stays below 2^53, so every step is exact.
+    function rnd(lim) { seed = (seed * 16807) % 2147483647; return seed % lim; }
+    for (k = 0; k < cases; k++) {
+        shapes = [];
+        texts = [];
+        n = rnd(60);
+        m = 1 + rnd(40);
+        for (i = 0; i < n; i++) {
+            x = rnd(20) * 10; y = rnd(20) * 10; w = rnd(12) * 10; hh = rnd(12) * 10;
+            if (rnd(15) === 0) { x = -50; y = -50; w = 400; hh = 400; }     // a background over everything
+            shapes.push({ id: 1000 + i, bounds: [x, y + hh, x + w, y] });
+            if (rnd(6) === 0) { shapes.push({ id: 5000 + i, bounds: shapes[shapes.length - 1].bounds.slice() }); }
+        }
+        for (i = 0; i < m; i++) {
+            x = rnd(24) * 10 - 20; y = rnd(24) * 10 - 20; w = rnd(3) * 10; hh = rnd(3) * 5;
+            texts.push({ id: i + 1, group: rnd(5) === 0 ? { id: 77, bounds: [0, 10, 10, 0] } : null,
+                bounds: [x, y + hh, x + w, y], tie: i });
+        }
+        els = BTE.Element.build(texts, shapes);
+        got = {};
+        for (i = 0; i < els.length; i++) {
+            for (x = 0; x < els[i].textIds.length; x++) { got[els[i].textIds[x]] = els[i].key; }
+        }
+        for (i = 0; i < texts.length; i++) {
+            want = oracleKey(texts[i], shapes);
+            if (got[texts[i].id] !== want) {
+                bad++;
+                if (firstBad === "") { firstBad = "case " + k + " text " + texts[i].id + ": " + got[texts[i].id] + " vs " + want; }
+            }
+        }
+    }
+    h.eq(bad, 0, "grid: same shape as the full comparison in " + cases + " random cases " + firstBad);
+})();
+
+(function () {
+    // every shape flat on one axis: one column or one row of cells
+    var lineX = [{ id: 1, bounds: [10, 100, 10, 0] }, { id: 2, bounds: [10, 50, 10, 20] }];
+    var lineY = [{ id: 3, bounds: [0, 40, 100, 40] }];
+    var pt = text(1, null, [10, 30, 10, 30], 0);              // area 0, centre (10, 30)
+    h.eq(BTE.Element.build([pt], lineX)[0].key, "t:1", "grid: zero-area shapes are never larger than a zero-area text");
+    h.eq(BTE.Element.build([text(2, null, [0, 40, 100, 40], 0)], lineY)[0].key, "t:2", "grid: flat shapes and a text on them");
+    // a zero-area text in a real shape next to a flat one: the real shape wins
+    h.eq(BTE.Element.build([text(3, null, [5, 60, 5, 60], 0)], [{ id: 4, bounds: [0, 100, 10, 0] }, { id: 5, bounds: [10, 100, 10, 0] }])[0].key,
+        "s:4", "grid: a single real shape among flat ones");
+    // centre outside the union of all shapes
+    h.eq(BTE.Element.build([text(6, null, [500, 510, 520, 500], 0)], [{ id: 7, bounds: [0, 100, 100, 0] }])[0].key,
+        "t:6", "grid: a centre beyond every shape");
+    // centre exactly on the grid's outer edges (max x, max y)
+    h.eq(BTE.Element.build([text(8, null, [99, 101, 101, 99], 0)],
+        [{ id: 9, bounds: [0, 100, 100, 0] }, { id: 10, bounds: [50, 100, 100, 50] }])[0].key,
+        "s:10", "grid: a centre on the far corner of the grid");
+})();
+
+(function () {
+    // the grid is built only when a loose text needs it: shapes with
+    // unusable bounds are never read for grouped texts
+    var g = { id: 1, bounds: [0, 10, 10, 0] };
+    var poisoned = [{ id: 2, get bounds() { throw new Error("shape bounds read"); } }];
+    h.eq(BTE.Element.build([text(1, g, [1, 2, 3, 1], 0)], poisoned)[0].key, "g:1", "grid: not built for grouped texts only");
+})();
+
 // ---- inRect: elements by the centre of their bounds -----------------------
 
 (function () {

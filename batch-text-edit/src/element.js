@@ -28,6 +28,11 @@ BTE.Element = {
      * key); ordering by position is the caller's job (BTE.Order.sort). The
      * inputs are not modified and the result shares no arrays with them.
      *
+     * Speed: shapes are bucketed by position (grid()) and a text only looks
+     * at the shapes over its own centre. Comparing every text with every
+     * shape took 97 s for 1000 texts and 9000 shapes in the engine, whose
+     * array access slows down as an array grows (docs/findings.md, Task 9).
+     *
      * @param {Array.<{id: *, group: ?{id: *, bounds: Array.<number>}, bounds: Array.<number>, tie: number}>} texts -
      *     bounds are [left, top, right, bottom] in Illustrator coordinates
      *     (top > bottom); tie is an integer, unique per text.
@@ -38,18 +43,11 @@ BTE.Element = {
      *     group, the shape or the lone text; tie is the smallest text tie.
      */
     build: function (texts, shapes) {
-        var shapeBounds = [];
-        var shapeAreas = [];
         var byKey = {};
         var recs = [];
         var elements = [];
+        var grid = null;
         var i, t, key, bounds, at, rec, ids;
-
-        // Each shape's bounds and area are read once, not once per text.
-        for (i = 0; i < shapes.length; i++) {
-            shapeBounds.push(shapes[i].bounds);
-            shapeAreas.push(BTE.Element.area(shapes[i].bounds));
-        }
 
         for (i = 0; i < texts.length; i++) {
             t = texts[i];
@@ -57,10 +55,12 @@ BTE.Element = {
                 key = "g:" + t.group.id;
                 bounds = t.group.bounds;
             } else {
-                at = BTE.Element.smallestShape(t.bounds, shapeBounds, shapeAreas);
+                // Built on the first loose text: grouped texts never need it.
+                if (grid === null) { grid = BTE.Element.grid(shapes); }
+                at = BTE.Element.findShape(t.bounds, grid);
                 if (at >= 0) {
                     key = "s:" + shapes[at].id;
-                    bounds = shapeBounds[at];
+                    bounds = shapes[at].bounds;
                 } else {
                     key = "t:" + t.id;
                     bounds = t.bounds;
@@ -129,27 +129,110 @@ BTE.Element = {
     },
 
     /**
+     * Buckets shapes by position: about one cell per shape, square-ish over
+     * the union of all shape bounds. A shape is listed in every cell its
+     * bounds touch, edges included, so the cell under a point lists every
+     * shape whose bounds contain that point. Inside a cell the shapes keep
+     * their order in `shapes`, which findShape() needs for equal areas.
+     *
+     * One record per shape, one array per cell: every array stays small,
+     * because the engine's array access slows down as an array grows, and
+     * few objects are made, because the engine pauses to collect garbage
+     * (docs/findings.md, Task 9).
+     * @param {Array.<{bounds: Array.<number>}>} shapes - As for build().
+     * @returns {Object} Index for findShape().
+     */
+    grid: function (shapes) {
+        var n = shapes.length;
+        var g = { count: n, cells: [] };
+        var side = Math.max(1, Math.ceil(Math.sqrt(n)));
+        var i, b, rec, c, r, c0, c1, r0, r1, row;
+
+        if (n === 0) { return g; }
+        b = shapes[0].bounds;
+        g.minX = b[0]; g.maxX = b[2]; g.minY = b[3]; g.maxY = b[1];
+        for (i = 1; i < n; i++) {
+            b = shapes[i].bounds;
+            if (b[0] < g.minX) { g.minX = b[0]; }
+            if (b[2] > g.maxX) { g.maxX = b[2]; }
+            if (b[3] < g.minY) { g.minY = b[3]; }
+            if (b[1] > g.maxY) { g.maxY = b[1]; }
+        }
+        g.cols = side;
+        g.rows = side;
+        g.cw = (g.maxX - g.minX) / side;
+        g.ch = (g.maxY - g.minY) / side;
+        for (r = 0; r < side; r++) {
+            row = [];
+            for (c = 0; c < side; c++) { row.push(null); }
+            g.cells.push(row);
+        }
+
+        for (i = 0; i < n; i++) {
+            b = shapes[i].bounds;
+            rec = { bounds: b, area: BTE.Element.area(b), index: i };
+            c0 = BTE.Element.slot(b[0], g.minX, g.cw, side);
+            c1 = BTE.Element.slot(b[2], g.minX, g.cw, side);
+            r0 = BTE.Element.slot(b[3], g.minY, g.ch, side);
+            r1 = BTE.Element.slot(b[1], g.minY, g.ch, side);
+            for (r = r0; r <= r1; r++) {
+                row = g.cells[r];
+                for (c = c0; c <= c1; c++) {
+                    if (row[c] === null) { row[c] = [rec]; }
+                    else { row[c].push(rec); }
+                }
+            }
+        }
+        return g;
+    },
+
+    /**
+     * The cell a coordinate falls in, clamped to the grid. The same formula
+     * places shapes and looks up points, so a point on a shape's edge lands
+     * in a cell that lists the shape.
+     * @param {number} v - The coordinate.
+     * @param {number} min - The grid's lowest coordinate on that axis.
+     * @param {number} size - Cell size on that axis (0 when every shape is
+     *     flat on that axis: one cell).
+     * @param {number} n - Number of cells on that axis.
+     * @returns {number} 0 .. n - 1.
+     */
+    slot: function (v, min, size, n) {
+        var k;
+        if (size <= 0) { return 0; }
+        k = Math.floor((v - min) / size);
+        if (k < 0) { return 0; }
+        if (k >= n) { return n - 1; }
+        return k;
+    },
+
+    /**
      * Finds the shape a loose text belongs to: among the shapes whose bounds
      * contain the text's centre (edges inclusive) and whose area is strictly
      * larger than the text's, the one with the smallest area; equal areas go
-     * to the lower index.
+     * to the lower index. Only the cell under the centre is searched; it
+     * lists every shape that can contain the centre, in index order, so the
+     * answer is the same as over all shapes.
      * @param {Array.<number>} textBounds - Bounds of the text.
-     * @param {Array.<Array.<number>>} shapeBounds - Bounds of every shape.
-     * @param {Array.<number>} shapeAreas - Area of every shape, same order.
-     * @returns {number} Index into the shape arrays, or -1 when none qualifies.
+     * @param {Object} g - From grid().
+     * @returns {number} Index into `shapes`, or -1 when none qualifies.
      */
-    smallestShape: function (textBounds, shapeBounds, shapeAreas) {
+    findShape: function (textBounds, g) {
         var cx = (textBounds[0] + textBounds[2]) / 2;
         var cy = (textBounds[1] + textBounds[3]) / 2;
         var textArea = BTE.Element.area(textBounds);
-        var best = -1;
-        var i, b;
-        for (i = 0; i < shapeBounds.length; i++) {
-            if (shapeAreas[i] <= textArea) { continue; }
-            if (best >= 0 && shapeAreas[i] >= shapeAreas[best]) { continue; }
-            b = shapeBounds[i];
-            if (cx >= b[0] && cx <= b[2] && cy <= b[1] && cy >= b[3]) { best = i; }
+        var best = null;
+        var cell, k, s, b;
+        if (g.count === 0 || cx < g.minX || cx > g.maxX || cy < g.minY || cy > g.maxY) { return -1; }
+        cell = g.cells[BTE.Element.slot(cy, g.minY, g.ch, g.rows)][BTE.Element.slot(cx, g.minX, g.cw, g.cols)];
+        if (cell === null) { return -1; }
+        for (k = 0; k < cell.length; k++) {
+            s = cell[k];
+            if (s.area <= textArea) { continue; }
+            if (best !== null && s.area >= best.area) { continue; }
+            b = s.bounds;
+            if (cx >= b[0] && cx <= b[2] && cy <= b[1] && cy >= b[3]) { best = s; }
         }
-        return best;
+        return (best === null) ? -1 : best.index;
     }
 };
