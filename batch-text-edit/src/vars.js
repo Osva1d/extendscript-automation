@@ -31,12 +31,13 @@ BTE.Vars = {
     /**
      * Variables across a set of elements, with how many elements use each.
      * An element counts once per name however often the name occurs in its
-     * texts ("{n}/{n}" is one use, it consumes one number).
+     * texts ("{n}/{n}" is one use, it consumes one number). Named list, not
+     * find, because the lint rule bans the property name "find" on any object.
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @returns {Array.<{name: string, count: number}>} Ordered by first
      *     occurrence (element order, then text order, then position).
      */
-    find: function (state) {
+    list: function (state) {
         var names = [];
         var counts = [];
         var result = [];
