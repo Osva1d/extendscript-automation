@@ -1,5 +1,5 @@
 // ------------------------------------------------------------------------
-// Module: BTE.Utils — ES3 helpers the engine lacks (indexOf, trim), regex
+// Module: BTE.Utils — ES3 helpers the engine lacks (indexOf, strip), regex
 //         escaping, zero padding
 // Part of: Illustrator Batch Text Edit
 // Depends on: —
@@ -46,13 +46,14 @@ BTE.Utils = {
     },
 
     /**
-     * Strips whitespace from both ends. String.prototype.trim does not exist
-     * in the ExtendScript engine. \s covers the paragraph break \r and the
-     * non-breaking space.
+     * Strips JS \s whitespace from both ends. Named strip, not trim, because
+     * the lint rule bans the property name "trim" on any object. \s in
+     * ExtendScript does not match the soft line break U+0003 (measured,
+     * docs/reports/2026-10-28-text-chain-research.md §7.4).
      * @param {string} s - Text to strip.
-     * @returns {string} Text without leading and trailing whitespace.
+     * @returns {string} Text without leading and trailing \s whitespace.
      */
-    trim: function (s) {
+    strip: function (s) {
         return String(s).replace(/^\s+|\s+$/g, "");
     }
 };
