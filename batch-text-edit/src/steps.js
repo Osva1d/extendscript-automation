@@ -2,7 +2,7 @@
 // Module: BTE.Steps — runs a chain of steps over plain strings and returns
 //         the state after each step plus what each step found and edits
 // Part of: Illustrator Batch Text Edit
-// Depends on: BTE.Utils, BTE.Vars
+// Depends on: BTE.Utils, BTE.Vars, BTE.Numbers (shared)
 // ------------------------------------------------------------------------
 var BTE = BTE || {};
 
@@ -174,7 +174,188 @@ BTE.Steps = {
     },
 
     /**
-     * Runs one step of any type. The place Number and Case steps plug in.
+     * The step result for a step that failed: the message and no edits.
+     * @param {{key: string, args: Array}} error - The message to show.
+     * @returns {{error: Object, edits: Array, warns: Array, multi: Array}}
+     *     The step result run() merges into StepInfo.
+     */
+    failed: function (error) {
+        return { error: error, edits: [], warns: [], multi: [] };
+    },
+
+    /**
+     * Reads one integer field of a step. Text goes through the shared
+     * BTE.Numbers.parse (decimal comma or dot, spaces around), then must be a
+     * whole number: 1,5 and 1e3 are refused, 1.0 is the integer 1.
+     * @param {*} raw - The field as typed (string or number).
+     * @param {string} label - BTE.L key of the field's label, named in errors.
+     * @param {*} blank - Value of a blank field (spaces only, missing);
+     *     undefined when a blank field is an error.
+     * @param {number|null} min - Smallest allowed value, or null for none.
+     * @returns {{value: *, error: Object|null}} The number (or the blank
+     *     value), or the message: ERR_NOT_INTEGER, ERR_MIN_ONE (both with
+     *     the label key as argument).
+     */
+    intField: function (raw, label, blank, min) {
+        var v;
+        if (blank !== undefined && (raw === undefined || raw === null || BTE.Utils.strip(raw) === "")) {
+            return { value: blank, error: null };
+        }
+        v = BTE.Numbers.parse(raw);
+        if (v !== v || Math.floor(v) !== v) {
+            return { value: NaN, error: BTE.Steps.msg("ERR_NOT_INTEGER", [label]) };
+        }
+        if (min !== null && v < min) {
+            return { value: v, error: BTE.Steps.msg("ERR_MIN_ONE", [label]) };
+        }
+        return { value: v, error: null };
+    },
+
+    /**
+     * Value of the i-th numbered element (spec 5.3): b = i, or i mod reset
+     * when reset is above 0; value = from + step * floor(b / repeats).
+     * @param {number} i - Position among the elements the step found
+     *     something in, from zero.
+     * @param {number} from - First value (Od).
+     * @param {number} step - Increment (Krok), may be negative or 0.
+     * @param {number} repeats - How often each value is used, at least 1.
+     * @param {number} reset - Elements after which the series returns to
+     *     from; 0 (or less) for never.
+     * @returns {number} The value.
+     */
+    valueAt: function (i, from, step, repeats, reset) {
+        var b = reset > 0 ? i % reset : i;
+        return from + step * Math.floor(b / repeats);
+    },
+
+    /**
+     * A value as the text written into the document. Integer-only string
+     * building, never toFixed (the engine rounds differently, research 7.4).
+     * Format "1": a minus sign, then the absolute value padded with zeros to
+     * digits. Format "A" / "a": bijective base 26 (1 = A, 26 = Z, 27 = AA),
+     * digits is ignored; a value below 1 has no letters and gives "" (the
+     * Number step refuses such values before it formats). Any other format
+     * is read as "1".
+     * @param {number} v - A whole number.
+     * @param {string} format - "1", "A" or "a".
+     * @param {number} digits - Minimum number of digits for format "1".
+     * @returns {string} The text for the value.
+     */
+    formatValue: function (v, format, digits) {
+        var alphabet, out;
+        if (format === "A" || format === "a") {
+            alphabet = format === "A" ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ" : "abcdefghijklmnopqrstuvwxyz";
+            out = "";
+            while (v > 0) {
+                out = alphabet.charAt((v - 1) % 26) + out;
+                v = Math.floor((v - 1) / 26);
+            }
+            return out;
+        }
+        return (v < 0 ? "-" : "") + BTE.Utils.pad(digits, Math.abs(v));
+    },
+
+    /**
+     * Number step: every element the step finds something in gets the next
+     * value of the series, and all its matches get that same value (spec
+     * decision 9: "{n}/{n}" in one element is 001/001). A text or element
+     * without a match consumes nothing. Kde "first" is the first run of
+     * digits [0-9]+ in the element's texts, in text order (spec 5.3); the
+     * other kinds go through compile() and are case-sensitive.
+     * Od, Krok, Číslic, Opakovat and Znovu po are checked before anything is
+     * matched: whole numbers, Číslic and Opakovat at least 1 (Číslic only for
+     * the numeric format). Blank Do and Znovu po mean none, blank Opakovat
+     * means 1. The Do check warns when the last value differs from Do, and
+     * names the missing or extra elements when the series is a plain count
+     * (repeats 1, no reset, step not 0) that Do falls on.
+     * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
+     * @param {Object} step - A number step.
+     * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
+     *     The step result run() merges into StepInfo.
+     */
+    number: function (state, step) {
+        var letters = step.format === "A" || step.format === "a";
+        var specs = [
+            ["from", "FIELD_FROM", undefined, null],
+            ["to", "FIELD_TO", null, null],
+            ["step", "FIELD_STEP", undefined, null],
+            ["digits", "FIELD_DIGITS", undefined, 1],
+            ["repeats", "FIELD_REPEATS", 1, 1],
+            ["reset", "FIELD_RESET", null, null]
+        ];
+        var vals = { digits: 1 };
+        var edits = [];
+        var warns = [];
+        var multi = [];
+        var found = [];
+        var first = !!(step.where && step.where.kind === "first");
+        var re, c, f, i, j, k, texts, hits, ms, m, reset, v, last, span, want, text;
+
+        if (first) {
+            re = new RegExp("[0-9]+", "g");
+        } else {
+            c = BTE.Steps.compile(step.where, false);
+            if (c.error) { return BTE.Steps.failed(c.error); }
+            re = c.re;
+        }
+
+        for (k = 0; k < specs.length; k++) {
+            // The digit count means nothing for letters, so it is not checked.
+            if (specs[k][0] === "digits" && letters) { continue; }
+            f = BTE.Steps.intField(step[specs[k][0]], specs[k][1], specs[k][2], specs[k][3]);
+            if (f.error) { return BTE.Steps.failed(f.error); }
+            vals[specs[k][0]] = f.value;
+        }
+        reset = vals.reset === null ? 0 : vals.reset;
+
+        for (i = 0; i < state.length; i++) {
+            texts = state[i];
+            hits = [];
+            for (j = 0; j < texts.length; j++) {
+                ms = BTE.Steps.matches(re, texts[j], first);
+                for (m = 0; m < ms.length; m++) {
+                    hits.push({ tx: j, start: ms[m].index, length: ms[m][0].length });
+                }
+                if (first && hits.length > 0) { break; }
+            }
+            if (hits.length > 0) { found.push({ el: i, hits: hits }); }
+        }
+
+        for (k = 0; k < found.length; k++) {
+            v = BTE.Steps.valueAt(k, vals.from, vals.step, vals.repeats, reset);
+            if (letters && v < 1) { return BTE.Steps.failed(BTE.Steps.msg("ERR_LETTER_BELOW_ONE")); }
+            text = BTE.Steps.formatValue(v, step.format, vals.digits);
+            hits = found[k].hits;
+            for (m = 0; m < hits.length; m++) {
+                edits.push({ el: found[k].el, tx: hits[m].tx, start: hits[m].start, length: hits[m].length, text: text });
+            }
+            if (hits.length > 1) { multi.push({ el: found[k].el, count: hits.length }); }
+        }
+
+        if (vals.to !== null && found.length > 0) {
+            last = BTE.Steps.valueAt(found.length - 1, vals.from, vals.step, vals.repeats, reset);
+            if (last !== vals.to) {
+                warns.push(BTE.Steps.msg("WARN_TO_MISMATCH", [String(last), String(vals.to)]));
+                // A plain count (one element per value, no reset) knows how
+                // many elements Do would have needed, when it is on the series.
+                if (vals.repeats === 1 && reset <= 0 && vals.step !== 0) {
+                    span = vals.to - vals.from;
+                    if (span % vals.step === 0) {
+                        want = span / vals.step + 1;
+                        if (want > found.length) {
+                            warns.push(BTE.Steps.msg("WARN_MISSING", [String(want - found.length)]));
+                        } else if (want >= 1) {
+                            warns.push(BTE.Steps.msg("WARN_EXTRA", [String(found.length - want)]));
+                        }
+                    }
+                }
+            }
+        }
+        return { error: null, edits: edits, warns: warns, multi: multi };
+    },
+
+    /**
+     * Runs one step of any type. The place the Case step plugs in.
      * An unknown type is a bug in the caller (the preset loader drops them),
      * so it throws instead of passing the text on unchanged.
      * @param {Array.<Array.<string>>} state - Input of the step.
@@ -184,6 +365,7 @@ BTE.Steps = {
      */
     apply: function (state, step) {
         if (step.type === "replace") { return BTE.Steps.replace(state, step); }
+        if (step.type === "number") { return BTE.Steps.number(state, step); }
         throw new Error("BTE.Steps: unknown step type \"" + step.type + "\"");
     },
 
