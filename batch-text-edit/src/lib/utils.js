@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------
-// Module: BTE.Utils — ES3 helpers the engine lacks (indexOf, strip), regex
-//         escaping, zero padding
+// Module: BTE.Utils — ES3 helpers the engine lacks (indexOf, isArray, strip),
+//         regex escaping, zero padding, preset comparison
 // Part of: Illustrator Batch Text Edit
 // Depends on: —
 // ------------------------------------------------------------------------
@@ -55,5 +55,49 @@ BTE.Utils = {
      */
     strip: function (s) {
         return String(s).replace(/^\s+|\s+$/g, "");
+    },
+
+    /**
+     * Whether a value is an array. Array.isArray does not exist in the engine.
+     * @param {*} x - Any value.
+     * @returns {boolean} True for an array.
+     */
+    isArray: function (x) {
+        return Object.prototype.toString.call(x) === "[object Array]";
+    },
+
+    /**
+     * Deep comparison of two preset values ({order, steps: [...]}), read by
+     * the shared UIState.isModified. The flat comparison the other tools use
+     * would call two different step lists equal ("[object Object]" on both
+     * sides). Plain data only: objects, arrays, strings, numbers, booleans.
+     * Key order does not matter; there is no coercion ("1" differs from 1,
+     * Storage.normalize has already made every field the type it is stored
+     * as).
+     * @param {*} a - First value.
+     * @param {*} b - Second value.
+     * @returns {boolean} True when both hold the same data.
+     */
+    presetEquals: function (a, b) {
+        var k, i;
+        if (a === b) { return true; }
+        if (!a || !b || typeof a !== "object" || typeof b !== "object") { return false; }
+        if (BTE.Utils.isArray(a) !== BTE.Utils.isArray(b)) { return false; }
+        if (BTE.Utils.isArray(a)) {
+            if (a.length !== b.length) { return false; }
+            for (i = 0; i < a.length; i++) {
+                if (!BTE.Utils.presetEquals(a[i], b[i])) { return false; }
+            }
+            return true;
+        }
+        for (k in a) {
+            if (a.hasOwnProperty(k)) {
+                if (!b.hasOwnProperty(k) || !BTE.Utils.presetEquals(a[k], b[k])) { return false; }
+            }
+        }
+        for (k in b) {
+            if (b.hasOwnProperty(k) && !a.hasOwnProperty(k)) { return false; }
+        }
+        return true;
     }
 };
