@@ -28,6 +28,7 @@ SUITES=(
     "tests/test_vars.js"
     "tests/test_steps_replace.js"
     "tests/test_steps_number.js"
+    "tests/test_steps_case.js"
     "tests/test_order.js"
     "tests/test_element.js"
     "tests/test_locale.js"

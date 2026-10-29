@@ -77,8 +77,8 @@ BTE.Steps = {
      * built on every call. The replacer returns the matched text, so the
      * throwaway result of replace is the input again. The arguments layout
      * (match, groups..., offset, whole string) and the offset are standard
-     * ES3 15.5.4.11, queued for an engine probe. An empty match (x*) is
-     * skipped; inserting text is not a v1 feature.
+     * ES3 15.5.4.11 and measured in the engine (docs/findings.md). An empty
+     * match (x*) is skipped; inserting text is not a v1 feature.
      * @param {RegExp} re - Regex from compile().
      * @param {string} s - The text.
      * @param {boolean} [firstOnly] - Keep only the first non-empty match.
@@ -404,7 +404,461 @@ BTE.Steps = {
     },
 
     /**
-     * Runs one step of any type. The place the Case step plugs in.
+     * The CaseChangeType member each case mode stands for. The write calls
+     * range.changeCaseTo(CaseChangeType[BTE.Steps.CASE_MAP[mode]]).
+     * @type {Object.<string, string>}
+     */
+    CASE_MAP: { upper: "UPPERCASE", lower: "LOWERCASE", title: "TITLECASE", sentence: "SENTENCECASE" },
+
+    /**
+     * Letters the engine maps to more than one letter, or to a letter the
+     * string functions of the ExtendScript engine leave alone (its
+     * toUpperCase is the simple mapping: "ß" stays "ß", and the titlecase
+     * digraph "ǅ" stays "ǅ" in either direction, measured). changeCaseTo
+     * does the full mapping. Measured: ß, ǅ and its family ǆ Ǆ, ǉ, ﬁ and İ;
+     * the other entries are the same Unicode rule for the sibling letters
+     * and were not measured. A table beats the host's functions here because
+     * the host differs: Node (the tests) does the full mapping, the
+     * ExtendScript engine does not.
+     * @type {Object.<string, string>}
+     */
+    CASE_UPPER: {
+        "ß": "SS", "ﬀ": "FF", "ﬁ": "FI", "ﬂ": "FL", "ﬃ": "FFI", "ﬄ": "FFL", "ﬅ": "ST", "ﬆ": "ST",
+        "ǅ": "Ǆ", "ǈ": "Ǉ", "ǋ": "Ǌ", "ǲ": "Ǳ"
+    },
+
+    /**
+     * Lowercase exceptions, see CASE_UPPER. "İ" becomes "i" plus the
+     * combining dot above (U+0307), measured.
+     * @type {Object.<string, string>}
+     */
+    CASE_LOWER: {
+        "İ": "i" + String.fromCharCode(775),
+        "ǅ": "ǆ", "ǈ": "ǉ", "ǋ": "ǌ", "ǲ": "ǳ"
+    },
+
+    /**
+     * Titlecase of a letter that starts a word or a sentence, where it is
+     * not its uppercase, see CASE_UPPER: "ß" is "Ss", "ﬁ" is "Fi", and a
+     * digraph has a titlecase letter of its own whichever form it is in.
+     * @type {Object.<string, string>}
+     */
+    CASE_TITLE: {
+        "ß": "Ss", "ﬀ": "Ff", "ﬁ": "Fi", "ﬂ": "Fl", "ﬃ": "Ffi", "ﬄ": "Ffl", "ﬅ": "St", "ﬆ": "St",
+        "ǆ": "ǅ", "ǅ": "ǅ", "Ǆ": "ǅ", "ǉ": "ǈ", "ǈ": "ǈ", "Ǉ": "ǈ",
+        "ǌ": "ǋ", "ǋ": "ǋ", "Ǌ": "ǋ", "ǳ": "ǲ", "ǲ": "ǲ", "Ǳ": "ǲ"
+    },
+
+    /**
+     * Word rules of Unicode UAX 29, cut to the characters text in this tool
+     * contains. The engine's titlecasing follows them (measured, see
+     * docs/findings.md). A character of this set joins two letters when it
+     * stands between them ("a:b").
+     * @type {string}
+     */
+    WORD_MID_LETTER: ":·",
+
+    /**
+     * A character of this set joins two digits when it stands between them
+     * ("1,5").
+     * @type {string}
+     */
+    WORD_MID_NUM: ",;",
+
+    /**
+     * A character of this set joins two letters or two digits ("a.b",
+     * "1.5", "don't", also with the curly single quotes).
+     * @type {string}
+     */
+    WORD_MID_BOTH: ".'‘’",
+
+    /**
+     * A full stop, "!" and "?" end a sentence (sentence rules of UAX 29,
+     * measured), with the exceptions sentenceStarts() lists.
+     * @type {string}
+     */
+    SENTENCE_STOP: ".!?",
+
+    /**
+     * A character of this set after a stop (and its spaces) keeps the
+     * sentence going: "škola. , Druhá" is one sentence.
+     * @type {string}
+     */
+    SENTENCE_CONTINUE: ",-:;–—",
+
+    /**
+     * Closing quotes and brackets (and the plain quotes) belong to the
+     * sentence they follow: in `škola." Druhá` the break is after the quote.
+     * @type {string}
+     */
+    SENTENCE_CLOSE: "\"'()[]{}«»‘’‚‛“”„‟‹›",
+
+    /**
+     * Whether a character is one of the characters of a set. An empty string
+     * (a read past the end of a text) is in no set.
+     * @param {string} set - The characters.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True when c is in the set.
+     */
+    inSet: function (set, c) {
+        return c !== "" && set.indexOf(c) !== -1;
+    },
+
+    /**
+     * Upper or lower case of a text, character by character through the
+     * exception table, the rest through the host's own function.
+     * @param {string} s - The text.
+     * @param {Object.<string, string>} table - CASE_UPPER or CASE_LOWER.
+     * @param {boolean} up - True to uppercase, false to lowercase.
+     * @returns {string} The text in the other case.
+     */
+    mapCase: function (s, table, up) {
+        var out = "";
+        var from = 0;
+        var i, ch, part;
+
+        for (i = 0; i < s.length; i++) {
+            ch = s.charAt(i);
+            if (table.hasOwnProperty(ch)) {
+                part = s.substring(from, i);
+                out += (up ? part.toUpperCase() : part.toLowerCase()) + table[ch];
+                from = i + 1;
+            }
+        }
+        part = s.substring(from);
+        return out + (up ? part.toUpperCase() : part.toLowerCase());
+    },
+
+    /**
+     * A text in capitals, as changeCaseTo(UPPERCASE) writes it.
+     * @param {string} s - The text.
+     * @returns {string} The text in capitals.
+     */
+    upperText: function (s) {
+        return BTE.Steps.mapCase(s, BTE.Steps.CASE_UPPER, true);
+    },
+
+    /**
+     * A text in small letters, as changeCaseTo(LOWERCASE) writes it.
+     * @param {string} s - The text.
+     * @returns {string} The text in small letters.
+     */
+    lowerText: function (s) {
+        return BTE.Steps.mapCase(s, BTE.Steps.CASE_LOWER, false);
+    },
+
+    /**
+     * Whether a character has a case: it changes in at least one direction.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True for a letter with upper and lower case.
+     */
+    isCased: function (c) {
+        return c !== "" && (BTE.Steps.lowerText(c) !== c || BTE.Steps.upperText(c) !== c);
+    },
+
+    /**
+     * Whether a character is a small letter (Unicode "Lower"): cased and
+     * already in its lowercase form. "ß" is one.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True for a small letter.
+     */
+    isLowerLetter: function (c) {
+        return BTE.Steps.isCased(c) && BTE.Steps.lowerText(c) === c;
+    },
+
+    /**
+     * Whether a character is a capital or titlecase letter (Unicode
+     * "Upper"): lowercasing changes it.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True for a capital.
+     */
+    isUpperLetter: function (c) {
+        return c !== "" && BTE.Steps.lowerText(c) !== c;
+    },
+
+    /**
+     * Whether a character is a space between words: a space, tab, no-break
+     * space or one of the Unicode space characters, but not a paragraph break.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True for a space.
+     */
+    isSpace: function (c) {
+        var n = c === "" ? -1 : c.charCodeAt(0);
+        return n === 32 || n === 9 || n === 11 || n === 12 || n === 160 || n === 5760 ||
+            (n >= 8192 && n <= 8202) || n === 8239 || n === 8287 || n === 12288;
+    },
+
+    /**
+     * Whether a character ends a paragraph: the carriage return Illustrator
+     * writes between paragraphs, a line feed, or a Unicode separator. The
+     * soft line break U+0003 is not one, it is an ordinary character.
+     * @param {string} c - One character, or "".
+     * @returns {boolean} True for a paragraph separator.
+     */
+    isParaSep: function (c) {
+        var n = c === "" ? -1 : c.charCodeAt(0);
+        return n === 13 || n === 10 || n === 133 || n === 8232 || n === 8233;
+    },
+
+    /**
+     * How a character takes part in a word (UAX 29, cut down): "L" a letter
+     * with a case, "N" a digit, "X" an underscore (joins letters and digits),
+     * "m" / "n" / "q" a character that joins two letters / two digits / either
+     * when it stands between them, "E" a combining mark or format character
+     * that belongs to the character before it, "" anything else (a break).
+     * @param {string} c - One character, or "".
+     * @returns {string} The class.
+     */
+    wordClass: function (c) {
+        var T = BTE.Steps;
+        var n;
+        if (c === "") { return ""; }
+        n = c.charCodeAt(0);
+        if (n >= 48 && n <= 57) { return "N"; }
+        if (c === "_") { return "X"; }
+        if (T.inSet(T.WORD_MID_LETTER, c)) { return "m"; }
+        if (T.inSet(T.WORD_MID_NUM, c)) { return "n"; }
+        if (T.inSet(T.WORD_MID_BOTH, c)) { return "q"; }
+        if ((n >= 768 && n <= 879) || n === 173 || n === 8205) { return "E"; }
+        return T.isCased(c) ? "L" : "";
+    },
+
+    /**
+     * The words of a text as [start, end) ranges, by the rules the engine's
+     * titlecasing follows (measured): letters and digits run together, an
+     * underscore joins them, a full stop, apostrophe or colon between two
+     * letters (a.b, o'neil, a:b) and a full stop or comma between two digits
+     * (1.5, 1,5) do not end the word, anything else (a space, a hyphen, a
+     * slash, a bracket, a paragraph break) does. Combining marks stay with
+     * their letter.
+     * @param {string} s - The text.
+     * @returns {Array.<Array.<number>>} Word ranges in order.
+     */
+    wordRuns: function (s) {
+        var T = BTE.Steps;
+        var runs = [];
+        var n = s.length;
+        var i = 0;
+        var start, last, c, j, next;
+
+        while (i < n) {
+            last = T.wordClass(s.charAt(i));
+            if (last !== "L" && last !== "N" && last !== "X") { i++; continue; }
+            start = i;
+            i++;
+            while (i < n) {
+                c = T.wordClass(s.charAt(i));
+                if (c === "E") { i++; continue; }
+                if (c === "L" || c === "N" || c === "X") { last = c; i++; continue; }
+                if (c === "m" || c === "n" || c === "q") {
+                    j = i + 1;
+                    while (j < n && T.wordClass(s.charAt(j)) === "E") { j++; }
+                    next = j < n ? T.wordClass(s.charAt(j)) : "";
+                    if (last === "L" && next === "L" && c !== "n") { i = j; continue; }
+                    if (last === "N" && next === "N" && c !== "m") { i = j; continue; }
+                }
+                break;
+            }
+            runs.push([start, i]);
+        }
+        return runs;
+    },
+
+    /**
+     * Where the sentences of a text start, by the rules the engine follows
+     * (UAX 29, measured): a paragraph break ends a sentence; ".", "!" and "?"
+     * end one after any closing quotes or brackets and spaces, except that
+     * a full stop does not end it when a digit follows at once (3.14), when
+     * a capital follows a letter and the stop at once (A.B), or when the next
+     * letter is small ("a. b", "odstavec. třetí"); and no stop ends it when
+     * a comma, hyphen, colon, semicolon, dash or another stop comes next.
+     * @param {string} s - The text.
+     * @returns {Array.<number>} Start of every sentence, the first is 0.
+     */
+    sentenceStarts: function (s) {
+        var T = BTE.Steps;
+        var n = s.length;
+        var starts = [0];
+        var i = 0;
+        var c, q, k, d, p, hold;
+
+        while (i < n) {
+            c = s.charAt(i);
+            if (T.isParaSep(c)) {
+                i++;
+                if (c === "\r" && s.charAt(i) === "\n") { i++; }
+                if (i < n) { starts.push(i); }
+                continue;
+            }
+            if (!T.inSet(T.SENTENCE_STOP, c)) { i++; continue; }
+
+            q = i + 1;
+            while (q < n && T.inSet(T.SENTENCE_CLOSE, s.charAt(q))) { q++; }
+            while (q < n && T.isSpace(s.charAt(q))) { q++; }
+            if (q >= n || T.isParaSep(s.charAt(q))) { i = q; continue; }
+
+            d = s.charAt(q);
+            hold = T.inSet(T.SENTENCE_CONTINUE, d) || T.inSet(T.SENTENCE_STOP, d);
+            if (!hold && c === ".") {
+                if (s.charAt(i + 1) >= "0" && s.charAt(i + 1) <= "9") {
+                    hold = true;
+                } else if (T.isUpperLetter(s.charAt(i + 1))) {
+                    p = i - 1;
+                    while (p > 0 && T.wordClass(s.charAt(p)) === "E") { p--; }
+                    hold = p >= 0 && T.isCased(s.charAt(p));
+                }
+                if (!hold) {
+                    k = q;
+                    while (k < n && !T.isCased(s.charAt(k)) && !T.isParaSep(s.charAt(k)) && !T.inSet(T.SENTENCE_STOP, s.charAt(k))) { k++; }
+                    hold = k < n && T.isLowerLetter(s.charAt(k));
+                }
+            }
+            if (!hold) { starts.push(q); }
+            i = q;
+        }
+        return starts;
+    },
+
+    /**
+     * Titlecase of one letter: its entry in CASE_TITLE, else its uppercase.
+     * @param {string} c - One character.
+     * @returns {string} The character that starts a word.
+     */
+    titleChar: function (c) {
+        return BTE.Steps.CASE_TITLE.hasOwnProperty(c) ? BTE.Steps.CASE_TITLE[c] : BTE.Steps.upperText(c);
+    },
+
+    /**
+     * One word or sentence in title form, as ICU does it and the engine
+     * shows (measured): the first letter or digit gets the titlecase form
+     * and all that follows is lowercased; what comes before it (an
+     * underscore, a bracket, a quote) is left as it is. A segment that
+     * starts with a digit has no capital (3abc, 1_a).
+     * @param {string} seg - A word or a sentence.
+     * @returns {string} The segment in title form.
+     */
+    titleSegment: function (seg) {
+        var T = BTE.Steps;
+        var i = 0;
+        var c;
+
+        while (i < seg.length) {
+            c = seg.charAt(i);
+            if ((c >= "0" && c <= "9") || T.isCased(c)) { break; }
+            i++;
+        }
+        if (i >= seg.length) { return seg; }
+        return seg.substring(0, i) + T.titleChar(seg.charAt(i)) + T.lowerText(seg.substring(i + 1));
+    },
+
+    /**
+     * A text in a case mode: the preview's emulation of what
+     * range.changeCaseTo(CaseChangeType[CASE_MAP[mode]]) writes, held to the
+     * engine's output by tests/test_steps_case.js (measured pairs, see
+     * docs/findings.md). It takes the text of a range alone: changeCaseTo
+     * treats a range as a text of its own (measured), so "cd" inside
+     * "abcdef" is "Cd" in title mode, whatever surrounds it.
+     * @param {string} mode - "upper", "lower", "title" (each word) or
+     *     "sentence" (the first letter of each sentence, the rest small).
+     * @param {string} s - The text.
+     * @returns {string} The text in the mode.
+     * @throws {Error} For an unknown mode: a bug in the caller.
+     */
+    caseText: function (mode, s) {
+        var T = BTE.Steps;
+        var out = "";
+        var last = 0;
+        var parts, i;
+
+        if (mode === "upper") { return T.upperText(s); }
+        if (mode === "lower") { return T.lowerText(s); }
+        if (mode === "title") {
+            parts = T.wordRuns(s);
+            for (i = 0; i < parts.length; i++) {
+                out += s.substring(last, parts[i][0]) + T.titleSegment(s.substring(parts[i][0], parts[i][1]));
+                last = parts[i][1];
+            }
+            return out + s.substring(last);
+        }
+        if (mode === "sentence") {
+            parts = T.sentenceStarts(s);
+            for (i = 0; i < parts.length; i++) {
+                out += T.titleSegment(s.substring(parts[i], i + 1 < parts.length ? parts[i + 1] : s.length));
+            }
+            return out;
+        }
+        throw new Error("BTE.Steps: unknown case mode \"" + mode + "\"");
+    },
+
+    /**
+     * One edit of the Case step. It carries the emulated result in `text`
+     * like every edit, so the preview builds its strings the one way
+     * applyEdits does, and `caseMode` besides, which tells the write to
+     * call changeCaseTo on the range instead of replacing its contents (the
+     * range keeps its formatting). The post-write check compares the
+     * document with `text`.
+     * @param {string} mode - The case mode.
+     * @param {number} el - Element index.
+     * @param {number} tx - Text index within the element.
+     * @param {number} start - Offset of the range.
+     * @param {string} original - The text in the range.
+     * @returns {{el: number, tx: number, start: number, length: number, text: string, caseMode: string}}
+     *     The edit.
+     */
+    caseEdit: function (mode, el, tx, start, original) {
+        return {
+            el: el, tx: tx, start: start, length: original.length,
+            text: BTE.Steps.caseText(mode, original), caseMode: mode
+        };
+    },
+
+    /**
+     * Case step: changes the case of every match of Kde, or of the whole
+     * text of every text in the element (Celý text, first in the dropdown,
+     * spec 5.2). Variable and text are literal and case-sensitive, a regex
+     * follows the global rules; there is no Rozlišovat velká a malá here. Each
+     * match is a range of its own for changeCaseTo. A blank text (empty, only
+     * spaces or paragraph breaks) has nothing to change and gets no edit
+     * under Celý text.
+     * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
+     * @param {Object} step - A case step; mode is a key of CASE_MAP.
+     * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
+     *     The step result run() merges into StepInfo.
+     * @throws {Error} For an unknown mode: a bug in the caller (the preset
+     *     loader fills in the default).
+     */
+    caseStep: function (state, step) {
+        var T = BTE.Steps;
+        var all = !!(step.where && step.where.kind === "all");
+        var edits = [];
+        var c, i, j, k, texts, found;
+
+        if (!T.CASE_MAP.hasOwnProperty(step.mode)) {
+            throw new Error("BTE.Steps: unknown case mode \"" + step.mode + "\"");
+        }
+        if (!all) {
+            c = T.compile(step.where, false);
+            if (c.error) { return T.failed(c.error); }
+        }
+
+        for (i = 0; i < state.length; i++) {
+            texts = state[i];
+            for (j = 0; j < texts.length; j++) {
+                if (all) {
+                    if (BTE.Utils.strip(texts[j]) !== "") { edits.push(T.caseEdit(step.mode, i, j, 0, texts[j])); }
+                    continue;
+                }
+                found = T.matches(c.re, texts[j], false);
+                for (k = 0; k < found.length; k++) {
+                    edits.push(T.caseEdit(step.mode, i, j, found[k].index, found[k][0]));
+                }
+            }
+        }
+        return { error: null, edits: edits, warns: [], multi: [] };
+    },
+
+    /**
+     * Runs one step of any type.
      * An unknown type is a bug in the caller (the preset loader drops them),
      * so it throws instead of passing the text on unchanged.
      * @param {Array.<Array.<string>>} state - Input of the step.
@@ -415,18 +869,49 @@ BTE.Steps = {
     apply: function (state, step) {
         if (step.type === "replace") { return BTE.Steps.replace(state, step); }
         if (step.type === "number") { return BTE.Steps.number(state, step); }
+        if (step.type === "case") { return BTE.Steps.caseStep(state, step); }
         throw new Error("BTE.Steps: unknown step type \"" + step.type + "\"");
+    },
+
+    /**
+     * Checks one edit against the text it is applied to, before applyEdits
+     * uses it. A broken edit list is a bug in a step handler, and writing
+     * "undefined" into a label or dropping an edit without a word would hide
+     * it, so every slip throws: no text (the Case step's edits carry their
+     * result in `text` too, a caseMode alone is not enough), an unknown
+     * caseMode, a start before the end of the previous edit (edits must be
+     * in ascending order and must not overlap), a negative or missing
+     * length, a range past the end of the text.
+     * @param {Object} e - The edit.
+     * @param {string} s - The text the edit is relative to.
+     * @param {number} pos - End of the previous edit in this text, or 0.
+     * @throws {Error} Naming the slip.
+     */
+    checkEdit: function (e, s, pos) {
+        var where = "BTE.Steps.applyEdits: edit at element " + e.el + ", text " + e.tx + ", start " + e.start;
+        if (typeof e.text !== "string") { throw new Error(where + " has no text"); }
+        if (e.caseMode !== undefined && !BTE.Steps.CASE_MAP.hasOwnProperty(e.caseMode)) {
+            throw new Error(where + " has an unknown caseMode \"" + e.caseMode + "\"");
+        }
+        if (!(e.start >= pos)) { throw new Error(where + " overlaps or precedes the previous edit"); }
+        if (!(e.length >= 0)) { throw new Error(where + " has no valid length"); }
+        if (e.start + e.length > s.length) { throw new Error(where + " reaches past the end of the text"); }
     },
 
     /**
      * Builds the texts after a step from its edits. The one code path both
      * the preview and the write use for what a step produces. Edits must be
      * ordered by element, text and start, as the step handlers emit them,
-     * and must not overlap. Always returns new arrays.
+     * and must not overlap; each has a string `text` (a Case edit has its
+     * emulated result there and a `caseMode` besides). A list that breaks
+     * this throws, no edit is skipped or half applied silently. Always
+     * returns new arrays.
      * @param {Array.<Array.<string>>} state - Input of the step.
-     * @param {Array.<{el: number, tx: number, start: number, length: number, text: string}>} edits
+     * @param {Array.<{el: number, tx: number, start: number, length: number, text: string, caseMode: (string|undefined)}>} edits
      *     Edits relative to the texts in state.
      * @returns {Array.<Array.<string>>} The state after the step.
+     * @throws {Error} For an edit that is unusable, out of order, overlapping
+     *     or aimed at an element or text that does not exist.
      */
     applyEdits: function (state, edits) {
         var out = [];
@@ -442,6 +927,7 @@ BTE.Steps = {
                 pos = 0;
                 while (k < edits.length && edits[k].el === i && edits[k].tx === j) {
                     e = edits[k];
+                    BTE.Steps.checkEdit(e, s, pos);
                     built += s.substring(pos, e.start) + e.text;
                     pos = e.start + e.length;
                     k++;
@@ -449,6 +935,10 @@ BTE.Steps = {
                 row.push(built + s.substring(pos));
             }
             out.push(row);
+        }
+        if (k < edits.length) {
+            throw new Error("BTE.Steps.applyEdits: edit " + k + " (element " + edits[k].el + ", text " + edits[k].tx +
+                ") is out of order or aimed at a text that does not exist");
         }
         return out;
     },
@@ -484,7 +974,10 @@ BTE.Steps = {
      *     {hits, error, warns, vars, multi, edits} for step k: hits = elements
      *     the step found something in, error and warns = {key, args} messages,
      *     vars = [{name, count}] in the step's input, multi = [{el, count}],
-     *     edits = [{el, tx, start, length, text}] relative to the step's input.
+     *     edits = [{el, tx, start, length, text}] relative to the step's input;
+     *     a Case step's edits carry a `caseMode` besides (see caseEdit).
+     * @throws {Error} For an unknown step type, an unknown case mode or a
+     *     broken edit list: bugs in the caller or in a step handler.
      */
     run: function (state, steps) {
         var states = [state];
