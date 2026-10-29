@@ -276,8 +276,9 @@ BTE.UIModel = {
      * A message from BTE.Steps as text. A label key in an argument (the
      * Number step names the field in ERR_NOT_INTEGER and ERR_MIN_ONE with
      * "FIELD_FROM" and the like) is replaced by the label, so the user never
-     * sees a key. A locale entry that is an array holds the forms of a
-     * counted noun; the form is picked by the first argument.
+     * sees a key. A key that has no entry of its own but has _1/_2/_5 forms
+     * (WARN_MISSING, WARN_EXTRA) is a counted message; the form is picked by
+     * the first argument, which is the count.
      * @param {{key: string, args: Array}} msg - A StepInfo error or warning.
      * @returns {string} The message; the key itself when BTE.L has no such
      *     entry (a bug the tests catch, not a crash for the user).
@@ -289,10 +290,9 @@ BTE.UIModel = {
         var vals = [];
         var i, a;
 
-        if (BTE.Utils.isArray(tpl)) {
-            tpl = L.plural(Number(args[0]), tpl);
-        } else if (typeof tpl !== "string") {
-            return msg.key;
+        if (typeof tpl !== "string") {
+            if (typeof L[msg.key + "_5"] !== "string") { return msg.key; }
+            tpl = L.countForm(msg.key, Number(args[0]));
         }
         for (i = 0; i < args.length; i++) {
             a = args[i];
@@ -352,18 +352,18 @@ BTE.UIModel = {
             shown = info.multi.length < U.MAX_MULTI ? info.multi.length : U.MAX_MULTI;
             for (i = 0; i < shown; i++) {
                 count = info.multi[i].count;
-                warns.push(sym.WARN + " " + led(k + 1, L.format(L.plural(count, L.MSG_MULTI), info.multi[i].el + 1, count, U.whereText(step.where))));
+                warns.push(sym.WARN + " " + led(k + 1, L.format(L.countForm("MSG_MULTI", count), info.multi[i].el + 1, count, U.whereText(step.where))));
             }
             rest = info.multi.length - shown;
             if (rest > 0) {
-                warns.push(sym.WARN + " " + led(k + 1, L.format(L.plural(rest, L.MSG_MULTI_MORE), rest)));
+                warns.push(sym.WARN + " " + led(k + 1, L.count("MSG_MULTI_MORE", rest)));
             }
         }
 
         for (i = 0; i < reasons.length; i++) {
             count = skipped ? Number(skipped[reasons[i][0]]) : 0;
             if (count > 0) {
-                warns.push(sym.WARN + " " + L.format(L.plural(count, L[reasons[i][1]]), count));
+                warns.push(sym.WARN + " " + L.count(reasons[i][1], count));
             }
         }
 
@@ -388,7 +388,7 @@ BTE.UIModel = {
             canApply = false;
         } else {
             kind = warns.length > 0 ? "WARN" : "OK";
-            line = sym[kind] + " " + L.format(L.plural(total, L.STATUS_CHANGED), changed, total);
+            line = sym[kind] + " " + L.format(L.countForm("STATUS_CHANGED", total), changed, total);
             canApply = true;
         }
         return { kind: kind, line: line, messages: errors.concat(warns), canApply: canApply, changed: changed };

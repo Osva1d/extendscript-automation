@@ -18,24 +18,38 @@ var DE = loadL("de_DE");
 
 h.eq(CS.DEC_SEP + EN.DEC_SEP + DE.DEC_SEP, ",..", "cs and en load, an unknown language falls back to en");
 
-// ---- plural(): Czech 1 / 2-4 / 0 and 5+, English 1 / other -----------------
-var cs = ["jedna", "několik", "mnoho"];
-function csForm(n) { return CS.plural(n, cs); }
-h.eq(csForm(1), "jedna", "cs 1");
-h.eq(csForm(2) + csForm(3) + csForm(4), "několikněkolikněkolik", "cs 2-4");
-h.eq(csForm(0), "mnoho", "cs 0 takes the many form");
-h.eq(csForm(5) + csForm(6) + csForm(11) + csForm(24) + csForm(240), "mnohomnohomnohomnohomnoho", "cs 5 and more");
-h.eq(csForm(21) + csForm(22), "mnohomnoho", "cs 21 and 22 are not few: only exactly 2-4 is");
-h.eq(csForm(-1) + csForm(-3), "mnohomnoho", "cs negative takes the many form");
-h.eq(csForm(1.5) + csForm(2.5), "mnohomnoho", "cs fractions take the many form");
-h.eq(csForm("3"), "několik", "a count given as text");
-h.eq(csForm(NaN), "mnoho", "cs NaN takes the many form");
+// ---- count(): the canon's _1 / _2 / _5 (1 / 2-4 / everything else) ----------
+function csCount(n) { return CS.count("SKIP_LOCKED", n); }
+h.eq(csCount(1), "Přeskočen 1 zamčený nebo skrytý text.", "cs 1");
+h.eq(csCount(2), "Přeskočeny 2 zamčené nebo skryté texty.", "cs 2");
+h.eq(csCount(3), "Přeskočeny 3 zamčené nebo skryté texty.", "cs 3");
+h.eq(csCount(4), "Přeskočeny 4 zamčené nebo skryté texty.", "cs 4");
+h.eq(csCount(0), "Přeskočeno 0 zamčených nebo skrytých textů.", "cs 0 takes _5");
+h.eq(csCount(5), "Přeskočeno 5 zamčených nebo skrytých textů.", "cs 5");
+h.eq(csCount(11), "Přeskočeno 11 zamčených nebo skrytých textů.", "cs 11");
+h.eq(csCount(24), "Přeskočeno 24 zamčených nebo skrytých textů.", "cs 24");
+h.eq(csCount(240), "Přeskočeno 240 zamčených nebo skrytých textů.", "cs 240");
+h.eq(csCount(-1), "Přeskočeno -1 zamčených nebo skrytých textů.", "cs negative takes _5");
+h.eq(csCount(NaN), "Přeskočeno NaN zamčených nebo skrytých textů.", "cs NaN takes _5");
+h.eq(CS.countForm("SKIP_LOCKED", 21), CS.countForm("SKIP_LOCKED", 5), "cs 21 is not 2-4");
 
-var en = ["one", "other"];
-h.eq(EN.plural(1, en), "one", "en 1");
-h.eq(EN.plural(0, en) + EN.plural(2, en) + EN.plural(5, en) + EN.plural(-1, en), "otherotherotherother", "en everything else");
-h.eq(DE.plural(2, en), "other", "unknown language plurals like en");
-h.eq(EN.plural(3, ["only"]), "only", "too few forms fall back to the last one");
+h.eq(EN.count("SKIP_LOCKED", 1), "Skipped 1 locked or hidden text.", "en 1");
+h.eq(EN.count("SKIP_LOCKED", 0), "Skipped 0 locked or hidden texts.", "en 0");
+h.eq(EN.count("SKIP_LOCKED", 3), "Skipped 3 locked or hidden texts.", "en 3");
+h.eq(EN.count("SKIP_LOCKED", 6), "Skipped 6 locked or hidden texts.", "en 6");
+h.eq(DE.count("SKIP_LOCKED", 3), "Skipped 3 locked or hidden texts.", "unknown language counts like en");
+
+// countForm hands back the template, for messages with more than the count in them
+h.eq(CS.format(CS.countForm("STATUS_CHANGED", 1), 1, 1), "Změní se 1 z 1 prvku.", "countForm: cs one");
+h.eq(CS.format(CS.countForm("STATUS_CHANGED", 5), 3, 5), "Změní se 3 z 5 prvků.", "countForm: cs five");
+h.eq(CS.countForm("WARN_EXTRA", 1), "Prvků je o %s víc.", "countForm leaves the placeholder");
+
+// The R17 examples
+h.eq(CS.count("WARN_MISSING", 1), "Chybí 1 prvek.", "Chybí 1 prvek.");
+h.eq(CS.count("WARN_MISSING", 3), "Chybí 3 prvky.", "Chybí 3 prvky.");
+h.eq(CS.count("WARN_MISSING", 6), "Chybí 6 prvků.", "Chybí 6 prvků.");
+h.eq(EN.count("WARN_MISSING", 1), "1 element missing.", "en 1 element missing");
+h.eq(EN.count("WARN_MISSING", 3), "3 elements missing.", "en 3 elements missing");
 
 // ---- both tables carry the same keys and the same %s slots -----------------
 function slots(s) {
@@ -48,30 +62,47 @@ function keysOf(t) {
     a.sort();
     return a;
 }
-function formsOf(v) { return typeof v === "string" ? [v] : v; }
 
 var ck = keysOf(CS), ek = keysOf(EN);
 h.eq(ck.join(","), ek.join(","), "cs and en have the same keys");
 
-var bad = [], i, j, k, cf, ef, n;
+var bad = [], i, k, base, suffixes, s, n;
 for (i = 0; i < ck.length; i++) {
     k = ck[i];
-    cf = formsOf(CS[k]);
-    ef = formsOf(EN[k]);
-    n = slots(cf[0]);
-    for (j = 0; j < cf.length; j++) { if (slots(cf[j]) !== n) { bad.push(k + " cs form " + j); } }
-    for (j = 0; j < ef.length; j++) { if (slots(ef[j]) !== n) { bad.push(k + " en form " + j); } }
-    if (typeof CS[k] !== "string" && typeof CS[k] !== "object") { bad.push(k + " type"); }
-    if (typeof CS[k] === "object" && cf.length !== 3 && cf.length !== 2) { bad.push(k + " cs form count"); }
-    if (typeof EN[k] === "object" && ef.length !== 2) { bad.push(k + " en form count"); }
+    if (typeof CS[k] !== "string" || typeof EN[k] !== "string") { bad.push(k + " is not a string"); }
+    // a counted key has all three forms, with the same slots in each, in both languages
+    if (/_1$/.test(k)) {
+        base = k.substring(0, k.length - 2);
+        n = slots(CS[k]);
+        suffixes = ["_1", "_2", "_5"];
+        for (s = 0; s < suffixes.length; s++) {
+            if (typeof CS[base + suffixes[s]] !== "string" || typeof EN[base + suffixes[s]] !== "string") {
+                bad.push(base + suffixes[s] + " missing");
+            } else if (slots(CS[base + suffixes[s]]) !== n || slots(EN[base + suffixes[s]]) !== n) {
+                bad.push(base + suffixes[s] + " slots");
+            }
+        }
+    }
 }
-h.eq(bad.join("; "), "", "every key has the same %s slots in every form and language");
+h.eq(bad.join("; "), "", "every counted key has _1/_2/_5 in both languages with the same %s slots");
+
+// no counted form is orphaned (a _2 or _5 without its _1)
+var orphans = [];
+for (i = 0; i < ck.length; i++) {
+    if (/_[25]$/.test(ck[i])) {
+        base = ck[i].substring(0, ck[i].length - 2);
+        if (CS[base + "_1"] === undefined) { orphans.push(ck[i]); }
+    }
+}
+h.eq(orphans.join(","), "", "no _2 or _5 form without its _1");
 
 // ---- every message key steps.js can emit has copy --------------------------
+// A counted message has no entry under its own key, only base_1/_2/_5.
 var src = fs.readFileSync(path.join(__dirname, "..", "src", "steps.js"), "utf8");
 var re = /msg\("([A-Z_]+)"/g, m, missing = [];
+function has(T, key) { return T[key] !== undefined || T[key + "_5"] !== undefined; }
 while ((m = re.exec(src)) !== null) {
-    if (CS[m[1]] === undefined || EN[m[1]] === undefined) { missing.push(m[1]); }
+    if (!has(CS, m[1]) || !has(EN, m[1])) { missing.push(m[1]); }
 }
 h.eq(missing.join(","), "", "every BTE.Steps.msg key exists in both tables");
 h.done();

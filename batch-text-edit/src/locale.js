@@ -35,10 +35,14 @@ BTE.L = (function () {
             ERR_VALUE_RANGE:     "A number exceeds the allowed range.",
             ERR_LETTER_BELOW_ONE: "Letters start at A = 1. Change From or Step so that no value falls below 1.",
             WARN_TO_MISMATCH:    "The last number comes out as %s, the To field says %s.",
-            // A value that is an array is the forms of a counted noun, picked by
-            // L.plural from the first argument (UIModel.text): [one, other].
-            WARN_MISSING:        ["%s element missing.", "%s elements missing."],
-            WARN_EXTRA:          ["%s element too many.", "%s elements too many."],
+            // Counted messages: _1 / _2 / _5 are the forms for 1, 2-4 and the
+            // rest (L.count). English has two forms; _2 and _5 are alike.
+            WARN_MISSING_1:      "%s element missing.",
+            WARN_MISSING_2:      "%s elements missing.",
+            WARN_MISSING_5:      "%s elements missing.",
+            WARN_EXTRA_1:        "%s element too many.",
+            WARN_EXTRA_2:        "%s elements too many.",
+            WARN_EXTRA_5:        "%s elements too many.",
             // Dialog model: Kde list, step list, status line
             NOT_FOUND:           "(not found)",
             WHERE_ALL:           "Whole text",
@@ -56,16 +60,28 @@ BTE.L = (function () {
             MODE_SENTENCE:       "Sentence case",
             STATUS_ERR:          "Cannot apply, nothing will be written.",
             STATUS_NOTHING:      "Nothing will change.",
-            // Picked by the total: "3 of 1 element" never happens, "1 of 5 elements" does.
-            STATUS_CHANGED:      ["%s of %s element will change.", "%s of %s elements will change."],
+            // Form picked by the total (the second %s).
+            STATUS_CHANGED_1:    "%s of %s element will change.",
+            STATUS_CHANGED_2:    "%s of %s elements will change.",
+            STATUS_CHANGED_5:    "%s of %s elements will change.",
             STATUS_STEP:         "Step %s: %s",
             ERR_NO_TEXT:         "There is no text in the range.",
-            // Picked by the number of matches (the second slot).
-            MSG_MULTI:           ["Element %s has %s match of %s, they get the same number.", "Element %s has %s matches of %s, they get the same number."],
-            MSG_MULTI_MORE:      ["And %s more element has several matches.", "And %s more elements have several matches."],
-            SKIP_LOCKED:         ["Skipped %s locked or hidden text.", "Skipped %s locked or hidden texts."],
-            SKIP_OVERFLOW:       ["Skipped %s overflowing text.", "Skipped %s overflowing texts."],
-            SKIP_LINKED:         ["Skipped %s threaded frame.", "Skipped %s threaded frames."],
+            // Form picked by the number of matches (the second %s).
+            MSG_MULTI_1:         "Element %s has %s match of %s, they get the same number.",
+            MSG_MULTI_2:         "Element %s has %s matches of %s, they get the same number.",
+            MSG_MULTI_5:         "Element %s has %s matches of %s, they get the same number.",
+            MSG_MULTI_MORE_1:    "And %s more element has several matches.",
+            MSG_MULTI_MORE_2:    "And %s more elements have several matches.",
+            MSG_MULTI_MORE_5:    "And %s more elements have several matches.",
+            SKIP_LOCKED_1:       "Skipped %s locked or hidden text.",
+            SKIP_LOCKED_2:       "Skipped %s locked or hidden texts.",
+            SKIP_LOCKED_5:       "Skipped %s locked or hidden texts.",
+            SKIP_OVERFLOW_1:     "Skipped %s overflowing text.",
+            SKIP_OVERFLOW_2:     "Skipped %s overflowing texts.",
+            SKIP_OVERFLOW_5:     "Skipped %s overflowing texts.",
+            SKIP_LINKED_1:       "Skipped %s threaded frame.",
+            SKIP_LINKED_2:       "Skipped %s threaded frames.",
+            SKIP_LINKED_5:       "Skipped %s threaded frames.",
             // Presets that needed repair when they were loaded
             NOTE_PRESET:         "Preset \"%s\": %s",
             NOTE_STEP_DROPPED:   "Step %s has the unknown type \"%s\" and was left out.",
@@ -95,11 +111,14 @@ BTE.L = (function () {
             ERR_VALUE_RANGE:     "Číslo přesahuje povolený rozsah.",
             ERR_LETTER_BELOW_ONE: "Písmena začínají od A = 1. Upravte Od nebo Krok, aby žádná hodnota nebyla pod 1.",
             WARN_TO_MISMATCH:    "Poslední číslo vyjde %s, v poli Do je %s.",
-            // Hodnota, která je pole, jsou tvary počítaného podstatného jména;
-            // L.plural z nich vybere podle prvního argumentu (UIModel.text):
-            // [1, 2–4, 0 a 5+].
-            WARN_MISSING:        ["Chybí %s prvek.", "Chybí %s prvky.", "Chybí %s prvků."],
-            WARN_EXTRA:          "Prvků je o %s víc.",
+            // Počítané hlášky: _1 / _2 / _5 jsou tvary pro 1, 2–4 a ostatní
+            // (L.count). „Prvků je o %s víc.“ čte správně při každém počtu.
+            WARN_MISSING_1:      "Chybí %s prvek.",
+            WARN_MISSING_2:      "Chybí %s prvky.",
+            WARN_MISSING_5:      "Chybí %s prvků.",
+            WARN_EXTRA_1:        "Prvků je o %s víc.",
+            WARN_EXTRA_2:        "Prvků je o %s víc.",
+            WARN_EXTRA_5:        "Prvků je o %s víc.",
             // Model dialogu: nabídka Kde, seznam kroků, stavová řádka
             NOT_FOUND:           "(nenalezeno)",
             WHERE_ALL:           "Celý text",
@@ -117,16 +136,28 @@ BTE.L = (function () {
             MODE_SENTENCE:       "První písmeno věty",
             STATUS_ERR:          "Nelze použít, nic se nezapíše.",
             STATUS_NOTHING:      "Nic se nezmění.",
-            // Podle celku: „1 z 1 prvku“, „3 z 5 prvků“ (po „z“ je druhý pád).
-            STATUS_CHANGED:      ["Změní se %s z %s prvku.", "Změní se %s z %s prvků.", "Změní se %s z %s prvků."],
+            // Tvar podle celku (druhé %s): „1 z 1 prvku“, „3 z 5 prvků“ (po „z“ je druhý pád).
+            STATUS_CHANGED_1:    "Změní se %s z %s prvku.",
+            STATUS_CHANGED_2:    "Změní se %s z %s prvků.",
+            STATUS_CHANGED_5:    "Změní se %s z %s prvků.",
             STATUS_STEP:         "Krok %s: %s",
             ERR_NO_TEXT:         "V rozsahu není žádný text.",
-            // Podle počtu shod (druhé %s).
-            MSG_MULTI:           ["Prvek %s má %s shodu %s, dostanou stejné číslo.", "Prvek %s má %s shody %s, dostanou stejné číslo.", "Prvek %s má %s shod %s, dostanou stejné číslo."],
-            MSG_MULTI_MORE:      ["A %s další prvek má víc shod.", "A %s další prvky mají víc shod.", "A %s dalších prvků má víc shod."],
-            SKIP_LOCKED:         ["Přeskočen %s zamčený nebo skrytý text.", "Přeskočeny %s zamčené nebo skryté texty.", "Přeskočeno %s zamčených nebo skrytých textů."],
-            SKIP_OVERFLOW:       ["Přeskočen %s přetečený text.", "Přeskočeny %s přetečené texty.", "Přeskočeno %s přetečených textů."],
-            SKIP_LINKED:         ["Přeskočen %s navázaný rámeček.", "Přeskočeny %s navázané rámečky.", "Přeskočeno %s navázaných rámečků."],
+            // Tvar podle počtu shod (druhé %s).
+            MSG_MULTI_1:         "Prvek %s má %s shodu %s, dostanou stejné číslo.",
+            MSG_MULTI_2:         "Prvek %s má %s shody %s, dostanou stejné číslo.",
+            MSG_MULTI_5:         "Prvek %s má %s shod %s, dostanou stejné číslo.",
+            MSG_MULTI_MORE_1:    "A %s další prvek má víc shod.",
+            MSG_MULTI_MORE_2:    "A %s další prvky mají víc shod.",
+            MSG_MULTI_MORE_5:    "A %s dalších prvků má víc shod.",
+            SKIP_LOCKED_1:       "Přeskočen %s zamčený nebo skrytý text.",
+            SKIP_LOCKED_2:       "Přeskočeny %s zamčené nebo skryté texty.",
+            SKIP_LOCKED_5:       "Přeskočeno %s zamčených nebo skrytých textů.",
+            SKIP_OVERFLOW_1:     "Přeskočen %s přetečený text.",
+            SKIP_OVERFLOW_2:     "Přeskočeny %s přetečené texty.",
+            SKIP_OVERFLOW_5:     "Přeskočeno %s přetečených textů.",
+            SKIP_LINKED_1:       "Přeskočen %s navázaný rámeček.",
+            SKIP_LINKED_2:       "Přeskočeny %s navázané rámečky.",
+            SKIP_LINKED_5:       "Přeskočeno %s navázaných rámečků.",
             // Předvolby, které bylo při načtení nutné opravit
             NOTE_PRESET:         "Předvolba „%s“: %s",
             NOTE_STEP_DROPPED:   "Krok %s má neznámý typ „%s“ a byl vynechán.",
@@ -139,7 +170,6 @@ BTE.L = (function () {
     };
 
     var t = strings[lang] || strings.en;
-    var czech = !!strings[lang] && lang === "cs";
 
     /**
      * Substitutes %s placeholders in order.
@@ -154,26 +184,35 @@ BTE.L = (function () {
     };
 
     /**
-     * Picks the form of a counted noun. Czech has three: 1, 2-4 and the rest
-     * (0, 5 and more, 21, 22, negatives, fractions); English two: 1 and the
-     * rest. A count that is not a whole number takes the last form. Forms
-     * the table does not have fall back to the last one it has.
-     * @param {number|string} n - The count.
-     * @param {Array.<string>} forms - Czech [one, few, many], English
-     *     [one, other].
-     * @returns {string} The form, still carrying its %s placeholders.
+     * The template of a counted message for a count: base + "_1" for 1,
+     * "_2" for 2-4, "_5" for everything else (0, negatives, NaN included).
+     * The family's count() (extendscript-ui-standards 5) for a message with
+     * more than the count in it; every counted key has all three forms in
+     * both tables.
+     * @param {string} base - Key without the suffix, e.g. "SKIP_LOCKED".
+     * @param {number} n - The count.
+     * @returns {string} The template, still carrying its %s placeholders.
      */
-    t.plural = function (n, forms) {
-        var count = Number(n);
-        var at;
-        if (count === 1) {
-            at = 0;
-        } else if (czech && count >= 2 && count <= 4 && Math.floor(count) === count) {
-            at = 1;
-        } else {
-            at = czech ? 2 : 1;
+    t.countForm = function (base, n) {
+        var suffix = "_5";
+        if (n === 1) {
+            suffix = "_1";
+        } else if (n >= 2 && n <= 4) {
+            suffix = "_2";
         }
-        return at < forms.length ? forms[at] : forms[forms.length - 1];
+        return t[base + suffix];
+    };
+
+    /**
+     * A number before its noun in the right form: count("SKIP_LOCKED", 3) ->
+     * "Přeskočeny 3 zamčené nebo skryté texty." (the canon's count(); the
+     * count fills the one %s of the template).
+     * @param {string} base - Key without the suffix.
+     * @param {number} n - The count.
+     * @returns {string} The filled string.
+     */
+    t.count = function (base, n) {
+        return t.format(t.countForm(base, n), n);
     };
     return t;
 })();
