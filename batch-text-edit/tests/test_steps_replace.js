@@ -48,6 +48,34 @@ h.eq(one("a {$} b", R({kind:"var",text:"{$}"},{replace:"X"})).states[1][0][0], "
 var dot = one("{x.y} {xzy}", R({kind:"var",text:"{x.y}"},{replace:"X"}));
 h.eq(dot.states[1][0][0], "X {xzy}", "{x.y} does not match {xzy}");
 h.eq(dot.info[0].edits.length, 1, "{x.y} has exactly one edit");
+// mayCapture(): only an unescaped "(" can open a group
+h.eq(BTE.Steps.mayCapture("\\{n\\}"), false, "mayCapture: an escaped variable");
+h.eq(BTE.Steps.mayCapture(BTE.Utils.escapeRegExp("{a(b)}")), false, "mayCapture: escaped parentheses");
+h.eq(BTE.Steps.mayCapture("\\d+"), false, "mayCapture: a regex without parentheses");
+h.eq(BTE.Steps.mayCapture("(a)"), true, "mayCapture: a group at the start");
+h.eq(BTE.Steps.mayCapture("x(y)"), true, "mayCapture: a group inside");
+h.eq(BTE.Steps.mayCapture("x\\\\(y)"), true, "mayCapture: an escaped backslash, then a group");
+h.eq(BTE.Steps.mayCapture("x\\\\\\(y"), false, "mayCapture: three backslashes escape the parenthesis");
+h.eq(BTE.Steps.mayCapture("(?:a)"), true, "mayCapture: a non-capturing group errs towards true");
+h.eq(BTE.Steps.mayCapture("[(]"), true, "mayCapture: a parenthesis in a class errs towards true");
+// the path without groups gives what the general path gives; "(?:...)" forces
+// the general path without adding a group
+var PATS = ["x*", "a", "\\d+", "b?", "\\{n\\}", "[a-c]", "\\s", "^a", "a$", ".", "\\r"];
+var TEXTS = ["", "xxaxb", "aaa", "a1 b22 c333", "{n}/{n} {n}", "ab\rcd", "  a  "];
+var diff = [], pi, ti, f;
+for (pi = 0; pi < PATS.length; pi++) {
+    for (ti = 0; ti < TEXTS.length; ti++) {
+        for (f = 0; f < 2; f++) {
+            if (JSON.stringify(BTE.Steps.matches(new RegExp(PATS[pi], "g"), TEXTS[ti], f === 1)) !==
+                    JSON.stringify(BTE.Steps.matches(new RegExp("(?:" + PATS[pi] + ")", "g"), TEXTS[ti], f === 1))) {
+                diff.push(PATS[pi] + " in " + JSON.stringify(TEXTS[ti]) + (f ? " firstOnly" : ""));
+            }
+        }
+    }
+}
+h.eq(diff.join("; "), "", "matches: the path without groups equals the general one (" + PATS.length * TEXTS.length * 2 + " cases)");
+h.eq(JSON.stringify(BTE.Steps.matches(new RegExp("A", "gi"), "xaA")), '[{"0":"a","index":1,"length":1},{"0":"A","index":2,"length":1}]', "matches: case-insensitive keeps its flag on the fast path");
+
 // matches(): empty matches at the end and between characters, groups, offsets
 var mm = BTE.Steps.matches(new RegExp("x*", "g"), "xxaxb");
 h.eq(mm.length, 2, "x* gives its two non-empty matches and terminates");

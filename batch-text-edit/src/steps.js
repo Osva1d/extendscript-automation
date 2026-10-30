@@ -90,6 +90,22 @@ BTE.Steps = {
         var rx = new RegExp(re.source, re.ignoreCase ? "gi" : "g");
         var found = [];
 
+        // Without groups the replacer's arguments are (match, offset,
+        // string), so named parameters read them. The arguments object costs
+        // the engine about 2 ms per call (measured 2026-10-30, AI 30.8.2: 480
+        // texts took 1.7-3.5 s through it, 2 ms with named parameters, the
+        // offsets identical), which made one preview of 240 elements take
+        // seconds. Variables and plain text are escaped and never capture.
+        if (!BTE.Steps.mayCapture(re.source)) {
+            s.replace(rx, function (whole, offset) {
+                if (whole.length > 0 && !(firstOnly && found.length > 0)) {
+                    found.push({ 0: whole, index: offset, length: 1 });
+                }
+                return whole;
+            });
+            return found;
+        }
+
         s.replace(rx, function () {
             var a = arguments;
             var groups = a.length - 3;
@@ -104,6 +120,18 @@ BTE.Steps = {
             return a[0];
         });
         return found;
+    },
+
+    /**
+     * Whether a pattern may hold capture groups: it has a "(" that is not
+     * escaped, i.e. not preceded by an odd run of backslashes. A "(" inside a
+     * character class or a non-capturing group counts too, so the answer
+     * errs towards true, the slower but general path of matches().
+     * @param {string} source - A RegExp source.
+     * @returns {boolean} False only when the pattern cannot capture.
+     */
+    mayCapture: function (source) {
+        return /(^|[^\\])(\\\\)*\(/.test(source);
     },
 
     /**
