@@ -469,7 +469,11 @@ a `shared/lib/ui_state.js`.
    prvního znaku úseku (naměřeno T2–T4). U proměnné je to tedy formát
    znaku `{`. `characterOffset` nepoužívat, čte se od 1 a zapisuje od 0
    (naměřeno). Index v `contents` odpovídá indexu v `characters` (`\r`
-   i U+0003 jsou znaky, naměřeno); pro znaky mimo BMP neověřeno.
+   i U+0003 jsou znaky, naměřeno); znak mimo BMP (surrogate pair) je
+   v obou dva znaky, takže indexy sedí i tam (naměřeno 2026-10-29, Task 10).
+   Před zápisem každého kroku se text přečtený z dokumentu porovná
+   s náhledem před tímto krokem; při rozdílu se zápis zastaví (bod 5),
+   takže se nikdy nezapíše na posunuté místo (rozhodnutí při implementaci).
 3. **Jedno Zpět:** během zápisu žádné `app.redraw()` (naměřeno, rešerše
    §7.5: 600 zápisů vrátilo jedno `app.undo()`). Běh ze Soubor › Skripty
    ověří ruční test.
@@ -477,7 +481,7 @@ a `shared/lib/ui_state.js`.
    a porovná s náhledem. Rozdíl se v souhrnu nahlásí jako chyba ✗ s počtem
    a prvními případy. Náhled = zápis je tak ověřené, ne předpokládané.
 5. **Chyba DOM uprostřed zápisu:** zápis se zastaví a souhrn řekne, kolik
-   prvků se zapsalo, a nabídne Zpět. Vzory podle skillu
+   textů se zapsalo a u kterého prvku se zastavil, a nabídne Zpět. Vzory podle skillu
    `robust-error-handling`, žádný tichý `catch`.
 6. **Souhrn** (kánon §12.5): změněné prvky a texty, přeskočené po
    důvodech, upozornění Do, výsledek kontroly. Okno průběhu jen tehdy,
