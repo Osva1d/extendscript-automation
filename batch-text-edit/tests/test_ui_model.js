@@ -381,6 +381,40 @@ for (i = 0; i < allMessages.length; i++) {
 h.eq(allMessages.length > 25, true, "the leak check covered " + allMessages.length + " lines");
 h.eq(leaked.join(" | "), "", "no raw key, no unfilled %s, no undefined in any message");
 
+// ---- cursor in text (spec 4.1): the empty range says why ----------------------
+steps = [N(V("{n}"))];
+s = U.status(chain([], steps), steps, { locked: 0, overflow: 0, linked: 0 }, true);
+h.eq(s.kind, "ERR", "cursor: error");
+h.eq(s.canApply, false, "cursor: Použít off");
+h.eq(s.messages.join("|"), "✗ Kurzor je v textu. Ukončete úpravu textu klávesou Esc a vyberte prvky, nebo zvolte jiný rozsah.", "cursor: the message replaces 'no text'");
+s = U.status(chain([], steps), steps, undefined, false);
+h.eq(s.messages.join("|"), "✗ V rozsahu není žádný text.", "cursor false: no text as before");
+s = U.status(chain(five, steps), steps, undefined, true);
+h.eq(s.kind, "OK", "cursor flag with texts in the range changes nothing");
+
+// ---- failedStatus: a preview that threw -----------------------------------------
+s = U.failedStatus("BTE.Steps: unknown step type \"x\"");
+h.eq(s.kind, "ERR", "failed: error");
+h.eq(s.canApply, false, "failed: Použít off");
+h.eq(s.changed, 0, "failed: nothing changes");
+h.eq(s.line, "✗ Nelze použít, nic se nezapíše.", "failed: the error line");
+h.eq(s.messages.join("|"), "✗ Náhled se nepodařilo spočítat (BTE.Steps: unknown step type \"x\"). Pošlete tuto hlášku správci skriptu.", "failed: says what failed");
+
+// ---- scopeLine: what the range holds ----------------------------------------------
+function prep(elements, texts, skipped, cursor) {
+    var els = [], q;
+    for (q = 0; q < elements; q++) { els.push({}); }
+    return { elements: els, textCount: texts, skipped: skipped || { locked: 0, overflow: 0, linked: 0 }, cursorInText: !!cursor };
+}
+h.eq(U.scopeLine(prep(240, 480)), "240 prvků, 480 textů", "scope: 240 / 480");
+h.eq(U.scopeLine(prep(1, 1)), "1 prvek, 1 text", "scope: one / one");
+h.eq(U.scopeLine(prep(3, 2)), "3 prvky, 2 texty", "scope: 2-4 forms");
+h.eq(U.scopeLine(prep(0, 0)), "0 prvků, 0 textů", "scope: empty");
+h.eq(U.scopeLine(prep(240, 478, { locked: 2, overflow: 0, linked: 0 })), "240 prvků, 478 textů · přeskočené texty: 2", "scope: skipped total");
+h.eq(U.scopeLine(prep(5, 5, { locked: 1, overflow: 2, linked: 3 })), "5 prvků, 5 textů · přeskočené texty: 6", "scope: all reasons summed");
+h.eq(U.scopeLine(prep(0, 0, undefined, true)), "Kurzor je v textu, prvky se z výběru nečtou.", "scope: cursor in text");
+h.eq(U.scopeLine({ elements: [], textCount: 0, skipped: {}, cursorInText: false }), "0 prvků, 0 textů", "scope: an empty skipped object");
+
 // ======================= English ==============================================
 var BTE_EN = loadBTE("en_US");
 var UE = BTE_EN.UIModel;

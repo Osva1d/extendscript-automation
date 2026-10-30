@@ -317,12 +317,15 @@ BTE.UIModel = {
      * @param {Array.<Object>} steps - The steps that were run.
      * @param {{locked: number, overflow: number, linked: number}} [skipped]
      *     Texts the scope skipped, by reason (ruling R3).
+     * @param {boolean} [cursorInText] - The Rozsah is Výběr and the
+     *     selection is text being edited (BTE.Scope.prepare): the empty
+     *     range then says so and what to do (spec 4.1), instead of "no text".
      * @returns {{kind: string, line: string, messages: Array.<string>, canApply: boolean, changed: number}}
      *     kind is "OK", "WARN" or "ERR" (the keys of FieldPaint.COLORS);
      *     line starts with the matching sign; changed is the number of
      *     elements whose texts differ at the end.
      */
-    status: function (run, steps, skipped) {
+    status: function (run, steps, skipped, cursorInText) {
         var U = BTE.UIModel;
         var L = BTE.L;
         var sym = U.SYMBOL;
@@ -337,7 +340,7 @@ BTE.UIModel = {
 
         function led(no, text) { return L.format(L.STATUS_STEP, no, text); }
 
-        if (total === 0) { errors.push(sym.ERR + " " + L.ERR_NO_TEXT); }
+        if (total === 0) { errors.push(sym.ERR + " " + (cursorInText === true ? L.ERR_CURSOR_IN_TEXT : L.ERR_NO_TEXT)); }
 
         for (k = 0; k < steps.length; k++) {
             step = steps[k];
@@ -392,5 +395,46 @@ BTE.UIModel = {
             canApply = true;
         }
         return { kind: kind, line: line, messages: errors.concat(warns), canApply: canApply, changed: changed };
+    },
+
+    /**
+     * The status for a preview that could not be computed: BTE.Steps.run
+     * threw, which is a bug (an unknown step type, a broken edit list). The
+     * dialog stays open, says what failed and blocks Použít, so nothing is
+     * written from a preview nobody saw.
+     * @param {string} message - The exception's message.
+     * @returns {{kind: string, line: string, messages: Array.<string>, canApply: boolean, changed: number}}
+     *     The shape status() returns, kind "ERR".
+     */
+    failedStatus: function (message) {
+        var L = BTE.L;
+        var sym = BTE.UIModel.SYMBOL;
+        return {
+            kind: "ERR",
+            line: sym.ERR + " " + L.STATUS_ERR,
+            messages: [sym.ERR + " " + L.format(L.ERR_PREVIEW, message)],
+            canApply: false,
+            changed: 0
+        };
+    },
+
+    /**
+     * The greyed line under Rozsah: what the scope holds, "240 prvků, 480
+     * textů", and how many texts it skipped (the reasons are in the status
+     * messages). With the cursor in a text it says that instead.
+     * @param {{elements: Array, textCount: number, skipped: Object, cursorInText: boolean}} prepared
+     *     From BTE.Scope.prepare or reorder.
+     * @returns {string} The line.
+     */
+    scopeLine: function (prepared) {
+        var L = BTE.L;
+        var s = prepared.skipped || {};
+        var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
+        var line;
+        if (prepared.cursorInText === true) { return L.SCOPE_CURSOR; }
+        line = L.format(L.SCOPE_COUNTS, L.count("COUNT_ELEMENTS", prepared.elements.length),
+            L.count("COUNT_TEXTS", prepared.textCount));
+        if (skipped > 0) { line = L.format(L.SCOPE_SKIPPED, line, skipped); }
+        return line;
     }
 };

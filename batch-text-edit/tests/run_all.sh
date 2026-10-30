@@ -35,6 +35,7 @@ SUITES=(
     "tests/test_write.js"
     "tests/test_locale.js"
     "tests/test_ui_model.js"
+    "tests/test_ui.js"
     "tests/test_presets.js"
 )
 
