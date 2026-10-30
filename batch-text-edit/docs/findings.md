@@ -300,7 +300,7 @@ Measured 2026-10-29 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/
 
 **changeCaseTo moves formatting when the length changes.** Upper case of „straße …“ with its own format on every character: the letters after the ß keep their own format, but each letter before it takes its left neighbour's (T has s's, R has t's, A has r's, the first S has a's) and the second S has the ß's. The text is right and the check after the write passes, because it compares only text. Only a length-changing letter (ß, ligatures, digraphs) inside a range with mixed formatting is affected; Czech text has none.
 
-**Undo is not measured by this probe.** `app.executeMenuCommand("undo")` inside the probe's own run took back the whole run, the document's setup included (5 texts → 0), although `app.redraw()` closed the setup before the write. That run also stalled Illustrator for about 18 minutes (AppleEvent timeout, "start" in the log and nothing more); the same part without the Undo finishes at once, so the command is the likely cause. Undo inside the running script therefore does not show what Cmd+Z does after a run; that is left to the manual test (spec §7 item 3). The probe no longer calls Undo.
+**Undo is not measured by this probe.** `app.executeMenuCommand("undo")` inside the probe's own run took back the whole run, the document's setup included (5 texts → 0), although `app.redraw()` closed the setup before the write. That run also stalled Illustrator for about 18 minutes (AppleEvent timeout, "start" in the log and nothing more); the same part without the Undo finishes at once, so the command is the likely cause. No dialog appeared in Illustrator during the stall (the user, who was at the machine, 2026-10-30). Undo inside the running script therefore does not show what Cmd+Z does after a run; that is left to the manual test (spec §7 item 3). The probe no longer calls Undo.
 
 ### Re-measuring
 
@@ -317,3 +317,68 @@ From the repo root, with 0 documents open:
     tools/ai-eval.sh -t 300 "$TMPDIR/probe_write_run.jsx"
 
 Parts: `chain`, `case`, `bulk`, `edge`. Building the bulk document takes about 2 minutes. The result is one JSON string (non-ASCII escaped); the progress log goes to `Folder.temp/bte_probe_write.log` unless `LOG_PATH` is set.
+
+## Dialog probe (Task 12)
+
+Measured 2026-10-30 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_dialog.jsx`. It builds its own document of 240 prefabs (12 × 20 groups, „{kód}“ above „{n}“, the builder of `probe_scope.jsx`). It then builds the real `BTE.UI` dialog without showing it, once with the Czech and once with the English locale table, and drives its handlers. It closes only its own document, unsaved. `Storage.load` and `save` are stubbed, so the preset file is neither read nor written.
+
+### The host's layout was broken for unshown windows
+
+In this session ScriptUI reported `$.screens` as one screen [0, 31, 756, 474]; the display is 3024 × 1964 Retina, 1512 × 982 logical. Every new window and control got a default `maximumSize` of 4294967246 × 4294967246 (2^32 − 50). `layout.layout(true)` then gave every unsized control −50 px; a window with one label came out 50 × −5. Setting the maxima afterwards and calling `layout(true)` again did not recover: a test window measured 366 × 253 with the maxima set before its first layout, 74 × 99 after.
+
+The probe therefore raises every made-up maximum to 4000 px before the dialog's first layout, through `BTE.UI.firstLayout`, a one-line method that exists for this reason. The result says `"lifted": true`. Not known: what puts the host in this state, and whether a shown dialog is affected; the family's dialogs are in daily use. Assigning to the global `Window` is silently ignored, so the constructor cannot be swapped.
+
+### Size and texts
+
+| | CS | EN |
+|---|---|---|
+| window (`window.size`, no title bar) | 1008 × 768 | 1008 × 768 |
+| Kroky panel / Náhled panel | 978 × 217 / 978 × 316 | same |
+| step list / editor | 528 × 150 / 406 × 187 | 496 × 150 / 438 × 187 |
+| editor stack: Číslovat, Nahradit, Velikost písmen | 406 × 154 (154 / 146 / 88 px tall) | 438 × 154 |
+| statictext, button, checkbox or radio wider than its control | none | none |
+
+- The preview table (columns 40/300/300/300 px) sets the width.
+- An unsized statictext lays out exactly as wide as `graphics.measureString` says (six labels, CS and EN, 0 px apart), so the editor's label axes need no margin.
+- The longest step label measured (Nahradit … → 30 × W, cut to 24 characters, with ✗) is 364 px in a 528 px list (EN 358 / 496).
+- Kde dropdowns are 220 px wide, items up to 106 px (EN 163). `dropdownlist.add("separator")` gives an item whose `type` is "separator".
+
+### Behaviour
+
+- Right after opening, the list says „[Výchozí]“ (EN „[Default]“) without `*`, and ↺ and Uložit are grey: the in-memory [Výchozí] is resolved with the same variables as the fields.
+- Starting from [Výchozí] (Číslovat {kód}), the real handlers built the chain Nahradit {kód} → ABC, Číslovat {n}, Velikost písmen Celý text → malá: row 1 went from „{kód} | {n}“ to „abc | 001“, row 240 reads „abc | 240“; Po sloupcích makes row 2 „abc | 002“.
+- „1O“ in Od: ✗ status line, Použít and Uložit jako… grey, and the step's list line ends in ✗.
+- Výběr with nothing selected: „0 prvků, 0 textů“, ✗, Použít grey. Back to Celý dokument: 240 rows again.
+- Použít right after typing in Od without Enter, and right after Enter (onChange, then Použít at once): the dialog stays, and the preview shows the new value (007, then 008). 500 ms later, Použít closes the dialog and returns the run the preview shows (`run === state.run`): 240 elements, 240 rows of tfs, 4 states. It saves [Last Settings] once.
+
+### Times (ms, 240 elements, a chain of three steps)
+
+| what | CS | EN |
+|---|---|---|
+| build the dialog (prepare included) | 2847 | 2579 |
+| Od committed (keystroke + Enter), 12 times | 237–670, median 306 | 214–622, median 305 |
+| refresh with unchanged values, 5 times | 215–589, median 220 | 209–595, median 300 |
+| `Steps.run` alone, 8 times | median 24, max 505 | median 24, max 485 |
+| select a step | 218–577 | 229–641 |
+| change Pořadí | 128–219 | 144–291 |
+| Rozsah → Celý dokument (prepare alone 1.8–2.1 s) | 1885 | 1920 |
+
+An instrumented copy split a refresh into phases: the run plus the status took 118–480 ms in steps of about 100 ms against 23 ms for the run alone; the preview update took either 6 or about 100 ms, alternately; every control setter took under 1 ms and `UIModel.rows` 5–6 ms. The 100 ms steps read as garbage-collection pauses. A refresh is over the ~200 ms of spec §6.2, so the preview follows on `onChange` (`BTE.UI.LIVE_EVENT`). Použít holds back a preview that was not yet computed from the current values, or that a text field refreshed less than 400 ms earlier (`BTE.UI.HOLD_MS`). Building the probe document took 3–24 s across runs, and `Scope.prepare` took 1.7–2.1 s here against 0.25–0.41 s for the same structure in Tasks 9 and 10 — a noisy machine; re-measure.
+
+### The arguments object costs about 2 ms per use
+
+Before `94ee5ec` a refresh took 0.4–4 s, because `BTE.Steps.matches` read its replacer's `arguments` and the engine pays about 2 ms for every use:
+
+| 480 calls of | time |
+|---|---|
+| a function reading `arguments.length` | 984 ms |
+| a replace whose callback reads `arguments[0]` | 1061 ms |
+| the same replace when nothing matches | 5 ms |
+| `matches` through `arguments` | 1.7–3.5 s |
+| `matches` with named parameters | 2 ms, identical offsets („ab{n}cd{n}“ → 2 and 7) |
+
+`Steps.run` for the three-step chain went from 3.9 s to 23 ms. A pattern that may capture (an unescaped „(“) keeps the general path, about 2 ms per text with a match. Side observations: `new RegExp("(?:x)|").exec("")` returns null (an empty alternative did not match the empty string); a `for (k in undefined)` loop threw „undefined není objekt“ with the line before reported.
+
+### Re-measuring
+
+Assemble the runner as in the probe's Usage header and run it with `tools/ai-eval.sh -t 600`, with 0 documents open; the probe builds and closes its own. A run takes several minutes. If the AppleEvent times out (−1712), the last "done {...}" line of `Folder.temp/bte_probe_dialog.log` holds the result. In a session where the host's default maximumSize is sane, "lifted" is false and the sizes come from the plain layout; one such re-run would confirm 1008 × 768.
