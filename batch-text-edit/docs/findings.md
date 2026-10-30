@@ -382,3 +382,21 @@ Before `94ee5ec` a refresh took 0.4–4 s, because `BTE.Steps.matches` read its 
 ### Re-measuring
 
 Assemble the runner as in the probe's Usage header and run it with `tools/ai-eval.sh -t 600`, with 0 documents open; the probe builds and closes its own. A run takes several minutes. If the AppleEvent times out (−1712), the last "done {...}" line of `Folder.temp/bte_probe_dialog.log` holds the result. In a session where the host's default maximumSize is sane, "lifted" is false and the sizes come from the plain layout; one such re-run would confirm 1008 × 768.
+
+### Fix round 1 (2026-10-30)
+
+The same probe, after `b6fccfa`. The host still gave a default maximumSize of 2^32 − 50, so the maxima were lifted again (`"lifted": true`). The window is 1008 × 768 px in Czech and English, and no text is cut.
+
+| text (CS / EN) | width / its control |
+|---|---|
+| scope line with the cursor text | 255 / 464 px · 362 / 476 px |
+| ✗ cursor error in the messages box | 566 / 944 px · 564 / 944 px |
+| hold hint | 485 / 944 px · 480 / 944 px |
+
+In the Number editor (Od, Do, Krok / Formát, Číslic / Opakovat, Znovu po) the first-column controls are 74 px each and the second labels start at x 154 in every row (EN 171).
+
+- **Tick without an event:** a tick set on a list item without any event, then Použít: the dialog settles it first. Step 1 turns off, the preview is recomputed and the hint is the first message line; nothing is applied.
+- **„1O“ without Enter:** Uložit jako… still read as live, because no refresh had seen the edit. After `settle()` it and Uložit are grey and both handlers return before the name prompt.
+- **Hold:** typing then Použít, and Enter then Použít, hold with the hint as before. 500 ms later Použít applies the run the preview shows.
+- **Times:** a refresh took 225–709 ms (median 246–346); a Rozsah change about 2 s.
+- Reading the messages box after the hint was cleared gave no line at all (probably `"".split(regex)` returns no element in the engine); harmless, noted.
