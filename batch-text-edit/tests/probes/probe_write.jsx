@@ -182,7 +182,7 @@
         for (k = 0; k < run.info.length; k++) { r.stepErrors.push(run.info[k].error ? run.info[k].error.key : null); }
         log("prepared and run, applying");
         s = now();
-        w = BTE.Write.apply(p.tfs, run.info);
+        w = BTE.Write.apply(p.tfs, run.info, run.states);
         r.applyMs = now() - s;
         log("applied");
         r.textsWritten = w.textsWritten;
@@ -331,7 +331,7 @@
         p = BTE.Scope.prepare(d, "document");
         run = BTE.Steps.run(p.state, [R(V("{n}"), "7")]);
         try {
-            w = BTE.Write.apply(p.tfs, run.info);
+            w = BTE.Write.apply(p.tfs, run.info, run.states);
             a.textsWritten = w.textsWritten;
             a.after = t.contents;
             a.verify = BTE.Write.verify(p.tfs, run.states[run.states.length - 1]);
