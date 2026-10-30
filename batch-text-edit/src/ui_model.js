@@ -398,21 +398,23 @@ BTE.UIModel = {
     },
 
     /**
-     * The status for a preview that could not be computed: BTE.Steps.run
-     * threw, which is a bug (an unknown step type, a broken edit list). The
-     * dialog stays open, says what failed and blocks Použít, so nothing is
-     * written from a preview nobody saw.
+     * The status for a dialog that hit a bug: BTE.Steps.run threw (an
+     * unknown step type, a broken edit list; ERR_PREVIEW), or a control's
+     * handler did (ERR_HANDLER). The dialog stays open, says what failed and
+     * blocks Použít, so nothing is written from a preview nobody saw.
      * @param {string} message - The exception's message.
+     * @param {string} [key] - "ERR_PREVIEW" (default) or "ERR_HANDLER".
      * @returns {{kind: string, line: string, messages: Array.<string>, canApply: boolean, changed: number}}
      *     The shape status() returns, kind "ERR".
      */
-    failedStatus: function (message) {
+    failedStatus: function (message, key) {
         var L = BTE.L;
         var sym = BTE.UIModel.SYMBOL;
+        var tpl = (key === "ERR_HANDLER") ? L.ERR_HANDLER : L.ERR_PREVIEW;
         return {
             kind: "ERR",
             line: sym.ERR + " " + L.STATUS_ERR,
-            messages: [sym.ERR + " " + L.format(L.ERR_PREVIEW, message)],
+            messages: [sym.ERR + " " + L.format(tpl, message)],
             canApply: false,
             changed: 0
         };

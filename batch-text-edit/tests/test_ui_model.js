@@ -399,6 +399,10 @@ h.eq(s.canApply, false, "failed: Použít off");
 h.eq(s.changed, 0, "failed: nothing changes");
 h.eq(s.line, "✗ Nelze použít, nic se nezapíše.", "failed: the error line");
 h.eq(s.messages.join("|"), "✗ Náhled se nepodařilo spočítat (BTE.Steps: unknown step type \"x\"). Pošlete tuto hlášku správci skriptu.", "failed: says what failed");
+s = U.failedStatus("x is undefined", "ERR_HANDLER");
+h.eq(s.messages.join("|"), "✗ Dialog narazil na chybu (x is undefined). Nic se nezapsalo; pošlete tuto hlášku správci skriptu.", "failed in a handler: its own message");
+h.eq(s.canApply, false, "failed in a handler: Použít off");
+h.eq(U.failedStatus("y", "NOPE").messages[0].indexOf("Náhled") !== -1, true, "an unknown key falls back to the preview message");
 
 // ---- scopeLine: what the range holds ----------------------------------------------
 function prep(elements, texts, skipped, cursor) {

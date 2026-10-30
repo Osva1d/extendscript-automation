@@ -128,6 +128,17 @@
     }
 
     function size(c) { return c && c.size ? [c.size.width, c.size.height] : null; }
+    function textW(c, text) { return Math.ceil(c.graphics.measureString(text)[0]); }
+    function msgLines(c) { return String(c.text).split(/\r\n|\r|\n/); }
+    // "label@left+width" for every control of a row group.
+    function rowLayout(g) {
+        var out = [], k, ch;
+        for (k = 0; k < g.children.length; k++) {
+            ch = g.children[k];
+            out.push((ch.type === "statictext" ? ascii(ch.text) : ch.type) + "@" + ch.bounds.left + "+" + ch.size.width);
+        }
+        return out.join(" ");
+    }
     function stats(list) {
         var s = list.slice().sort(function (a, b) { return a - b; });
         return { n: s.length, min: s[0], median: s[Math.floor(s.length / 2)], max: s[s.length - 1] };
@@ -367,6 +378,20 @@
         w.layout.layout(true);
         r.windowAfter = size(w);
 
+        // --- the scope line and the messages with the cursor texts ----------
+        t = R.stScope.text;
+        R.stScope.text = BTE.L.SCOPE_CURSOR;
+        r.cursorLine = { text: ascii(R.stScope.text), textW: textW(R.stScope, R.stScope.text), ctrlW: R.stScope.size.width,
+            messageW: textW(R.etMsgs, BTE.UIModel.SYMBOL.ERR + " " + BTE.L.ERR_CURSOR_IN_TEXT), messagesW: R.etMsgs.size.width,
+            hintW: textW(R.etMsgs, BTE.L.HOLD_HINT) };
+        R.stScope.text = t;
+
+        // --- the Number editor's rows: where each control starts ------------
+        r.numberRows = [];
+        for (i = 2; i < R.ed.number.group.children.length; i++) {
+            r.numberRows.push(rowLayout(R.ed.number.group.children[i]));
+        }
+
         // --- clipped texts, with every type group laid out -------------------
         r.clipped = [];
         r.dropdowns = [];
@@ -377,14 +402,43 @@
         R.ed.replace.dd.selection = 0;   // back to {kód}: the chain can apply again
         R.lbSteps.selection = 1;
         r.hold = { okBefore: R.btnOk.enabled };
+        // A tick that arrives without any event: Použít settles it first,
+        // shows that preview with the hint and does not apply (I1, R28).
+        R.lbSteps.items[0].checked = false;
+        R.btnOk.onClick();
+        r.tick = { closed: dlg.result() !== null, active0: S.steps[0].active, cbActive: R.cbActive.value,
+            label1: ascii(R.lbSteps.items[0].text), row1New: ascii(R.lbPrev.items[0].subItems[2].text),
+            hint: ascii(msgLines(R.etMsgs)[0]) };
+        R.lbSteps.items[0].checked = true;
+        R.btnOk.onClick();
+        r.tick.back = { closed: dlg.result() !== null, active0: S.steps[0].active, row1New: ascii(R.lbPrev.items[0].subItems[2].text) };
+        R.ed.number.fields.from.text = "5";
+        commit(R.ed.number.fields.from);
+        r.tick.hintGone = ascii(msgLines(R.etMsgs)[0]);
+        // "1O" typed without Enter: Uložit jako… is grey before a refresh has
+        // seen it only after settle(); its handler then refuses before the
+        // name prompt. settle() runs first here, so a regression cannot open
+        // a modal prompt in a headless run.
+        R.ed.number.fields.from.text = "1O";
+        R.ed.number.fields.from.onChanging();
+        r.saveAs = { staleFieldsOk: S.fieldsOk, staleEnabled: R.btnSaveAs.enabled, settled: dlg.settle(),
+            fieldsOk: S.fieldsOk, enabled: R.btnSaveAs.enabled, saveEnabled: R.btnSave.enabled, status: ascii(R.stStatus.text) };
+        if (!S.fieldsOk) {
+            R.btnSaveAs.onClick();
+            R.btnSave.onClick();
+            r.saveAs.handlersReturned = true;
+        }
+        R.ed.number.fields.from.text = "1";
+        commit(R.ed.number.fields.from);
+        $.sleep(BTE.UI.HOLD_MS + 100);
         R.ed.number.fields.from.text = "7";
         R.ed.number.fields.from.onChanging();   // typed, not committed
         R.btnOk.onClick();
-        r.hold.typedThenOk = { closed: dlg.result() !== null, after: R.lbPrev.items.length ? ascii(R.lbPrev.items[0].subItems[1].text) : null };
+        r.hold.typedThenOk = { closed: dlg.result() !== null, after: R.lbPrev.items.length ? ascii(R.lbPrev.items[0].subItems[1].text) : null, hint: ascii(msgLines(R.etMsgs)[0]) };
         R.ed.number.fields.from.text = "8";
         commit(R.ed.number.fields.from);       // Enter: onChange, then Použít at once
         R.btnOk.onClick();
-        r.hold.enterThenOk = { closed: dlg.result() !== null, after: R.lbPrev.items.length ? ascii(R.lbPrev.items[0].subItems[1].text) : null };
+        r.hold.enterThenOk = { closed: dlg.result() !== null, after: R.lbPrev.items.length ? ascii(R.lbPrev.items[0].subItems[1].text) : null, hint: ascii(msgLines(R.etMsgs)[0]) };
         $.sleep(BTE.UI.HOLD_MS + 100);
         R.btnOk.onClick();                      // the preview has been seen: applies
         res = dlg.result();

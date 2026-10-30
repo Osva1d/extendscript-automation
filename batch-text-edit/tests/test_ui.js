@@ -56,8 +56,10 @@ h.eq(U.initialScope([{ typename: "GroupItem" }]), "selection", "objects selected
 h.eq(U.initialScope([]), "document", "nothing selected: Celý dokument");
 h.eq(U.initialScope(null), "document", "null selection: Celý dokument");
 h.eq(U.initialScope(undefined), "document", "no selection: Celý dokument");
-// Text being edited is a TextRange, not an array (findings, Task 8 fact 2).
-h.eq(U.initialScope({ typename: "TextRange", length: 3 }), "document", "text editing: Celý dokument");
+// Text being edited is a TextRange, not an array (findings, Task 8 fact 2):
+// open on Výběr, so the cursor error shows at once (ruling R27).
+h.eq(U.initialScope({ typename: "TextRange", length: 3 }), "selection", "selected characters: Výběr");
+h.eq(U.initialScope({ typename: "TextRange", length: 0 }), "selection", "a blinking cursor: Výběr");
 
 // ======================= resolveAuto =========================================
 var raw = S.defaultPreset();
@@ -247,4 +249,36 @@ h.eq(absent.join(","), "", "every L.KEY in ui.js exists in both tables");
 var code = uiSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 h.eq(/"[^"\n]*[ěščřžýáíéóůúňťď][^"\n]*"/i.test(code), false, "no Czech string literal in ui.js");
 h.eq(uiSrc.indexOf("\"© 2025–2026 Ladislav Osvald · v\" + C.version") !== -1, true, "the family footer, verbatim");
+
+// ======================= every handler is guarded (M1) =========================
+var unguarded = [], hm, hre = /\.(onClick|onChange|onChanging)\s*=\s*([A-Za-z]+)/g;
+while ((hm = hre.exec(code)) !== null) {
+    if (hm[2] !== "guard" && hm[2] !== "kindClick" && hm[2] !== "orderClick") { unguarded.push(hm[0]); }
+}
+h.eq(unguarded.join(", "), "", "every onClick / onChange / onChanging goes through guard()");
+h.eq(/kindClick\(kind\) \{ return guard\(/.test(code) && /orderClick\(order\) \{ return guard\(/.test(code), true, "the radio factories return guarded handlers");
+h.eq(/addEventListener\("mouseup", guard\(/.test(code), true, "the mouseup listener is guarded");
+var handlers = code.match(/\.(onClick|onChange|onChanging)\s*=/g) || [];
+h.eq(handlers.length >= 20, true, "the scan saw " + handlers.length + " handler assignments");
+
+// ======================= tips: at most two sentences (canon 7) ==================
+// A sentence ends in . ! ? (a closing quote may follow) before a space or the
+// end; a "." that a quote opens („.“, ".") is a character, not an end.
+function sentences(t) {
+    var m = t.match(/[^"„“][.!?]["“]?(?=\s|$)/g);
+    return m === null ? 0 : m.length;
+}
+var long = [], tk;
+for (tk in BTE.L) {
+    if (BTE.L.hasOwnProperty(tk) && /^TIP_/.test(tk)) {
+        if (sentences(BTE.L[tk]) > 2) { long.push("cs " + tk); }
+        if (sentences(EN[tk]) > 2) { long.push("en " + tk); }
+        if (sentences(BTE.L[tk]) < 1) { long.push("cs " + tk + " no sentence"); }
+    }
+}
+h.eq(long.join(", "), "", "every tip has one or two sentences, in both languages");
+h.eq(sentences("A. B. C."), 3, "the sentence count sees three");
+h.eq(sentences("Najde „.“ i konec. Druhá."), 2, "a quoted dot is not a sentence end");
+h.eq(/[Zz]aškrtnutím|check mark turns/.test(BTE.L.TIP_STEP_LIST + EN.TIP_STEP_LIST), false, "the step list tip does not promise the tick (unverified)");
+h.eq(BTE.L.HOLD_HINT, "Náhled se přepočítal podle nové hodnoty. Zkontrolujte ho a potvrďte Použít znovu.", "the hold hint, as ruled (R28)");
 h.done();

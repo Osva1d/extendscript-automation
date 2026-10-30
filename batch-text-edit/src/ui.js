@@ -60,12 +60,14 @@ BTE.UI = {
 
     /**
      * ms after a refresh from a text field during which Použít only shows
-     * the new preview instead of applying. Enter in a field, or a click on
-     * Použít while a field holds an edit, commits the field (onChange, a
-     * refresh) and fires Použít at once: the user has not seen that preview,
-     * and the tool never writes one nobody saw (spec 2, anti-goals). The two
-     * events come within a few ms; a person who looks at a preview and then
-     * clicks takes far longer. The next Použít applies.
+     * the new preview, with the hint HOLD_HINT, instead of applying. Enter in
+     * a field, or a click on Použít while a field holds an edit, commits the
+     * field (onChange, a refresh) and fires Použít at once: the user has not
+     * seen that preview, and the tool never writes one nobody saw (spec 2,
+     * anti-goals; ruling R28). The two events come within a few ms; a person
+     * who looks at a preview and then clicks takes far longer. Values no
+     * refresh has seen at all are held by settle() in build(). The next
+     * Použít applies.
      * @type {number}
      */
     HOLD_MS: 400,
@@ -86,7 +88,7 @@ BTE.UI = {
     ORDERS: ["rows", "cols"],
 
     /** The Number step's text fields. */
-    NUMBER_FIELDS: ["from", "step", "to", "digits", "repeats", "reset"],
+    NUMBER_FIELDS: ["from", "to", "step", "digits", "repeats", "reset"],
 
     /** The step field a FIELD_* label key in a Number error names. */
     FIELD_OF: {
@@ -119,15 +121,17 @@ BTE.UI = {
     },
 
     /**
-     * The Rozsah the dialog opens with: Výběr when objects are selected,
-     * else Celý dokument. Text being edited is not an array (a TextRange,
-     * findings.md Task 8 fact 2), so it opens on Celý dokument; Výběr then
-     * shows the cursor error (spec 4.1).
+     * The Rozsah the dialog opens with: Výběr when objects are selected or
+     * text is being edited, else Celý dokument. Text being edited is not an
+     * array but one TextRange (findings.md Task 8 fact 2); opening on Výběr
+     * shows the cursor error at once (spec 4.1, decision 15; ruling R27).
      * @param {*} sel - doc.selection.
      * @returns {string} "selection" or "document".
      */
     initialScope: function (sel) {
-        return (BTE.Utils.isArray(sel) && sel.length > 0) ? "selection" : "document";
+        if (sel === null || sel === undefined) { return "document"; }
+        if (!BTE.Utils.isArray(sel)) { return "selection"; }
+        return sel.length > 0 ? "selection" : "document";
     },
 
     /**
@@ -320,6 +324,25 @@ BTE.UI = {
     },
 
     /**
+     * Controls of one column made as wide as the widest of them, so the
+     * labels after them start on one axis: the Formát dropdown and the Od
+     * and Opakovat fields above and below it. Computed from their own
+     * preferred widths, for the same reason as axis().
+     * @param {Array} ctrls - Controls of one column.
+     * @returns {number} The width in px, 0 when none was known.
+     */
+    matchWidths: function (ctrls) {
+        var w = 0;
+        var i;
+        for (i = 0; i < ctrls.length; i++) {
+            if (ctrls[i].preferredSize.width > w) { w = ctrls[i].preferredSize.width; }
+        }
+        if (w <= 0) { return 0; }
+        for (i = 0; i < ctrls.length; i++) { BTE.UI.lockW(ctrls[i], w); }
+        return w;
+    },
+
+    /**
      * The dialog's first layout, a method of its own for one reason:
      * probe_dialog.jsx replaces it to check the host's default maximumSize
      * first. In the AppleEvent session of 2026-10-30 every element defaulted
@@ -372,9 +395,10 @@ BTE.UI = {
             kind: "document", order: "rows", steps: [], sel: 0,
             prepared: null, run: null, status: null, shown: [],
             fieldsOk: true, busy: false, outcome: null,
-            // the values the preview was last computed from, and when a text
-            // field last refreshed it (ms, see HOLD_MS)
-            shownValues: null, textAt: 0
+            // the values the preview was last computed from, when a text
+            // field last refreshed it (ms, see HOLD_MS), and whether Použít
+            // has just held a preview back (the hint shows until a refresh)
+            shownValues: null, textAt: 0, holdHint: false
         };
         var typeNames = [], modeNames = [], labels = [], axis2 = [];
         var sel, start, i, k, rb, r;
@@ -576,9 +600,9 @@ BTE.UI = {
         ed.replace.cbFirst = r.add("checkbox", undefined, L.CB_FIRST_ONLY);
         ed.replace.cbFirst.helpTip = L.TIP_FIRST_ONLY;
 
-        // Od, Krok, Do read as one series; Číslic sits by Formát, which it
-        // belongs to; Opakovat by Znovu po. A second axis lines up the middle
-        // labels.
+        // In the order of spec 6.1: Od, Do, Krok; Formát and its Číslic;
+        // Opakovat and Znovu po. The first column's controls share a width
+        // and a second axis lines up the labels after them.
         var gNum = typeGroup();
         ed.number = whereRows(gNum, L.LBL_WHERE, L.TIP_WHERE_NUMBER);
         ed.number.group = gNum;
@@ -586,21 +610,23 @@ BTE.UI = {
         r = gNum.add("group");
         label(r, L.LBL_FROM, L.TIP_FROM, labels);
         ed.number.fields.from = numField(r, L.TIP_FROM);
-        label(r, L.LBL_STEP, L.TIP_STEP, axis2);
-        ed.number.fields.step = numField(r, L.TIP_STEP);
-        r.add("statictext", undefined, L.LBL_TO).helpTip = L.TIP_TO;
+        label(r, L.LBL_TO, L.TIP_TO, axis2);
         ed.number.fields.to = numField(r, L.TIP_TO);
+        r.add("statictext", undefined, L.LBL_STEP).helpTip = L.TIP_STEP;
+        ed.number.fields.step = numField(r, L.TIP_STEP);
         r = gNum.add("group");
-        label(r, L.LBL_DIGITS, L.TIP_DIGITS, labels);
-        ed.number.fields.digits = numField(r, L.TIP_DIGITS);
-        label(r, L.LBL_FORMAT, L.TIP_FORMAT, axis2);
+        label(r, L.LBL_FORMAT, L.TIP_FORMAT, labels);
         ed.number.ddFormat = r.add("dropdownlist", undefined, [L.FORMAT_NUM, L.FORMAT_UPPER, L.FORMAT_LOWER]);
         ed.number.ddFormat.helpTip = L.TIP_FORMAT;
+        label(r, L.LBL_DIGITS, L.TIP_DIGITS, axis2);
+        ed.number.fields.digits = numField(r, L.TIP_DIGITS);
         r = gNum.add("group");
         label(r, L.LBL_REPEATS, L.TIP_REPEATS, labels);
         ed.number.fields.repeats = numField(r, L.TIP_REPEATS);
         label(r, L.LBL_RESET, L.TIP_RESET, axis2);
         ed.number.fields.reset = numField(r, L.TIP_RESET);
+        // [deviation] alignment axis, see matchWidths()
+        U.matchWidths([ed.number.fields.from, ed.number.ddFormat, ed.number.fields.repeats]);
 
         var gCase = typeGroup();
         ed["case"] = whereRows(gCase, L.LBL_WHERE, L.TIP_WHERE_CASE);
@@ -694,11 +720,16 @@ BTE.UI = {
         function updateStepLabels() {
             var n = lbSteps.items.length;
             var j, text, it;
-            for (j = 0; j < st.steps.length && j < n; j++) {
-                it = lbSteps.items[j];
-                text = Model.stepLabel(st.steps[j], st.run ? st.run.info[j] : null, j);
-                if (it.text !== text) { it.text = text; }
-                if ((it.checked === true) !== st.steps[j].active) { it.checked = st.steps[j].active; }
+            st.busy = true;
+            try {
+                for (j = 0; j < st.steps.length && j < n; j++) {
+                    it = lbSteps.items[j];
+                    text = Model.stepLabel(st.steps[j], st.run ? st.run.info[j] : null, j);
+                    if (it.text !== text) { it.text = text; }
+                    if ((it.checked === true) !== st.steps[j].active) { it.checked = st.steps[j].active; }
+                }
+            } finally {
+                st.busy = false;
             }
         }
 
@@ -812,10 +843,12 @@ BTE.UI = {
             st.shown = rows;
         }
 
+        /** Status line and messages; the hold hint first while it applies (ruling R28). */
         function renderStatus() {
+            var msgs = st.holdHint ? [L.HOLD_HINT].concat(st.status.messages) : st.status.messages;
             stStatus.text = st.status.line;
             BTE.FieldPaint.text(stStatus, st.status.kind);
-            etMsgs.text = st.status.messages.join("\n");
+            etMsgs.text = msgs.join("\n");
         }
 
         // --- presets -------------------------------------------------------------
@@ -887,6 +920,7 @@ BTE.UI = {
             var j;
             if (syncChecks()) { cbActive.value = selected().active === true; }
             st.shownValues = current();
+            st.holdHint = false;
             st.run = null;
             try {
                 st.run = BTE.Steps.run(st.prepared.state, st.steps);
@@ -933,9 +967,51 @@ BTE.UI = {
 
         // --- wiring -------------------------------------------------------------------
 
+        /**
+         * A handler that can never fail silently or half-way: an exception
+         * is logged and shown as a ✗ status, and Použít, Uložit and Uložit
+         * jako… go grey until the next refresh succeeds. The dialog stays
+         * open; nothing has been written.
+         */
+        function guard(fn) {
+            return function (ev) {
+                try {
+                    return fn(ev);
+                } catch (e) {
+                    st.busy = false;
+                    U.log("handler: " + e.message + " (line " + e.line + ")");
+                    try {
+                        st.status = Model.failedStatus(String(e.message), "ERR_HANDLER");
+                        st.fieldsOk = false;
+                        st.holdHint = false;
+                        renderStatus();
+                        btnOk.enabled = false;
+                        btnSave.enabled = false;
+                        btnSaveAs.enabled = false;
+                    } catch (e2) {
+                        U.log("handler error display: " + e2.message + " (line " + e2.line + ")");
+                    }
+                }
+            };
+        }
+
         /** Whether the preview was computed from the values the dialog holds now. */
         function previewCurrent() {
             return st.shownValues !== null && BTE.Utils.presetEquals(current(), st.shownValues);
+        }
+
+        /**
+         * Brings the preview up to what the dialog holds before anything uses
+         * the values: a tick clicked in the step list without an event, an
+         * edit no refresh has seen yet. Použít, Uložit and Uložit jako… call
+         * it first, so they never act on values the preview did not show.
+         * @returns {boolean} True when it had to refresh.
+         */
+        function settle() {
+            if (syncChecks()) { cbActive.value = selected().active === true; }
+            if (previewCurrent()) { return false; }
+            refresh();
+            return true;
         }
 
         /** A refresh caused by typing, remembered for Použít (HOLD_MS). */
@@ -951,20 +1027,20 @@ BTE.UI = {
          * edit never holds Použít back.
          */
         function wireText(et, apply) {
-            et.onChanging = function () {
+            et.onChanging = guard(function () {
                 if (st.busy) { return; }
                 apply(et.text);
                 if (U.LIVE_EVENT === "onChanging") { textRefresh(); }
-            };
-            et.onChange = function () {
+            });
+            et.onChange = guard(function () {
                 if (st.busy) { return; }
                 apply(et.text);
                 if (!previewCurrent()) { textRefresh(); }
-            };
+            });
         }
 
         function wireWhere(e) {
-            e.dd.onChange = function () {
+            e.dd.onChange = guard(function () {
                 var step, item, kind;
                 if (st.busy || !e.dd.selection) { return; }
                 step = selected();
@@ -980,7 +1056,7 @@ BTE.UI = {
                     }
                 }
                 refresh();
-            };
+            });
             wireText(e.et, function (text) {
                 var step = selected();
                 if (step.where && (step.where.kind === "text" || step.where.kind === "regex")) {
@@ -993,32 +1069,32 @@ BTE.UI = {
         wireWhere(ed["case"]);
 
         wireText(ed.replace.etReplace, function (text) { selected().replace = text; });
-        ed.replace.cbCase.onClick = function () {
+        ed.replace.cbCase.onClick = guard(function () {
             selected().matchCase = ed.replace.cbCase.value === true;
             refresh();
-        };
-        ed.replace.cbFirst.onClick = function () {
+        });
+        ed.replace.cbFirst.onClick = guard(function () {
             selected().firstOnly = ed.replace.cbFirst.value === true;
             refresh();
-        };
+        });
         function numberSetter(f) {
             return function (text) { selected()[f] = text; };
         }
         for (k = 0; k < U.NUMBER_FIELDS.length; k++) {
             wireText(ed.number.fields[U.NUMBER_FIELDS[k]], numberSetter(U.NUMBER_FIELDS[k]));
         }
-        ed.number.ddFormat.onChange = function () {
+        ed.number.ddFormat.onChange = guard(function () {
             if (st.busy || !ed.number.ddFormat.selection) { return; }
             selected().format = U.FORMATS[ed.number.ddFormat.selection.index];
             refresh();
-        };
-        ed["case"].ddMode.onChange = function () {
+        });
+        ed["case"].ddMode.onChange = guard(function () {
             if (st.busy || !ed["case"].ddMode.selection) { return; }
             selected().mode = U.MODES[ed["case"].ddMode.selection.index];
             refresh();
-        };
+        });
 
-        ddType.onChange = function () {
+        ddType.onChange = guard(function () {
             var type, vars;
             if (st.busy || !ddType.selection) { return; }
             type = U.TYPES[ddType.selection.index];
@@ -1028,16 +1104,21 @@ BTE.UI = {
             st.steps[st.sel] = U.convertStep(selected(), type, vars);
             showEditor();
             refresh();
-        };
-        cbActive.onClick = function () {
+        });
+        cbActive.onClick = guard(function () {
             selected().active = cbActive.value === true;
             // The list's tick follows at once, or refresh() would read the
             // old tick back as a click.
-            lbSteps.items[st.sel].checked = selected().active;
+            st.busy = true;
+            try {
+                lbSteps.items[st.sel].checked = selected().active;
+            } finally {
+                st.busy = false;
+            }
             refresh();
-        };
+        });
 
-        lbSteps.onChange = function () {
+        lbSteps.onChange = guard(function () {
             if (st.busy) { return; }
             if (!lbSteps.selection) {
                 // A click into the empty part of the list deselects; the
@@ -1054,16 +1135,17 @@ BTE.UI = {
             st.sel = lbSteps.selection.index;
             showEditor();
             refresh();
-        };
+        });
         // A click on a tick may not change the selection; whether it fires
-        // onChange is unmeasured (spec 6.1, manual test), so mouseup checks.
+        // onChange is unmeasured (spec 6.1, manual test), so mouseup checks,
+        // and settle() catches a tick that came without any event.
         try {
-            lbSteps.addEventListener("mouseup", function () {
+            lbSteps.addEventListener("mouseup", guard(function () {
                 if (!st.busy && syncChecks()) {
                     cbActive.value = selected().active === true;
                     refresh();
                 }
-            });
+            }));
         } catch (listenErr) {
             U.log("step list mouseup: " + listenErr.message);
         }
@@ -1075,26 +1157,26 @@ BTE.UI = {
             showEditor();
             refresh();
         }
-        btnAdd.onClick = function () {
+        btnAdd.onClick = guard(function () {
             var type = U.TYPES[ddAddType.selection ? ddAddType.selection.index : 0];
             var s = BTE.Storage.newStep(type);
             syncChecks();
             s.where = Model.defaultWhere(type, U.varsAfter(st.run, st.sel));
             replaceChain(U.insertStep(st.steps, st.sel, s));
-        };
-        btnRemove.onClick = function () {
+        });
+        btnRemove.onClick = guard(function () {
             if (st.steps.length <= 1) { return; }
             syncChecks();
             replaceChain(U.removeStep(st.steps, st.sel));
-        };
-        btnUp.onClick = function () {
+        });
+        btnUp.onClick = guard(function () {
             syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, -1));
-        };
-        btnDown.onClick = function () {
+        });
+        btnDown.onClick = guard(function () {
             syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, 1));
-        };
+        });
 
         function setKind(kind) {
             var p;
@@ -1102,6 +1184,7 @@ BTE.UI = {
             try {
                 p = BTE.Scope.prepare(doc, kind, st.order);
             } catch (e) {
+                U.log("setKind: " + e.message + " (line " + e.line + ")");
                 alert(L.format(L.ERR_SCOPE_READ, e.message));
                 rbKind[indexOf(U.SCOPES, st.kind)].value = true;
                 return;
@@ -1112,7 +1195,7 @@ BTE.UI = {
             stScope.text = Model.scopeLine(p);
             refresh();
         }
-        function kindClick(kind) { return function () { setKind(kind); }; }
+        function kindClick(kind) { return guard(function () { setKind(kind); }); }
         for (k = 0; k < rbKind.length; k++) { rbKind[k].onClick = kindClick(U.SCOPES[k]); }
 
         function setOrder(order) {
@@ -1121,10 +1204,10 @@ BTE.UI = {
             st.order = order;
             refresh();
         }
-        function orderClick(order) { return function () { setOrder(order); }; }
+        function orderClick(order) { return guard(function () { setOrder(order); }); }
         for (k = 0; k < rbOrder.length; k++) { rbOrder[k].onClick = orderClick(U.ORDERS[k]); }
 
-        ddPreset.onChange = function () {
+        ddPreset.onChange = guard(function () {
             var key, res;
             if (st.busy || !ddPreset.selection) { return; }
             key = sortedKeys[ddPreset.selection.index];
@@ -1133,17 +1216,24 @@ BTE.UI = {
             if (!res.ok) { return; }
             if (key === DEF) { resolveDefault(); }
             applyValues(pData.presets[key]);
-        };
+        });
 
         /** ↺ — back to the active preset as saved. Nothing is written. */
-        btnRevert.onClick = function () {
+        btnRevert.onClick = guard(function () {
             if (pData.activePreset === DEF) { resolveDefault(); }
             applyValues(pData.presets[pData.activePreset]);
-        };
+        });
 
-        btnSaveAs.onClick = function () {
-            var raw = prompt(L.PROMPT_SAVE_AS, "");
-            var res;
+        /**
+         * Saves the values under a new name. A field the preview has not
+         * checked yet is checked first, and an invalid one is never saved
+         * (canon 12.4): the button is grey then, and the field red.
+         */
+        btnSaveAs.onClick = guard(function () {
+            var raw, res;
+            settle();
+            if (!st.fieldsOk) { return; }
+            raw = prompt(L.PROMPT_SAVE_AS, "");
             if (raw === null) { return; }
             if (!/\S/.test(raw)) {
                 alert(L.ERR_ENTER_NAME);
@@ -1160,11 +1250,13 @@ BTE.UI = {
             updatePresetList();
             persist();
             refreshPresetIndicator();
-        };
+        });
 
         /** Overwrites the active preset; on [Výchozí] it asks for a name (canon 12.4). */
-        btnSave.onClick = function () {
+        btnSave.onClick = guard(function () {
             var res;
+            settle();
+            if (!st.fieldsOk) { return; }
             if (pData.activePreset === DEF) {
                 btnSaveAs.onClick();
                 return;
@@ -1173,9 +1265,9 @@ BTE.UI = {
             if (!res.ok) { return; }
             persist();
             refreshPresetIndicator();
-        };
+        });
 
-        btnDel.onClick = function () {
+        btnDel.onClick = guard(function () {
             var res;
             if (pData.activePreset === DEF) { return; }   // greyed there anyway
             if (!confirm(L.format(L.CONFIRM_DELETE_PRESET, pData.activePreset))) { return; }
@@ -1185,25 +1277,33 @@ BTE.UI = {
             updatePresetList();
             persist();
             applyValues(pData.presets[DEF]);
-        };
+        });
 
-        btnOk.onClick = function () {
-            // A preview nobody has seen yet is shown, not applied (HOLD_MS):
-            // an edit still waiting for its refresh, or one that Enter or this
-            // click has just committed.
-            var unseen = !previewCurrent() || (new Date().getTime() - st.textAt < U.HOLD_MS);
-            // The run handed back is the one the preview shows now.
-            refresh();
-            if (unseen || !st.status.canApply) { return; }
+        /**
+         * Applies only a preview that has been on screen (spec 2, anti-goals).
+         * Held back, it shows the new preview with a hint and the next Použít
+         * applies: when settle() had to refresh (an edit or a tick no refresh
+         * had seen), or when a text field refreshed it just now (Enter in the
+         * field, or this click committed it; HOLD_MS). The run handed back is
+         * the one the preview shows.
+         */
+        btnOk.onClick = guard(function () {
+            var held = settle() || (new Date().getTime() - st.textAt < U.HOLD_MS);
+            if (held) {
+                st.holdHint = true;
+                renderStatus();
+                return;
+            }
+            if (!st.status.canApply) { return; }
             pData.presets[LAST] = current();
             if (!BTE.Storage.save(pData)) { alert(L.ERR_WRITE_SETTINGS_RUN); }
             st.outcome = { scope: st.kind, order: st.order, steps: U.copy(st.steps), prepared: st.prepared, run: st.run };
             w.close(1);
-        };
-        btnCancel.onClick = function () {
+        });
+        btnCancel.onClick = guard(function () {
             st.outcome = null;
             w.close(0);
-        };
+        });
 
         // --- first fill ---------------------------------------------------------------
         rbKind[indexOf(U.SCOPES, st.kind)].value = true;
@@ -1219,6 +1319,7 @@ BTE.UI = {
             notes: pData.notes,
             state: st,
             refresh: refresh,
+            settle: settle,
             refs: {
                 ddPreset: ddPreset, btnRevert: btnRevert, btnSave: btnSave, btnSaveAs: btnSaveAs, btnDel: btnDel,
                 rbKind: rbKind, rbOrder: rbOrder, stScope: stScope,
