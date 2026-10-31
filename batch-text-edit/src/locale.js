@@ -191,6 +191,25 @@ BTE.L = (function () {
             HOLD_HINT:           "The preview was recomputed for the new value. Check it and confirm Apply again.",
             BTN_CANCEL:          "Cancel",
             BTN_APPLY:           "Apply",
+            // Summary of a run (shared BTE.Summary). The note is one line of
+            // about 60 characters at most; longer text goes into the details.
+            SUM_TITLE:           "Edit result",
+            SUM_CHANGED_ELEMENTS: "Changed elements:",
+            SUM_CHANGED_TEXTS:   "Changed texts:",
+            SUM_SKIPPED:         "Skipped texts:",
+            SUM_MISMATCH:        "Mismatch after writing:",
+            SUM_ERRORS:          "Errors:",
+            SUM_DETAILS:         "Details",
+            SUM_ALL_OK:          "Everything went fine.",
+            SUM_MISMATCH_NOTE:   "Check the document, or undo the run (Cmd+Z).",
+            SUM_STOPPED:         "Writing stopped before the end.",
+            // Element, text (counted from 1), the text the preview showed, the
+            // text the document holds now.
+            SUM_MISMATCH_LINE:   "Element %s, text %s: the preview said \"%s\", the document holds \"%s\".",
+            SUM_MISMATCH_MORE_1: "And %s more mismatch.",
+            SUM_MISMATCH_MORE_2: "And %s more mismatches.",
+            SUM_MISMATCH_MORE_5: "And %s more mismatches.",
+            BTN_CLOSE:           "Close",
             // Write stopped by a DOM error: element (first %s), texts written so
             // far (second %s, picks the form).
             ERR_WRITE_AT_1:      "Writing stopped at element %s; %s text was written. Undo (Cmd+Z) reverts the whole run.",
@@ -374,6 +393,24 @@ BTE.L = (function () {
             HOLD_HINT:           "Náhled se přepočítal podle nové hodnoty. Zkontrolujte ho a potvrďte Použít znovu.",
             BTN_CANCEL:          "Storno",
             BTN_APPLY:           "Použít",
+            // Souhrn běhu (sdílený BTE.Summary). Poznámka je jeden řádek
+            // nejvýš kolem 60 znaků, delší text patří do podrobností.
+            SUM_TITLE:           "Výsledek úprav",
+            SUM_CHANGED_ELEMENTS: "Změněné prvky:",
+            SUM_CHANGED_TEXTS:   "Změněné texty:",
+            SUM_SKIPPED:         "Přeskočené texty:",
+            SUM_MISMATCH:        "Neshoda po zápisu:",
+            SUM_ERRORS:          "Chyby:",
+            SUM_DETAILS:         "Podrobnosti",
+            SUM_ALL_OK:          "Vše proběhlo bez chyb.",
+            SUM_MISMATCH_NOTE:   "Zkontrolujte dokument, případně běh vraťte (Cmd+Z).",
+            SUM_STOPPED:         "Zápis se zastavil před koncem.",
+            // Prvek, text (od 1), text z náhledu, text, který je teď v dokumentu.
+            SUM_MISMATCH_LINE:   "Prvek %s, text %s: náhled říkal „%s“, v dokumentu je „%s“.",
+            SUM_MISMATCH_MORE_1: "A další %s neshoda.",
+            SUM_MISMATCH_MORE_2: "A další %s neshody.",
+            SUM_MISMATCH_MORE_5: "A dalších %s neshod.",
+            BTN_CLOSE:           "Zavřít",
             // Zápis zastavený chybou DOM: prvek (první %s), dosud zapsané texty
             // (druhé %s, podle něj tvar).
             ERR_WRITE_AT_1:      "Zápis se zastavil u prvku %s, zapsán %s text. Zpět (Cmd+Z) vrátí celý běh.",

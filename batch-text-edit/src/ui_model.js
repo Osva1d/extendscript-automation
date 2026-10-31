@@ -38,6 +38,19 @@ BTE.UIModel = {
     MAX_MULTI: 3,
 
     /**
+     * How many mismatches after writing the summary lists by name; the rest
+     * is counted in one line.
+     * @type {number}
+     */
+    MAX_MISMATCH: 10,
+
+    /**
+     * Longest text the summary quotes for one mismatch before it is cut.
+     * @type {number}
+     */
+    MAX_QUOTE: 60,
+
+    /**
      * A text for one table cell or label: paragraph breaks and soft line
      * breaks are replaced by their symbols.
      * @param {string} s - Text from the document.
@@ -438,5 +451,122 @@ BTE.UIModel = {
             L.count("COUNT_TEXTS", prepared.textCount));
         if (skipped > 0) { line = L.format(L.SCOPE_SKIPPED, line, skipped); }
         return line;
+    },
+
+    /**
+     * What a run changed, from the preview's states: an element changed when
+     * any of its texts differs between the input and the final state. A text
+     * written to and brought back by a later step (A -> B -> A) is not a
+     * change, which is why this is not BTE.Write.apply's textsWritten.
+     * @param {Array} states - BTE.Steps.run(...).states.
+     * @returns {{elements: number, texts: number}} Changed elements and texts.
+     */
+    changes: function (states) {
+        var first = states[0];
+        var last = states[states.length - 1];
+        var elements = 0;
+        var texts = 0;
+        var i, j, any;
+
+        for (i = 0; i < first.length; i++) {
+            any = false;
+            for (j = 0; j < first[i].length; j++) {
+                if (first[i][j] !== last[i][j]) {
+                    texts++;
+                    any = true;
+                }
+            }
+            if (any) { elements++; }
+        }
+        return { elements: elements, texts: texts };
+    },
+
+    /**
+     * The lines the summary lists for the texts that differ from the preview
+     * after writing: the first MAX_MISMATCH by name (element and text from
+     * 1, both texts on one line, "¶" for a paragraph break, cut to
+     * MAX_QUOTE), then one line counting the rest.
+     * @param {Array.<{el: number, tx: number, expected: string, actual: string}>} mismatches
+     *     BTE.Write.verify's result.
+     * @returns {Array.<string>} Lines led by the error sign; empty for none.
+     */
+    mismatchLines: function (mismatches) {
+        var U = BTE.UIModel;
+        var L = BTE.L;
+        var lines = [];
+        var shown = mismatches.length < U.MAX_MISMATCH ? mismatches.length : U.MAX_MISMATCH;
+        var i, m;
+
+        function quote(s) { return U.shorten(U.display(s), U.MAX_QUOTE); }
+
+        for (i = 0; i < shown; i++) {
+            m = mismatches[i];
+            lines.push(U.SYMBOL.ERR + " " + L.format(L.SUM_MISMATCH_LINE, m.el + 1, m.tx + 1, quote(m.expected), quote(m.actual)));
+        }
+        if (mismatches.length > shown) {
+            lines.push(U.SYMBOL.ERR + " " + L.count("SUM_MISMATCH_MORE", mismatches.length - shown));
+        }
+        return lines;
+    },
+
+    /**
+     * The argument BTE.Summary.show takes for a finished run: changed
+     * elements and texts (computed from the states, see changes()), the
+     * skipped texts, the mismatches after writing (red, always shown), and in
+     * the details the mismatches first, then the warnings the dialog showed
+     * (the skipped texts by reason among them).
+     * @param {{steps: Array, prepared: Object, run: Object}} res - What
+     *     BTE.UI.show returned.
+     * @param {Array.<{el: number, tx: number, expected: string, actual: string}>} mismatches
+     *     BTE.Write.verify's result.
+     * @returns {Object} {title, pairs, note, details, detailsTitle, allOk, close}.
+     */
+    runSummary: function (res, mismatches) {
+        var U = BTE.UIModel;
+        var L = BTE.L;
+        var s = res.prepared.skipped || {};
+        var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
+        var ch = U.changes(res.run.states);
+        var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText);
+
+        return {
+            title: L.SUM_TITLE,
+            pairs: [
+                { label: L.SUM_CHANGED_ELEMENTS, value: ch.elements, always: true },
+                { label: L.SUM_CHANGED_TEXTS, value: ch.texts, always: true },
+                { label: L.SUM_SKIPPED, value: skipped },
+                { label: L.SUM_MISMATCH, value: mismatches.length, alert: true, always: true }
+            ],
+            note: mismatches.length > 0 ? L.SUM_MISMATCH_NOTE : "",
+            details: U.mismatchLines(mismatches).concat(st.messages),
+            detailsTitle: L.SUM_DETAILS,
+            allOk: L.SUM_ALL_OK,
+            close: L.BTN_CLOSE
+        };
+    },
+
+    /**
+     * The argument BTE.Summary.show takes when BTE.Write.apply stopped
+     * halfway. The Error's message (it says how many texts were written,
+     * where the write stopped and that Cmd+Z reverts the run) goes into the
+     * details box, which wraps; a note is one unwrapped line and would cut
+     * it. The Error's `detail` (English, for the log) is never shown. The
+     * note and the details keep the summary from saying that everything
+     * went fine.
+     * @param {{message: string}} err - The Error BTE.Write.apply threw (only
+     *     its message is read).
+     * @returns {Object} {title, pairs, note, details, detailsTitle, allOk, close}.
+     */
+    writeFailureSummary: function (err) {
+        var L = BTE.L;
+        return {
+            title: L.SUM_TITLE,
+            pairs: [{ label: L.SUM_ERRORS, value: 1, alert: true, always: true }],
+            note: L.SUM_STOPPED,
+            details: [String(err.message)],
+            detailsTitle: L.SUM_DETAILS,
+            allOk: L.SUM_ALL_OK,
+            close: L.BTN_CLOSE
+        };
     }
 };
