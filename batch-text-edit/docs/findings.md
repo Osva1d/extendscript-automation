@@ -400,3 +400,17 @@ In the Number editor (Od, Do, Krok / Formát, Číslic / Opakovat, Znovu po) the
 - **Hold:** typing then Použít, and Enter then Použít, hold with the hint as before. 500 ms later Použít applies the run the preview shows.
 - **Times:** a refresh took 225–709 ms (median 246–346); a Rozsah change about 2 s.
 - Reading the messages box after the hint was cleared gave no line at all (probably `"".split(regex)` returns no element in the engine); harmless, noted.
+
+## End-to-end probe (Task 13)
+
+Probe: `tests/probes/probe_e2e.jsx`, Illustrator 30.8.2, locale cs, run 2026-10-31. The real modules and the real `src/main.js` ran together (the file read from disk and run through `new Function` with its own `alert` and `$`). Only `BTE.UI.show` and `BTE.Summary.show` were stubbed; the `UI.show` stub uses the real `Scope.prepare` and `Steps.run`. Each part ran in its own `ai-eval` call, started at 0 open documents, closed the probe's own document unsaved and left 0 documents. No Undo command was called.
+
+| part | setup | result |
+|---|---|---|
+| main | 240 prefab groups of „{kód}“, „{n}“, „Série {série}“, chain Replace {kód}→ABC, Number {n} Číslic 3, Replace {série}→2026 | calls in order: ui.show, apply, verify, summary. Preview: 240 elements, 720 texts, canApply true. `textsWritten` 720, `verify` `[]`. One summary with pairs 240 changed elements, 720 changed texts, 0 skipped, 0 mismatches; no note, no details; no alert, nothing logged. 0 of 240 elements wrong: element 1 „ABC \| 001 \| Série 2026“, element 240 „ABC \| 240 \| Série 2026“ |
+| locked | 3 prefabs, the {kód} text of prefab 2 locked | skipped `{locked: 1}`; pairs 3 elements, 8 texts, 1 skipped, 0 mismatches; details exactly `⚠ ` + `L.count("SKIP_LOCKED", 1)`; `textsWritten` 8, `verify` `[]`; the locked text stayed „{kód}“ while element 2 still took part (002, 2026) |
+| fail-dom | 20 prefabs; `BTE.Write.writeEdit` wrapped so its 15th call throws | calls ui.show, apply, summary (no verify). Summary „Chyby: 1“, note „Zápis se zastavil před koncem.“, details „Zápis se zastavil u prvku 15, zapsáno 14 textů. Zpět (Cmd+Z) vrátí celý běh.“ (= `ERR_WRITE_AT`); the simulated failure text appears nowhere in the summary; the log has one line `[BTE] BTE.Write.apply: step 1, element 15, text 1: …`; 14 elements hold ABC, as expected |
+| fail-drift | 20 prefabs; the {kód} text of element 10 changed by hand after the preview | same path; „…u prvku 10, zapsáno 9 textů…“; the log has the drift detail (first difference at character 5; 6 characters in the document, 5 in the preview); 9 elements hold ABC and element 10 is untouched |
+| note | widths in the dialog font via `graphics.measureString` | notes 316 / 180 / 137 px against 500 px (`Summary.NOTE_W`); labels Změněné prvky: 93, Změněné texty: 91, Přeskočené texty: 103, Neshoda po zápisu: 116, Chyby: 40 px against the 150 px label column — everything fits |
+
+Part main took 5.2 s in total incl. the stub dialog's `prepare` and `Steps.run`. One Cmd+Z reverting the whole run is left to the manual test, as are the `⚠`/`✗` glyphs in the Summary's details box (the Summary window was not rendered headless).
