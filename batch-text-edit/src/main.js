@@ -1,22 +1,16 @@
 // ------------------------------------------------------------------------
 // Module: Entry point — IIFE, error boundary, dialog, write, verify, summary
 // Part of: Illustrator Batch Text Edit
-// Depends on: BTE.L, BTE.UI, BTE.UIModel, BTE.Write, BTE.Summary
+// Depends on: BTE.L, BTE.UI, BTE.UIModel, BTE.Utils, BTE.Write, BTE.Summary
 // ------------------------------------------------------------------------
 var BTE = BTE || {};
 
 (function (BTE) {
     var L = BTE.L;
-
-    /**
-     * Writes where a debugger can see it. The user never reads this: a
-     * write error's `detail` is English diagnostics, its `message` is the
-     * text for the user.
-     * @param {string} msg - What to log.
-     */
-    function log(msg) {
-        if (typeof $ !== "undefined" && $.writeln) { $.writeln("[BTE] " + msg); }
-    }
+    // A write error's `detail` and the boundary's errors are English
+    // diagnostics for the maintainer: BTE.Utils.log puts them on the console
+    // and in the log file, never in a dialog. The user reads `message`.
+    var log = BTE.Utils.log;
 
     try {
         if (app.documents.length === 0) { alert(L.ERR_NO_DOC); return; }

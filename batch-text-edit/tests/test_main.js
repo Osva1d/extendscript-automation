@@ -76,6 +76,27 @@ r = result([["a", "a"], ["a", "x"]], [R({ kind: "text", text: "a" }, { replace: 
 c = U.changes(r.run.states);
 h.eq(c.elements + "/" + c.texts, "2/3", "changes: two texts in one element count twice, the element once");
 
+// after writing, a text the document still holds as it was is not a change (verify's `actual`)
+var one = [R({ kind: "text", text: "a" }, { replace: "b" })];
+r = result([["a", "x"], ["a", "x"]], one);
+c = U.changes(r.run.states);
+h.eq(c.elements + "/" + c.texts, "2/2", "measured: the preview promises two changes");
+c = U.changes(r.run.states, [{ el: 0, tx: 0, expected: "b", actual: "a" }]);
+h.eq(c.elements + "/" + c.texts, "1/1", "measured: the text the document still holds as it was, and its element, are not counted");
+c = U.changes(r.run.states, [{ el: 0, tx: 0, expected: "b", actual: "a" }, { el: 1, tx: 0, expected: "b", actual: "a" }]);
+h.eq(c.elements + "/" + c.texts, "0/0", "measured: every write missing, nothing changed");
+c = U.changes(r.run.states, [{ el: 0, tx: 0, expected: "b", actual: "c" }]);
+h.eq(c.elements + "/" + c.texts, "2/2", "measured: a text that holds something else is changed all the same");
+r = result([["a", "a"], ["a", "x"]], one);
+c = U.changes(r.run.states, [{ el: 0, tx: 0, expected: "b", actual: "a" }]);
+h.eq(c.elements + "/" + c.texts, "2/2", "measured: the element still counts through its other text");
+c = U.changes(r.run.states, []);
+h.eq(c.elements + "/" + c.texts, "2/3", "measured: no mismatches, the preview's count");
+// a mismatch that is not the original text (the document holds something else) changes the text too
+r = result([["a", "x"]], one);
+c = U.changes(r.run.states, [{ el: 0, tx: 1, expected: "x", actual: "y" }]);
+h.eq(c.elements + "/" + c.texts, "1/2", "measured: a text the preview left alone but the document changed is counted");
+
 // ======================= mismatchLines ========================================
 h.eq(U.mismatchLines([]).length, 0, "no mismatch, no line");
 var lines = U.mismatchLines([{ el: 2, tx: 0, expected: "ABC", actual: "ABC\rX" }]);
@@ -129,6 +150,16 @@ h.eq(sum.note, "", "summary: a warning is no note");
 r = result(sheet(5), [N(V("{n}"), { to: "8" })]);
 sum = U.runSummary(r, [{ el: 1, tx: 1, expected: "002", actual: "2" }]);
 h.eq(sum.pairs[3].value, 1, "summary: one mismatch");
+h.eq(sum.pairs[0].value + "/" + sum.pairs[1].value, "5/5", "summary: a mismatched text that differs from the original still counts as changed");
+
+// the document still holds the original of a text: measured, not promised
+var r2 = result([["a"], ["a"]], [R({ kind: "text", text: "a" }, { replace: "b" })]);
+var sum2 = U.runSummary(r2, [{ el: 0, tx: 0, expected: "b", actual: "a" }]);
+h.eq(sum2.pairs[0].value + "/" + sum2.pairs[1].value + "/" + sum2.pairs[3].value, "1/1/1",
+    "summary: the unwritten text and its element are not counted, the mismatch is");
+r2 = result(sheet(3), CHAIN);
+sum2 = U.runSummary(r2, [{ el: 0, tx: 1, expected: "001", actual: "{n}" }]);
+h.eq(sum2.pairs[0].value + "/" + sum2.pairs[1].value, "3/8", "summary: three elements still changed, eight texts of nine");
 h.eq(sum.note, "Zkontrolujte dokument, případně běh vraťte (Cmd+Z).", "summary: the note says what to do");
 h.eq(sum.details[0], "✗ Prvek 2, text 2: náhled říkal „002“, v dokumentu je „2“.", "summary: the mismatch comes first");
 h.eq(sum.details.length, 3, "summary: then the two warnings");
@@ -151,6 +182,19 @@ shown = BTE.Summary.visiblePairs(sum.pairs);
 h.eq(shown.length, 1, "failure: the error row shows");
 
 // ======================= main.js ==============================================
+// A File and Folder stub for the log file (BTE.Utils.log): "a" appends to the
+// string in logDisk; opts.logOpenFails makes the file refuse to open.
+var LOG_PATH = "/ud/batch-text-edit/bte.log";
+var logDisk = {}, logFolders = {}, logFails = false;
+function MockFolder(p) { this.fsName = p; }
+Object.defineProperty(MockFolder.prototype, "exists", { get: function () { return logFolders[this.fsName] === true; } });
+MockFolder.prototype.create = function () { logFolders[this.fsName] = true; return true; };
+MockFolder.userData = "/ud";
+function MockFile(p) { this.fsName = p; }
+MockFile.prototype.open = function () { return !logFails; };
+MockFile.prototype.writeln = function (t) { logDisk[this.fsName] = (logDisk[this.fsName] || "") + t + (this.lineFeed === "Unix" ? "\n" : "\r"); return true; };
+MockFile.prototype.close = function () { return true; };
+
 // Runs main.js against stubs and records every call in order.
 function runMain(opts) {
     var calls = [], alerts = [], logged = [], summaries = [];
@@ -180,6 +224,11 @@ function runMain(opts) {
     };
     BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); } };
     global.$ = { writeln: function (s) { logged.push(s); } };
+    global.File = MockFile;
+    global.Folder = MockFolder;
+    logDisk = {};
+    logFolders = {};
+    logFails = opts.logOpenFails === true;
     try {
         new Function("BTE", "app", "alert", "$", MAIN)(BTE, env, function (s) { alerts.push(s); }, global.$);
     } finally {
@@ -188,8 +237,10 @@ function runMain(opts) {
         delete BTE.UI;
         BTE.Summary = origSummary;
         delete global.$;
+        delete global.File;
+        delete global.Folder;
     }
-    return { calls: calls, alerts: alerts, logged: logged, summaries: summaries };
+    return { calls: calls, alerts: alerts, logged: logged, summaries: summaries, logFile: logDisk[LOG_PATH] };
 }
 
 var tfs = [[{ id: "frame" }]];
@@ -228,6 +279,19 @@ h.eq(m.alerts.length, 0, "main: a stopped write is no ERR_CRITICAL");
 h.eq(m.summaries[0].details.join("|"), wErr.message, "main: the Error's message is shown");
 h.eq(JSON.stringify(m.summaries[0]).indexOf("the DOM said no"), -1, "main: the detail is not shown");
 h.eq(m.logged.join("|"), "[BTE] " + wErr.detail, "main: the detail is logged");
+h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d BTE\.Write\.apply: step 1, element 7, text 2: the DOM said no\n$/.test(m.logFile), true,
+    "main: and appended to the log file, one line with a stamp");
+h.eq(m.logFile.indexOf(wErr.message), -1, "main: the user's message is not what the file holds");
+
+// the log file cannot be opened: the run still ends with the summary, the console has the detail and the reason
+m = runMain({ res: r, applyThrows: wErr, logOpenFails: true });
+h.eq(m.calls.join(","), "ui.show:true,apply,summary", "main: a failing log file does not stop the summary");
+h.eq(m.alerts.length, 0, "main: and raises no alert");
+h.eq(m.logged.length, 2, "main: the console has the detail and the reason");
+h.eq(m.logged[0], "[BTE] " + wErr.detail, "main: the detail is on the console");
+h.eq(m.logged[1].indexOf("log file not written") !== -1, true, "main: the console says the file was not written");
+h.eq(m.logFile, undefined, "main: nothing was written to the file");
+h.eq(m.summaries[0].details.join("|"), wErr.message, "main: the summary is the same");
 h.eq(wErr.detail.indexOf("the DOM said no") !== -1, true, "main: (the logged detail carries the cause)");
 
 // a broken edit list (apply throws before it writes): the global boundary
@@ -238,6 +302,8 @@ h.eq(m.calls.join(","), "ui.show:true,apply", "main: a bug in the edit list stop
 h.eq(m.alerts.join("|"), L.format(L.ERR_CRITICAL, "BTE.Write: step 1, edit 1 has no text", "42"), "main: ERR_CRITICAL with the message and the line");
 h.eq(m.summaries.length, 0, "main: no summary after ERR_CRITICAL");
 h.eq(m.logged.length, 1, "main: the fatal error is logged too");
+h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d fatal: BTE\.Write: step 1, edit 1 has no text \(line 42\)\n$/.test(m.logFile), true,
+    "main: and in the log file, with the line");
 
 // a failing verify: the boundary (the document is written, ERR_CRITICAL says to check it)
 m = runMain({ res: r, verifyThrows: new Error("BTE.Write.verify: reading failed") });

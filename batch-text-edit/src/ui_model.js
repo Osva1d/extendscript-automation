@@ -454,24 +454,37 @@ BTE.UIModel = {
     },
 
     /**
-     * What a run changed, from the preview's states: an element changed when
-     * any of its texts differs between the input and the final state. A text
-     * written to and brought back by a later step (A -> B -> A) is not a
-     * change, which is why this is not BTE.Write.apply's textsWritten.
+     * What a run changed: an element changed when any of its texts differs
+     * between the input and the end of the run. A text written to and brought
+     * back by a later step (A -> B -> A) is not a change, which is why this
+     * is not BTE.Write.apply's textsWritten. The end of the run is the
+     * preview's final state, except where BTE.Write.verify read something
+     * else back: there the document's own text counts (`actual`), so a text
+     * that was never written is not reported as changed.
      * @param {Array} states - BTE.Steps.run(...).states.
+     * @param {Array.<{el: number, tx: number, actual: string}>} [mismatches]
+     *     BTE.Write.verify's result; none when omitted.
      * @returns {{elements: number, texts: number}} Changed elements and texts.
      */
-    changes: function (states) {
+    changes: function (states, mismatches) {
         var first = states[0];
         var last = states[states.length - 1];
+        var actual = {};
         var elements = 0;
         var texts = 0;
-        var i, j, any;
+        var i, j, any, key, end;
 
+        if (mismatches) {
+            for (i = 0; i < mismatches.length; i++) {
+                actual[mismatches[i].el + "," + mismatches[i].tx] = mismatches[i].actual;
+            }
+        }
         for (i = 0; i < first.length; i++) {
             any = false;
             for (j = 0; j < first[i].length; j++) {
-                if (first[i][j] !== last[i][j]) {
+                key = i + "," + j;
+                end = actual.hasOwnProperty(key) ? actual[key] : last[i][j];
+                if (first[i][j] !== end) {
                     texts++;
                     any = true;
                 }
@@ -511,7 +524,8 @@ BTE.UIModel = {
 
     /**
      * The argument BTE.Summary.show takes for a finished run: changed
-     * elements and texts (computed from the states, see changes()), the
+     * elements and texts (computed from the states and, where the document
+     * differs from the preview, from what it holds; see changes()), the
      * skipped texts, the mismatches after writing (red, always shown), and in
      * the details the mismatches first, then the warnings the dialog showed
      * (the skipped texts by reason among them).
@@ -526,7 +540,7 @@ BTE.UIModel = {
         var L = BTE.L;
         var s = res.prepared.skipped || {};
         var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
-        var ch = U.changes(res.run.states);
+        var ch = U.changes(res.run.states, mismatches);
         var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText);
 
         return {

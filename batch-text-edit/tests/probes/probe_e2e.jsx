@@ -10,9 +10,12 @@
 //              real BTE.Scope.prepare and BTE.Steps.run, Replace {kód} ->
 //              ABC, Number {n} Číslic 3, Replace {série} -> 2026), and
 //              BTE.Summary.show captures its argument. main.js is read from
-//              disk and run through new Function with its own alert and $,
-//              so an alert can never block Illustrator and the logged
-//              `detail` can be read. Parts (one per run):
+//              disk and run through new Function with its own alert, so an
+//              alert can never block Illustrator. BTE.Utils.log writes the
+//              `detail` of a stopped write to a log file; the probe points
+//              it at a file of its own in the temp folder (a new name every
+//              run, nothing deleted), so the user's bte.log stays as it is,
+//              and reads that file back. Parts (one per run):
 //                main        240 prefabs of „{kód}“, „{n}“, „Série {série}“:
 //                            expect 240 elements „ABC | 001 ... 240 | Série
 //                            2026“ in reading order, verify [], summary 240
@@ -144,10 +147,11 @@
     // The run of main.js: stubs for the two windows, the real rest. opts:
     //   afterShow(p, run)  called after the dialog's stub has built its result
     function runMain(opts) {
-        var r = { calls: [], summaries: [], alerts: [], logged: [], applyReturn: null, verifyReturn: null, ms: 0 };
+        var r = { calls: [], summaries: [], alerts: [], logFile: "", applyReturn: null, verifyReturn: null, ms: 0 };
         var origApply = BTE.Write.apply, origVerify = BTE.Write.verify, origUI = BTE.UI, origSummary = BTE.Summary;
-        var f, src, fakeDollar, started;
+        var f, src, started, logPath;
 
+        logPath = redirectLog();
         f = new File(mainPath);
         f.encoding = "UTF-8";
         if (!f.open("r")) { throw new Error("cannot read " + mainPath); }
@@ -178,12 +182,10 @@
             return v;
         };
         BTE.Summary = { show: function (o) { r.calls.push("summary"); r.summaries.push(o); } };
-        // The real $ for everything else; writeln is the log main.js uses.
-        fakeDollar = { writeln: function (s) { r.logged.push(String(s)); } };
 
         started = now();
         try {
-            (new Function("BTE", "app", "alert", "$", src))(BTE, app, function (s) { r.alerts.push(String(s)); }, fakeDollar);
+            (new Function("BTE", "app", "alert", src))(BTE, app, function (s) { r.alerts.push(String(s)); });
         } finally {
             r.ms = now() - started;
             BTE.Write.apply = origApply;
@@ -191,7 +193,29 @@
             BTE.UI = origUI;
             BTE.Summary = origSummary;
         }
+        r.logFile = readFile(logPath);
         return r;
+    }
+
+    // Sends BTE.Utils.log to a new file in the temp folder. Utils.log builds
+    // its folder as Folder.userData + "/" + LOG_FOLDER, so the temp folder is
+    // reached with "../" for every level of userData.
+    function redirectLog() {
+        var depth = Folder.userData.fsName.split("/").length - 1, up = "", i, dir;
+        for (i = 0; i < depth; i++) { up += "../"; }
+        dir = Folder.temp.fsName + "/bte_e2e_log";
+        BTE.Utils.LOG_FOLDER = up + dir.substring(1);
+        BTE.Utils.LOG_FILE = "bte_e2e_" + part + "_" + now() + ".log";
+        return dir + "/" + BTE.Utils.LOG_FILE;
+    }
+
+    // The file's text, "" when there is none.
+    function readFile(path) {
+        var f = new File(path), s = "";
+        if (!f.exists) { return ""; }
+        f.encoding = "UTF-8";
+        if (f.open("r")) { s = f.read(); f.close(); }
+        return s;
     }
 
     function pairsOf(summary) {
@@ -206,7 +230,7 @@
         out.calls = r.calls;
         out.preview = r.preview;
         out.alerts = r.alerts;
-        out.logged = r.logged;
+        out.logFile = r.logFile;
         out.ms = r.ms;
         out.applyReturn = r.applyReturn;
         out.verifyReturn = r.verifyReturn;
@@ -239,7 +263,7 @@
         out.calls = r.calls;
         out.preview = r.preview;
         out.alerts = r.alerts;
-        out.logged = r.logged;
+        out.logFile = r.logFile;
         out.verifyReturn = r.verifyReturn;
         out.applyReturn = r.applyReturn;
         if (r.summaries.length > 0) {
@@ -267,7 +291,7 @@
         }
         out.calls = r.calls;
         out.alerts = r.alerts;
-        out.logged = r.logged;
+        out.logFile = r.logFile;
         out.writeEditCalls = calls;
         out.summaryCount = r.summaries.length;
         if (r.summaries.length > 0) {
@@ -291,7 +315,7 @@
         });
         out.calls = r.calls;
         out.alerts = r.alerts;
-        out.logged = r.logged;
+        out.logFile = r.logFile;
         out.summaryCount = r.summaries.length;
         if (r.summaries.length > 0) {
             out.pairs = pairsOf(r.summaries[0]);
