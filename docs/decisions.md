@@ -280,3 +280,37 @@ v nástroji; ze sdíleného bere jen `json2`, `ui_state`, `numbers`,
 `field_paint` a `summary`. Kandidátem na sdílení po druhém konzumentovi je
 pomocník `L.countForm` (šablona počítané hlášky s víc čísly vedle
 kánonového `L.count`) a zápis logu do souboru (`BTE.Utils.log`).
+
+## Worktree pro každé vlákno, nástroj větve v pre-commit (2026-11-03)
+
+Uživatel zvažoval rozdělení repa na pět, protože se do pracovních větví
+opakovaně přimíchala práce na jiném nástroji a jiná se ztrácela a skládala
+z commitů zpět. Rozbor (přepisy vláken, reflog, paměť) našel dvě příčiny,
+ani jednu ve tvaru repa:
+
+1. **Víc vláken v jednom checkoutu.** Vlákna startovala v `~/Dev`, které není
+   repo, takže jim aplikace nezaložila worktree, a pracovala přímo
+   v `~/Dev/extendscript-automation`. Necommitnuté změny patří pracovnímu
+   stromu, ne větvi: přepnutí větve nebo `git add` jednoho vlákna odnese
+   rozdělanou práci druhého. Doloženo 2026-10-23 (vlákno GM našlo v checkoutu
+   necommitnutou ZSM část `extendscript-engine-facts.md` a ZSM report)
+   a opakovaně necommitnutými reporty v `docs/reports/`; k tomu `git stash`,
+   který je společný všem worktree.
+2. **Worktree ve scratchpadu.** `/private/tmp` se po zhruba třech dnech maže
+   (2026-09-28 zmizel worktree i s harnessem, 2026-10-16 soubory z 10.–11. 10.).
+   Commity přežijí v `.git`, necommitnuté a netrackované soubory ne.
+
+**Proč ne pět repozitářů:** nejčastěji se míchají rodinné soubory (`docs/`,
+`shared/lib`), které by skončily v šestém společném repu se stejným problémem;
+dvě vlákna na jednom nástroji (review a nová verze) by se v jednom checkoutu
+potkala stejně; scratchpad by mazal dál. Worktree pro každé vlákno dává totéž
+oddělení bez ceny přechodu (sdílené jádro, 19 tagů, Releases, GitHub účet).
+
+**Rozhodnutí:** hlavní checkout jen `main`, každé vlákno ve vlastním worktree
+na trvalém místě, větev nástroje nese jeho plný název (`conventions.md`, Git).
+Mechanismus místo prózy, jak chce první vzorec výš: `pre-commit` 1.1.0 odmítne
+na větvi nástroje soubory jiného nástroje. Zpětné přehrání na 34 větvích
+nástrojů sloučených do `main` od 2026-10-04 (254 commitů) by neodmítlo nic —
+legitimní práce na hook nenarazí. Necommitnuté soubory v `docs/` a `shared/`
+hook nevidí; ty hlídá jen pravidlo o worktree. `install-hooks.sh` 1.1.0 nově
+funguje i z worktree (dřív hledal adresář `.git`, který tam je souborem).
