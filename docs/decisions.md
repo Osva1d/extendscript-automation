@@ -249,22 +249,34 @@ XMP měřítka v `TE.Doc`).
 **Bilance sdíleného jádra:** 9 modulů; TE používá všechny kromě `json2.js`,
 který je prostý polyfill a builduje se první.
 
-## Konzumenti sdíleného jádra (2026-10-24)
+## Konzumenti sdíleného jádra (2026-10-24, batch-text-edit 2026-11-03)
 
 Čtyři moduly z 2026-10-17 už mají všechny tři nástroje, kterým byly určené;
 každý při převzetí smazal svou kopii. Zdrojem pravdy je `tools/build.sh`
 každého nástroje.
 
-| modul | grommet-marks | tile-export | zund-summa-marks | batch-relink-export |
-|---|---|---|---|---|
-| `json2.js` | ✓ | ✓ | ✓ | ✓ |
-| `ui_state.js` | ✓ | ✓ | ✓ | — |
-| `cut_marks.js` | — | ✓ | ✓ | — |
-| `numbers.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
-| `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | ✓ od 1.2.0 |
-| `registration.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
-| `drawing_scale.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — |
-| `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | ✓ od 1.2.0 |
+| modul | grommet-marks | tile-export | zund-summa-marks | batch-relink-export | batch-text-edit |
+|---|---|---|---|---|---|
+| `json2.js` | ✓ | ✓ | ✓ | ✓ | ✓ od 1.0.0 |
+| `ui_state.js` | ✓ | ✓ | ✓ | — | ✓ od 1.0.0 |
+| `cut_marks.js` | — | ✓ | ✓ | — | — |
+| `numbers.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — | ✓ od 1.0.0 |
+| `field_paint.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | ✓ od 1.0.0 |
+| `registration.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — | — |
+| `drawing_scale.js` | ✓ od 1.4.0 | ✓ od 1.2.0 | ✓ od 1.2.0 | — | — |
+| `progress.js`, `summary.js` | — | ✓ od 1.2.0 | — | ✓ od 1.2.0 | jen `summary.js`, od 1.0.0 |
 
 Hlavičky modulů v `shared/lib/` jmenují své konzumenty; sdílené testy
 (`npm run test:shared`) zůstávají, protože modul mění chování všem najednou.
+
+## Batch Text Edit jako samostatný nástroj (2026-10-29)
+
+Pátý nástroj vznikl z požadavku „číselná řada + najdi a nahraď ve výběru
+nebo na artboardu“. Uživatel zvažoval dva skripty; s řetězem kroků po vzoru
+Transnomina je nahrazení jen jeden typ kroku, takže z toho je jeden nástroj
+(návrh `docs/specs/2026-10-29-batch-text-edit-design.md`, rozhodnutí 2).
+Vlastní jádro (proměnné, kroky, pořadí, prvek, zápis) je doménové a zůstává
+v nástroji; ze sdíleného bere jen `json2`, `ui_state`, `numbers`,
+`field_paint` a `summary`. Kandidátem na sdílení po druhém konzumentovi je
+pomocník `L.countForm` (šablona počítané hlášky s víc čísly vedle
+kánonového `L.count`) a zápis logu do souboru (`BTE.Utils.log`).

@@ -1,0 +1,14 @@
+{
+  "name": "batch-text-edit",
+  "version": "1.0.0",
+  "description": "Edits text and {variables} in a selection, artboard or document through a chain of steps (Adobe Illustrator ExtendScript).",
+  "private": true,
+  "scripts": {
+    "test": "bash tests/run_all.sh",
+    "build": "bash tools/build.sh",
+    "verify": "npm run build && npm test"
+  },
+  "author": "Ladislav Osvald",
+  "license": "MIT",
+  "engines": { "node": ">=14" }
+}

@@ -41,12 +41,15 @@ const EXTENDSCRIPT_GLOBALS = {
     CMYKColor: "readonly", RGBColor: "readonly", SpotColor: "readonly",
     GrayColor: "readonly", NoColor: "readonly", ColorModel: "readonly",
     PathPointSelection: "readonly",
+    // Present in 30.8.2 (docs/reports/2026-10-28-text-chain-research.md §7.1, §7.2).
+    CaseChangeType: "readonly", TextType: "readonly",
 
     // Polyfilled by shared/lib/json2.js, first in every build order.
     JSON: "readonly",
 
     // Tool namespaces and the shared-core factory the build wires up.
     ZSM: "writable", GM: "writable", BRE: "writable", TE: "writable",
+    BTE: "writable",
     buildUIState: "readonly"
 };
 

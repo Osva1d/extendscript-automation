@@ -16,8 +16,8 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
 ## ENFORCED — hlídá stroj
 
 - **Parity guard verze** — build spadne, když se rozejde `package.json` ↔ verzní
-  konstanta (`src/constants.js` u GM, `src/config.js` u ZSM/BRE/TE) ↔ **nejnovější
-  položka v `CHANGELOG.md`**. Běží ve všech čtyřech buildech. Chytá „release
+  konstanta (`src/constants.js` u GM, `src/config.js` u ZSM/BRE/TE/BTE) ↔ **nejnovější
+  položka v `CHANGELOG.md`**. Běží ve všech pěti buildech. Chytá „release
   napůl": verze bumpnutá, changelog zapomenutý (nebo naopak).
 - **Commit na `main`** — `tools/hooks/pre-commit` ho odmítne; merge do main pustí
   (rozpozná probíhající merge přes `MERGE_HEAD`). Instaluje `tools/install-hooks.sh`.
@@ -29,7 +29,7 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
   `src/` **a** `shared/lib/` na zakázané konstrukce (`let`/`const`/arrow/`Array.map`…).
   Vendorovaný `json2.js` je vyloučen (cizí kód nelintujeme).
   ⚠ GM a BRE zatím scanner nemají — viz `decisions.md`.
-- **Testy** — `npm test` v adresáři nástroje (GM, ZSM, tile-export; BRE testy nemá);
+- **Testy** — `npm test` v adresáři nástroje (GM, ZSM, tile-export, batch-text-edit; BRE testy nemá);
   `npm run verify` = build + test.
 
 ## TEMPLATE — kopíruj z `templates/`
@@ -73,7 +73,7 @@ takže nemůže driftovat → nekontroluje se**.
 // ------------------------------------------------------------------------
 ```
 
-**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`, `TE`), guard `var NS = NS || {};`
+**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`, `TE`, `BTE`), guard `var NS = NS || {};`
 v každém modulu, žádné globální proměnné mimo namespace.
 
 **Struktura `src/`** — `config.js` (uživatelská nastavení, `getDefaults()`),
@@ -114,19 +114,20 @@ pro svůj namespace:
 
 | modul | factory | používá |
 |---|---|---|
-| `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE |
+| `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE, BTE |
 | `cut_marks.js` | `buildCutMarks(NS)` | ZSM, TE |
-| `numbers.js` | `buildNumbers(NS)` | GM, ZSM, TE |
-| `field_paint.js` | `buildFieldPaint(NS)` | GM, ZSM, TE, BRE |
+| `numbers.js` | `buildNumbers(NS)` | GM, ZSM, TE, BTE |
+| `field_paint.js` | `buildFieldPaint(NS)` | GM, ZSM, TE, BRE, BTE |
 | `registration.js` | `buildRegistration(NS)` | GM, ZSM, TE |
 | `drawing_scale.js` | `buildDrawingScale(NS)` | GM, ZSM, TE |
 | `progress.js` | `buildProgress(NS)` | TE, BRE |
-| `summary.js` | `buildSummary(NS)` | TE, BRE |
+| `summary.js` | `buildSummary(NS)` | TE, BRE, BTE |
 
 Čtyři vznikly 2026-10-17 z kódu tile-exportu a používá je GM od 1.4.0, TE od
 1.2.0 a ZSM od 1.2.0, `field_paint.js` i BRE od 1.2.0 (stavové barvy); `progress.js` a `summary.js` vznikly 2026-10-20
 z batch-relink-exportu a používá je TE od 1.2.0 a BRE od 1.2.0 (BRE tím smazal
-své původní kopie). Zdrojem pravdy je `tools/build.sh` každého nástroje
+své původní kopie). Batch Text Edit používá od 1.0.0 `ui_state.js`, `numbers.js`,
+`field_paint.js` a `summary.js`. Zdrojem pravdy je `tools/build.sh` každého nástroje
 (přehled v `decisions.md`, „Konzumenti sdíleného jádra“). Sdílené moduly testuje `shared/tests/` (`npm run
 test:shared`), protože změna v nich platí pro všechny nástroje najednou.
 
@@ -190,7 +191,8 @@ vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
 
 **Per-nástroj:** `README.md` (česky), `CHANGELOG.md`, volitelně
 `docs/architecture.md` a `docs/manual-test.md` (mají GM a ZSM; tile-export má
-`docs/manual-test.md` a k němu `docs/findings.md`; BRE nic — menší nástroj).
+`docs/manual-test.md` a k němu `docs/findings.md`, batch-text-edit totéž; BRE
+nic — menší nástroj).
 
 **Kam s dokumentem:** živý dokument jednoho nástroje — ruční testy, architektura,
 otevřené nálezy — patří do `<nástroj>/docs/`, ať má nástroj své dokumenty
