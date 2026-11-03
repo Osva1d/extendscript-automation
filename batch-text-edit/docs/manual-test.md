@@ -29,10 +29,12 @@ Cmd+Z a skutečné soubory.
   Před prvním testem přesunout `settings.json` z této složky do Koše: zbyl
   po sondách a dialog by se otevřel s jejich nastavením (test 1.2 počítá
   s prvním spuštěním).
-- Log `bte.log` vzniká, jen když se něco pokazí: zastavený zápis, chyba
-  v obsluze dialogu nebo v ukládání nastavení, neočekávaná chyba.
+- Log `bte.log` vzniká jen při zastaveném zápisu nebo neočekávané chybě.
 - Testy jdou **popořadě**; každý řádek říká, čím končí (Použít, Storno,
   Cmd+Z). Sekce 1–4 a 6–8 běží na `…geoup.ai`, sekce 5 na zbylých dvou.
+- Použít hned po psaní do pole může nejdřív jen přepočítat náhled a ukázat
+  hlášku „Náhled se přepočítal…“ (pojistka proti zápisu neviděného
+  náhledu); pak Použít znovu. To není chyba, kromě testu 6.3 se to nezapisuje.
 - **Brány vydání: 4.1, 4.2, 6.3, 6.4, 6.5.** README a CHANGELOG tvrdí, že
   celý běh vrátí jedno Cmd+Z a že Použít nikdy nezapíše nic, co náhled
   neukázal; ověří to jen tyto testy. Bez nich se 1.0.0 nevydá.
@@ -56,7 +58,7 @@ Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
 | 2.1 | Spustit znovu. Krok 1: Typ Nahradit, Najít `{NORDIC CZ}`, Nahradit „SNB CZ“. **+** → krok 2: Typ Číslovat, Kde `{n}`, Od 1, Číslic 3, Do prázdné | Náhled: řádek 1 „{NORDIC CZ} \| {n}“ → „SNB CZ \| 001“, poslední řádek „… 240“. Stavový řádek „✓ Změní se 240 z 240 prvků.“ | |
-| 2.2 | **Uložit jako…** „Samolepky“ | Předvolba „Samolepky“ v seznamu, bez hvězdičky (sekce 5 a 6 ji použijí) | |
+| 2.2 | **Uložit jako…** „Samolepky“ | Předvolba „Samolepky“ v seznamu, bez hvězdičky (sekce 5–7 ji použijí) | |
 | 2.3 | Vybrat v seznamu krok 1 | Prostřední sloupec „Po vybraném kroku“ ukazuje stav po kroku 1 („SNB CZ \| {n}“) | |
 | 2.4 | **Použít** | Souhrn „Výsledek úprav“: Změněné prvky 240, Změněné texty 480, Neshoda po zápisu 0. V dokumentu 001 vlevo nahoře, čísla po řádcích do 240 vpravo dole | |
 | 2.5 | Prohlédnout několik samolepek zblízka | Písmo, velikost a barva kódu i čísla **beze změny**, logo a kruh nedotčené. **Nevracet** — sekce 3 pokračuje na zapsaném bloku | |
@@ -78,21 +80,21 @@ Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 
 ## 5. Struktura dokumentu
 
-Každý test začíná výběrem předvolby „Samolepky“ v seznamu.
+Každý test začíná tlačítkem **↺** u předvoleb: vrátí kroky a pořadí aktivní předvolby „Samolepky“ (z 2.2), hvězdička zmizí. Znovu vybrat „Samolepky“ v seznamu nestačí — aktivní předvolba se výběrem nenačte znovu.
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
-| 5.1 | `…arch.ai`, nic nevybrat, spustit, „Samolepky“; **Použít**, prohlédnout, **Cmd+Z** | 240 prvků; čísla po řádcích přes celý arch (levý horní aršík 001, 002, 003, 013, 014, 015 …) — aršíky pořadí neovlivní | |
-| 5.2 | Vybrat jeden aršík (12 samolepek), spustit, „Samolepky“; **Storno** | Rozsah **Výběr**, „12 prvků, 24 textů“, náhled 001–012 | |
-| 5.3 | `Zund_Summa_Test.ai` (bez skupin), nic nevybrat, spustit, „Samolepky“; **Storno** | 240 prvků, 480 textů, každý řádek náhledu „{NORDIC CZ} \| {n}“; žádné ⚠ „Prvek … má 2 shody …“ — kód a číslo jedné samolepky drží spolu (geometrie podle kruhu) | |
-| 5.4 | Tamtéž: Pořadí **Po sloupcích**; **Použít**, prohlédnout, **Cmd+Z** | Náhled se přepočítá; v dokumentu čísla tečou shora dolů po sloupcích | |
+| 5.1 | `…arch.ai`, nic nevybrat, spustit, ↺; **Použít**, prohlédnout, **Cmd+Z** | 240 prvků; čísla po řádcích přes celý arch (levý horní aršík 001, 002, 003, 013, 014, 015 …) — aršíky pořadí neovlivní | |
+| 5.2 | Vybrat jeden aršík (12 samolepek), spustit, ↺; **Storno** | Rozsah **Výběr**, „12 prvků, 24 textů“, náhled 001–012 | |
+| 5.3 | `Zund_Summa_Test.ai` (bez skupin), nic nevybrat, spustit, ↺; **Storno** | 240 prvků, 480 textů, každý řádek náhledu „{NORDIC CZ} \| {n}“; žádné ⚠ „Prvek … má 2 shody …“ — kód a číslo jedné samolepky drží spolu (geometrie podle kruhu) | |
+| 5.4 | Tamtéž spustit znovu, ↺, Pořadí **Po sloupcích**; **Použít**, prohlédnout, **Cmd+Z** | Náhled se přepočítá; v dokumentu čísla tečou shora dolů po sloupcích | |
 | 5.5 | Má-li soubor víc artboardů: Rozsah Aktivní artboard; **Storno** | Jen prvky, jejichž střed leží na aktivním artboardu | |
 
 Konec sekce: oba soubory v původním stavu (nebo zavřít bez uložení).
 
 ## 6. Ovládání
 
-Na `…geoup.ai` v původním stavu (po 4.2), předvolba „Samolepky“.
+Na `…geoup.ai` v původním stavu (po 4.2). Na začátku **↺** (kroky a pořadí z „Samolepky“); 6.4 a 6.5 pak záměrně pokračují s polem Od z předchozího běhu.
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
@@ -101,8 +103,8 @@ Na `…geoup.ai` v původním stavu (po 4.2), předvolba „Samolepky“.
 | 6.3 | Do pole Od napsat 5 a **bez Enteru** kliknout Použít; po chvilce **Použít** znovu; **Cmd+Z** | Po prvním kliku dialog zůstane, v hláškách „Náhled se přepočítal podle nové hodnoty. Zkontrolujte ho a potvrďte Použít znovu.“, náhled ukazuje 005. Druhé Použít zapíše 005–244 | |
 | 6.4 | Spustit znovu, Od 6 a **Enter**; pak **Enter** nebo Použít; **Cmd+Z** | První Enter jen přepočítá náhled (006), dialog se nezavře; další Enter / Použít zapíše 006–245 | |
 | 6.5 | Spustit znovu, vypnout krok 1 zaškrtávátkem v seznamu a **hned** Použít (případně ještě jednou); **Cmd+Z** | Platí jedno z dvou, **zapsat které**: (a) zapíše hned, (b) dialog zůstane s hláškou a zapíše až další Použít. V obou případech dokument odpovídá náhledu bez kroku 1: kód zůstane `{NORDIC CZ}`, čísla 006–245. ✗ jen tehdy, když se zapíše i vypnutý krok | |
-| 6.6 | Spustit znovu, vybrat „Samolepky“. Do Od napsat „1O“ (písmeno O), pak vrátit 1 | Pole červené, ✗ ve stavovém řádku i na řádku kroku, Použít, Uložit a Uložit jako… šedé; po opravě vše zpět | |
-| 6.7 | Do 230, pak Do vymazat | Stavový řádek „⚠ Změní se 240 z 240 prvků.“, v hláškách dva řádky „Krok 2: Poslední číslo vyjde 240, v poli Do je 230.“ a „Krok 2: Prvků je o 10 víc.“; Použít zůstává aktivní | |
+| 6.6 | Spustit znovu, **↺**. Do Od napsat „1O“ (písmeno O), pak vrátit 1 | Pole červené, ✗ ve stavovém řádku i na řádku kroku, Použít, Uložit a Uložit jako… šedé; po opravě vše zpět | |
+| 6.7 | Do 230, pak Do vymazat | Stavový řádek „⚠ Změní se 240 z 240 prvků.“, v hláškách dva řádky „⚠ Krok 2: Poslední číslo vyjde 240, v poli Do je 230.“ a „⚠ Krok 2: Prvků je o 10 víc.“; Použít zůstává aktivní | |
 | 6.8 | **+** → krok 3: Velikost písmen, Kde Celý text, Režim malá; **Použít**, prohlédnout, **Cmd+Z** | Náhled „snb cz \| 001“; v dokumentu písmo, velikost a barva beze změny | |
 
 ## 7. Zvláštní stavy
@@ -112,7 +114,7 @@ Na `…geoup.ai` v původním stavu.
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
 | 7.1 | Dvojklikem vstoupit do textu (blikající kurzor) a spustit skript; přepnout Rozsah na Celý dokument; **Storno**, Esc | Dialog se otevře na **Výběr** a hned ✗ „Kurzor je v textu. Ukončete úpravu textu klávesou Esc a vyberte prvky, nebo zvolte jiný rozsah.“, Použít šedé. Po přepnutí 240 prvků, Použít aktivní | |
-| 7.2 | Přímým výběrem vybrat jeden text `{NORDIC CZ}` a zamknout ho (Objekt › Zamknout › Výběr), nic nevybrat, spustit, „Samolepky“; **Použít**; **Cmd+Z**, Objekt › Odemknout vše | Řádek rozsahu „… · přeskočené texty: 1“; v souhrnu „Přeskočené texty: 1“ a v podrobnostech řádek s ⚠, vykreslený jako znak (ne čtvereček). Zamčený text zůstane `{NORDIC CZ}`, jeho samolepka dostane číslo | |
+| 7.2 | Přímým výběrem vybrat jeden text `{NORDIC CZ}` a zamknout ho (Objekt › Zamknout › Výběr), nic nevybrat, spustit, ↺; **Použít**; **Cmd+Z**, Objekt › Odemknout vše | Řádek rozsahu „… · přeskočené texty: 1“; v souhrnu „Přeskočené texty: 1“ a v podrobnostech řádek s ⚠, vykreslený jako znak (ne čtvereček). Zamčený text zůstane `{NORDIC CZ}`, jeho samolepka dostane číslo | |
 
 ✗ se v podrobnostech souhrnu ukáže jen při neshodě po zápisu nebo zastaveném
 zápisu; ten ruční test nevyvolá (pokryla ho sonda, `findings.md`). Znak ✗

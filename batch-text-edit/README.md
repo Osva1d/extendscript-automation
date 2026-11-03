@@ -8,8 +8,9 @@ Upraví texty a {proměnné} ve výběru, na artboardu nebo v celém dokumentu
 Na archu leží kopie jednoho prvku (samolepka, vstupenka, štítek, cedulka)
 a v každé se má změnit text: pořadové číslo, kód, série, velikost písmen.
 Vestavěné Najít a nahradit čísla nevytvoří; skládat to z číslovacího
-skriptu a ručního přepisování je pomalé a chybu v počtu ukáže až tisk. Batch Text Edit to udělá jedním během, s náhledem
-před zápisem a s kontrolou po něm.
+skriptu a ručního přepisování je pomalé a chybu v počtu ukáže až tisk.
+Batch Text Edit to udělá jedním během, s náhledem před zápisem
+a s kontrolou po něm.
 
 ## Požadavky
 
@@ -31,9 +32,11 @@ před zápisem a s kontrolou po něm.
     / `a, b, c`, Číslic (nuly zleva), Opakovat a Znovu po (např. řady
     sedadel 1–20, 1–20).
   - **Nahradit:** proměnná, jiný text nebo regulární výraz; Rozlišovat velká
-    a malá, Jen první shoda v textu. Nový text převezme formát prvního
-    nahrazeného znaku, zbytek textu zůstane, jak byl.
+    a malá, Jen první shoda v textu.
   - **Velikost písmen:** VELKÁ, malá, Každé Slovo, První písmeno věty.
+- **Formát zůstane.** Přepíše se jen nalezený úsek; nový text (číslo,
+  náhrada) převezme formát prvního přepsaného znaku, zbytek textu zůstane,
+  jak byl.
 - **Proměnné.** Cokoli ve složených závorkách (`{kód}`, `{n}`,
   `{název produktu}`; bez vnořených závorek a bez konce odstavce uvnitř)
   skript v textu najde sám a nabídne v poli Kde (u Nahradit v poli Najít)
