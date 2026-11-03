@@ -249,7 +249,7 @@ XMP měřítka v `TE.Doc`).
 **Bilance sdíleného jádra:** 9 modulů; TE používá všechny kromě `json2.js`,
 který je prostý polyfill a builduje se první.
 
-## Konzumenti sdíleného jádra (2026-10-24)
+## Konzumenti sdíleného jádra (2026-10-24, batch-text-edit 2026-11-03)
 
 Čtyři moduly z 2026-10-17 už mají všechny tři nástroje, kterým byly určené;
 každý při převzetí smazal svou kopii. Zdrojem pravdy je `tools/build.sh`

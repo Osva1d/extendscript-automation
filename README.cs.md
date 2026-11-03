@@ -7,7 +7,7 @@
 
 **Jazyk:** [English](README.md) · Čeština
 
-Tento repozitář je **monorepo čtyř nezávislých nástrojů** plus malé sdílené jádro.
+Tento repozitář je **monorepo pěti nezávislých nástrojů** plus malé sdílené jádro.
 Každý nástroj má vlastní README, build a verzi — tato stránka je rozcestník.
 
 ---
@@ -22,7 +22,7 @@ Každý nástroj má vlastní README, build a verzi — tato stránka je rozcest
 | **tile-export** | Rozdělení velké grafiky na tiskové pláty — přídavky per hrana, přelep, ořezová linka v přímé barvě, plus Zünd režim s regmarkami a ořezovými daty plátu | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
 | **batch-text-edit** | Úprava textu a `{proměnných}` ve výběru, na artboardu nebo v dokumentu řetězem kroků — číslování, nahrazení, velikost písmen — s náhledem před zápisem a kontrolou po něm | [README](batch-text-edit/README.md) · [CHANGELOG](batch-text-edit/CHANGELOG.md) |
 
-`shared/` drží namespace-neutrální jádro, které oba generátory značek sdílejí;
+`shared/` drží namespace-neutrální jádro, které nástroje sdílejí;
 odůvodnění, co se sdílí a co záměrně ne, je v
 [`docs/decisions.md`](docs/decisions.md).
 
@@ -30,7 +30,7 @@ odůvodnění, co se sdílí a co záměrně ne, je v
 
 ## Společné konvence
 
-Všechny čtyři nástroje sdílejí stejné konvence a UX standardy:
+Všech pět nástrojů sdílí stejné konvence a UX standardy:
 
 - **Dvojjazyčné UI** — čeština a angličtina, automaticky podle locale Illustratoru
 - **Pojmenované presety** — uložená nastavení s automatickým uchováním posledního použitého
@@ -71,7 +71,7 @@ bash tools/build.sh    # nebo: npm run build
 ```
 
 Buildnuté artefakty se **necommitují** — jsou distribuovány jako release assets.
-Zdroj pravdy je strom `src/`. `zund-summa-marks` a `grommet-marks` mají navíc
+Zdroj pravdy je strom `src/`. Všechny nástroje kromě `batch-relink-export` mají navíc
 Node testovou sadu (`npm test`).
 
 ---
@@ -85,7 +85,7 @@ extendscript-automation/
 ├── batch-relink-export/    # nástroj: hromadný relink + export PDF
 ├── tile-export/            # nástroj: rozdělení grafiky na tiskové pláty
 ├── batch-text-edit/        # nástroj: úprava textu a {proměnných} řetězem kroků
-├── shared/lib/             # namespace-neutrální jádro (ui_state, json2)
+├── shared/lib/             # namespace-neutrální jádro (ui_state, json2, numbers, …)
 ├── docs/decisions.md       # architektonická rozhodnutí (co se sdílí a proč)
 ├── LICENSE
 └── README.md · README.cs.md

@@ -13,7 +13,7 @@ První vydání.
 - **Řetěz kroků nad textem** ve výběru, na aktivním artboardu nebo v celém
   dokumentu: **Číslovat** (Od, Do, Krok, formát 1 / A / a, Číslic,
   Opakovat, Znovu po), **Nahradit** (proměnná, jiný text, regulární výraz;
-  rozlišovat velká a malá, jen první shoda) a **Velikost písmen** (VELKÁ,
+  rozlišovat velká a malá, jen první shoda v textu) a **Velikost písmen** (VELKÁ,
   malá, Každé Slovo, První písmeno věty). Kroky jdou vypnout, posunout
   a smazat.
 - **Proměnné ve složených závorkách** skript najde a nabídne v poli Kde
