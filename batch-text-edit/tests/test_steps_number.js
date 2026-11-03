@@ -35,6 +35,12 @@ var two = BTE.Steps.run([["{n}/{n}"], ["{n}"]], [N({kind:"var",text:"{n}"})]);
 h.eq(two.states[1][0][0] + " " + two.states[1][1][0], "001/001 002", "same variable twice in one text");
 h.eq(two.info[0].multi[0].count, 2, "multi-match reported");
 h.eq(BTE.Steps.run([[""], ["\r"], ["{n}"]], [N({kind:"var",text:"{n}"})]).states[1][2][0], "001", "empty texts consume nothing");
+// two texts of one element both match: one number for the element, both texts get it
+var tt = BTE.Steps.run([["{n}", "{n}"], ["{n}", "{n}"]], [N({kind:"var",text:"{n}"})]);
+h.eq(tt.states[1][0].join("|") + " " + tt.states[1][1].join("|"), "001|001 002|002", "both texts of an element get its number");
+h.eq(tt.info[0].hits, 2, "two elements numbered, not four texts");
+h.eq(JSON.stringify(tt.info[0].multi), '[{"el":0,"count":2},{"el":1,"count":2}]', "multi-match reported per element");
+h.eq(tt.info[0].warns.length, 0, "no other warning");
 
 // --- more than the brief lists ---
 // valueAt / formatValue
