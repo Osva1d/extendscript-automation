@@ -20,7 +20,13 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
   položka v `CHANGELOG.md`**. Běží ve všech pěti buildech. Chytá „release
   napůl": verze bumpnutá, changelog zapomenutý (nebo naopak).
 - **Commit na `main`** — `tools/hooks/pre-commit` ho odmítne; merge do main pustí
-  (rozpozná probíhající merge přes `MERGE_HEAD`). Instaluje `tools/install-hooks.sh`.
+  (rozpozná probíhající merge přes `MERGE_HEAD`). Instaluje `tools/install-hooks.sh`
+  (z hlavního checkoutu i z worktree — hooky jsou společné).
+- **Cizí nástroj na větvi nástroje** — týž hook odmítne commit na větvi, jejíž
+  jméno nese právě jeden nástroj (`feat/grommet-marks-1.4.0`), když mění adresář
+  jiného nástroje. `shared/` a `docs/` pustí, merge taky. Nástroj = adresář
+  s `tools/build.sh`, takže nový nástroj hook pokryje sám. Vědomá výjimka
+  (změna `shared/` i s konzumenty) `git commit --no-verify`.
 - **Force push na `github`** — `tools/hooks/pre-push` odmítne non-fast-forward push
   na veřejný remote. Force detekuje **nepřímo** (`git merge-base --is-ancestor`),
   protože hook nevidí příznaky příkazové řádky. Na `origin` (Codeberg, privátní
@@ -180,7 +186,15 @@ z toho bude zdát divné, přeměř to — `tools/ai-eval.sh` je na to.
 Legacy `gm-v4/5/6.0.0` jsou lightweight a zůstávají jak jsou.
 
 **Větve** — `feat/`, `fix/`, `refactor/`, `docs/` + krátký popis. Merge do `main`
-vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu).
+vědomě `--no-ff` (jedna vratná hranice, čitelná závorka v grafu). Práce na jednom
+nástroji nese v názvu větve plný název jeho adresáře (`fix/tile-export-1.0.1-n41`,
+ne `docs/te-n38`) — podle něj pre-commit hlídá cizí nástroje.
+
+**Worktree** — hlavní checkout drží jen `main` (merge a vydaný `dist/`), práce
+každého vlákna běží ve vlastním worktree: `.claude/worktrees/` (zakládá aplikace)
+nebo `.worktrees/<jméno>`. Necommitnuté změny patří pracovnímu stromu, ne větvi,
+takže dvě vlákna v jednom checkoutu si je navzájem přenášejí. Proč →
+`decisions.md`, „Worktree pro každé vlákno".
 
 **Identita** — `Osva1d <143696990+Osva1d@users.noreply.github.com>`, globálně.
 
