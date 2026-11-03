@@ -339,4 +339,49 @@ var rawIn = [["abc"]];
 S.applyEdits(rawIn, [E(0, 1, "X")]);
 h.eq(JSON.stringify(rawIn), '[["abc"]]', "applyEdits does not change its input");
 
+// --- the exception tables, against the engine's simple mapping ---
+// Node maps case in full, the ExtendScript engine does not ("ß".toUpperCase() === "ß",
+// "ǅ".toLowerCase() === "ǅ", measured, docs/findings.md), so the tests above stay green
+// even when an entry leaves CASE_UPPER / CASE_LOWER / CASE_TITLE. Here the host's two
+// functions are replaced by the engine's simple mapping for the characters the tables
+// cover (they return them unchanged) and the emulation has to give the measured results.
+// The pairs are the measured ones: [input, UPPERCASE, LOWERCASE, TITLECASE, SENTENCECASE].
+var HOST_KEEPS = "ß\uFB00\uFB01\uFB02\uFB03\uFB04\uFB05\uFB06\u01C5\u01C8\u01CB\u01F2\u0130";
+var HOST_PAIRS = [
+    ["straße", "STRASSE", "straße", "Straße", "Straße"],
+    ["ǆ ǅ Ǆ", "Ǆ Ǆ Ǆ", "ǆ ǆ ǆ", "ǅ ǅ ǅ", "ǅ ǆ ǆ"],
+    ["ǉudi ﬁlm", "ǇUDI FILM", "ǉudi ﬁlm", "ǈudi Film", "ǈudi ﬁlm"],
+    ["i\u0307 \u0130 \u0131", "I\u0307 \u0130 I", "i\u0307 i\u0307 \u0131", "I\u0307 \u0130 I", "I\u0307 i\u0307 \u0131"]
+];
+var origUpper = String.prototype.toUpperCase;
+var origLower = String.prototype.toLowerCase;
+function simpleMap(orig) {
+    return function () {
+        var s = String(this);
+        var out = "";
+        var i, c;
+        for (i = 0; i < s.length; i++) {
+            c = s.charAt(i);
+            out += HOST_KEEPS.indexOf(c) !== -1 ? c : orig.call(c);
+        }
+        return out;
+    };
+}
+try {
+    String.prototype.toUpperCase = simpleMap(origUpper);
+    String.prototype.toLowerCase = simpleMap(origLower);
+    h.eq("ß".toUpperCase(), "ß", "the stub is the engine's simple mapping");
+    var MODES = ["upper", "lower", "title", "sentence"];
+    var hp, hm;
+    for (hp = 0; hp < HOST_PAIRS.length; hp++) {
+        for (hm = 0; hm < MODES.length; hm++) {
+            h.eq(S.caseText(MODES[hm], HOST_PAIRS[hp][0]), HOST_PAIRS[hp][hm + 1],
+                MODES[hm] + " of " + JSON.stringify(HOST_PAIRS[hp][0]) + " without the host's full mapping");
+        }
+    }
+} finally {
+    String.prototype.toUpperCase = origUpper;
+    String.prototype.toLowerCase = origLower;
+}
+
 h.done();

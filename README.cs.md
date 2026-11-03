@@ -35,7 +35,7 @@ Všech pět nástrojů sdílí stejné konvence a UX standardy:
 - **Dvojjazyčné UI** — čeština a angličtina, automaticky podle locale Illustratoru
 - **Pojmenované presety** — uložená nastavení s automatickým uchováním posledního použitého
 - **Robustní validace vstupů** — žádné tiché převody na nulu, žádné pády
-- **Large Canvas podpora** — nativní Illustrator Large Canvas i ručně zmenšené dokumenty (1:N)
+- **Large Canvas podpora** — nativní Illustrator Large Canvas i ručně zmenšené dokumenty (1:N); u Batch Text Edit neověřeno
 - **Bez závislostí** — čistý ExtendScript (ES3), žádné externí knihovny ani CEP panely
 
 ---
@@ -44,6 +44,7 @@ Všech pět nástrojů sdílí stejné konvence a UX standardy:
 
 - **Software:** Adobe Illustrator CC 2020+ (testováno na CC 2024 a CC 2025)
 - **OS:** macOS 12.0+ / Windows 10+
+- **Batch Text Edit:** naměřeno jen v Illustratoru 30.8.2 na macOS; starší verze a Windows neověřeny
 - **Hardware:** plotry Zünd (ECHO) a Summa jsou volitelné — skripty připraví data i bez stroje
 
 ---
