@@ -35,7 +35,7 @@ All five tools follow the same conventions and UX standards:
 - **Bilingual UI** — Czech and English, switched automatically by Illustrator's locale
 - **Named presets** — saved configurations with automatic recall of the last-used one
 - **Robust input validation** — no silent fallbacks to zero, no crashes
-- **Large Canvas support** — native Illustrator Large Canvas and manually scaled (1:N) documents
+- **Large Canvas support** — native Illustrator Large Canvas and manually scaled (1:N) documents; not verified for Batch Text Edit
 - **Zero dependencies** — pure ExtendScript (ES3), no external libraries or CEP panels
 
 ---
@@ -44,6 +44,7 @@ All five tools follow the same conventions and UX standards:
 
 - **Software:** Adobe Illustrator CC 2020+ (tested on CC 2024 and CC 2025)
 - **OS:** macOS 12.0+ / Windows 10+
+- **Batch Text Edit:** measured only in Illustrator 30.8.2 on macOS; older versions and Windows are unverified
 - **Hardware:** Zünd (ECHO) and Summa cutters are optional — the scripts also prepare data without a machine
 
 ---

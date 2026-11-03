@@ -101,6 +101,10 @@ nezapíše nic, co náhled neukázal.
 - Regulární výrazy: lookbehind a pojmenované skupiny `(?<…)` Illustrator
   nepodporuje (odmítnuto); `.` najde i konec odstavce; `\w` a `\b` neznají
   češtinu.
+- Regulární výraz s vnořeným opakováním (např. `(\w+\s?)+$`) může na
+  dlouhém textu bez shody zamrznout Illustrator: náhled se přepočítá po
+  každém potvrzení pole a ExtendScript nezná časový limit. Před pokusy
+  s takovým výrazem ulož otevřené dokumenty.
 - Velikost písmen u znaků, které mění délku (ß → SS), může posunout formát
   uvnitř úseku; text je správně. Česká abeceda se netýká.
 
