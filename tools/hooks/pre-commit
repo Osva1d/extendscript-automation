@@ -1,9 +1,9 @@
 #!/bin/bash
 # ===========================================================================
 # Script:      pre-commit
-# Version:     1.0.0
+# Version:     1.1.0
 # Author:      Ladislav Osvald
-# Updated:     2026-07-26
+# Updated:     2026-11-03
 #
 # Description:
 #   Refuses a commit made directly on `main`. Work belongs on a branch; `main`
@@ -13,6 +13,15 @@
 #   main by design. During a merge git writes .git/MERGE_HEAD — that is how we
 #   tell "merging into main" (legitimate) from "committing on main" (mistake).
 #   Without this check the hook would make merging impossible.
+#
+#   Refuses a commit on a tool's branch that touches another tool. A branch
+#   whose name carries exactly one tool's directory name (feat/grommet-marks-
+#   1.4.0, tile-export/1.1.0-names) may change that tool, shared/ and docs/,
+#   but no other tool's directory. Uncommitted changes belong to the working
+#   tree, not to a branch — another session's work left in the same checkout
+#   is how another tool's files end up on a branch. A tool is a top-level
+#   directory with tools/build.sh, so a new tool is covered without editing
+#   this hook.
 #
 #   Installed by tools/install-hooks.sh. Bypass for a one-off: git commit --no-verify
 # ===========================================================================
@@ -31,13 +40,69 @@ if [ "$BRANCH" = "main" ]; then
     echo "" >&2
     echo "BLOCKED: direct commit on 'main'." >&2
     echo "" >&2
-    echo "  main holds finished states only — work happens on a branch." >&2
+    echo "  main holds finished states only — work happens on a branch," >&2
+    echo "  in its own worktree, so this checkout can stay on main." >&2
     echo "" >&2
-    echo "  Move this work to a branch (the staged changes follow you):" >&2
+    echo "  Move this work to a branch (the staged changes follow you)," >&2
+    echo "  then hand the branch to a worktree:" >&2
     echo "     git switch -c feat/<name>" >&2
+    echo "     git commit" >&2
+    echo "     git switch main" >&2
+    echo "     git worktree add .worktrees/<name> feat/<name>" >&2
     echo "" >&2
     echo "  Merges into main are allowed and are not affected by this hook." >&2
     echo "  Deliberate exception: git commit --no-verify" >&2
+    echo "" >&2
+    exit 1
+fi
+
+# Git runs the hook from the top of the working tree, so the glob sees the tools.
+TOOLS=""
+for build in */tools/build.sh; do
+    if [ -f "$build" ]; then
+        TOOLS="$TOOLS ${build%%/*}"
+    fi
+done
+
+BRANCH_TOOL=""
+MATCHES=0
+for tool in $TOOLS; do
+    case "$BRANCH" in
+        *"$tool"*)
+            BRANCH_TOOL="$tool"
+            MATCHES=$((MATCHES + 1))
+            ;;
+    esac
+done
+
+# No tool in the name (feat/shared-…, docs/…, detached HEAD) or several: nothing to guard.
+if [ "$MATCHES" -ne 1 ]; then
+    exit 0
+fi
+
+# -z keeps non-ASCII paths unquoted; --no-renames lists a move's source too.
+FOREIGN=""
+while IFS= read -r -d '' path; do
+    top="${path%%/*}"
+    for tool in $TOOLS; do
+        if [ "$top" = "$tool" ] && [ "$tool" != "$BRANCH_TOOL" ]; then
+            FOREIGN="$FOREIGN     $path"$'\n'
+        fi
+    done
+done < <(git diff --cached --name-only --no-renames -z)
+
+if [ -n "$FOREIGN" ]; then
+    echo "" >&2
+    echo "BLOCKED: '$BRANCH' is $BRANCH_TOOL work, but the commit touches another tool:" >&2
+    printf '%s' "$FOREIGN" >&2
+    echo "" >&2
+    echo "  Another tool's files on this branch usually come from another" >&2
+    echo "  session's work left in the same working tree — they belong to that" >&2
+    echo "  session's branch. Unstage them (they stay in the working tree):" >&2
+    echo "     git restore --staged <path>" >&2
+    echo "" >&2
+    echo "  A change that really spans tools (shared/ and its consumers):" >&2
+    echo "     git commit --no-verify" >&2
     echo "" >&2
     exit 1
 fi
