@@ -20,6 +20,7 @@ Každý nástroj má vlastní README, build a verzi — tato stránka je rozcest
 | **grommet-marks** | Značky pro oka po obvodu artboardu nebo na vybrané cestě — rohové zóny, registrační terče v Esko stylu | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Hromadné relinkování PDF do `.ai` vyřazovací šablony a export tiskových PDF | [README](batch-relink-export/README.md) |
 | **tile-export** | Rozdělení velké grafiky na tiskové pláty — přídavky per hrana, přelep, ořezová linka v přímé barvě, plus Zünd režim s regmarkami a ořezovými daty plátu | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
+| **batch-text-edit** | Úprava textu a `{proměnných}` ve výběru, na artboardu nebo v dokumentu řetězem kroků — číslování, nahrazení, velikost písmen — s náhledem před zápisem a kontrolou po něm | [README](batch-text-edit/README.md) · [CHANGELOG](batch-text-edit/CHANGELOG.md) |
 
 `shared/` drží namespace-neutrální jádro, které oba generátory značek sdílejí;
 odůvodnění, co se sdílí a co záměrně ne, je v
@@ -83,6 +84,7 @@ extendscript-automation/
 ├── zund-summa-marks/       # nástroj: registrační značky Zünd/Summa
 ├── batch-relink-export/    # nástroj: hromadný relink + export PDF
 ├── tile-export/            # nástroj: rozdělení grafiky na tiskové pláty
+├── batch-text-edit/        # nástroj: úprava textu a {proměnných} řetězem kroků
 ├── shared/lib/             # namespace-neutrální jádro (ui_state, json2)
 ├── docs/decisions.md       # architektonická rozhodnutí (co se sdílí a proč)
 ├── LICENSE

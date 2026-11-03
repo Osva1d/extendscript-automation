@@ -20,6 +20,7 @@ core. Each tool has its own README, build, and version — this page is a signpo
 | **grommet-marks** | Banner grommet marks along artboard edges or a selected path — corner zones, Esko-style registration targets | [README](grommet-marks/README.md) · [CHANGELOG](grommet-marks/CHANGELOG.md) |
 | **batch-relink-export** | Batch-relink PDFs into an `.ai` imposition template and export print-ready PDFs | [README](batch-relink-export/README.md) |
 | **tile-export** | Split a large graphic into printable panels — per-edge adds, overlap, spot-colour trim line, plus a Zünd mode with registration marks and per-panel cut data | [README](tile-export/README.md) · [CHANGELOG](tile-export/CHANGELOG.md) |
+| **batch-text-edit** | Edit text and `{variables}` in a selection, artboard or document through a chain of steps — numbering, replace, change case — with a preview before and a check after the write | [README](batch-text-edit/README.md) · [CHANGELOG](batch-text-edit/CHANGELOG.md) |
 
 `shared/` holds the namespace-neutral core modules both mark generators consume;
 the reasoning behind what is shared and what is deliberately not lives in
@@ -83,6 +84,7 @@ extendscript-automation/
 ├── zund-summa-marks/       # tool: Zünd/Summa registration marks
 ├── batch-relink-export/    # tool: batch PDF relink + export
 ├── tile-export/            # tool: split a graphic into printable panels
+├── batch-text-edit/        # tool: edit text and {variables} in a chain of steps
 ├── shared/lib/             # namespace-neutral core (ui_state, json2)
 ├── docs/decisions.md       # architecture decisions (what is shared, and why)
 ├── LICENSE

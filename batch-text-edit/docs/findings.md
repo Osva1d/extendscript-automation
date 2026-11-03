@@ -414,3 +414,9 @@ Probe: `tests/probes/probe_e2e.jsx`, Illustrator 30.8.2, locale cs, run 2026-10-
 | note | widths in the dialog font via `graphics.measureString` | notes 316 / 180 / 137 px against 500 px (`Summary.NOTE_W`); labels Změněné prvky: 93, Změněné texty: 91, Přeskočené texty: 103, Neshoda po zápisu: 116, Chyby: 40 px against the 150 px label column — everything fits |
 
 Part main took 5.2 s in total incl. the stub dialog's `prepare` and `Steps.run`. One Cmd+Z reverting the whole run is left to the manual test, as are the `⚠`/`✗` glyphs in the Summary's details box (the Summary window was not rendered headless).
+
+After the fix round (`ca9e586`, 2026-11-03) part main took 228 ms in total; the difference to 5.2 s was not investigated (the machine was noisy during the first run).
+
+### Log file (`BTE.Utils.log`)
+
+`File.writeln` ends lines with CR on macOS by default (measured 2026-11-03, Illustrator 30.8.2); with `f.lineFeed = "Unix"` a second real run wrote LF. Append mode (`open("a")`), UTF-8 Czech and creating `Folder.userData/batch-text-edit/` were confirmed in the same run. The e2e probe sends the log to its own temp file, so the user's `bte.log` is never written by a probe.

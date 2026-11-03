@@ -29,7 +29,7 @@ Rozdělení podle **vynutitelnosti** — ať je poznat, co hlídá stroj a co di
   `src/` **a** `shared/lib/` na zakázané konstrukce (`let`/`const`/arrow/`Array.map`…).
   Vendorovaný `json2.js` je vyloučen (cizí kód nelintujeme).
   ⚠ GM a BRE zatím scanner nemají — viz `decisions.md`.
-- **Testy** — `npm test` v adresáři nástroje (GM, ZSM, tile-export; BRE testy nemá);
+- **Testy** — `npm test` v adresáři nástroje (GM, ZSM, tile-export, batch-text-edit; BRE testy nemá);
   `npm run verify` = build + test.
 
 ## TEMPLATE — kopíruj z `templates/`
@@ -73,7 +73,7 @@ takže nemůže driftovat → nekontroluje se**.
 // ------------------------------------------------------------------------
 ```
 
-**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`, `TE`), guard `var NS = NS || {};`
+**Namespace** — 2–3písmenný prefix (`GM`, `ZSM`, `BRE`, `TE`, `BTE`), guard `var NS = NS || {};`
 v každém modulu, žádné globální proměnné mimo namespace.
 
 **Struktura `src/`** — `config.js` (uživatelská nastavení, `getDefaults()`),
@@ -114,14 +114,14 @@ pro svůj namespace:
 
 | modul | factory | používá |
 |---|---|---|
-| `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE |
+| `ui_state.js` | `buildUIState(NS)` | GM, ZSM, TE, BTE |
 | `cut_marks.js` | `buildCutMarks(NS)` | ZSM, TE |
-| `numbers.js` | `buildNumbers(NS)` | GM, ZSM, TE |
-| `field_paint.js` | `buildFieldPaint(NS)` | GM, ZSM, TE, BRE |
+| `numbers.js` | `buildNumbers(NS)` | GM, ZSM, TE, BTE |
+| `field_paint.js` | `buildFieldPaint(NS)` | GM, ZSM, TE, BRE, BTE |
 | `registration.js` | `buildRegistration(NS)` | GM, ZSM, TE |
 | `drawing_scale.js` | `buildDrawingScale(NS)` | GM, ZSM, TE |
 | `progress.js` | `buildProgress(NS)` | TE, BRE |
-| `summary.js` | `buildSummary(NS)` | TE, BRE |
+| `summary.js` | `buildSummary(NS)` | TE, BRE, BTE |
 
 Čtyři vznikly 2026-10-17 z kódu tile-exportu a používá je GM od 1.4.0, TE od
 1.2.0 a ZSM od 1.2.0, `field_paint.js` i BRE od 1.2.0 (stavové barvy); `progress.js` a `summary.js` vznikly 2026-10-20
