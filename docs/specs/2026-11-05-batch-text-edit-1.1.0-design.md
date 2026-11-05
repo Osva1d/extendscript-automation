@@ -4,7 +4,7 @@ Nástroj: `batch-text-edit`, namespace `BTE`.
 Navazuje na [návrh 1.0](2026-10-29-batch-text-edit-design.md); co tu není,
 platí podle něj.
 
-Datum: 2026-11-05 · Stav: **návrh**, čeká na schválení
+Datum: 2026-11-05 · Stav: **schváleno** (uživatel, 2026-11-05)
 
 Vzniklo z oponentury tezí, které uživatel nechal vypracovat v Gemini
 (2026-10-31), z auditu těch tezí proti kódu 1.0.0 (2026-11-04)
