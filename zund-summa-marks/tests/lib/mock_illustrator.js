@@ -452,19 +452,25 @@
         this.artboards.getActiveArtboardIndex = function () { return 0; };
 
         // Spots / swatches
+        // Registration as Illustrator reports it: a SpotColor whose spot has
+        // colorType REGISTRATION (measured) — production finds it by type.
+        var swatchList = [{ name: "[None]" }, { name: "[Registration]", color: { typename: "SpotColor",
+            spot: { name: "[Registration]", colorType: "REGISTRATION" }, tint: 100 } }]
+            .concat(spec.swatches || []);
         this.spots = wrapCollection(spec.spots || [], {
             add: function () {
                 var s = { typename: "Spot", name: "", color: {}, colorType: null };
                 self.spots.push(s);
+                // A new spot is a swatch of the same name.
+                swatchList.push({
+                    get name() { return s.name; },
+                    color: { typename: "SpotColor", spot: s, tint: 100 }
+                });
                 return s;
             }
         });
         this.swatches = wrapCollection(
-            // Registration as Illustrator reports it: a SpotColor whose spot has
-            // colorType REGISTRATION (measured) — production finds it by type.
-            [{ name: "[None]" }, { name: "[Registration]", color: { typename: "SpotColor",
-                spot: { name: "[Registration]", colorType: "REGISTRATION" }, tint: 100 } }]
-                .concat(spec.swatches || []),
+            swatchList,
             {
                 add: function () { var s = {}; self.swatches.push(s); return s; }
             }

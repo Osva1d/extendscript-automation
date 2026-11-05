@@ -103,7 +103,7 @@ ZSM.L = (function () {
             ORIENT_DIST:    "Orientation mark offset:",
             TIP_ORIENT_DIST: "Gap between the edges of the marks, from the corner mark to the orientation mark.",
             MARK_COLOR:   "Mark color:",
-            TIP_MARK_COLOR: "Spot color for marks. The registration color prints on all separations.",
+            TIP_MARK_COLOR: "Spot color for marks. The registration color prints on all separations. Spot 1 (white on dark media) is added to the document when missing, with the alternate color Cyan.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Top feed:",
@@ -235,7 +235,7 @@ ZSM.L = (function () {
             ORIENT_DIST:    "Odsazení orientační značky:",
             TIP_ORIENT_DIST: "Mezera mezi okraji značek, od rohové značky k orientační značce.",
             MARK_COLOR:   "Barva značek:",
-            TIP_MARK_COLOR: "Přímá barva značek. Registrační barva se tiskne na všech separacích.",
+            TIP_MARK_COLOR: "Přímá barva značek. Registrační barva se tiskne na všech separacích. Spot 1 (bílá na tmavý materiál) se založí, když v dokumentu chybí, se zástupnou barvou Cyan.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Horní výjezd (Top):",

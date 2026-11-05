@@ -58,6 +58,7 @@ ZSM.L = {
     ERR_MARKS_ORIENT: "marks orient %s %s",
     ERR_MARKS_OVERLAP: "marks overlap %s %s",
     ERR_MARKS_OUTSIDE: "marks outside %s",
+    WARN_COLOR_FALLBACK: "colorfallback %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -70,6 +71,7 @@ ZSM.Config = {
     layerGraphics: "Graphics",
     layerTrim:     "Trim",
     trimNote:      "ZSM trim line",
+    markSpot:      { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
     summaXCenter: 10,    // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,    // mm: gap from graphic edge to Summa mark outer edge (Y)
     redLineWidth: 1,
@@ -1666,6 +1668,151 @@ assertEq(ZSM.Draw.detectCutColor(), "Thru-cut", "detectCutColor still answers th
 setupDoc({ spots: [{ name: "Bílá" }], layers: [] });
 assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), "[]", "no known cut spot: an empty list");
 assertEq(ZSM.Draw.detectCutColor(), ZSM.Draw.getRegistrationName(), "...and detectCutColor keeps its registration fallback");
+
+
+// =====================================================
+// TEST 1.3.0-A: the mapping offers cut and Zünd tool names, no print layers
+// =====================================================
+console.log("\n=== TEST 1.3.0-A: mapping suggestions hold no print or registration names ===");
+setupDoc({ layers: [{ name: "Art", items: [] }] });
+var namesA = ZSM.Draw.getLayerNames();
+["White", "Varnish", "Register"].forEach(function (n) {
+    assert(namesA.indexOf(n) < 0, "mapping suggestions leave out " + n);
+});
+["Cut", "Thru-cut", "Kiss-cut", "CutContour", "Score", "Crease", "Perforation", "V-cut", "Bevel-cut",
+    "Route", "Engrave", "Draw", "Punch", "Drill"].forEach(function (n) {
+    assert(namesA.indexOf(n) >= 0, "mapping suggestions keep " + n);
+});
+setupDoc({ layers: [{ name: "White", items: [] }, { name: "Art", items: [] }] });
+assert(ZSM.Draw.getLayerNames().indexOf("White") >= 0,
+    "a layer of that name in the document is still offered");
+
+
+// =====================================================
+// TEST 1.3.0-B: the cleanup removes only what the run emptied (audit V1)
+// =====================================================
+// The cleanup was meant for layers movePaths leaves behind, but took every empty
+// visible layer, also a template's prepared ones and, after beginSession
+// unlocked them, locked ones.
+console.log("\n=== TEST 1.3.0-B: layers empty before the run stay ===");
+var docB = setupDoc({
+    layers: [
+        { name: "Prepared", items: [] },
+        { name: "Prepared locked", locked: true, items: [] },
+        { name: "Cut source", items: [{ type: "path", spot: "CutSpot", bounds: [0, 50, 50, 0] }] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sB = makeSettings({ layers: [{ name: "Cut", color: "CutSpot" }] });
+ZSM.Draw.beginSession();
+ZSM.Draw.render(ZSM.Core.calculateAll(sB, ZSM.Draw.getBounds(sB)), sB);
+ZSM.Draw.endSession();
+assert(findLayer(docB, "Prepared") !== null, "an empty layer the run did not touch stays");
+assert(findLayer(docB, "Prepared locked") !== null, "a locked empty layer stays");
+assertEq(findLayer(docB, "Prepared locked").locked, true, "and is locked again after the run");
+assert(findLayer(docB, "Cut source") === null, "a layer the run emptied is removed");
+assertEq(countItems(findLayer(docB, "Cut"), "PathItem"), 1, "its path is on the cut layer");
+
+
+// =====================================================
+// TEST 1.3.0-C: no second Graphics layer (audit V2)
+// =====================================================
+console.log("\n=== TEST 1.3.0-C: an existing Graphics layer is not doubled ===");
+var docC = setupDoc({
+    layers: [
+        { name: "Graphics", items: [{ type: "path", bounds: [0, 100, 100, 0] }] },
+        { name: "Background", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sC = makeSettings();
+ZSM.Draw.render(ZSM.Core.calculateAll(sC, ZSM.Draw.getBounds(sC)), sC);
+var graphicsC = 0;
+for (var iC = 0; iC < docC._layers.length; iC++) { if (docC._layers[iC].name === "Graphics") graphicsC++; }
+assertEq(graphicsC, 1, "one Graphics layer after the run");
+assert(findLayer(docC, "Background") !== null, "the bottom layer keeps its name");
+
+
+// =====================================================
+// TEST 1.3.0-D: marks in Spot 1
+// =====================================================
+console.log("\n=== TEST 1.3.0-D: the mark spot is added when picked and missing ===");
+var artD = [{ name: "Art", items: [{ type: "path", bounds: [0, 300, 300, 0] }] }];
+function findSpot(doc, name) {
+    var found = [];
+    for (var i = 0; i < doc.spots.length; i++) { if (doc.spots[i].name === name) found.push(doc.spots[i]); }
+    return found;
+}
+function runD(s) {
+    var alerts = [], orig = global.alert;
+    global.alert = function (m) { alerts.push(String(m)); };
+    var drew = ZSM.Draw.render(ZSM.Core.calculateAll(s, ZSM.Draw.getBounds(s)), s);
+    global.alert = orig;
+    return { drew: drew, alerts: alerts.join("\n") };
+}
+
+// Missing and picked: added as a spot with the configured alternate.
+var docD = setupDoc({ layers: artD });
+var outD = runD(makeSettings({ markColor: "Spot 1" }));
+var spotsD = findSpot(docD, "Spot 1");
+assertEq(spotsD.length, 1, "Spot 1 added once");
+assertEq(spotsD[0].colorType, ColorModel.SPOT, "as a spot colour");
+assertEq(spotsD[0].color.typename, "CMYKColor", "with a CMYK alternate");
+assertEq(spotsD[0].color.cyan, 100, "cyan 100");
+assertEq(spotsD[0].color.magenta + spotsD[0].color.yellow + spotsD[0].color.black, 0, "and nothing else");
+var markD = findSublayer(findLayer(docD, "Regmarks"), "Zünd")._items[0];
+assertEq(markD.fillColor.typename, "SpotColor", "the marks are painted with it");
+assertEq(markD.fillColor.spot.name, "Spot 1", "by name");
+assertEq(markD.fillColor.tint, 100, "at full tint");
+assertEq(outD.alerts, "", "no warning: the operator picked it");
+
+// Second run: reused, nothing added.
+outD = runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(findSpot(docD, "Spot 1").length, 1, "a re-run adds no second Spot 1");
+
+// Present with the document's own alternate: left as it is.
+var ownD = { typename: "Spot", name: "Spot 1", colorType: "SPOT", color: { typename: "CMYKColor", cyan: 0, magenta: 100, yellow: 0, black: 0 } };
+var docD2 = setupDoc({ layers: artD, spots: [ownD],
+    swatches: [{ name: "Spot 1", color: { typename: "SpotColor", spot: ownD, tint: 100 } }] });
+runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(findSpot(docD2, "Spot 1").length, 1, "an existing Spot 1 is not doubled");
+assertEq(ownD.color.magenta, 100, "and keeps its own alternate");
+
+// Not picked: nothing added, whatever else is missing.
+var docD3 = setupDoc({ layers: artD });
+runD(makeSettings());
+assertEq(findSpot(docD3, "Spot 1").length, 0, "another mark colour adds nothing");
+var docD4 = setupDoc({ layers: artD });
+var outD4 = runD(makeSettings({ markColor: "Ghost" }));
+assertEq(docD4.spots.length, 0, "a missing colour of another name is still never added");
+assert(outD4.alerts.indexOf("colorfallback Ghost") >= 0, "and still warns about the fallback");
+
+// A refused run says the document was not changed: no spot either.
+var docD5 = setupDoc({ layers: artD });
+var sD5 = makeSettings({ markColor: "Spot 1" });
+var geoD5 = ZSM.Core.calculateAll(sD5, ZSM.Draw.getBounds(sD5));
+geoD5.marksZ[0].cx = NaN;
+ZSM.Draw.render(geoD5, sD5);
+assertEq(docD5.spots.length, 0, "a refused run adds no spot");
+
+// The spot cannot be added: the fallback warning says so, the marks still draw.
+var docD6 = setupDoc({ layers: artD });
+docD6.spots.add = function () { throw new Error("spots locked"); };
+var outD6 = runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(outD6.drew, true, "a failed add does not stop the run");
+assert(outD6.alerts.indexOf("colorfallback Spot 1") >= 0, "and warns about the fallback");
+
+// The swatch tile previews it before it exists; a present one shows its own colour.
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8"));
+setupDoc({ layers: artD });
+assertEq(JSON.stringify(ZSM.Draw.getSwatchRGBMap()["Spot 1"]), "[0,255,255]", "preview of the missing spot is cyan");
+setupDoc({ layers: artD, spots: [ownD] });
+assertEq(JSON.stringify(ZSM.Draw.getSwatchRGBMap()["Spot 1"]), "[255,0,255]", "a present spot previews its own alternate");
+
+// The list of mark colours: right after registration when missing, not doubled.
+assertEq(JSON.stringify(ZSM.UI.markColorNames(["[Reg]", "Cut"])), JSON.stringify(["[Reg]", "Spot 1", "Cut"]),
+    "the mark colour list offers a missing Spot 1 after registration");
+assertEq(JSON.stringify(ZSM.UI.markColorNames(["[Reg]", "Cut", "Spot 1"])), JSON.stringify(["[Reg]", "Cut", "Spot 1"]),
+    "a present Spot 1 stays where it is");
 
 
 // =====================================================

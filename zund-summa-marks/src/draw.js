@@ -248,6 +248,10 @@ ZSM.Draw = {
             }
             var refLayer = reg;
 
+            // What is empty now was empty before the mapping: a template's
+            // prepared layer, say. The cleanup in 3b leaves those alone.
+            var wasEmpty = this._emptyLayerNames();
+
             // 3. Dynamic layer mapping — move spot-colored paths to named layers
             // Row existence = active (no checkbox in new UI design).
             // Skipped entirely in "marks only" mode: the user's cut layers are
@@ -309,8 +313,8 @@ ZSM.Draw = {
             }
 
             // 3b. Remove empty layers left behind by movePaths.
-            //     Only truly empty (no items, no sublayers), visible,
-            //     non-system layers are removed. Skip Regmarks, target
+            //     Only layers this mapping emptied (no items, no sublayers now,
+            //     something before), visible, non-system. Skip Regmarks, target
             //     layers just created above, artifact layers, and hidden layers.
             var sysNames = {};
             sysNames[ZSM.Config.layerRegmarks] = true;
@@ -324,7 +328,7 @@ ZSM.Draw = {
                     if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
                     try {
                         var elay = doc.layers[ei];
-                        if (sysNames[elay.name]) continue;
+                        if (sysNames[elay.name] || wasEmpty["l_" + elay.name]) continue;
                         if (ZSM.Bounds.isArtifactLayer(elay)) continue;
                         if (!elay.visible) continue;
                         if (elay.pageItems.length === 0 && elay.layers.length === 0) {
@@ -335,6 +339,8 @@ ZSM.Draw = {
             }
 
             // 4. Draw Zünd marks (circles)
+            // Past every refusal above: a refused run leaves no colour behind.
+            this.ensureMarkSpot(s.markColor);
             var col = this.getCol(s.markColor);
             // Non-blocking warning if the chosen mark colour isn't in the
             // document — getCol fell back to [Registration]. We draw a valid
@@ -438,7 +444,12 @@ ZSM.Draw = {
                     // "Graphics" surprised the user. sysNames holds Regmarks +
                     // every mapped name, so skip the rename for any of them; only
                     // a genuine leftover artwork layer gets named Graphics.
-                    if (!sysNames[gfxLayer.name]) {
+                    // The name is for people and nothing reads it (user,
+                    // 2026-11-05), so a Graphics layer elsewhere is enough: a
+                    // second one of that name would only confuse.
+                    var hasGraphics = true;
+                    try { doc.layers.getByName(ZSM.Config.layerGraphics); } catch (eG) { hasGraphics = false; }
+                    if (!sysNames[gfxLayer.name] && !hasGraphics) {
                         // Track rename so endSession() can restore lock state (W3)
                         var oldGfxName = gfxLayer.name;
                         gfxLayer.name    = ZSM.Config.layerGraphics;
@@ -790,6 +801,27 @@ ZSM.Draw = {
     // directly (see callers in beginSession, render, movePaths).
 
     /**
+     * Names of the top-level layers that hold nothing, keyed "l_" + name (so a
+     * layer called "toString" collides with nothing). A name shared with a
+     * layer that holds something counts as empty: the cleanup then keeps both.
+     * @returns {Object} "l_" + name → true.
+     * @private
+     */
+    _emptyLayerNames: function () {
+        var empty = {}, layers = app.activeDocument.layers;
+        for (var i = 0; i < layers.length; i++) {
+            try {
+                if (layers[i].pageItems.length === 0 && layers[i].layers.length === 0) {
+                    empty["l_" + layers[i].name] = true;
+                }
+            } catch (e) {
+                ZSM.Utils.log("_emptyLayerNames: " + e.message);
+            }
+        }
+        return empty;
+    },
+
+    /**
      * The first mapping-row layer name that is one of the script's own output
      * layers (Regmarks, Trim), or null. The script rewrites those layers'
      * content, so paths routed there were deleted in the same run. Rows the
@@ -1034,6 +1066,8 @@ ZSM.Draw = {
      * falls back to [Registration] (always a valid, cutter-readable mark colour)
      * and the caller (render) surfaces a non-blocking warning naming the colour
      * so the operator can fix it. See ZSM.Draw.swatchExists for the detection.
+     * The one colour that does get added is the mark spot the operator picks
+     * (ensureMarkSpot); it never happens here.
      *
      * @param {string} name - Swatch or spot color name.
      * @returns {Color} Illustrator Color object (never null).
@@ -1047,6 +1081,39 @@ ZSM.Draw = {
             // Missing swatch → safe [Registration] fallback, never auto-create.
             return this.registrationColor();
         }
+    },
+
+    /**
+     * Adds ZSM.Config.markSpot to the document when it is the run's mark colour
+     * and the document lacks it. The operator picked it by name for white ink on
+     * dark media, unlike the unknown names getCol refuses to mint. If it cannot
+     * be added, getCol falls back and render() warns, as for any missing colour.
+     * @param {string} name - The run's mark colour.
+     */
+    ensureMarkSpot: function (name) {
+        var def = ZSM.Config.markSpot;
+        if (name !== def.name || this.swatchExists(name)) return;
+        try {
+            var spot = app.activeDocument.spots.add();
+            spot.name = def.name;
+            spot.colorType = ColorModel.SPOT;
+            spot.color = this._markSpotAlternate();
+        } catch (e) {
+            ZSM.Utils.log("ensureMarkSpot: " + e.message);
+        }
+    },
+
+    /**
+     * The alternate of ZSM.Config.markSpot: what the screen shows, and what
+     * prints where the RIP does not know the name.
+     * @returns {CMYKColor}
+     * @private
+     */
+    _markSpotAlternate: function () {
+        var def = ZSM.Config.markSpot, cmyk = new CMYKColor();
+        cmyk.cyan = def.cyan; cmyk.magenta = def.magenta;
+        cmyk.yellow = def.yellow; cmyk.black = def.black;
+        return cmyk;
     },
 
     /**
@@ -1159,6 +1226,12 @@ ZSM.Draw = {
                     if (rgb) map[n] = rgb;
                 } catch (e2) {}
             }
+            // The mark spot is on offer even before it exists (ZSM.UI.markColorNames).
+            var spotName = ZSM.Config.markSpot.name;
+            if (map[spotName] === undefined) {
+                var spotRgb = ZSM.UI.colorToRGB(this._markSpotAlternate());
+                if (spotRgb) map[spotName] = spotRgb;
+            }
         } catch (e) {}
         return map;
     },
@@ -1206,9 +1279,10 @@ ZSM.Draw = {
      * that are not already present in the document.
      * System layers (Regmarks, Graphics) are excluded.
      *
-     * Predefined names follow Zünd Design Center v7.2 method list
-     * plus common print-related layers (White, Varnish).
-     * Order: most common cutting first, then processing, then print.
+     * Predefined names follow Zünd Design Center v7.2 method list: cutting and
+     * tool methods only. A print layer (White, Varnish) has no cut paths to map;
+     * one the document holds is offered with its other layers.
+     * Order: most common cutting first, then processing.
      *
      * @returns {Array} Array of layer name strings.
      */
@@ -1219,11 +1293,7 @@ ZSM.Draw = {
             "Cut", "Thru-cut", "Kiss-cut", "CutContour",
             // Processing
             "Score", "Crease", "Perforation", "V-cut", "Bevel-cut",
-            "Route", "Engrave", "Draw", "Punch", "Drill",
-            // Registration
-            "Register",
-            // Print-related
-            "White", "Varnish"
+            "Route", "Engrave", "Draw", "Punch", "Drill"
         ];
 
         // 1. Collect document layers (excluding system layers)

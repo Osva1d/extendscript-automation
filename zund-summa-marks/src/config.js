@@ -27,6 +27,10 @@ ZSM.Config = {
     // Note stamped on every trim line the script draws, so a refresh removes
     // only its own lines and never a user's content on a layer named "Trim".
     trimNote:      "ZSM trim line",
+    // The one colour the script may add to a document, and only as a mark colour
+    // the operator picked: white ink on dark media. The RIP reads the name; the
+    // alternate is what the screen shows (user, 2026-11-05).
+    markSpot:      { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {

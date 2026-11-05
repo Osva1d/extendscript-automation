@@ -366,7 +366,7 @@ ZSM.UI = {
         }
 
         // Shared: mark color
-        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR, docData.swatchRGB);
+        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, self.markColorNames(docData.swatches), l.TIP_MARK_COLOR, docData.swatchRGB);
 
         // =================================================================
         // Panel: Feed (SUMMA only — not created for ZUND)
@@ -1589,6 +1589,23 @@ ZSM.UI = {
         var refresh = function () { if (sw) self.setSwatch(sw, self.ddlValue(ddl), rgbMap); };
         refresh();
         return { ddl: ddl, group: g, sw: sw, refresh: refresh };
+    },
+
+    /**
+     * The colours the marks can take: the document's, and the mark spot even
+     * when the document lacks it (the run adds it, ZSM.Draw.ensureMarkSpot).
+     * The cut colours stay the document's own: a colour that is not there
+     * matches no path.
+     * @param {Array} swatchNames - List from ZSM.Draw.getSwatchNames(),
+     *     registration first.
+     * @returns {Array} The list for the mark colour dropdown.
+     */
+    markColorNames: function (swatchNames) {
+        var spot = ZSM.Config.markSpot.name;
+        for (var i = 0; i < swatchNames.length; i++) {
+            if (swatchNames[i] === spot) return swatchNames;
+        }
+        return [swatchNames[0], spot].concat(swatchNames.slice(1));
     },
 
     /**
