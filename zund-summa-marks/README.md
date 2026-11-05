@@ -66,15 +66,23 @@ Značky, které by se dotýkaly nebo překrývaly (typicky orientační značka 
 ### Správa vrstev
 
 Panel *Přiřazení vrstev k barvám* obsahuje tabulku řezacích vrstev. Každý řádek má:
-- **Combobox** — název vrstvy v dokumentu (výběr z existujících nebo vlastní text)
+- **Combobox** — název vrstvy: vrstvy dokumentu a standardní řezné a nástrojové názvy Zündu (Cut, Thru-cut, Kiss-cut, Score, Route…). Tiskové vrstvy jako White nebo Varnish nabízí jen ty, které v dokumentu jsou; jiný název lze dopsat ručně.
 - **Dropdown** — přímá barva asociovaná s touto vrstvou (seznam živých swatchů z dokumentu)
 - **Tlačítko ✕** — odebrání řádku (minimum 1 řádek musí vždy existovat)
 
 Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
-Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk.
+Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk. Vrstvu, kterou přesun vyprázdnil, skript odstraní; vrstvy prázdné už před během nechá být, i zamčené.
+
+Spodní viditelnou vrstvu pojmenuje **Graphics**, pokud vrstva tohoto jména v dokumentu ještě není a není v mapování. Jméno slouží jen lidem, nic ho nečte.
 
 Vrstvy **Regmarks** a **Trim** patří skriptu (značky a ořezové linky) a v mapování je použít nejde. Ve vrstvě Trim skript obnovuje jen své vlastní ořezové linky; cizí objekty v ní nechá a upozorní na ně. Ve vrstvě Regmarks obnovuje jen své podvrstvy „Zünd“ a „Summa“: objekty, které v ní leží mimo ně — třeba značky v PDF plátu, které Tile Export exportoval v režimu Zünd (tam je kreslí přímo do vrstvy Regmarks), nebo značky ze starší zakázky z doby před 1.0.0 —, zůstanou vedle nových značek a běh na ně upozorní i s počtem. Před řezáním je zkontrolujte.
+
+### Barva značek
+
+Rozbalovací seznam **Barva značek** nabízí registrační barvu a přímé barvy dokumentu. Na tmavý materiál zvolte **Spot 1** (bílá): seznam ji nabízí vždy, a když v dokumentu chybí, skript ji při Generovat založí se zástupnou barvou Cyan. Značky a čára OPOS se pak kreslí v ní. Přímá barva jiného jména se nezakládá: když ji předvolba chce a dokument ji nemá, seznam ukáže „(chybí)“ a značky vyjdou v registrační barvě s upozorněním.
+
+Jméno a zástupnou barvu určuje `markSpot` v `src/config.js`.
 
 ### Presets
 
@@ -122,7 +130,7 @@ registrační barvou nejde rozpoznat řezové cesty.
 | `markSizeZ` | `5` mm | Průměr značky Zünd |
 | `markSizeS` | `3` mm | Strana značky Summa |
 | `orientDist` | `100` mm | Mezera mezi levou dolní rohovou a orientační značkou (ZUND) |
-| `markColor` | `[Registration]` | Přímá barva značek |
+| `markColor` | `[Registration]` | Přímá barva značek (Spot 1 se založí, když chybí) |
 | `feedTop` | `70` mm | Horní přesah materiálu (SUMMA) |
 | `feedBottom` | `50` mm | Spodní přesah materiálu (SUMMA) |
 | `drawRed` | `true` | Kreslit červené ořezové linky (SUMMA) |

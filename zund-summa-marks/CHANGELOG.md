@@ -4,6 +4,33 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.3.0] — 2026-11-05
+
+Bílé značky na tmavý materiál a opatrnější práce s vrstvami uživatele.
+
+### Přidáno
+
+- **Značky ve Spot 1.** Seznam Barva značek nabízí Spot 1 vždy, hned za
+  registrační barvou. Když v dokumentu chybí, Generovat ji založí se zástupnou
+  barvou Cyan; zamítnutý běh (kolize značek, příliš velký artboard) dokument
+  nezmění ani tady. Existující Spot 1 zůstane, jak je. Přímá barva jiného jména
+  se dál nezakládá.
+
+### Změněno
+
+- **Nabídka vrstev v mapování** má jen řezné a nástrojové názvy Zündu: ubyly
+  White, Varnish a Register. Vrstva tohoto jména, kterou dokument má, se nabídne
+  dál a název jde dopsat ručně.
+
+### Opraveno
+
+- **Prázdné vrstvy.** Běh smazal každou prázdnou viditelnou vrstvu v dokumentu,
+  i připravenou v šabloně a i zamčenou. Teď smaže jen tu, kterou sám vyprázdnil
+  přesunem cest. Prázdné vrstvy, které dřív po běhu zmizely, tak v dokumentu
+  zůstanou.
+- **Druhá vrstva Graphics.** Když dokument vrstvu Graphics už měl jinde než
+  dole, běh pojmenoval Graphics i spodní vrstvu. Teď ji nechá pod jejím jménem.
+
 ## [1.2.0] — 2026-10-28
 
 Čistý tah, měřítko kresby z dokumentu a jazyk společný všem nástrojům
