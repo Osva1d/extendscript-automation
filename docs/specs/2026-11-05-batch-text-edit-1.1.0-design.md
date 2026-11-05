@@ -33,25 +33,32 @@ review 1.0.0 (M1, M5, M6).
 
 | # | rozhodnutí | kdo |
 |---|---|---|
-| 19 | Do je hranice. Číslování skončí u prvního prvku, jehož číslo by Do překročilo; ten a všechny další zůstanou v kroku beze změny. Nahrazuje rozhodnutí 8 | uživatel 2026-11-05; pravidlo „první překročení“ **moje volba** |
+| 19 | Do je konec řady. Prvek, jehož číslo by Do překročilo, zůstane v kroku beze změny; nová řada (Znovu po, nový aršík) začne znovu na Od. Nahrazuje rozhodnutí 8 | uživatel 2026-11-05 (hranice; „konec řady, ne kroku“ po příkladu s aršíky) |
 | 20 | Pořadí Po aršících jako výslovná volba s nápovědou. Aršík = skupina přímo nad skupinou prvku. Nahrazuje rozhodnutí 13; anti-cíl „pořadí podle neviditelné struktury“ platí dál pro výchozí stav, protože volba je vypnutá a zapnutá ukáže aršík v náhledu | uživatel 2026-11-05 (volba, nápověda, „univerzální a hlavně spolehlivé“); definice aršíku **moje volba** podle auditu |
 | 21 | Proměnné, které zůstanou po posledním kroku, jen ohlásit ⚠; Použít zůstane aktivní | uživatel 2026-11-05 (bez námitky k návrhu „jen upozornit“) |
 | 22 | Víc bloků v jednom běhu (cíl kroku, rozsah indexů) ne. Dál víc běhů s výběrem bloku, rozhodnutí 3 platí | uživatel 2026-11-05 |
 | 23 | Seznam hodnot, kroky Vložit a Ořezat, filtr náhledu a dialog do 720 px zůstávají v §12 návrhu 1.0 | **moje volba** podle auditu; žádná zakázka o ně zatím nežádá |
+| 24 | Číslovat má volbu Znovu od začátku v každém aršíku; platí jen s Pořadím po aršících | uživatel 2026-11-05 |
 
 ## 3. Do jako hranice
 
 ### 3.1 Pravidlo
 
 Hodnota prvku s pořadím *i* se počítá dál podle §5.3 návrhu 1.0 (Od,
-Krok, Opakovat, Znovu po). Nově:
+Krok, Opakovat, Znovu po); u volby v každém aršíku je *i* pořadí v aršíku
+(§3.4). Nově:
 
-- **Prvek dostane číslo, dokud hodnota nepřekročí Do** ve směru Kroku: pro
-  Krok ≥ 0 musí být hodnota ≤ Do, pro Krok < 0 hodnota ≥ Do.
-- **První prvek, jehož hodnota by Do překročila, ukončí celý krok.** Ten
-  a všechny další prvky zůstanou v tomto kroku beze změny, i když by se
-  hodnota u Znovu po později vrátila pod Do. Řada tak nikdy nemá díry
-  a hranice se dá popsat jednou větou.
+- **Do je konec řady.** Prvek dostane číslo jen tehdy, když jeho hodnota
+  nepřekročí Do ve směru Kroku: pro Krok ≥ 0 musí být hodnota ≤ Do, pro
+  Krok < 0 hodnota ≥ Do. Prvek za hranicí zůstane v tomto kroku beze
+  změny.
+- **Nová řada začne znovu na Od** a končí zase na Do: u Znovu po po daném
+  počtu prvků, u volby v každém aršíku v dalším aršíku. Bez nové řady
+  zůstane beze změny celý zbytek kroku.
+- **Díry:** hodnoty v řadě jen rostou (Krok ≥ 0) nebo jen klesají
+  (Krok < 0), takže uvnitř řady díra nevznikne; za hranicí je vždy jen
+  konec řady. Mezi řadami zůstanou prvky za Do beze změny a hláška je
+  spočítá (§3.2).
 - **Prázdné Do** = bez hranice, jako v 1.0.
 - **Od už za hranicí** (Od 10, Do 5, Krok 1; nebo Krok 0 a Od > Do): ✗
   „Od je za hranicí Do, krok by nic neočísloval.“ Zablokuje Použít, protože
@@ -65,9 +72,12 @@ Krok, Opakovat, Znovu po). Nově:
 Obě jsou ⚠ a Použít zůstane aktivní.
 
 - **Řada skončila na Do:** „Do 20: číslo dostalo 20 prvků, 220 zůstane beze
-  změny.“ Počty přes `L.count` podle kánonu. Nahrazuje „Prvků je o N víc.“
-- **Řada nedošla k Do:** beze změny proti 1.0: „Poslední číslo vyjde 24,
-  v poli Do je 30.“ a při Opakovat 1 a prázdném Znovu po „Chybí 6 prvků.“
+  změny.“ Počty jsou součtem přes všechny řady a jdou přes `L.count` podle
+  kánonu. Nahrazuje „Prvků je o N víc.“
+- **Řada nedošla k Do:** jedna řada beze změny proti 1.0: „Poslední číslo
+  vyjde 24, v poli Do je 30.“ a při Opakovat 1 a prázdném Znovu po „Chybí
+  6 prvků.“ U volby v každém aršíku jedna souhrnná hláška: „Ve 2 aršících
+  řada nedojde k Do 10.“
 
 U Kde „První číslo v prvku“, Jiný text a Regulární výraz si prvky za
 hranicí nechají původní text, tedy i staré číslo, a na archu může vzniknout
@@ -86,6 +96,25 @@ výslovně.
   předvolby se nemění. Náhled to ukáže před zápisem a CHANGELOG to řekne.
 - **Nápověda** `TIP_TO`: „Nepovinné: poslední číslo řady. Prvky, na které
   číslo nezbude, zůstanou beze změny a náhled je ohlásí.“
+
+### 3.4 Znovu v každém aršíku
+
+- **Zaškrtávátko „v každém aršíku“** vedle pole Znovu od začátku po
+  v editoru kroku Číslovat. Ukládá se do kroku pod klíčem `perSheet`;
+  krok z 1.0.0 bez klíče = vypnuto.
+- **Zapnuté:** počítadlo začne v každém aršíku znovu, takže první prvek
+  aršíku dostane Od a Do ukončí řadu v každém aršíku zvlášť. Funguje
+  i u aršíků s různým počtem prvků, kde Znovu po selže. Prvky mimo aršík
+  (na konci, §4.2) tvoří jednu poslední řadu.
+- **Se Znovu po zároveň:** Znovu po počítá prvky uvnitř aršíku.
+- **Bez Pořadí po aršících** je zaškrtávátko šedé a krok ho nepoužije. Když
+  ho má zapnuté předvolba a Po aršících vypnuté, ⚠ „Krok 2: v každém aršíku
+  platí jen s Pořadím po aršících.“
+- **Nápověda:** „Řada začne v každém aršíku znovu na Od a skončí na Do.
+  Platí jen s Pořadím po aršících.“
+- **Příklad:** 20 aršíků po 12, Od 1, Do 10 → v každém aršíku 1–10, dvě
+  samolepky na aršík beze změny, ⚠ „Do 10: číslo dostalo 200 prvků, 40
+  zůstane beze změny.“
 
 ## 4. Pořadí po aršících
 
@@ -117,8 +146,8 @@ výslovně.
   4. Shoda: rozhodne `tie` jako v 1.0; aršík nese nejmenší `tie` svých
      prvků.
 - **Číslování jde přes aršíky souvisle:** aršík 1 dostane 1–12, aršík 2
-  13–24 a tak dál. Řadu od 1 v každém aršíku dá Znovu po = počet prvků
-  v aršíku, když jsou aršíky stejně velké. Samostatná volba je v §9.
+  13–24 a tak dál. Řadu od Od v každém aršíku zvlášť zapíná krok Číslovat
+  volbou v každém aršíku (§3.4).
 - **Přepnutí volby jen přeřadí prvky**, nečte znovu dokument (jako změna
   Pořadí přes `BTE.Scope.reorder`). Aršík každého prvku se proto zjistí
   už při čtení rozsahu.
@@ -182,7 +211,7 @@ výslovně.
 
 Rozsah, pravidlo prvku, kroky Nahradit a Velikost písmen, zápis a záruky
 (§7 návrhu 1.0: náhled = zápis, kontrola po zápisu, jedno Zpět), velikost
-dialogu a formát předvoleb kromě klíče `bySheet`.
+dialogu a formát předvoleb kromě klíčů `bySheet` a `perSheet`.
 
 **Verze:** změna Do je změna chování, kterou si předvolba z 1.0.0 přenese.
 Podle SemVer by obhájila i 2.0.0. Navrhuji 1.1.0: 1.0.0 je dva dny venku,
@@ -192,11 +221,13 @@ uvede v sekci Změněno.
 ## 8. Ověření
 
 - **Node:**
-  - `steps`: hranice Do pro Krok kladný, záporný a 0, Opakovat, Znovu po,
-    písmena, Od za Do ✗ a obě hlášky;
+  - `steps`: hranice Do pro Krok kladný, záporný a 0, Opakovat, Znovu po
+    (každá řada končí na Do), písmena, Od za Do ✗ a obě hlášky;
+  - `steps`: v každém aršíku s aršíky různé velikosti, se Znovu po,
+    s prvky mimo aršík jako poslední řadou a bez Pořadí po aršících ⚠;
   - `order` a `scope`: aršíky (§4.4);
   - `ui_model`: zbylé proměnné, hlášky aršíků a plurály;
-  - `storage`: chybějící `bySheet` = vypnuto;
+  - `storage`: chybějící `bySheet` a `perSheet` = vypnuto;
   - `main`: M1;
   - ES3 sken.
 - **Sondy:**
@@ -204,16 +235,14 @@ uvede v sekci Změněno.
   - dialog: šířka sloupce #, zaškrtávátko v řádku Pořadí v CS i EN,
     rozměr dál 1008×768.
 - **Ruční test:** `manual-test.md` dostane oddíly Do jako hranice, Po
-  aršících na souboru aršíky 3×4 a Zbylé proměnné. Brány vydání: 4.1,
-  4.2, 6.3–6.5 jako v 1.0.0 (dotkne se jich M1 a M5) a nově hranice Do
-  a pořadí po aršících.
+  aršících a Znovu v každém aršíku na souboru aršíky 3×4 a Zbylé
+  proměnné. Brány vydání: 4.1, 4.2, 6.3–6.5 jako v 1.0.0 (dotkne se jich
+  M1 a M5) a nově hranice Do, pořadí po aršících a řada v každém aršíku.
 
 ## 9. Později
 
 Doplněk k §12 návrhu 1.0:
 
-- Číslovat od 1 v každém aršíku zvlášť jako volba (dnes Znovu po, když
-  jsou aršíky stejně velké).
 - Cíl kroku (aršík, rozsah prvků), rozhodnutí 22.
 - Ze seznamu, Vložit, Ořezat; filtr náhledu „jen změněné“; dialog do
   720 px pro obrazovky 1366×768.
