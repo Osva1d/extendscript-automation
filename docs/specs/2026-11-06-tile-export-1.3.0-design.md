@@ -5,7 +5,7 @@ Navazuje na [návrh 1.0](2026-09-13-tile-export-design.md),
 [Zünd režim](2026-09-13-tile-export-zund-design.md) a
 [návrh 1.1.0](2026-10-10-tile-export-1.1.0-design.md).
 
-Datum: 2026-11-06 · Stav: **návrh, čeká na schválení uživatelem**
+Datum: 2026-11-06 · Stav: **schváleno** (uživatel, 2026-11-06); `WARN_UNPRINTED_SKIP` doplněno při plánování
 
 ---
 
@@ -27,8 +27,8 @@ TE dnes tiskne celý přelep, takže pás by se musel ručně maskovat v každé
 |---|---|---|
 | 1 | Přelep se dělí na potištěnou a nepotištěnou část. Potisk přes šev 1–2 mm kryje nespasování. | uživatel, 2026-11-06 |
 | 2 | Šířka sváru je hodnota v poli a v předvolbě, ne konstanta. Dílna počítá asi s 30 mm, ještě se potvrdí ve finiši. | uživatel, 2026-11-06 |
-| 3 | Rysky pro prořez nejsou v této verzi. Pláty se spasují podle obrazu, rysky by jen zrychlily práci. Nejdřív ruční zkouška na zakázce (§7). | návrh, čeká na schválení |
-| 4 | Žádný přestavěný dialog, žádný nový režim „technika spoje“ (§7). | návrh, čeká na schválení |
+| 3 | Rysky pro prořez nejsou v této verzi. Pláty se spasují podle obrazu, rysky by jen zrychlily práci. Nejdřív ruční zkouška na zakázce (§7). | uživatel, 2026-11-06 |
+| 4 | Žádný přestavěný dialog, žádný nový režim „technika spoje“ (§7). | uživatel, 2026-11-06 |
 
 Verze **1.3.0**: nová schopnost, předvolby se nerozbijí (`docs/conventions.md`,
 kdy bumpovat).
@@ -140,9 +140,12 @@ vedle `INFO_MARKS_CUT`. Klíče anglicky, EN i CS, tón podle kánonu §12.
 | `ERR_UNPRINTED_BIG` | platí a je větší než přelep | chyba, stopne vše | Část bez potisku (%s mm) nesmí být větší než přelep (%s mm). |
 | `WARN_UNPRINTED_WATER` | platí, Vodorovně, lem nese horní plát | upozornění | Přelep nese horní plát, takže dolní leží na něm. Venku může voda zatékat do sváru; obvykle se volí Celý na pravý / dolní. |
 | `WARN_UNPRINTED_NO_LINE` | platí, ruční ořez, linka vypnutá | upozornění | Linka je vypnutá: okraj části bez potisku nebude na tisku vidět. |
+| `WARN_UNPRINTED_SKIP` | platí, Přeskočit hotové výstupy zapnuté | upozornění | Přeskočit hotové výstupy nepozná změnu části bez potisku a soubor se stejným názvem by zůstal. Po její změně volbu vypněte. |
 | `INFO_UNPRINTED` | platí | informace ve Výsledku | Přelep %s mm: %s mm bez potisku, %s mm potisku přes šev. |
 
-Nic se nepřepíná samo. Tip pole (`TIP_UNPRINTED`) řekne, k čemu pole je, že plát
+Část bez potisku nemění název souboru ani stránku, takže Přeskočit hotové výstupy
+by po její změně nechalo starý soubor s inkoustem v místě sváru. Proto třetí
+upozornění. Nic se nepřepíná samo. Tip pole (`TIP_UNPRINTED`) řekne, k čemu pole je, že plát
 s lemem leží při sváru dole a že přelep 32 s 30 bez potisku nechá 2 mm potisku
 jako krytí nespasování.
 
@@ -167,7 +170,7 @@ jako krytí nespasování.
 - vlastnostní test: `clean`, `expanded` a řezy jsou se svárem stejné jako bez něj,
 - `printClip`: všechny strany, měřítko `k`, bez lemu vrací `mask`,
 - `zundLayout` a `pageSizeMm` nezávisí na `overlapUnprinted`,
-- `Validate`: větší než přelep, nečíslo, šedé pole nic neblokuje, obě upozornění,
+- `Validate`: větší než přelep, nečíslo, šedé pole nic neblokuje, všechna tři upozornění,
 - starý soubor nastavení bez klíče dostane 0, hvězdička u předvolby funguje.
 
 **Sondy v Illustratoru** (na kopiích, jen při prázdném Illustratoru, každý běh
