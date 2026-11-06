@@ -6,7 +6,8 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 
 ## [1.3.0] — 2026-11-05
 
-Bílé značky na tmavý materiál a opatrnější práce s vrstvami uživatele.
+Bílé značky na tmavý materiál, užší nabídka vrstev v mapování a žádná druhá
+vrstva Graphics.
 
 ### Přidáno
 
@@ -24,10 +25,6 @@ Bílé značky na tmavý materiál a opatrnější práce s vrstvami uživatele.
 
 ### Opraveno
 
-- **Prázdné vrstvy.** Běh smazal každou prázdnou viditelnou vrstvu v dokumentu,
-  i připravenou v šabloně a i zamčenou. Teď smaže jen tu, kterou sám vyprázdnil
-  přesunem cest. Prázdné vrstvy, které dřív po běhu zmizely, tak v dokumentu
-  zůstanou.
 - **Druhá vrstva Graphics.** Když dokument vrstvu Graphics už měl jinde než
   dole, běh pojmenoval Graphics i spodní vrstvu. Teď ji nechá pod jejím jménem.
 

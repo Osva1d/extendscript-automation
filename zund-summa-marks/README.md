@@ -72,7 +72,7 @@ Panel *Přiřazení vrstev k barvám* obsahuje tabulku řezacích vrstev. Každ�
 
 Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
-Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk. Vrstvu, kterou přesun vyprázdnil, skript odstraní; vrstvy prázdné už před během nechá být, i zamčené.
+Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk. Po přesunu skript odstraní každou prázdnou viditelnou vrstvu v dokumentu (bez objektů a bez podvrstev), i zamčenou; skrytou a vrstvu z mapování nechá.
 
 Spodní viditelnou vrstvu pojmenuje **Graphics**, pokud vrstva tohoto jména v dokumentu ještě není a není v mapování. Jméno slouží jen lidem, nic ho nečte.
 

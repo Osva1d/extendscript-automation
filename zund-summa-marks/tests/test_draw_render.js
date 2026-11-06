@@ -1689,29 +1689,33 @@ assert(ZSM.Draw.getLayerNames().indexOf("White") >= 0,
 
 
 // =====================================================
-// TEST 1.3.0-B: the cleanup removes only what the run emptied (audit V1)
+// TEST 1.3.0-B: the cleanup takes every truly empty layer (user, 2026-11-06)
 // =====================================================
-// The cleanup was meant for layers movePaths leaves behind, but took every empty
-// visible layer, also a template's prepared ones and, after beginSession
-// unlocked them, locked ones.
-console.log("\n=== TEST 1.3.0-B: layers empty before the run stay ===");
+// Also one that was empty before the run and a locked one. What is hidden, holds
+// a sublayer or is in the mapping stays.
+console.log("\n=== TEST 1.3.0-B: truly empty layers go ===");
 var docB = setupDoc({
     layers: [
         { name: "Prepared", items: [] },
         { name: "Prepared locked", locked: true, items: [] },
+        { name: "Hidden", visible: false, items: [] },
+        { name: "Has sublayer", sublayers: [{ name: "Sub", items: [] }] },
+        { name: "Mapped empty", items: [] },
         { name: "Cut source", items: [{ type: "path", spot: "CutSpot", bounds: [0, 50, 50, 0] }] },
         { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
     ]
 });
-var sB = makeSettings({ layers: [{ name: "Cut", color: "CutSpot" }] });
+var sB = makeSettings({ layers: [{ name: "Cut", color: "CutSpot" }, { name: "Mapped empty", color: "NoSuchSpot" }] });
 ZSM.Draw.beginSession();
 ZSM.Draw.render(ZSM.Core.calculateAll(sB, ZSM.Draw.getBounds(sB)), sB);
 ZSM.Draw.endSession();
-assert(findLayer(docB, "Prepared") !== null, "an empty layer the run did not touch stays");
-assert(findLayer(docB, "Prepared locked") !== null, "a locked empty layer stays");
-assertEq(findLayer(docB, "Prepared locked").locked, true, "and is locked again after the run");
-assert(findLayer(docB, "Cut source") === null, "a layer the run emptied is removed");
-assertEq(countItems(findLayer(docB, "Cut"), "PathItem"), 1, "its path is on the cut layer");
+assert(findLayer(docB, "Prepared") === null, "an empty layer the run did not touch goes");
+assert(findLayer(docB, "Prepared locked") === null, "a locked empty layer goes");
+assert(findLayer(docB, "Cut source") === null, "a layer the run emptied goes");
+assert(findLayer(docB, "Hidden") !== null, "a hidden empty layer stays");
+assert(findLayer(docB, "Has sublayer") !== null, "a layer with a sublayer stays");
+assert(findLayer(docB, "Mapped empty") !== null, "a mapped empty layer stays");
+assertEq(countItems(findLayer(docB, "Cut"), "PathItem"), 1, "the moved path is on the cut layer");
 
 
 // =====================================================

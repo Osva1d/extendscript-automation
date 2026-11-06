@@ -248,10 +248,6 @@ ZSM.Draw = {
             }
             var refLayer = reg;
 
-            // What is empty now was empty before the mapping: a template's
-            // prepared layer, say. The cleanup in 3b leaves those alone.
-            var wasEmpty = this._emptyLayerNames();
-
             // 3. Dynamic layer mapping — move spot-colored paths to named layers
             // Row existence = active (no checkbox in new UI design).
             // Skipped entirely in "marks only" mode: the user's cut layers are
@@ -312,10 +308,12 @@ ZSM.Draw = {
                 }
             }
 
-            // 3b. Remove empty layers left behind by movePaths.
-            //     Only layers this mapping emptied (no items, no sublayers now,
-            //     something before), visible, non-system. Skip Regmarks, target
-            //     layers just created above, artifact layers, and hidden layers.
+            // 3b. Remove empty layers: no items, no sublayers, visible,
+            //     non-system. Every such layer in the document, not only those
+            //     movePaths emptied, and a locked one too (beginSession unlocked
+            //     it): the user wants them gone (2026-11-06). Skip Regmarks,
+            //     target layers just created above, artifact layers, and hidden
+            //     layers.
             var sysNames = {};
             sysNames[ZSM.Config.layerRegmarks] = true;
             for (var si = 0; si < s.layers.length; si++) {
@@ -328,7 +326,7 @@ ZSM.Draw = {
                     if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
                     try {
                         var elay = doc.layers[ei];
-                        if (sysNames[elay.name] || wasEmpty["l_" + elay.name]) continue;
+                        if (sysNames[elay.name]) continue;
                         if (ZSM.Bounds.isArtifactLayer(elay)) continue;
                         if (!elay.visible) continue;
                         if (elay.pageItems.length === 0 && elay.layers.length === 0) {
@@ -799,27 +797,6 @@ ZSM.Draw = {
     // moved to ZSM.Bounds (src/lib/bounds.js). Render code in this file
     // now references them as ZSM.Bounds.isArtifactLayer / .isInsideClippedGroup
     // directly (see callers in beginSession, render, movePaths).
-
-    /**
-     * Names of the top-level layers that hold nothing, keyed "l_" + name (so a
-     * layer called "toString" collides with nothing). A name shared with a
-     * layer that holds something counts as empty: the cleanup then keeps both.
-     * @returns {Object} "l_" + name → true.
-     * @private
-     */
-    _emptyLayerNames: function () {
-        var empty = {}, layers = app.activeDocument.layers;
-        for (var i = 0; i < layers.length; i++) {
-            try {
-                if (layers[i].pageItems.length === 0 && layers[i].layers.length === 0) {
-                    empty["l_" + layers[i].name] = true;
-                }
-            } catch (e) {
-                ZSM.Utils.log("_emptyLayerNames: " + e.message);
-            }
-        }
-        return empty;
-    },
 
     /**
      * The first mapping-row layer name that is one of the script's own output
