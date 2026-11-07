@@ -126,7 +126,10 @@ ZSM.UI = {
      *        artboard, artwork}
      *        drawingScale = the scale field's start value (number; NaN for a
      *        typo carried through a mode switch, shown as an empty field);
-     *        artboard, artwork = {w, h} in document mm or null (see show())
+     *        artboard, artwork = {w, h} in document mm or null (see show());
+     *        _switchSettings = what a mode switch carried over (set by
+     *        requestModeSwitch, read here first); _lastBounds = the closed
+     *        dialog's position
      * @returns {Object|null}
      */
     buildDialog: function (mode, pData, docData) {
@@ -145,8 +148,10 @@ ZSM.UI = {
             pData.presets[c.PRESET_KEY_DEFAULT].mode = mode;
         }
 
-        // Resolve initial values: [Last Settings] → active preset → defaults
-        var sData = pData.presets["[Last Settings]"]
+        // Resolve initial values: what a mode switch carried over → [Last
+        // Settings] → active preset → defaults
+        var sData = docData._switchSettings
+                 || pData.presets["[Last Settings]"]
                  || pData.presets[pData.activePreset]
                  || c.getDefaults();
 
@@ -1006,14 +1011,17 @@ ZSM.UI = {
         function requestModeSwitch(newMode, preset) {
             if (newMode === mode) return;
 
-            // Snapshot current UI state into [Last Settings] so nothing is lost
-            // — or the preset being loaded, as a copy: [Last Settings] must
-            // never alias a named preset.
-            pData.presets["[Last Settings]"] = preset
+            // Carry the current UI state, or a copy of the preset being loaded,
+            // to the dialog that opens next. It stays in memory: [Last Settings]
+            // is written by Generate only. Written there, it reached the file
+            // with a Save, Save As or Delete in the next dialog, even after
+            // Cancel, and the next run opened with values nobody confirmed
+            // (audit U12).
+            docData._switchSettings = preset
                 ? JSON.parse(JSON.stringify(preset))
                 : getUIValues(otherModeBase);
-            // Tag the snapshot with the TARGET mode so the next dialog opens correctly
-            pData.presets["[Last Settings]"].mode = newMode;
+            // Tag it with the TARGET mode so the next dialog opens correctly
+            docData._switchSettings.mode = newMode;
 
             // Preserve window position across mode switch
             docData._lastBounds = w.bounds;
@@ -1123,8 +1131,8 @@ ZSM.UI = {
         // 1. Populate preset dropdown
         updatePresetList();
 
-        // 2. Load initial values
-        var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
+        // 2. Load initial values (the same order as sData above)
+        var initPreset = docData._switchSettings || pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
         if (initPreset) setUIValues(initPreset);
 
         // 3. Sync dropdown selection to activePreset

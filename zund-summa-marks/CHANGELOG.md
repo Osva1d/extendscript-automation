@@ -69,6 +69,12 @@ vrstva Graphics a opravy tichých chyb z
   ní, ale měřil ji jako grafiku. Každý další běh artboard zvětšil (změřeno: z 374
   na 394 mm). Skript teď své vrstvy pozná v jakékoli velikosti písmen, totéž platí
   pro `trim`.
+- **Storno po přepnutí režimu nezapíše poslední běh (U12).** Po přepnutí ZUND
+  ↔ SUMMA a uložení, uložení jako nebo smazání předvolby zapsal skript do
+  souboru i hodnoty z dialogu, které nikdo neodeslal, a to i po Storno. Další
+  spuštění pak otevřelo dialog v tom režimu a s těmi hodnotami. Teď si poslední
+  běh pamatuje jen Generovat; zadané hodnoty se přes přepnutí režimu přenesou
+  dál jako dřív.
 
 ## [1.2.0] — 2026-10-28
 

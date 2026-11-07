@@ -590,6 +590,14 @@ function runDialogs(pData, steps) {
     try { ZSM.UI.show(pData); } finally { delete SUI.MockWindow.prototype.show; }
     return shown;
 }
+// The settings a mode switch carried to the next dialog. They stay in memory,
+// in the docData show() hands to buildDialog (audit U12), so the helper records it.
+function carriedBy(fn) {
+    var seen = null, orig = ZSM.UI.buildDialog;
+    ZSM.UI.buildDialog = function (mode, p, docData) { seen = docData; return orig.apply(this, arguments); };
+    try { fn(); } finally { ZSM.UI.buildDialog = orig; }
+    return seen ? seen._switchSettings : undefined;
+}
 function k5PresetDD(win) {
     return win.findOne(function (c) {
         return c.type === "dropdownlist" && c.parent && c.parent.parent &&
@@ -623,7 +631,8 @@ function bannerPresets() {
 // (a) ZUND dialog, pick the SUMMA preset → the dialog reopens as SUMMA with its values
 var pK5 = { activePreset: "[Default]", presets: bannerPresets() };
 var closeCode = null, afterSwitch = {};
-var shownK5 = runDialogs(pK5, [
+var shownK5;
+var carryK5 = carriedBy(function () { shownK5 = runDialogs(pK5, [
     function (win) { win.close = function (c) { closeCode = c; }; pick(win, "Banner"); },
     function (win) {
         afterSwitch.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
@@ -631,7 +640,7 @@ var shownK5 = runDialogs(pK5, [
         afterSwitch.size    = fieldText(win, ZSM.L.MARK_SIZE_S);
         afterSwitch.preset  = k5PresetDD(win).selection ? k5PresetDD(win).selection.text : null;
     }
-]);
+]); });
 assertEq(closeCode, 2, "picking a SUMMA preset closes the ZUND dialog as a mode switch");
 assertEq(shownK5.length, 2, "the dialog is shown again");
 assertEq(afterSwitch.summaOn, true, "the new dialog is SUMMA");
@@ -639,8 +648,9 @@ assertEq(afterSwitch.feedTop, "123", "the new dialog shows the preset's feed");
 assertEq(afterSwitch.size, "4", "the new dialog shows the preset's Summa size");
 assertEq(afterSwitch.preset, "Banner", "the preset is active and unmodified (no asterisk)");
 assertEq(pK5.activePreset, "Banner", "activePreset = the picked preset");
-assert(pK5.presets["[Last Settings]"] !== pK5.presets["Banner"],
-    "[Last Settings] is a copy, not the named preset itself");
+assert(carryK5 && carryK5 !== pK5.presets["Banner"],
+    "what the switch carries is a copy, not the named preset itself");
+assertEq(pK5.presets["[Last Settings]"], undefined, "the switch writes no [Last Settings] (U12)");
 assertEq(pK5.presets["Banner"].feedTop, 123, "the named preset is unchanged");
 
 // (b) same-mode preset: values load in place, no second dialog
@@ -895,11 +905,11 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         "a checkbox refresh over '1O5': Save, Save As and Generate stay grey");
 
     // --- Direct reads: the typo is NaN, not a prefix; the mode-switch snapshot does not store 1 ---
-    // getUIValues() is the dialog's own; it is seen through [Last Settings], which
-    // the switch writes from it, and through the dialog that opens from that.
+    // getUIValues() is the dialog's own; it is seen through what the switch
+    // carries, which is made from it, and through the dialog that opens from that.
     var pSw = mineData({});
     var swSecond = {};
-    runDialogs(pSw, [
+    var snap = carriedBy(function () { runDialogs(pSw, [
         function (win) {
             var f = fieldCtl(win, ZSM.L.GAP_ZO);
             f.text = "1O5"; f.onChanging();
@@ -911,11 +921,10 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
             swSecond.red = isErrPen(f.graphics.foregroundColor);
             swSecond.gates = gatesOf(win);
         }
-    ]);
-    var snap = pSw.presets["[Last Settings]"];
+    ]); });
     assert(snap && typeof snap.gapOuter === "number" && isNaN(snap.gapOuter),
-        "mode switch with '1O5': [Last Settings].gapOuter is NaN (got " + (snap && snap.gapOuter) + ")");
-    assert(snap && snap.gapOuter !== 1, "mode switch with '1O5': [Last Settings] does not store 1");
+        "mode switch with '1O5': the carried gapOuter is NaN (got " + (snap && snap.gapOuter) + ")");
+    assert(snap && snap.gapOuter !== 1, "mode switch with '1O5': the switch does not carry 1");
     assertEq(swSecond.text, "", "the dialog opened after the switch shows an empty field for it");
     assertEq(swSecond.red, true, "...painted red");
     assert(swSecond.gates.ok === false && swSecond.gates.save === false && swSecond.gates.saveAs === false,
@@ -988,20 +997,21 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         assertEq(savedMine.maxDist, 450, "greyed typo: ...and the valid edit made before");
 
         var pGrey2 = mineData({ gapInner: 7 });
-        runDialogs(pGrey2, [function (win) { fixedWithTypo(win); clickRadio(win, ZSM.L.MODE_SUMMA); }, function () {}]);
-        var greySnap = pGrey2.presets["[Last Settings]"];
+        var greySnap = carriedBy(function () {
+            runDialogs(pGrey2, [function (win) { fixedWithTypo(win); clickRadio(win, ZSM.L.MODE_SUMMA); }, function () {}]);
+        });
         assertEq(greySnap.gapInner, 7, "greyed typo: the mode-switch snapshot carries the preset's gapInner (got " + greySnap.gapInner + ")");
 
         // A valid edit made before the switch is not kept either: the greyed field carries the previous run's value.
         var pGrey3 = mineData({ gapInner: 7 });
-        runDialogs(pGrey3, [function (win) {
+        var grey3 = carriedBy(function () { runDialogs(pGrey3, [function (win) {
             var gap = fieldCtl(win, ZSM.L.GAP_GZ);
             gap.text = "9"; gap.onChanging();
             var rbF = win.findOne(function (c) { return c.type === "radiobutton" && c.text === ZSM.L.SRC_FIXED; });
             rbF.value = true; rbF.onClick();
             clickRadio(win, ZSM.L.MODE_SUMMA);
-        }, function () {}]);
-        assertEq(pGrey3.presets["[Last Settings]"].gapInner, 7, "greyed field: an earlier valid edit (9) is not saved either, the preset's 7 stays");
+        }, function () {}]); });
+        assertEq(grey3.gapInner, 7, "greyed field: an earlier valid edit (9) is not saved either, the preset's 7 stays");
     } finally {
         ZSM.Storage = origStorage;
         if (origStorage === undefined) delete ZSM.Storage;
@@ -2011,6 +2021,97 @@ console.log("\n=== TEST 26: five mapping rows at most ===");
     assertEq(rowsE, 5, "picked SUMMA preset: five rows in the SUMMA dialog");
     assertEq(alertsE.length, 1, "picked SUMMA preset: one warning");
     assertEq(pE.presets["Long S"].layers.length, 8, "the picked preset keeps its eight rows");
+})();
+
+
+// =====================================================
+// TEST 27 (audit U12): Cancel leaves no unconfirmed run behind
+// =====================================================
+// A mode switch wrote its snapshot into [Last Settings]. Save, Save As or
+// Delete in the next dialog put the whole wrapper on disk, Cancel did not undo
+// it, and the next run opened with values and a mode nobody confirmed.
+console.log("\n=== TEST 27 (audit U12): Cancel after a mode switch writes no run ===");
+(function () {
+    function fieldOfU12(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl.parent.findOne(function (c) { return c.type === "edittext"; });
+    }
+    function btn(win, text) {
+        return win.findOne(function (c) { return c.type === "button" && c.text === text; });
+    }
+    // ZUND, an edit nobody confirms (max dist 450), then SUMMA: `inSumma` acts there, then Cancel.
+    function switchThenCancel(inSumma) {
+        var lastRun = ZSM.Config.getDefaults();          // the last confirmed run: ZUND, 500
+        // A SUMMA preset: picked in the SUMMA dialog it loads in place, no second switch.
+        var old = ZSM.Config.getDefaults(); old.mode = "SUMMA"; old.gapOuter = 3;
+        var pData = { activePreset: "[Default]",
+            presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": lastRun, "Old": old } };
+        var written = [], o = { storage: ZSM.Storage, prompt: global.prompt, confirm: global.confirm };
+        ZSM.Storage = { save: function (d) { written.push(JSON.parse(JSON.stringify(d))); return true; } };
+        global.prompt = function () { return "New"; };
+        global.confirm = function () { return true; };
+        var result;
+        try {
+            var shown = [];
+            SUI.MockWindow.prototype.show = function () {
+                shown.push(this);
+                if (shown.length === 1) {
+                    this.close = function () {};
+                    var f = fieldOfU12(this, ZSM.L.MAX_DIST); f.text = "450"; f.onChanging();
+                    clickRadio(this, ZSM.L.MODE_SUMMA);
+                } else if (shown.length === 2) {
+                    inSumma(this);
+                }
+                return 0;                                     // Cancel
+            };
+            try { result = ZSM.UI.show(pData); } finally { delete SUI.MockWindow.prototype.show; }
+        } finally {
+            ZSM.Storage = o.storage; global.prompt = o.prompt; global.confirm = o.confirm;
+            if (o.storage === undefined) delete ZSM.Storage;
+        }
+        return { result: result, written: written, pData: pData };
+    }
+
+    var sa = switchThenCancel(function (win) { btn(win, ZSM.L.BTN_SAVE_AS).onClick(); });
+    assertEq(sa.result, null, "Save As, then Cancel: show() returns null");
+    assertEq(sa.written.length, 1, "Save As writes the file once");
+    var diskLast = sa.written[0].presets["[Last Settings]"];
+    assertEq(diskLast.mode, "ZUND", "Save As, then Cancel: the file keeps the confirmed run's mode");
+    assertEq(diskLast.maxDist, 500, "Save As, then Cancel: the file keeps the confirmed run's max dist, not the unconfirmed 450");
+    assertEq(sa.written[0].presets["New"].maxDist, 450, "the new preset holds what the dialog showed when it was saved");
+    assertEq(sa.written[0].presets["New"].mode, "SUMMA", "...in the mode it was saved in");
+
+    var next = {};
+    SUI.MockWindow.prototype.show = function () {
+        next.zund = radioOn(this, ZSM.L.MODE_ZUND);
+        next.maxDist = fieldText(this, ZSM.L.MAX_DIST);
+        return 0;
+    };
+    try { ZSM.UI.show(sa.written[0]); } finally { delete SUI.MockWindow.prototype.show; }
+    assertEq(next.zund, true, "the next opening starts in the confirmed run's mode");
+    assertEq(next.maxDist, "500", "the next opening shows the confirmed run's max dist");
+
+    var del = switchThenCancel(function (win) { pick(win, "Old"); btn(win, ZSM.L.BTN_DEL).onClick(); });
+    assertEq(del.written.length >= 1, true, "Delete writes the file");
+    var delLast = del.written[del.written.length - 1].presets["[Last Settings]"];
+    assertEq(delLast.mode + " " + delLast.maxDist, "ZUND 500", "Delete, then Cancel: the file keeps the confirmed run");
+    assertEq(del.written[del.written.length - 1].presets["Old"], undefined, "...and the preset is gone");
+
+    // The switch still carries the edit into the next dialog, and Generate there is the run.
+    var gen = {};
+    var pGen = { activePreset: "[Default]",
+        presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": ZSM.Config.getDefaults() } };
+    runDialogs(pGen, [
+        function (win) {
+            win.close = function () {};
+            var f = fieldOfU12(win, ZSM.L.MAX_DIST); f.text = "450"; f.onChanging();
+            clickRadio(win, ZSM.L.MODE_SUMMA);
+        },
+        function (win) { gen.maxDist = fieldText(win, ZSM.L.MAX_DIST); clickGenerate(win); }
+    ]);
+    assertEq(gen.maxDist, "450", "the SUMMA dialog after the switch shows the edit");
+    assertEq(pGen.presets["[Last Settings]"].mode + " " + pGen.presets["[Last Settings]"].maxDist, "SUMMA 450",
+        "Generate after the switch: [Last Settings] is that run");
 })();
 
 

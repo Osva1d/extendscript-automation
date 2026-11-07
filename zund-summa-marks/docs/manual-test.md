@@ -271,6 +271,10 @@ a přesouvá cesty čistě v řezové barvě.
   „+ Přidat“ zešedne a Storno i Generovat jsou pořád vidět (SUMMA s pěti řádky
   měří 882 px, změřeno). Upozornění na nenačtené řádky (předvolba s víc než pěti
   řádky) změřila sonda 2026-11-07; vaše předvolby mají nejvýš dva řádky.
+- [ ] **6a.12 Storno po přepnutí režimu (U12).** ZUND, změňte Max. rozteč značek na
+  450, přepněte na SUMMA, Uložit jako… „U12“, Storno. Spusťte skript znovu:
+  dialog se otevře v režimu a s hodnotami posledního Generovat (ne SUMMA s 450).
+  Předvolba „U12“ v nabídce je a má 450. Ověřeno testem v Node, živý dialog ne.
 
 ---
 

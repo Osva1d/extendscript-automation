@@ -134,7 +134,7 @@ Sjednocené pravidlo pro error handling napříč moduly:
 
 `[Default]` obsahuje jen tovární hodnoty — Uložit do ní nikdy nezapíše (změní se na Uložit jako). `UI.show()` ji proto při každém otevření sestaví znovu přes `ZSM.UI.defaultsForDocument()`: `getDefaults()` s řezovou barvou, kterou `ZSM.Draw.detectCutColor()` najde v dokumentu, a vrstvou stejného jména. Tlačítko Výchozí načítá totéž.
 
-`UI.show()` přijímá **wrapper**, ne flat settings. Vrací wrapper nebo `null` (cancel). Main pak bere nastavení běhu z `wrapper.presets["[Last Settings]"]`, které dialog zapíše při Generovat: pole zobrazeného režimu z dialogu, pole druhého režimu z toho, s čím byl dialog otevřen nebo naposledy načten (poslední běh, vybraná předvolba, tovární hodnoty) — ne z aktivní předvolby.
+`UI.show()` přijímá **wrapper**, ne flat settings. Vrací wrapper nebo `null` (cancel). Main pak bere nastavení běhu z `wrapper.presets["[Last Settings]"]`, které dialog zapíše při Generovat: pole zobrazeného režimu z dialogu, pole druhého režimu z toho, s čím byl dialog otevřen nebo naposledy načten (poslední běh, vybraná předvolba, tovární hodnoty) — ne z aktivní předvolby. Přepnutí režimu nese hodnoty do dalšího dialogu jen v paměti (`docData._switchSettings`); `[Last Settings]` zapisuje jedině Generovat, takže Uložit, Uložit jako… nebo Smazat po přepnutí a Storno nezanechají v souboru běh, který nikdo nepotvrdil (U12).
 
 ### Geometry objekt (výstup ZSM.Core.calculateAll)
 ```javascript
