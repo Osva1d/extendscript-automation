@@ -155,11 +155,13 @@ odvozená a změří se po změně.
 | nástroj | dnes | změna | cíl |
 |---|---|---|---|
 | GM | 465 × **678 až 804**, primární y 631 až 757 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne | jedna výška, nejvýš 804 |
-| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, rezervované řádky do `MAX_LAYERS`, žádná přestavba | **851 × 634** ve všech stavech při 8 řádcích [M: maketa]; při 6 asi 560, při 5 asi 545 [odhad ze snímku] |
+| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, **nejvýš 5 vrstev** (`MAX_LAYERS` z 8 na 5, rozhodnuto 2026-11-07), 5 rezervovaných řádků, žádná přestavba | **851 × asi 545** ve všech stavech [odhad ze snímku; 851 × 634 při 8 řádcích M] |
 
-Výšku ZSM určuje pravý sloupec: řádek vrstvy má 37 px (tlačítko `−` 27 a mezera 10).
-Pravý sloupec je o 89 px vyšší než levý, takže pod 5 řádků už okno nesníží; pak rozhoduje
-levý sloupec. Šířka zůstane, drží ji osa popisků 170 a přepínače zdroje.
+Výšku makety s 8 řádky určoval pravý sloupec: řádek vrstvy má 37 px (tlačítko `−` 27
+a mezera 10) a pravý sloupec byl o 89 px vyšší než levý. Při 5 řádcích je o 22 px nižší,
+výšku tedy určuje levý sloupec a oba končí skoro stejně. Šířka zůstane, drží ji osa popisků
+170 a přepínače zdroje. Maketa ve specimenu 1.0.1 má 5 řádků; změří se, až Illustrator
+nebude mít otevřený dokument.
 | BRE | 460 × 478, stálé | přibude stavový řádek | asi 465 × 500 |
 | TE | 1022 × 836, stálé | patička do řady tlačítek, `Po dokončení…` do panelu Soubory | výška asi stejná |
 | BTE | 1008 × 768, stálé | stavový řádek a patička podle G7 | výška asi stejná |
@@ -374,10 +376,65 @@ Obsluha ho 2026-11-07 spustila ve všech čtyřech jasech UI a poslala snímky [
 | Tab | i na seznam, mezi panely stisknutí navíc | na Tabu nic nestojí, §5.2 |
 | okno jen se `Zavřít` | Esc i Enter ho zavřou | souhrn s jedním tlačítkem stačí |
 | `confirm` | `Ne` a `Ano`, výchozí `Ano` | otázka, na kterou `Ano` znamená akci |
-| maketa ZSM | obsluze nic nechybí | dva sloupce platí; zbývá nejvyšší počet vrstev, §3 |
+| maketa ZSM | obsluze nic nechybí | dva sloupce platí; nejvýš 5 vrstev, §3 |
 
-Maketa nemá napojené `Jen značky`; skutečné ZSM při něm tabulku vrstev zešedí [R:
-`applyMarksOnlyState`] a nový dialog to převezme.
+Maketa 1.0.0 neměla napojené `Jen značky`; skutečné ZSM při něm tabulku vrstev zešedí [R:
+`applyMarksOnlyState`]. Specimen 1.0.1 to dělá také a stav ukazuje bez tučného písma.
 
 Zbývá [O]: jestli psaní po otevření ZSM padne do pole mezery, jestli Enter v `confirm`
 potvrdí `Ano` a jestli světle červená na tmavém UI působí jako chyba.
+
+---
+
+## 10. Plán fáze 3 (návrh ke schválení)
+
+Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
+
+- Každý krok má vlastní větev a worktree, ruční test a vydání. Další nástroj začne až po
+  vydání předchozího.
+- Úpravy nástrojů začnou po vydání TE 1.3.0, ZSM 1.3.0 a BTE 1.1.0. Kroky 0 a 1 na nich
+  nezávisí, protože žádný nástroj nemění.
+- Mění se jen to, co pomůže v běžném dni (R1 až R4, R6, R7). TE a BTE se jen napojí na
+  sdílené části, nepřestavují se.
+- Výpočty a výrobní logika zůstanou. Funkce se bez souhlasu neodebírají; odebrání `Výchozí`
+  v ZSM a snížení na 5 vrstev souhlas mají.
+
+| krok | větev | co | řeší | proč v tomhle pořadí |
+|---|---|---|---|---|
+| 0 | `docs/family-ux-audit` do main | audit, tento návrh, `tools/ui-probe`, specimen | | vlákna ZSM a TE mají návrh číst ze svého worktree |
+| 1 | `feat/shared-ui-kit` | `shared/lib/ui_kit.js` podle §7; sady barev podle jasu ve `FieldPaint` jako nová funkce, dnešní `COLORS` zůstane, dokud ho nástroje používají; společný dotaz před přepisem; Node testy; měření řádků v Illustratoru | U29, U14 | bez konzumenta se v žádném nástroji nic nezmění, jako sdílené moduly 2026-10-17 |
+| 2 | BRE 1.3.0 | dotaz před přepisem; živá kontrola místo série `alert`; stavový řádek a šedé Spustit; `Cílová složka:`, `Vzor pojmenování:`, `Kontrola souborů`; pamatovat Přeskočit; patička a tlačítka v jedné řadě | U5, U7, U13, U17, U23, U24 | ztráta dat je nejhorší nález; nejmenší okno bez předvoleb ověří první polovinu kitu (patička, stav, řádek cesty) |
+| 3 | GM 1.5.0 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne; stav nad tlačítky; předvolby a číselné řádky z kitu; co skript našel běžným textem; tipy předvoleb | U1, U6, U15, U26 | denně používaný nástroj s poskakujícím Generovat; ověří druhou polovinu kitu (předvolby, číselné řádky, `stack`) |
+| 4 | ZSM 1.4.0 | dva sloupce, nejvýš 5 vrstev, okno bez přestavby, bez `Výchozí`, české termíny, výchozí fokus | U2, U3, U16, U18, U27; U12, pokud ho vlákno ZSM neopraví dřív | největší přestavba přijde, až je kit ověřený na dvou nástrojích |
+| 5 | TE 1.4.0 | jen napojení: předvolby, stav a patička z kitu, barvy; dotaz před přepisem; `Náhled`, `Způsob ořezu:`; `Po dokončení…` do panelu Soubory | U5, U13, U17, U24 | rozvržení TE je stálé, mění se málo |
+| 6 | BTE 1.2.0 | jen napojení: předvolby, stav nad tlačítky, patička, barvy; ochrana Enteru zůstává | U6, U14 | totéž |
+
+V každém kroku navíc: tučné písmo pryč (U21), hlášky polí podle §6.3 (U25, U28) a úklid
+dokumentace toho nástroje, README a CHANGELOG (R8, U20, U30, U31). Rozestupy se mění jen
+tam, kde se okno staví z kitu (R5).
+
+Mimo plán vědomě: U4 (ochrana Enteru v BTE je zdůvodněná výjimka), U8 (šířka Souhrnu podle
+cesty je záměr z 2026-10-27), U9 (jen pokud v kroku 5 vyjde levně), U11 (fokus se na
+neplatné pole nepřesouvá, §5.3).
+
+Dvě věci, které pořadí nechává otevřené:
+
+- TE přepisuje soubory bez dotazu až do kroku 5. Společný dotaz z kroku 1 může vlákno TE
+  převzít dřív; je to samostatná malá změna.
+- Vydané ZSM 1.2.0 má u Summy s 8 vrstvami Generovat pod okrajem okna. Snížení
+  `MAX_LAYERS` na 5 to odstraní i bez přestavby; patří to do vlákna ZSM. V kroku 4 je navíc
+  třeba rozhodnout, co s předvolbou, která má víc než 5 řádků (na tomto Macu má nejvíc 2).
+
+Hotovo je krok, když:
+
+1. `npm run verify` ve worktree a `npm run lint` v kořeni projdou.
+2. `tools/ui-probe` projde všechny stavy okna: jedna velikost, primární tlačítko na místě,
+   žádný popisek užší než text, výška nejvýš 850 px.
+3. Obsluha pošle snímky okna v tmavém a světlém jasu a projde běžnou zakázku.
+4. Zpráva ke kroku řekne, co se změnilo a proč, které problémy zmizely a co je ověřené
+   čtením kódu, co měřením a co okem obsluhy.
+5. Vydání podle `releasing-a-tool`.
+
+Po kroku 6 přijde fáze 5 (`UI_UX_CANON.md` jen z ověřeného) a fáze 6
+(`UI_UX_VIOLATIONS.md`, `UI_UX_REVIEW_CHECKLIST.md`). Skill `extendscript-ui-standards`
+se pak zkrátí na odkaz a to, co potřebuje generování kódu (Q2).

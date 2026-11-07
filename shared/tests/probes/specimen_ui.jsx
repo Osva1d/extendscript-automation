@@ -1,7 +1,7 @@
 ﻿#target illustrator
 // ------------------------------------------------------------------------
 // Script:      specimen_ui.jsx
-// Version:     1.0.0
+// Version:     1.0.1
 // Author:      Ladislav Osvald
 // Updated:     2026-11-07
 // Description: Component specimen for the family design system (spec
@@ -17,11 +17,11 @@
     // Status colours: today's single set, and the proposed set per brightness.
     var PAL = {
         now:   { ERR: [0.90, 0.20, 0.20], WARN: [0.96, 0.60, 0.38], OK: [0.36, 0.60, 0.34] },
-        dark:  { ERR: [1.00, 0.70, 0.68], WARN: [1.00, 0.78, 0.40], OK: [0.60, 0.88, 0.58] },
+        dark:  { ERR: [1.00, 0.71, 0.69], WARN: [1.00, 0.78, 0.40], OK: [0.60, 0.88, 0.58] },
         light: { ERR: [0.52, 0.03, 0.03], WARN: [0.40, 0.23, 0.00], OK: [0.05, 0.31, 0.09] }
     };
     var SYMBOL = { ERR: "✗", WARN: "⚠", OK: "✓" };
-    var COPY = "© 2025–2026 Ladislav Osvald · specimen 1.0.0";
+    var COPY = "© 2025–2026 Ladislav Osvald · specimen 1.0.1";
     var TIGHT = 5;
     var AXIS = 170;   // label axis of this specimen; a real tool measures its longest label
 
@@ -72,7 +72,6 @@
     function statusLine(parent) {
         var st = parent.add("statictext", undefined, "");
         st.alignment = ["fill", "top"];
-        font(st, "BOLD");
         return st;
     }
     function setStatus(st, kind, text) {
@@ -169,14 +168,20 @@
         head.alignChildren = ["left", "center"];
         lock(head.add("statictext", undefined, "Vrstva"), 170);
         lock(head.add("statictext", undefined, "Barva"), 150);
-        var slots = [], MAX = 8, shown = 2, i;
+        var slots = [], MAX = 5, shown = 2, i;
+        // "Marks only" greys the mapping, as Zünd & Summa Marks does
+        // (applyMarksOnlyState); the rows keep their place.
         function fillSlots() {
+            var on = cbOnly.value;
             for (var k = 0; k < MAX; k++) {
                 slots[k].group.visible = (k < shown);
+                slots[k].group.enabled = !on;
                 slots[k].minus.enabled = (shown > 1);
             }
-            btnAdd.enabled = (shown < MAX);
+            head.enabled = !on;
+            btnAdd.enabled = !on && (shown < MAX);
         }
+        cbOnly.onClick = fillSlots;
         for (i = 0; i < MAX; i++) {
             (function () {
                 var g = pLay.add("group");
@@ -238,7 +243,7 @@
     // ---------------------------------------------------------------------
     // Specimen
     // ---------------------------------------------------------------------
-    var w = new Window("dialog", "Specimen komponent v1.0.0");
+    var w = new Window("dialog", "Specimen komponent v1.0.1");
     w.orientation = "column";
     w.alignChildren = ["fill", "top"];
 
@@ -324,7 +329,6 @@
         h.enabled = false;
         for (var i = 0; i < kinds.length; i++) {
             var st = pS.add("statictext", undefined, SYMBOL[kinds[i]] + " " + texts[kinds[i]]);
-            font(st, "BOLD");
             pen(st, set[kinds[i]]);
         }
     }

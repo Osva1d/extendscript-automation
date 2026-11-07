@@ -10,7 +10,7 @@
             sum.value = true; sum.onClick(); H.snap(w, "maketa Summa");
             var add = H.find(w, "button", /^\+ P/), g = 0;
             while (add.enabled && g < 10) { add.onClick(); g++; }
-            H.snap(w, "maketa 8 vrstev");
+            H.snap(w, "maketa plno vrstev");
             var cut = 0;
             H.walk(w, function (c) {
                 if (c.type === "statictext" && c.visible && c.text !== "") {
