@@ -1018,6 +1018,35 @@ Důsledek: dynamickou viditelnost nelze použít jako nástroj na výšku dialog
 Výšku musí vyřešit rozložení (sloupce, zkrácení polí). `visible` má smysl jen
 na to, aby nerušil obsah, který právě neplatí.
 
+### ScriptUI: strop okna a meze nativních prvků (naměřeno 2026-11-07, AI 30.8.2)
+
+Nezobrazené okno, tmavé UI, obrazovka 1512 × 982 logických px.
+
+**Okno má strop, a co přesahuje, je pod okrajem.** Výchozí `maximumSize` okna byl
+`[1462, 932]`, tedy obrazovka minus 50 px; v jiné session hlásil host místo toho
+2^32 − 50 (`batch-text-edit/tests/probes/probe_dialog.jsx`). Zünd & Summa Marks v režimu
+SUMMA s 8 řádky vrstev vyžaduje 959 px: `size` i `preferredSize` okna zůstanou na 932
+a primární tlačítko končí na y 947. Jestli to tak vypadá i po zobrazení, měření neříká.
+`$.screens` tu vrací `[0, 31, 756, 474]`, tedy polovinu logických px bez lišty a Docku.
+
+| co | výsledek |
+|---|---|
+| písmo okna | Lucida Grande 11 |
+| `background`, `foreground`, `selection` motivu | 0,196 / 0,60 / 0,30 0,33 0,39 |
+| `getRealPreference("uiBrightness")` | 0 |
+| `edittext`, `characters` 4 / 7 / 26 | 48 / 72 / 224 px, výška 23 |
+| `button` | nejméně 80 px, výška 27; `Uložit jako…` 103 px |
+| `checkbox`, `radiobutton` / `statictext` / `progressbar` | výška 19 / 15 / 17 |
+| `button.graphics.backgroundColor =` | vyhodí „Cannot set backgroundColor property for this element type“ |
+| `button.graphics.foregroundColor =` skutečné pero, `button.graphics.font =` | projde bez chyby, vzhled neověřen |
+| `panel.graphics.backgroundColor =` | projde bez chyby, vzhled neověřen |
+| `tabbedpanel` se dvěma `tab` | jde vytvořit (213 × 70 px), vzhled neověřen |
+| `button.addEventListener("mouseover", …)` | jde připojit, spuštění neověřeno |
+| `ScriptUI.newFont(jméno, "REGULAR", 14)` | vrátí velikost 14, vzhled neověřen |
+
+Rozměry skutečných dialogů se měří přes `tools/ui-probe`, která na okně nahradí `show()`
+a dialog ukončí jako Storno.
+
 ### ScriptUI: `layout(true)` nepřeměří změněný text (naměřeno 2026-10-03, AI 30.8.2)
 
 Sondy přes `tools/ai-eval.sh`, okna nezobrazená i krátce zobrazená (`onShow` →

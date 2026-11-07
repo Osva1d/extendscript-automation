@@ -46,11 +46,14 @@ napsané znovu, a proto se rozcházejí.
 
 | nástroj | účel | primární akce | hlavní okno [M] | `ui.js` | sdílené moduly |
 |---|---|---|---|---|---|
-| GM | značky pro průchodky po hranách artboardu nebo vybrané cestě | Generovat | 465 × 804 px, nejvyšší stav (`CHANGELOG` 1.4.0); výška se mění | 1383 ř. | DrawingScale, FieldPaint, Numbers, Registration, UIState |
-| ZSM | registrační značky pro Zünd a Summa, přiřazení vrstev k barvám | Generovat | 465 × 720 (ZUND), 756 (SUMMA), s 8 řádky vrstev až 932 px (`CHANGELOG`) | 1657 ř. | CutMarks, DrawingScale, FieldPaint, Numbers, Registration, UIState |
-| BRE | dávka: šablona + složka PDF → relink a export | Spustit | 460 × 478 px (audit 2026-09-28, verze 1.1.0) | 562 ř. | FieldPaint, Progress, Summary |
-| TE | dělení velké grafiky na pláty, export | Vytvořit a exportovat, vedle Jen pláty | 1022 × 836 px (`CHANGELOG` 1.2.0) | 1494 ř. | CutMarks, DrawingScale, FieldPaint, Numbers, Progress, Registration, Summary, UIState |
-| BTE | řetěz textových úprav s živým náhledem | Použít | 1008 × 768 px (komentář `ui.js:428`, 2026-10-30) | 1338 ř. | FieldPaint, Numbers, Summary, UIState |
+| GM | značky pro průchodky po hranách artboardu nebo vybrané cestě | Generovat | 465 × 678 až 804 px podle stavu | 1383 ř. | DrawingScale, FieldPaint, Numbers, Registration, UIState |
+| ZSM | registrační značky pro Zünd a Summa, přiřazení vrstev k barvám | Generovat | 465 × 749 až 932 px podle stavu | 1657 ř. | CutMarks, DrawingScale, FieldPaint, Numbers, Registration, UIState |
+| BRE | dávka: šablona + složka PDF → relink a export | Spustit | 460 × 478 px | 562 ř. | FieldPaint, Progress, Summary |
+| TE | dělení velké grafiky na pláty, export | Vytvořit a exportovat, vedle Jen pláty | 1022 × 836 px | 1494 ř. | CutMarks, DrawingScale, FieldPaint, Numbers, Progress, Registration, Summary, UIState |
+| BTE | řetěz textových úprav s živým náhledem | Použít | 1008 × 768 px | 1338 ř. | FieldPaint, Numbers, Summary, UIState |
+
+Rozměry oken byly po první verzi reportu změřeny v Illustratoru 30.8.2 bez zobrazení
+(`tools/ui-probe`, 2026-11-07; soubory nastavení se nezměnily, kontrola SHA) [M].
 
 Technologie je všude stejná: **ScriptUI** v ExtendScriptu, žádný CEP ani UXP [K].
 Ze 6434 řádků `ui.js` žádný nepoužívá `tabbedpanel` [K]. Vlastní kreslení (`onDraw`)
@@ -204,9 +207,9 @@ z náhledu, ale obsluha si ji musí pamatovat (U4).
 
 | kód | závažnost | problém | důkaz |
 |---|---|---|---|
-| **U1** | CRITICAL | GM mění výšku okna při každém přepnutí režimu a každém Zrcadlit. Panely pod místem změny i Generovat se posunou, někdy pod kurzorem, kterým obsluha právě klikla. | [K] `grommet-marks/src/ui.js:674`, `:680`, `:910` volají `relayoutDialog` (`:894`), které dělá `dlg.size = dlg.preferredSize` |
-| **U2** | CRITICAL | ZSM při změně režimu zavírá a staví okno znovu. Výška se změní o 36 px, okno problikne, fokus přeskočí na první pole. Stejně se chová výběr předvolby druhého režimu, kde to obsluha nečeká. | [K] `zund-summa-marks/src/ui.js:979`, `:836`, `:1334`, `:1342`; výšky [M] `CHANGELOG` |
-| **U3** | CRITICAL | Řádky vrstev v ZSM mění výšku okna, s posunem Generovat a korekcí +10 px, protože engine výšku podměřuje. S 8 řádky 923 až 932 px; po odečtení lišty a Docku zbývá na malém displeji asi 850 px, takže spodek okna včetně tlačítek může být mimo obrazovku. | [K] `ui.js:176`, `:487`, `:514`, `:726`; [M] `CHANGELOG` a komentáře `tile-export/src/ui.js:250`, `batch-text-edit/src/ui.js:436` |
+| **U1** | CRITICAL | GM mění výšku okna při každém přepnutí režimu a každém Zrcadlit: 678, 758, 781 nebo 804 px, Generovat se pohybuje o 126 px [M]. Panely pod místem změny se posunou, někdy pod kurzorem, kterým obsluha právě klikla. | [K] `grommet-marks/src/ui.js:674`, `:680`, `:910` volají `relayoutDialog` (`:894`), které dělá `dlg.size = dlg.preferredSize` |
+| **U2** | CRITICAL | ZSM při změně režimu zavírá a staví okno znovu. Výška se změní o 36 px [M], okno problikne [H], fokus přeskočí na první pole. Stejně se chová výběr předvolby druhého režimu, kde to obsluha nečeká. | [K] `zund-summa-marks/src/ui.js:979`, `:836`, `:1334`, `:1342` |
+| **U3** | CRITICAL | Řádky vrstev v ZSM mění výšku okna o 29 px na řádek, s posunem Generovat a korekcí +10 px. **SUMMA s 8 řádky chce 959 px, ale Illustrator okno omezí na 932 (obrazovka 982 minus 50), takže Generovat s dolní hranou na 947 px leží z 15 px pod okrajem okna** [M, po zobrazení ověřit]. Od 5 řádků přesahuje okno asi 850 px, které malý displej s lištou a Dockem nechává. | [K] `zund-summa-marks/src/ui.js:176`, `:487`, `:514`, `:726`; hranice 850 px v komentářích `tile-export/src/ui.js:665`, `batch-text-edit/src/ui.js:436` |
 | **U8** | MINOR | Okno Souhrn roste s délkou cesty v úvodním řádku. Záměr (2026-10-27), aby se cesta neuřízla, ale je to jediné okno, jehož šířka závisí na obsahu. | [K] `shared/lib/summary.js:62` |
 | **U9** | MINOR | TE na každý znak znovu rozvrhne celé okno a znovu postaví tabulku Výsledku, takže odrolovaná tabulka skočí nahoru. BTE staví tabulku znovu jen při změně počtu řádků. | [K] `tile-export/src/ui.js:720`, `:726`, `:1286`; `batch-text-edit/src/ui.js:822`. Viditelný dopad [H] |
 
@@ -352,7 +355,8 @@ a vydáním, než začne další.
 
 **Q4. Stálá výška proti malému displeji (zásadní pro GM a ZSM).** Stálá výška znamená
 výšku nejvyššího stavu. GM má dnes až 804 px, což se vejde. ZSM s rezervou na 8 řádků
-vrstev by mělo přes 900 px, což se nevejde, a ScriptUI nemá posuvnou plochu.
+vrstev potřebuje v jednom sloupci 959 px, což se nevejde, a ScriptUI nemá posuvnou
+plochu. *(Rozhodnuto 2026-11-07: dva sloupce; maketa měří 851 × 634 px ve všech stavech.)*
 Varianty pro ZSM:
 - **a) Dva sloupce jako TE a BTE, vrstvy vpravo v rezervované ploše s pevným počtem
   řádků.** Stálé, vejde se, rychlé. **Doporučuji.** Horní mez 8 vrstev už v kódu je
@@ -383,8 +387,7 @@ ve světlém a tmavém UI.
 
 Měření v Illustratoru (sonda bez zobrazení, se souhlasem, bez otevřeného dokumentu):
 
-- aktuální rozměry všech oken ve všech režimech, poloha primárního tlačítka;
-- výška GM a ZSM po převedení na `stack`;
+- výška GM a ZSM po převedení na `stack` (rozměry dnešních oken už jsou změřené);
 - výchozí fokus v každém dialogu;
 - počet kroků Cmd+Z po běhu ZSM;
 - pozadí středních jasů UI a kontrast stavových barev;
