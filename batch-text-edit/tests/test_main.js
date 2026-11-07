@@ -304,7 +304,8 @@ var bug = new Error("BTE.Write: step 1, edit 1 has no text");
 bug.line = 42;
 m = runMain({ res: r, applyThrows: bug });
 h.eq(m.calls.join(","), "ui.show:true,apply", "main: a bug in the edit list stops at apply");
-h.eq(m.alerts.join("|"), L.format(L.ERR_CRITICAL, "BTE.Write: step 1, edit 1 has no text", "42"), "main: ERR_CRITICAL with the message and the line");
+h.eq(m.alerts.join("|"), L.format(L.ERR_CRITICAL_UNCHANGED, "BTE.Write: step 1, edit 1 has no text", "42"), "main: ERR_CRITICAL_UNCHANGED with the message and the line");
+h.eq(m.alerts[0].indexOf("Dokument nebyl změněn.") !== -1 && m.alerts[0].indexOf("Cmd+Z") === -1, true, "main: a broken edit list says the document is unchanged");
 h.eq(m.summaries.length, 0, "main: no summary after ERR_CRITICAL");
 h.eq(m.logged.length, 1, "main: the fatal error is logged too");
 h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d fatal: BTE\.Write: step 1, edit 1 has no text \(line 42\)\n$/.test(m.logFile), true,
@@ -315,12 +316,16 @@ m = runMain({ res: r, verifyThrows: new Error("BTE.Write.verify: reading failed"
 h.eq(m.calls.join(","), "ui.show:true,apply,verify", "main: a failing verify stops there");
 h.eq(m.alerts[0].indexOf("BTE.Write.verify: reading failed") !== -1 && m.alerts[0].indexOf("(řádek ?)") !== -1, true,
     "main: ERR_CRITICAL, line unknown");
+h.eq(m.alerts[0].indexOf("Cmd+Z") !== -1 && m.alerts[0].indexOf("Dokument nebyl změněn.") === -1, true,
+    "main: a failing verify (after a complete write) is ERR_CRITICAL, not the unchanged one");
 
 // the dialog throwing (a document that cannot be read)
 m = runMain({ uiThrows: new Error("BTE.UI: reading the selection failed") });
 h.eq(m.calls.join(","), "", "main: the dialog threw before it returned");
 h.eq(m.alerts.length === 1 && m.alerts[0].indexOf("BTE.UI: reading the selection failed") !== -1, true,
     "main: the dialog's failure reaches the boundary");
+h.eq(m.alerts[0].indexOf("Dokument nebyl změněn.") !== -1 && m.alerts[0].indexOf("Cmd+Z") === -1, true,
+    "main: a dialog failure says the document is unchanged");
 
 // the source has no silent catch and no redraw between apply and verify
 h.eq(/app\.redraw/.test(MAIN), false, "main.js never redraws (one Undo step)");
