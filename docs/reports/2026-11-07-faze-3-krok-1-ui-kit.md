@@ -34,7 +34,7 @@ zůstaly beze změny a `COLORS` taky.
 | všech 12 barev obou sad drží kontrast aspoň 4,5:1 na obou pozadích své strany | [T] výpočtem proti změřeným pozadím 0,196, 0,326, 0,726, 0,941 |
 | `status()` vybere sadu podle jasu, kde jas přečíst nejde, použije dnešní `COLORS` | [T] |
 | sady jsou čitelné ve všech čtyřech jasech | [V] specimen 2026-11-07 |
-| řádky staví správné prvky v pořadí, se šířkami ze §2.5, s tipy a zapojením | [T] 68 kontrol v `shared/tests/test_ui_kit.js` |
+| řádky staví správné prvky v pořadí, se šířkami ze §2.5, s tipy a zapojením | [T] 69 kontrol v `shared/tests/test_ui_kit.js` |
 | kit nezapisuje mezery kromě `TIGHT`, okraje ani výšky | [T] |
 | `confirmOverwrite` se nezeptá, když není co přepsat, a výchozí tlačítko je `Ano` | [T] logika; tlačítka `Ne`/`Ano` a výchozí `Ano` [V] specimen |
 | ES3, žádné chybějící metody, známé globály | lint celého repa a `tools/typecheck.sh` |
