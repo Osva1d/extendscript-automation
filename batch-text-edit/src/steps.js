@@ -349,16 +349,18 @@ BTE.Steps = {
      * With step.perSheet and a sheets array the series starts again in every
      * sheet (the counter that feeds Opakovat and Znovu po restarts when the
      * sheet number changes); without a sheets array it warns with
-     * WARN_PER_SHEET_OFF and numbers one series. With one series and nothing
-     * cut the Do check warns when the last value differs from Do, and names
+     * WARN_PER_SHEET_OFF and numbers one series. With one series, or when the last
+     * series (a Znovu po cycle) was not cut, the Do check warns when the last value differs from Do, and names
      * the missing elements when the series is a plain count (repeats 1, no
      * reset, step not 0) that Do falls on. With several series it counts the
      * ones that were not cut and did not reach Do (WARN_TO_SHORT).
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @param {Object} step - A number step.
-     * @param {Array.<number>=} sheets - sheets[el] is the sheet number of
+     * @param {?Array.<number>=} sheets - sheets[el] is the sheet number of
      *     element el (1..K), 0 outside any sheet; consecutive elements with
-     *     the same number are one sheet. Only used with step.perSheet.
+     *     the same number are one sheet. Only used with step.perSheet; its
+     *     length must equal state.length.
+     * @throws {Error} When step.perSheet is set and sheets has the wrong length.
      * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
      *     The step result run() merges into StepInfo.
      */
@@ -411,6 +413,9 @@ BTE.Steps = {
         if (BTE.Steps.pastTo(vals.from, vals.to, vals.step)) {
             return BTE.Steps.failed(BTE.Steps.msg("ERR_FROM_PAST_TO"));
         }
+        if (step.perSheet === true && sheets && sheets.length !== state.length) {
+            throw new Error("BTE.Steps.number: sheets has " + sheets.length + " entries, state has " + state.length + " elements");
+        }
         if (step.perSheet === true && !sheets) { warns.push(BTE.Steps.msg("WARN_PER_SHEET_OFF")); }
 
         for (i = 0; i < state.length; i++) {
@@ -432,6 +437,10 @@ BTE.Steps = {
             if (k === 0 || (perSheet && sheets[found[k].el] !== prevSheet)) {
                 if (k > 0 && !seriesCut && seriesLast !== vals.to && vals.to !== null) { shortSeries++; }
                 idx = 0;
+                seriesLast = null;
+                seriesCut = false;
+            } else if (!perSheet && reset > 0 && idx % reset === 0) {
+                // A Znovu po cycle is a series of its own.
                 seriesLast = null;
                 seriesCut = false;
             }
@@ -465,7 +474,7 @@ BTE.Steps = {
         if (vals.to !== null && found.length > 0) {
             if (perSheet) {
                 if (shortSeries > 0) { warns.push(BTE.Steps.msg("WARN_TO_SHORT", [String(shortSeries), String(vals.to)])); }
-            } else if (cut === 0) {
+            } else if (!seriesCut) {
                 last = seriesLast;
                 if (last !== vals.to) {
                     warns.push(BTE.Steps.msg("WARN_TO_MISMATCH", [String(last), String(vals.to)]));
@@ -946,7 +955,7 @@ BTE.Steps = {
      * so it throws instead of passing the text on unchanged.
      * @param {Array.<Array.<string>>} state - Input of the step.
      * @param {Object} step - Step object (the preset format).
-     * @param {Array.<number>=} sheets - Sheet number per element, see number();
+     * @param {?Array.<number>=} sheets - Sheet number per element, see number();
      *     only the Number step uses it.
      * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
      *     The step result run() merges into StepInfo.
@@ -1054,7 +1063,7 @@ BTE.Steps = {
      * step's list. The input is never changed.
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @param {Array.<Object>} steps - Step objects, in order.
-     * @param {Array.<number>=} sheets - Optional sheet number per element
+     * @param {?Array.<number>=} sheets - Optional sheet number per element
      *     (1..K, 0 outside any sheet), for the Number step's per-sheet series;
      *     the same array goes to every step, whatever the order of the chain.
      * @returns {{states: Array, info: Array}} states[k] is the state after

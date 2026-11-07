@@ -251,8 +251,8 @@ h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_CUT", args: ["1", "2"] }, { key: "WA
 r = runN(six, { perSheet: true, digits: "1" }, null);
 h.eq(col(r), "1 2 3 4 5 6", "perSheet without sheets: one series");
 h.eq(j(r.info[0].warns), j([{ key: "WARN_PER_SHEET_OFF", args: [] }]), "perSheet without sheets: warned");
-r = runN(five, { perSheet: true, reset: "2", digits: "1" }, [1, 1, 1, 1, 2]);
-h.eq(col(r), "1 2 1 2 1", "perSheet + Znovu po: reset counts inside the sheet");
+r = runN(five, { perSheet: true, reset: "2", digits: "1" }, [1, 1, 1, 2, 2]);
+h.eq(col(r), "1 2 1 1 2", "perSheet + Znovu po: reset counts inside the sheet");
 r = runN([["x"], ["{n}"], ["{n}"]], { perSheet: true, digits: "1" }, [1, 1, 2]);
 h.eq(col(r), "x 1 1", "perSheet: only found elements count");
 r = runN([["{n}", "{n}"], ["{n}", "{n}"]], { to: "1", digits: "1" });
@@ -260,5 +260,15 @@ h.eq(col(r), "1|1 {n}|{n}", "Do: an element past Do keeps every match");
 h.eq(j(r.info[0].multi), j([{ el: 0, count: 2 }]), "Do: multi lists numbered elements only");
 r = runN(six, { perSheet: true, to: "1", digits: "1" }, null);
 h.eq(j(r.info[0].warns), j([{ key: "WARN_PER_SHEET_OFF", args: [] }, { key: "WARN_TO_CUT", args: ["5", "1"] }]), "PER_SHEET_OFF warns first");
+
+// Fix round 1
+r = runN(six, { reset: "4", to: "3", digits: "1" });
+h.eq(col(r), "1 2 3 {n} 1 2", "Znovu po: last cycle not cut");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_CUT", args: ["1", "3"] }, { key: "WARN_TO_MISMATCH", args: ["2", "3"] }]), "Znovu po: cut, then mismatch of the last cycle");
+function throwsMsg(fn) { try { fn(); } catch (e) { return String(e.message); } return null; }
+var tm = throwsMsg(function () { runN(five, { perSheet: true }, [1, 1, 2]); });
+h.assert(tm !== null && tm.indexOf("BTE.Steps") >= 0 && tm.indexOf("3") >= 0 && tm.indexOf("5") >= 0, "perSheet: short sheets array throws, naming both lengths");
+tm = throwsMsg(function () { runN(five, { perSheet: true }, []); });
+h.assert(tm !== null && tm.indexOf("0") >= 0 && tm.indexOf("5") >= 0, "perSheet: empty sheets array throws");
 
 h.done();
