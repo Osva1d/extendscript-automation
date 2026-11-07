@@ -355,9 +355,9 @@ výšku nejvyššího stavu. GM má dnes až 804 px, což se vejde. ZSM s rezerv
 vrstev by mělo přes 900 px, což se nevejde, a ScriptUI nemá posuvnou plochu.
 Varianty pro ZSM:
 - **a) Dva sloupce jako TE a BTE, vrstvy vpravo v rezervované ploše s pevným počtem
-  řádků.** Stálé, vejde se, rychlé. Zavádí horní mez počtu vrstev, dnes žádná není.
-  **Doporučuji, pokud je mez přijatelná.** Otázka zní: kolik vrstev se v praxi
-  mapuje nejvýš?
+  řádků.** Stálé, vejde se, rychlé. **Doporučuji.** Horní mez 8 vrstev už v kódu je
+  (`zund-summa-marks/src/ui.js:421`, `MAX_LAYERS`), takže plocha na 8 řádků žádnou
+  funkci nebere. *(Oprava: první verze reportu tvrdila, že mez chybí.)*
 - b) Seznam vrstev + editor jako kroky v BTE. Bez meze, ale víc klikání na každou změnu.
 - c) Nechat ZSM jako vědomou výjimku a stabilizovat jen okolí. Nejlevnější, ale zadání
   tím nesplní.
