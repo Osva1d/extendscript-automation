@@ -84,6 +84,8 @@ ZSM.L = {
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
     STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
     STATUS_DUP_COLOR: "dup %s",
+    WARN_PREFIX: "WARNING: ",
+    WARN_ROWS_NOT_LOADED: "rows: %s, at most %s, not loaded: %s",
     // The status line at rest (spec 1.2.0 §7), Czech: the tests read the spec's text back.
     STATUS_FOUND_ARTBOARD: "artboard %s × %s mm", STATUS_FOUND_ARTWORK: "grafika %s × %s mm",
     STATUS_MARKS_ONLY: "pouze značky",
@@ -1896,6 +1898,120 @@ runDialogs(namedPresetL13([{ name: "Thru-cut", color: "Cut" }]), [function (win)
     saveEnabledL13 = win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).enabled;
 }]);
 assertEq(saveEnabledL13, false, "L13: a trailing space alone leaves Save grey");
+
+
+// =====================================================
+// TEST 26 (UI spec 2026-11-07 §3): five mapping rows at most
+// =====================================================
+// In 1.2.0 SUMMA with eight rows asked for a 959 px dialog in a 932 px window.
+// A preset or last run with more rows shows the first five, says which rows
+// were not loaded, and stays as it is until the operator saves it.
+console.log("\n=== TEST 26: five mapping rows at most ===");
+(function () {
+    var EIGHT = [
+        { name: "Thru-cut", color: "Thru-cut" }, { name: "Kiss-cut", color: "Kiss-cut" },
+        { name: "Cut", color: "Cut" }, { name: "Reg", color: "[Registration]" },
+        { name: "Score", color: "Score" }, { name: "Crease", color: "Crease" },
+        { name: "", color: "Perf" }, { name: "V-cut", color: "V-cut" }
+    ];
+    function rowsOf(n) { return JSON.parse(JSON.stringify(EIGHT.slice(0, n))); }
+    function presetData(n, last) {
+        var d = ZSM.Config.getDefaults();
+        d.layers = rowsOf(n);
+        var p = { activePreset: "Long", presets: { "[Default]": ZSM.Config.getDefaults(), "Long": d } };
+        if (last) p.presets["[Last Settings]"] = last;
+        return p;
+    }
+    function removeButtons(win) {
+        return win.find(function (c) { return c.type === "button" && c.text === "−"; });
+    }
+    function addButton(win) {
+        return win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_ADD_LAYER; });
+    }
+    function withAlerts(fn) {
+        var seen = [], o = global.alert;
+        global.alert = function (m) { seen.push(String(m)); };
+        try { fn(); } finally { global.alert = o; }
+        return seen;
+    }
+
+    // (a) an eight-row preset: five rows, one warning naming the other three
+    var pA = presetData(8), seenA = {};
+    var alertsA = withAlerts(function () {
+        runDialogs(pA, [function (win) {
+            seenA.rows = removeButtons(win).length;
+            seenA.add = addButton(win).enabled;
+            var dd = k5PresetDD(win);
+            seenA.preset = dd.selection ? dd.selection.text : null;
+            seenA.save = win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).enabled;
+            clickGenerate(win);
+        }]);
+    });
+    assertEq(seenA.rows, 5, "eight-row preset: five rows shown");
+    assertEq(seenA.add, false, "eight-row preset: + Add is grey");
+    assertEq(alertsA.length, 1, "eight-row preset: one warning");
+    assertEq(alertsA[0], "WARNING: rows: 8, at most 5, not loaded: Crease, Perf, V-cut",
+        "the warning counts the rows and names the ones not loaded (a row without a name by its colour)");
+    assertEq(seenA.preset, "Long *", "the preset shows as modified: what the dialog holds differs from it");
+    assertEq(seenA.save, true, "Save is there for the operator who wants the five rows kept");
+    assertEq(pA.presets["Long"].layers.length, 8, "a run leaves the preset's eight rows alone");
+    assertEq(pA.presets["[Last Settings]"].layers.length, 5, "the run uses the five rows shown");
+
+    // (b) Save puts the five rows into the preset: the operator's decision
+    var pB = presetData(8);
+    var origStorage = ZSM.Storage;
+    ZSM.Storage = { save: function () { return true; } };
+    try {
+        withAlerts(function () {
+            runDialogs(pB, [function (win) {
+                win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).onClick();
+            }]);
+        });
+    } finally {
+        ZSM.Storage = origStorage;
+        if (origStorage === undefined) delete ZSM.Storage;
+    }
+    assertEq(pB.presets["Long"].layers.length, 5, "Save keeps the five rows shown");
+
+    // (c) a last run with eight rows: one warning, not one per build step
+    var last = ZSM.Config.getDefaults();
+    last.layers = rowsOf(8);
+    var alertsC = withAlerts(function () { runDialogs(presetData(2, last), [function () {}]); });
+    assertEq(alertsC.length, 1, "eight-row last run: one warning at open");
+
+    // (d) five rows: no warning, + Add grey; four rows: + Add gives the fifth, then greys
+    var alertsD = withAlerts(function () {
+        runDialogs(presetData(5), [function (win) {
+            assertEq(addButton(win).enabled, false, "five rows: + Add is grey");
+        }]);
+    });
+    assertEq(alertsD.length, 0, "five rows: no warning");
+    runDialogs(presetData(4), [function (win) {
+        assertEq(addButton(win).enabled, true, "four rows: + Add is live");
+        addButton(win).onClick();
+        assertEq(removeButtons(win).length, 5, "four rows: + Add makes five");
+        assertEq(addButton(win).enabled, false, "then + Add is grey");
+        addButton(win).onClick();
+        assertEq(removeButtons(win).length, 5, "a click on the grey + Add adds nothing");
+    }]);
+
+    // (e) an eight-row SUMMA preset picked in the ZUND dialog: one warning, in the SUMMA dialog
+    var summaLong = ZSM.Config.getDefaults();
+    summaLong.mode = "SUMMA";
+    summaLong.layers = rowsOf(8);
+    var pE = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "Long S": summaLong } };
+    var rowsE = null, shownE = null;
+    var alertsE = withAlerts(function () {
+        shownE = runDialogs(pE, [
+            function (win) { win.close = function () {}; pick(win, "Long S"); },
+            function (win) { rowsE = removeButtons(win).length; }
+        ]);
+    });
+    assertEq(shownE.length, 2, "picked SUMMA preset: the dialog reopens");
+    assertEq(rowsE, 5, "picked SUMMA preset: five rows in the SUMMA dialog");
+    assertEq(alertsE.length, 1, "picked SUMMA preset: one warning");
+    assertEq(pE.presets["Long S"].layers.length, 8, "the picked preset keeps its eight rows");
+})();
 
 
 // =====================================================

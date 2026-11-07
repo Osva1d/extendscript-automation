@@ -418,7 +418,42 @@ ZSM.UI = {
         layContainer.spacing       = 6;
 
         var layRows    = [];
-        var MAX_LAYERS = 8;
+        // Five rows at most (UI spec 2026-11-07 §3): in 1.2.0 SUMMA with eight
+        // rows asked for a 959 px dialog in a 932 px window, and Generate sat
+        // below the window's edge. Each row adds 37 px.
+        var MAX_LAYERS = 5;
+
+        /**
+         * The mapping rows a settings object shows: its own, or the factory row
+         * for this document, at most MAX_LAYERS of them, in order. A longer
+         * mapping (presets and last runs from 1.2.0 hold up to eight rows) stays
+         * as it is in pData and on disk. Nothing here writes it; only Save puts
+         * the shown rows into the preset.
+         * @param {Object} obj - Settings object.
+         * @returns {Array} Row definitions {name, color}.
+         */
+        function shownLayers(obj) {
+            var all = (obj && obj.layers && obj.layers.length > 0)
+                ? obj.layers
+                : ZSM.UI.defaultsForDocument(docData).layers;
+            return all.slice(0, MAX_LAYERS);
+        }
+
+        /**
+         * Tells the operator which mapping rows were not loaded, if any. Called
+         * once per load (setUIValues), so a preset picked again says it again.
+         * @param {Object} obj - Settings object that was loaded.
+         */
+        function warnRowsNotLoaded(obj) {
+            if (!obj || !obj.layers || obj.layers.length <= MAX_LAYERS) return;
+            var names = [];
+            for (var d = MAX_LAYERS; d < obj.layers.length; d++) {
+                var row = obj.layers[d] || {};
+                names.push(String(row.name || "").replace(/^\s+|\s+$/g, "") || String(row.color || ""));
+            }
+            ZSM.Utils.warn(ZSM.L.format(l.WARN_ROWS_NOT_LOADED,
+                obj.layers.length, MAX_LAYERS, names.join(", ")));
+        }
 
         function updateRemoveButtons() {
             var canRemove = layRows.length > 1;
@@ -490,10 +525,9 @@ ZSM.UI = {
             return { grp: grp, ddColor: ddColor, swColor: swColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
         }
 
-        // Populate initial layer rows
-        var initLayers = (sData.layers && sData.layers.length > 0)
-            ? sData.layers
-            : ZSM.UI.defaultsForDocument(docData).layers;
+        // Populate initial layer rows. Rows past MAX_LAYERS are reported by
+        // setUIValues, which loads the same settings again before show().
+        var initLayers = shownLayers(sData);
 
         for (var i = 0; i < initLayers.length; i++) {
             layRows.push(buildLayerRow(initLayers[i]));
@@ -710,9 +744,7 @@ ZSM.UI = {
             }
             layRows = [];
 
-            var newLayers = (obj.layers && obj.layers.length > 0)
-                ? obj.layers
-                : ZSM.UI.defaultsForDocument(docData).layers;
+            var newLayers = shownLayers(obj);
             for (var i = 0; i < newLayers.length; i++) {
                 layRows.push(buildLayerRow(newLayers[i]));
             }
@@ -752,6 +784,8 @@ ZSM.UI = {
             // switch even though the freshly-loaded values are valid (the dialog
             // looked permanently broken). No-op during the initial build (guarded).
             liveValidateAll();
+
+            warnRowsNotLoaded(obj);
         }
 
         // =================================================================
