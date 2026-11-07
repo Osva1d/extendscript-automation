@@ -637,7 +637,8 @@ function keysOf(p) {
 
 // sheetCols x sheetRows aršík groups on one layer, each holding bc x br prefab
 // groups (code above number, pitch PITCH); aršík i sits at column i % sheetCols.
-//   opts.clippedSheets  aršíky are clip groups (mask = a rectangle over the block)
+//   opts.clippedSheets  aršíky are clip groups (mask = the block inset by 10 on every side,
+//                       so the mask differs from the group's own bounds)
 //   opts.maskedPrefabs  every prefab is a clip group > plain group > texts
 //   opts.looseFirst     one more prefab group straight in the layer, top-left of all
 function blocks(sheetCols, sheetRows, bc, br, opts) {
@@ -664,7 +665,7 @@ function blocks(sheetCols, sheetRows, bc, br, opts) {
         ox = (i % sheetCols) * (bw + GAP);
         oy = -Math.floor(i / sheetCols) * (bh + GAP);
         sg = M.group(L, box(ox + bw / 2, oy - bh / 2, bw, bh), { clipped: !!o.clippedSheets });
-        if (o.clippedSheets) { M.path(sg, box(ox + bw / 2, oy - bh / 2, bw, bh), { clipping: true }); }
+        if (o.clippedSheets) { M.path(sg, box(ox + bw / 2, oy - bh / 2, bw - 20, bh - 20), { clipping: true }); }
         sheets.push(sg);
         for (k = 0; k < bc * br; k++) {
             c = k % bc;
@@ -698,6 +699,25 @@ function blocks(sheetCols, sheetRows, bc, br, opts) {
     h.eq(BTE.Scope.reorder(p, "rows", false).sheets, null, "toggle off: sheets null");
     h.eq(BTE.Scope.reorder(p, "cols", true).sheets.length, 240, "reorder keeps one sheet number per row");
     h.eq(BTE.Scope.reorder(p, "rows").sheets, null, "reorder: bySheet omitted = off");
+    // Full order from the fixture's geometry: aršík i is at column i % 4, row floor(i / 4);
+    // prefab k of an aršík is at column k % 3, row floor(k / 3).
+    function expected(byCols) {
+        var cells = [], i, k, keys = [];
+        for (i = 0; i < 20; i++) {
+            for (k = 0; k < 12; k++) {
+                cells.push({ uuid: b.prefabs[i * 12 + k].uuid,
+                    sc: i % 4, sr: Math.floor(i / 4), pc: k % 3, pr: Math.floor(k / 3) });
+            }
+        }
+        cells.sort(function (x, y) {
+            if (byCols) { return (x.sc - y.sc) || (x.sr - y.sr) || (x.pc - y.pc) || (x.pr - y.pr); }
+            return (x.sr - y.sr) || (x.sc - y.sc) || (x.pr - y.pr) || (x.pc - y.pc);
+        });
+        for (i = 0; i < cells.length; i++) { keys.push("g:" + cells[i].uuid); }
+        return keys.join();
+    }
+    h.eq(keysOf(p), expected(false), "blocks rows: aršíky row by row, prefabs row by row inside each");
+    h.eq(keysOf(BTE.Scope.prepare(b.doc, "document", "cols", true)), expected(true), "blocks cols: aršíky column by column, prefabs column by column inside each");
     h.eq(p.state[0].join(), "{kód},{n}", "state rows still hold the element's texts");
     h.assert(p.elements[0].sheet !== null && p.elements[0].sheet !== undefined, "element records keep their sheet");
 })();
@@ -705,6 +725,7 @@ function blocks(sheetCols, sheetRows, bc, br, opts) {
 (function () {
     var cl = BTE.Scope.prepare(blocks(2, 1, 3, 4, { clippedSheets: true }).doc, "document", "rows", true);
     h.eq(cl.sheetCount, 2, "clip-group aršíky are sheets");
+    h.eq(JSON.stringify(cl.elements[0].sheet.bounds), JSON.stringify([10, -10, 3 * PITCH - 10, -4 * PITCH + 10]), "clip-group aršík: bounds are its mask rectangle");
     var m = BTE.Scope.prepare(blocks(1, 1, 3, 4, { maskedPrefabs: true }).doc, "document", "rows", true);
     h.eq(m.sheetCount, m.elements.length, "masked prefabs: every sheet holds one element (Task 4 warns)");
     var lf = BTE.Scope.prepare(blocks(2, 1, 3, 4, { looseFirst: true }).doc, "document", "rows", true);
