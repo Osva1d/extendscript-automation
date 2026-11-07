@@ -40,9 +40,6 @@ BTE.L = (function () {
             WARN_MISSING_1:      "%s element missing.",
             WARN_MISSING_2:      "%s elements missing.",
             WARN_MISSING_5:      "%s elements missing.",
-            WARN_EXTRA_1:        "%s element too many.",
-            WARN_EXTRA_2:        "%s elements too many.",
-            WARN_EXTRA_5:        "%s elements too many.",
             // Dialog model: Kde list, step list, status line
             NOT_FOUND:           "(not found)",
             WHERE_ALL:           "Whole text",
@@ -266,13 +263,10 @@ BTE.L = (function () {
             ERR_LETTER_BELOW_ONE: "Písmena začínají od A = 1. Upravte Od nebo Krok, aby žádná hodnota nebyla pod 1.",
             WARN_TO_MISMATCH:    "Poslední číslo vyjde %s, v poli Do je %s.",
             // Počítané hlášky: _1 / _2 / _5 jsou tvary pro 1, 2–4 a ostatní
-            // (L.count). „Prvků je o %s víc.“ čte správně při každém počtu.
+            // (L.count).
             WARN_MISSING_1:      "Chybí %s prvek.",
             WARN_MISSING_2:      "Chybí %s prvky.",
             WARN_MISSING_5:      "Chybí %s prvků.",
-            WARN_EXTRA_1:        "Prvků je o %s víc.",
-            WARN_EXTRA_2:        "Prvků je o %s víc.",
-            WARN_EXTRA_5:        "Prvků je o %s víc.",
             // Model dialogu: nabídka Kde, seznam kroků, stavová řádka
             NOT_FOUND:           "(nenalezeno)",
             WHERE_ALL:           "Celý text",

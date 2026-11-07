@@ -188,8 +188,8 @@ h.eq(U.text({ key: "WARN_MISSING", args: ["1"] }), "Chybí 1 prvek.", "missing: 
 h.eq(U.text({ key: "WARN_MISSING", args: ["3"] }), "Chybí 3 prvky.", "missing: 3");
 h.eq(U.text({ key: "WARN_MISSING", args: ["6"] }), "Chybí 6 prvků.", "missing: 6");
 h.eq(U.text({ key: "WARN_MISSING", args: [0] }), "Chybí 0 prvků.", "missing: 0");
-h.eq(U.text({ key: "WARN_EXTRA", args: ["1"] }), "Prvků je o 1 víc.", "extra: 1");
-h.eq(U.text({ key: "WARN_EXTRA", args: ["6"] }), "Prvků je o 6 víc.", "extra: 6");
+h.eq(U.text({ key: "WARN_TO_CUT", args: ["1", "3"] }), "1 prvek zůstane beze změny, řada končí na Do 3.", "cut: 1");
+h.eq(U.text({ key: "WARN_TO_CUT", args: ["6", "3"] }), "6 prvků zůstane beze změny, řada končí na Do 3.", "cut: 6");
 h.eq(U.text({ key: "NO_SUCH_KEY", args: [] }), "NO_SUCH_KEY", "an unknown key is shown as it is, never throws");
 h.eq(U.text({ key: "ERR_FIND_EMPTY" }), "Zadejte, co hledat.", "args may be missing");
 
@@ -241,7 +241,7 @@ h.eq(s.canApply, true, "do: apply stays on (decision 8)");
 h.eq(s.messages.join("|"), "⚠ Krok 1: Poslední číslo vyjde 5, v poli Do je 8.|⚠ Krok 1: Chybí 3 prvky.", "do: both messages, plural form");
 steps = [N(V("{n}"), { to: "4" })];
 s = U.status(chain(five, steps), steps);
-h.eq(s.messages[1], "⚠ Krok 1: Prvků je o 1 víc.", "do: extra");
+h.eq(s.messages[0], "⚠ Krok 1: 1 prvek zůstane beze změny, řada končí na Do 4.", "do: cut");
 
 // ERR
 steps = [R({ kind: "text", text: "" }, { replace: "x" })];
@@ -432,7 +432,7 @@ enS = UE.status(BTE_EN.Steps.run([["{n}"], ["{n}"], ["{n}"], ["{n}"], ["{n}"]], 
 h.eq(enS.messages.join("|"), "⚠ Step 1: The last number comes out as 5, the To field says 8.|⚠ Step 1: 3 elements missing.", "en: do check");
 enSteps = [N(V("{n}"), { to: "1" })];
 enS = UE.status(BTE_EN.Steps.run([["{n}"], ["{n}"]], enSteps), enSteps);
-h.eq(enS.messages[1], "⚠ Step 1: 1 element too many.", "en: extra, singular");
+h.eq(enS.messages[0], "⚠ Step 1: 1 element stays unchanged, the series ends at To 1.", "en: cut, singular");
 enS = UE.status(BTE_EN.Steps.run([["{n}"]], [N({ kind: "text", text: "" })]), [N({ kind: "text", text: "" })]);
 h.eq(enS.line, "✗ Cannot apply, nothing will be written.", "en: error line");
 h.eq(enS.messages[0], "✗ Step 1: Enter what to look for.", "en: error message");

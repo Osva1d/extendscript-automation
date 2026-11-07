@@ -42,7 +42,7 @@ h.eq(DE.count("SKIP_LOCKED", 3), "Skipped 3 locked or hidden texts.", "unknown l
 // countForm hands back the template, for messages with more than the count in them
 h.eq(CS.format(CS.countForm("STATUS_CHANGED", 1), 1, 1), "Změní se 1 z 1 prvku.", "countForm: cs one");
 h.eq(CS.format(CS.countForm("STATUS_CHANGED", 5), 3, 5), "Změní se 3 z 5 prvků.", "countForm: cs five");
-h.eq(CS.countForm("WARN_EXTRA", 1), "Prvků je o %s víc.", "countForm leaves the placeholder");
+h.eq(CS.countForm("WARN_TO_CUT", 1), "%s prvek zůstane beze změny, řada končí na Do %s.", "countForm leaves the placeholder");
 
 // The R17 examples
 h.eq(CS.count("WARN_MISSING", 1), "Chybí 1 prvek.", "Chybí 1 prvek.");

@@ -24,7 +24,7 @@ h.eq(BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{from:"1,5"})]).info[0].error.
 h.eq(BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{digits:"0"})]).info[0].error.key, "ERR_MIN_ONE", "digits >= 1");
 var w = BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{to:"8"})]).info[0].warns;
 h.eq(w[0].key + w[1].key + w[1].args[0], "WARN_TO_MISMATCHWARN_MISSING3", "Do: 3 missing");
-h.eq(BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{to:"3"})]).info[0].warns[1].key, "WARN_EXTRA", "Do: extra");
+h.eq(BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{to:"3"})]).info[0].warns[0].key, "WARN_TO_CUT", "Do: cut");
 h.eq(BTE.Steps.run(st, [N({kind:"var",text:"{n}"},{to:"5"})]).info[0].warns.length, 0, "Do matches");
 // first number in element, text order within element
 h.eq(BTE.Steps.run([["A 12", "7"]], [N({kind:"first"},{from:"40"})]).states[1][0].join("|"), "A 040|7", "first number only");
@@ -187,22 +187,22 @@ h.eq(BTE.Steps.run([["12 34"]], [N({kind:"first"})]).info[0].multi.length, 0, "f
 var d1 = infoOf(st, N({kind:"var",text:"{n}"},{to:"8"})).warns;
 h.eq(d1[0].args[0] + "," + d1[0].args[1], "5,8", "mismatch names last and Do");
 h.eq(d1.length, 2, "mismatch + missing");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"3"})).warns[1].args[0], "2", "2 extra");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"3"})).warns[0].key, "WARN_TO_MISMATCH", "mismatch first");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"3"})).warns[0].args[0], "2", "2 cut");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"3"})).warns.length, 1, "cut only, no mismatch");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"4", repeats:"2"})).warns.length, 1, "repeats: mismatch only");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"9", reset:"3"})).warns.length, 1, "reset: mismatch only");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"9", step:"0"})).warns.length, 1, "step 0: mismatch only");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"7", step:"2"})).warns[1].args[0], "1", "step 2 to 7: values 1..9, one extra");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"7", step:"2"})).warns[0].args[0], "1", "step 2 to 7: values 1..7, one cut");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"20", step:"2"})).warns.length, 1, "unreachable Do: mismatch only");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{from:"10", to:"4", step:"-2"})).warns[1].key, "WARN_EXTRA", "descending: values 10..2, Do 4");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{from:"10", to:"4", step:"-2"})).warns[0].key, "WARN_TO_CUT", "descending: stops below 4, one cut");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{from:"10", to:"0", step:"-2"})).warns[1].args[0], "1", "descending: 10 -> 0 needs 6, has 5, one missing");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{from:"10", to:"0", step:"-2"})).warns[1].key, "WARN_MISSING", "descending: missing");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"-3"})).warns.length, 1, "Do on the wrong side: mismatch only");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"-3"})).error.key, "ERR_FROM_PAST_TO", "Do on the wrong side: Od already past Do");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"1.5"})).error.args[0], "FIELD_TO", "Do must be an integer");
 h.eq(infoOf([["x"]], N({kind:"var",text:"{n}"},{to:"4"})).warns.length, 1, "nothing found: no Do check");
 h.eq(infoOf([["x"]], N({kind:"var",text:"{n}"},{to:"4"})).warns[0].key, "WARN_NOTHING_FOUND", "nothing found: only that warning");
 h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:" "})).warns.length, 0, "blank Do means none");
-h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"4", format:"A"})).warns[0].args[0], "5", "letters: Do check compares numbers");
+h.eq(infoOf(st, N({kind:"var",text:"{n}"},{to:"4", format:"A"})).warns[0].args.join(","), "1,4", "letters: Do check compares numbers, one cut");
 // inactive step
 var off = N({kind:"var",text:"{n}"}); off.active = false;
 h.eq(BTE.Steps.run(st, [off]).states[1][0][1], "{n}", "inactive step copies input");
@@ -211,5 +211,54 @@ var chain = BTE.Steps.run([["{kód}", "{n}"], ["{kód}", "{n}"]],
     [N({kind:"var",text:"{n}"}), { type: "replace", active: true, where: {kind:"var", text:"{kód}"}, replace: "K", matchCase: false, firstOnly: false }]);
 h.eq(chain.states[2].join("|"), "K,001|K,002", "number then replace");
 h.eq(JSON.stringify(chain.info[1].vars), '[{"name":"{kód}","count":2}]', "numbered variable is gone from the next step's list");
+
+
+// Task 2: Do ends the series, a new series in every sheet
+var j = JSON.stringify;
+function runN(st, extra, sheets) { return BTE.Steps.run(st, [V(extra)], sheets); }
+function col(r) { var o = [], i; for (i = 0; i < r.states[1].length; i++) { o.push(r.states[1][i].join("|")); } return o.join(" "); }
+var five = [["{n}"], ["{n}"], ["{n}"], ["{n}"], ["{n}"]];
+
+r = runN(five, { to: "3", digits: "1" });
+h.eq(col(r), "1 2 3 {n} {n}", "Do: series ends at 3");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_CUT", args: ["2", "3"] }]), "Do: cut warning, count first");
+h.eq(r.info[0].hits, 3, "Do: hits are the numbered elements");
+
+r = runN(five, { from: "10", step: "-1", to: "8", digits: "1" });
+h.eq(col(r), "10 9 8 {n} {n}", "Do, Krok -1: stops below 8");
+h.eq(runN(five, { from: "5", step: "-1", to: "10" }).info[0].error.key, "ERR_FROM_PAST_TO", "Krok -1, Od 5 Do 10: error");
+h.eq(runN(five, { from: "10", to: "5" }).info[0].error.key, "ERR_FROM_PAST_TO", "Od 10 Do 5: error");
+r = runN(five, { from: "3", step: "0", to: "5", digits: "1" });
+h.eq(col(r), "3 3 3 3 3", "Krok 0 below Do: all numbered");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_MISMATCH", args: ["3", "5"] }]), "Krok 0: 1.0 mismatch only");
+h.eq(runN(five, { from: "6", step: "0", to: "5" }).info[0].error.key, "ERR_FROM_PAST_TO", "Krok 0 past Do: error");
+h.eq(runN(five, { from: "10", to: "5", digits: "x" }).info[0].error.key, "ERR_NOT_INTEGER", "field error wins over ERR_FROM_PAST_TO");
+
+var eight = five.concat([["{n}"], ["{n}"], ["{n}"]]);
+r = runN(eight, { reset: "4", to: "3", digits: "1" });
+h.eq(col(r), "1 2 3 {n} 1 2 3 {n}", "Znovu po: every series ends at Do");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_CUT", args: ["2", "3"] }]), "Znovu po: one summed cut warning");
+
+h.eq(j(runN(five, { to: "5" }).info[0].warns), j([]), "Do equal to the count: no warning");
+h.eq(j(runN(five, { to: "7" }).info[0].warns), j([{ key: "WARN_TO_MISMATCH", args: ["5", "7"] }, { key: "WARN_MISSING", args: ["2"] }]), "Do above the count: 1.0 warnings");
+
+var six = [["{n}"], ["{n}"], ["{n}"], ["{n}"], ["{n}"], ["{n}"]];
+r = runN(six, { perSheet: true, digits: "1" }, [1, 1, 1, 2, 2, 0]);
+h.eq(col(r), "1 2 3 1 2 1", "perSheet: a series per sheet, loose ones last");
+r = runN(six, { perSheet: true, to: "2", digits: "1" }, [1, 1, 1, 2, 2, 0]);
+h.eq(col(r), "1 2 {n} 1 2 1", "perSheet + Do: each series ends at 2");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_TO_CUT", args: ["1", "2"] }, { key: "WARN_TO_SHORT", args: ["1", "2"] }]), "perSheet: cut plus one short series");
+r = runN(six, { perSheet: true, digits: "1" }, null);
+h.eq(col(r), "1 2 3 4 5 6", "perSheet without sheets: one series");
+h.eq(j(r.info[0].warns), j([{ key: "WARN_PER_SHEET_OFF", args: [] }]), "perSheet without sheets: warned");
+r = runN(five, { perSheet: true, reset: "2", digits: "1" }, [1, 1, 1, 1, 2]);
+h.eq(col(r), "1 2 1 2 1", "perSheet + Znovu po: reset counts inside the sheet");
+r = runN([["x"], ["{n}"], ["{n}"]], { perSheet: true, digits: "1" }, [1, 1, 2]);
+h.eq(col(r), "x 1 1", "perSheet: only found elements count");
+r = runN([["{n}", "{n}"], ["{n}", "{n}"]], { to: "1", digits: "1" });
+h.eq(col(r), "1|1 {n}|{n}", "Do: an element past Do keeps every match");
+h.eq(j(r.info[0].multi), j([{ el: 0, count: 2 }]), "Do: multi lists numbered elements only");
+r = runN(six, { perSheet: true, to: "1", digits: "1" }, null);
+h.eq(j(r.info[0].warns), j([{ key: "WARN_PER_SHEET_OFF", args: [] }, { key: "WARN_TO_CUT", args: ["5", "1"] }]), "PER_SHEET_OFF warns first");
 
 h.done();

@@ -290,7 +290,7 @@ BTE.UIModel = {
      * Number step names the field in ERR_NOT_INTEGER and ERR_MIN_ONE with
      * "FIELD_FROM" and the like) is replaced by the label, so the user never
      * sees a key. A key that has no entry of its own but has _1/_2/_5 forms
-     * (WARN_MISSING, WARN_EXTRA) is a counted message; the form is picked by
+     * (WARN_MISSING, WARN_TO_CUT) is a counted message; the form is picked by
      * the first argument, which is the count.
      * @param {{key: string, args: Array}} msg - A StepInfo error or warning.
      * @returns {string} The message; the key itself when BTE.L has no such
