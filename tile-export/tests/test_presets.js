@@ -195,6 +195,7 @@ console.log("\n=== a stored null takes the default ===");
 // A field left with a typo where the run does not use it is saved as NaN,
 // which JSON writes as null. Loaded back, it must not show as "null".
 var filled = TE.Storage.fillDefaults({ overlap: null, addTop: 7 });
+eq(TE.Storage.fillDefaults({ overlap: 20 }).overlapUnprinted, 0, "an older preset gets no unprinted part (1.3.0)");
 eq(filled.overlap, TE.Config.getDefaults().overlap, "null overlap: the default");
 eq(filled.addTop, 7, "a stored number stays");
 

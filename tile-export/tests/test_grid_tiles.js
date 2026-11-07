@@ -258,5 +258,68 @@ assertPrinted(t10, s10, "1010|1020|1050", "ani tiskové šířky");
 assertClose(t10[0].expanded[2], mm(101), 0.01, "adds and overlap shrink with the document");
 assertClose(t10[0].expanded[1], mm(104), 0.01, "top add shrinks too");
 
+console.log("\n=== 1.3.0: the panel that carries an unprinted part of the overlap ===");
+// A weld: the carrier lies underneath, so its overlap is left unprinted from
+// its outer edge in; 32 mm overlap with 30 unprinted keeps 2 mm printed past
+// the seam. The geometry is that of the one-sided overlap; only the label is new.
+var WALL = [0, mm(1000), mm(6000), 0];
+function weldTiles(over, guides) {
+    var sw = merge(D, merge({ divideMode: "count", tileCount: 3, overlap: 32, overlapUnprinted: 30,
+        overlapMode: "onesided", addTop: 0, addBottom: 0, addLeft: 0, addRight: 0 }, over));
+    var ext = (sw.direction === "horizontal") ? { start: WALL[0], end: WALL[2] } : { start: WALL[3], end: WALL[1] };
+    return TE.Grid.computeTiles(TE.Grid.computeCuts(sw, ext, guides || null), WALL, sw);
+}
+var weldCases = [["horizontal", "first", "right", [0, 1], 2], ["horizontal", "second", "left", [1, 2], 0],
+                 ["vertical", "first", "bottom", [0, 1], 2], ["vertical", "second", "top", [1, 2], 0]];
+var wc, wt, wi;
+for (wc = 0; wc < weldCases.length; wc++) {
+    wt = weldTiles({ direction: weldCases[wc][0], overlapCarrier: weldCases[wc][1] });
+    for (wi = 0; wi < weldCases[wc][3].length; wi++) {
+        var lab = wt[weldCases[wc][3][wi]].unprinted;
+        assert(lab !== null && lab.side === weldCases[wc][2],
+            weldCases[wc][0] + "/" + weldCases[wc][1] + ": panel " + (weldCases[wc][3][wi] + 1) + " carries it on the " + weldCases[wc][2]);
+        if (lab) { assertClose(lab.width, mm(30), 1e-9, "30 mm wide, in document points"); }
+    }
+    assert(wt[weldCases[wc][4]].unprinted === null,
+        weldCases[wc][0] + "/" + weldCases[wc][1] + ": panel " + (weldCases[wc][4] + 1) + " carries nothing");
+}
+function noneLabelled(t) { for (var q = 0; q < t.length; q++) { if (t[q].unprinted !== null) { return false; } } return true; }
+assert(noneLabelled(weldTiles({ direction: "horizontal", overlapCarrier: "second", overlapMode: "symmetric" })), "symmetric: nothing");
+assert(noneLabelled(weldTiles({ direction: "horizontal", overlapCarrier: "second", overlap: 0 })), "overlap 0: nothing");
+assert(noneLabelled(weldTiles({ direction: "horizontal", overlapCarrier: "second", overlapUnprinted: 0 })), "part 0: nothing");
+assert(noneLabelled(weldTiles({ direction: "horizontal", overlapCarrier: "second", overlapUnprinted: NaN })), "part NaN: nothing");
+// computeCuts refuses a single panel (TE_MIN_TILES); with no cuts the panel has no seam.
+assert(noneLabelled(TE.Grid.computeTiles([], WALL, merge(D, { direction: "horizontal", overlap: 32, overlapUnprinted: 30,
+    overlapMode: "onesided", overlapCarrier: "second" }))), "one panel: nothing");
+var withPart = weldTiles({ direction: "horizontal", overlapCarrier: "second" });
+var withoutPart = weldTiles({ direction: "horizontal", overlapCarrier: "second", overlapUnprinted: 0 });
+for (wi = 0; wi < withPart.length; wi++) {
+    assert(withPart[wi].clean.join() === withoutPart[wi].clean.join(), "panel " + (wi + 1) + ": clean unchanged");
+    assert(withPart[wi].expanded.join() === withoutPart[wi].expanded.join(), "panel " + (wi + 1) + ": expanded unchanged");
+}
+var byGuides = weldTiles({ direction: "horizontal", overlapCarrier: "second", divideMode: "guides", guideRound: 0 },
+    [mm(1500), mm(4200)]);
+assert(byGuides.length === 3 && byGuides[0].unprinted === null && byGuides[1].unprinted.side === "left" &&
+    byGuides[2].unprinted.side === "left", "uneven seams from guides: the same panels carry it");
+
+function deep(got, want, msg) { for (var i = 0; i < 4; i++) { assertClose(got[i], want[i], 1e-9, msg + " rect[" + i + "]"); } }
+var MASK = [-5, 105, 205, -5], PANEL = [0, 100, 200, 0];
+assert(TE.Grid.printClip(MASK, PANEL, null, 1) === MASK, "no strip: the mask itself");
+assert(TE.Grid.printClip(MASK, PANEL, undefined, 1) === MASK, "a tile without the field: the mask itself");
+deep(TE.Grid.printClip(MASK, PANEL, { side: "left",   width: 30 }, 1), [30, 105, 205, -5], "left");
+deep(TE.Grid.printClip(MASK, PANEL, { side: "right",  width: 30 }, 1), [-5, 105, 170, -5], "right");
+deep(TE.Grid.printClip(MASK, PANEL, { side: "top",    width: 30 }, 1), [-5, 70, 205, -5], "top");
+deep(TE.Grid.printClip(MASK, PANEL, { side: "bottom", width: 30 }, 1), [-5, 105, 205, 30], "bottom");
+deep(TE.Grid.printClip(MASK, PANEL, { side: "left",   width: 3 }, 10), [30, 105, 205, -5], "output scale k");
+deep(MASK, [-5, 105, 205, -5], "the mask is not changed");
+
+assert(TE.Grid.oneSidedOverlap(merge(D, { overlapMode: "onesided", overlap: 20 })) === true, "one-sided overlap");
+assert(TE.Grid.oneSidedOverlap(merge(D, { overlapMode: "symmetric", overlap: 20 })) === false, "symmetric is not");
+assert(TE.Grid.oneSidedOverlap(merge(D, { overlapMode: "onesided", overlap: 0 })) === false, "nor overlap 0");
+assert(TE.Grid.unprintedWidth(merge(D, { overlapMode: "onesided", overlap: 32, overlapUnprinted: 30 })) === 30, "the part in mm");
+assert(TE.Grid.unprintedWidth(merge(D, { overlapMode: "symmetric", overlap: 32, overlapUnprinted: 30 })) === 0, "0 while symmetric");
+assert(TE.Grid.unprintedWidth(merge(D, { overlapMode: "onesided", overlap: 32, overlapUnprinted: NaN })) === 0, "0 for NaN");
+assert(TE.Config.getDefaults().overlapUnprinted === 0, "default 0: nothing changes for an old job");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

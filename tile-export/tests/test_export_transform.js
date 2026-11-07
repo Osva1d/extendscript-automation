@@ -39,6 +39,12 @@ assertClose(r.position[1], 100, 0.001, "graphic sits 100 pt above the panel");
 assertClose(r.size[0], 1000, 0.001, "graphic keeps its width");
 assertClose(r.size[1], 1000, 0.001, "graphic keeps its height");
 
+console.log("\n=== 1.3.0: the unprinted part travels with the panel ===");
+assert(r.unprinted === null, "a panel without the field: null");
+var rU = TE.Export.tileTransform({ index: 1, expanded: [100, 900, 500, 100], unprinted: { side: "left", width: 3 } }, GRAPHIC, 10);
+assert(rU.unprinted !== null && rU.unprinted.side === "left" && rU.unprinted.width === 3, "passed on in document points");
+assertClose(rU.k, 10, 0.001, "beside the scale that converts it");
+
 console.log("\n=== output 1:1 from a 1:10 document (k = 10) ===");
 var r10 = TE.Export.tileTransform(TILE, GRAPHIC, 10);
 assertClose(r10.artboard[2], 4000, 0.001, "artboard scales up tenfold");

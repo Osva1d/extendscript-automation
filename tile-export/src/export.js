@@ -40,7 +40,10 @@ TE.Export = {
             // a source point X maps to (X - tileOrigin) * k in the temporary
             // document, which is the same rule the graphic follows.
             tileOrigin: [t[0], t[1]],
-            k: k
+            k: k,
+            // The panel's unprinted part, in document points: printClip()
+            // scales it by k (1.3.0).
+            unprinted: tile.unprinted || null
         };
     },
 
