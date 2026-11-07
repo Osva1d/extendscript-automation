@@ -592,6 +592,16 @@ ZSM.UI = {
         }
 
         /**
+         * A mapping row's layer name without surrounding spaces: "Thru-cut " would
+         * make a layer that no cutter's method list knows, and looks the same.
+         * @param {Object} row - A row of layRows.
+         * @returns {string}
+         */
+        function rowLayerName(row) {
+            return String(row.etLayer.text || "").replace(/^\s+|\s+$/g, "");
+        }
+
+        /**
          * Normalise a colour read from a dropdown back to the canonical
          * "[Registration]" token. selectDDL's registration alias selects the
          * document's LOCALIZED registration swatch (e.g. CS "[Registrace]"), so
@@ -623,7 +633,7 @@ ZSM.UI = {
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
-                layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
+                layers.push({ name: rowLayerName(layRows[i]), color: cSel });
             }
             var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
@@ -1000,7 +1010,7 @@ ZSM.UI = {
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var colorSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
-                layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
+                layers.push({ name: rowLayerName(layRows[i]), color: colorSel });
             }
 
             // Every row carries a colour (defaults to [Registration]); a row with

@@ -97,6 +97,7 @@ ZSM.L = {
 ZSM.Config = {
     layerRegmarks: "Regmarks", layerGraphics: "Graphics", layerTrim: "Trim", PRESET_KEY_DEFAULT: "[Default]",
     markSpot: { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
+    cutMethods: ["Cut", "Thru-cut", "Kiss-cut", "CutContour"],
     summaXCenter: 10, summaYVisual: 10, redLineWidth: 1, debug: false,
     zundSize: 5, summaSize: 3,
     ui: { title: "Zünd & Summa Marks v26.4.0" },
@@ -1825,6 +1826,34 @@ console.log("\n=== TEST 25 (spec 1.2.0 §17): no cut colour in the status line =
         ZSM.L = origL;
     }
 })();
+
+
+// =====================================================
+// TEST (audit L13): a layer name goes out without its surrounding spaces
+// =====================================================
+// "Thru-cut " made a layer the cutter's method list would not know, invisibly.
+console.log("\n=== TEST L13: mapping names are trimmed on Generate and on Save ===");
+// A named preset: show() rebuilds [Default] from the code on every open.
+function namedPresetL13(layers) {
+    var d = ZSM.Config.getDefaults();
+    d.layers = layers;
+    return { activePreset: "L13", presets: { "[Default]": ZSM.Config.getDefaults(), "L13": d } };
+}
+var pL13 = namedPresetL13([{ name: "  Thru-cut ", color: "Cut" }, { name: "\tCut\t", color: "Kiss-cut" }]);
+runDialogs(pL13, [function (win) { clickGenerate(win); }]);
+var lastL13 = pL13.presets["[Last Settings]"].layers;
+assertEq(lastL13[0].name, "Thru-cut", "L13: the run gets the name without its spaces");
+assertEq(lastL13[1].name, "Cut", "L13: tabs go too");
+
+// A trailing space alone changes nothing worth saving.
+var saveEnabledL13 = null;
+runDialogs(namedPresetL13([{ name: "Thru-cut", color: "Cut" }]), [function (win) {
+    var fieldL13 = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+    fieldL13.text = "Thru-cut  ";
+    fieldL13.onChanging();
+    saveEnabledL13 = win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).enabled;
+}]);
+assertEq(saveEnabledL13, false, "L13: a trailing space alone leaves Save grey");
 
 
 // =====================================================

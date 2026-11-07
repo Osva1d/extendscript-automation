@@ -31,6 +31,12 @@ ZSM.Config = {
     // the operator picked: white ink on dark media. The RIP reads the name; the
     // alternate is what the screen shows (user, 2026-11-05).
     markSpot:      { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
+    // Cutting and tool methods, most common first: what the mapping suggests as
+    // layer names, and the spot names a run reports when a path in one has no
+    // mapping row (technical terms, not localized).
+    cutMethods:    ["Cut", "Thru-cut", "Kiss-cut", "CutContour",
+                    "Score", "Crease", "Perforation", "V-cut", "Bevel-cut",
+                    "Route", "Engrave", "Draw", "Punch", "Drill"],
     PRESET_KEY_DEFAULT: "[Default]",
 
     ui: {
