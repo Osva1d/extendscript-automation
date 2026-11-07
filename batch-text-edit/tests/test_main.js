@@ -140,8 +140,13 @@ h.eq(sum.details.join("|"), "⚠ Přeskočen 1 zamčený nebo skrytý text.|⚠ 
 shown = BTE.Summary.visiblePairs(sum.pairs);
 h.eq(shown.length, 4, "summary: the skipped row shows at 3");
 
+// a variable left after the last step goes to the details
+r = result([["{n}", "x"], ["1", "x"]], [R(V("x"), { replace: "y" })]);
+sum = U.runSummary(r, []);
+h.eq(sum.details.join("|"), "⚠ 1 prvek má po posledním kroku dál {n}.", "summary: the leftover variable");
+
 // warnings of the run go to the details
-r = result(sheet(5), [N(V("{n}"), { to: "8" })]);
+r = result(sheet(5), [N(V("{n}"), { to: "8" }), R(V("{kód}"), { replace: "ABC" }), R(V("{série}"), { replace: "2026" })]);
 sum = U.runSummary(r, []);
 h.eq(sum.details.join("|"), "⚠ Krok 1: Poslední číslo vyjde 5, v poli Do je 8.|⚠ Krok 1: Chybí 3 prvky.", "summary: the Do warning");
 h.eq(sum.note, "", "summary: a warning is no note");
@@ -162,7 +167,7 @@ sum2 = U.runSummary(r2, [{ el: 0, tx: 1, expected: "001", actual: "{n}" }]);
 h.eq(sum2.pairs[0].value + "/" + sum2.pairs[1].value, "3/8", "summary: three elements still changed, eight texts of nine");
 h.eq(sum.note, "Zkontrolujte dokument, případně běh vraťte (Cmd+Z).", "summary: the note says what to do");
 h.eq(sum.details[0], "✗ Prvek 2, text 2: náhled říkal „002“, v dokumentu je „2“.", "summary: the mismatch comes first");
-h.eq(sum.details.length, 3, "summary: then the two warnings");
+h.eq(sum.details.length, 5, "summary: then the two warnings and the two leftover variables");
 
 // the shared window reads what the model gives: a pair with a count and a note never says "all fine"
 h.eq(typeof sum.allOk, "string", "summary: allOk is given (shown only when there is no note and no detail)");
