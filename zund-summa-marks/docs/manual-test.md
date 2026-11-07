@@ -233,6 +233,33 @@ a přesouvá cesty čistě v řezové barvě.
 
 ---
 
+## 6a. Nové v 1.3.0 — Spot 1 a vrstvy
+
+> Logiku hlídají Node testy (`tests/test_draw_render.js`, TEST 1.3.0-A až I). Tady
+> je, co mock nevidí. Selhání po objektech (L3) ručně vyvolat neumíme: testuje ho
+> jen Node.
+
+- [ ] **6a.1 Spot 1.** Dokument bez Spot 1 → Barva značek nabízí Spot 1 hned za
+  registrační. Generovat → značky jsou v přímé barvě Spot 1, zástupná Cyan, tint
+  100 %, a **žádné** upozornění na náhradní barvu. Druhý běh druhý Spot 1 nepřidá.
+  Dokument s vlastním Spot 1 ho nechá beze změny.
+- [ ] **6a.2 Řez bez řádku (L1).** Cesty v CutContour a Kiss-cut, řádek jen pro
+  CutContour → upozornění „Barva „Kiss-cut“ nemá řádek v mapování (objektů: N)“,
+  Kiss-cut zůstal v grafice. Přidejte řádek, Generovat → přesun proběhne a
+  upozornění zmizí.
+- [ ] **6a.3 Dvě barvy do jedné vrstvy (L2).** `Cut ← CutContour`, `Cut ← Kiss-cut`
+  → obě barvy v jedné vrstvě Cut, žádná druhá Cut a žádné upozornění.
+- [ ] **6a.4 Aktivní vrstva (L4).** Po běhu ZUND i SUMMA s ořezovými linkami je
+  v panelu Vrstvy zvýrazněná vrstva s grafikou. Nakreslete obdélník → je ve
+  Graphics a další běh ho obejme. Cmd+Z: běh ZUND s mapováním má dál dva kroky.
+- [ ] **6a.5 Závorka v názvu (L5).** Vrstva `(podklad)` se dvěma objekty, druhý
+  přesahuje → značky obejmou oba. Maskovaná skupina se dál měří podle masky.
+- [ ] **6a.6 Názvy (L13).** Řádek `Cut ` s mezerou → vznikne vrstva `Cut`. Řádek
+  `regmarks` → chyba o vyhrazené vrstvě a dokument se nezmění.
+- [ ] **6a.7 U stroje.** Bílé značky ve Spot 1 na tmavém materiálu: kamera je najde.
+
+---
+
 ## 7. Regresní přehled
 
 Očekávané hodnoty dnešní verze. Rozměry v mm, ostatní nastavení výchozí.

@@ -57,7 +57,7 @@ src/
 **`src/lib/` vs `src/` boundary:**
 - `lib/` = pure utility moduly bez DOM přístupu. Testovatelné s `eval()` + Node.js mocks (žádný Illustrator).
 - `src/` root = doménové moduly. `draw.js` a `ui.js` jsou DOM/ScriptUI vrstvy. `config.js` jen konstanty + `getDefaults()`. `locale.js` strings. `main.js` orchestrace. Čistá matematika (`ZSM.Core`) je ve sdíleném `../shared/lib/cut_marks.js` — testovatelná offline a sdílená s tile-exportem.
-- `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`) protože jsou sdílené mezi bounds výpočtem a render-side `movePaths()`/`beginSession()`. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
+- `_isArtifactLayer` a `_isInsideClippedGroup` jsou v `lib/bounds.js` (`ZSM.Bounds.isArtifactLayer`/`isInsideClippedGroup`), ale používá je render-side `movePaths()`/`beginSession()`; měření od 1.3.0 podle jména vrstvy nerozhoduje. Render kód v `draw.js` je volá přes `ZSM.Bounds.*` přímo, nikoli přes `this._helper`.
 
 **Invariant — efektivní měřítko (`ZSM.Utils.getEffectiveSF(s)`):**
 Jediný zdroj pravdy pro převod „uživatelské reálné mm ↔ doc-space pt". Skládá Adobe Large Canvas `scaleFactor` × měřítko kresby `s.scaleN` (1–100, desetinné; viz invariant níž). **Každé** místo, které převádí rozměry (pozice i velikosti značek), MUSÍ jít přes tento helper — `ZSM.Core` (matematika v `cut_marks.js`) i `draw.js` (render). Historicky draw.js použil syrový `getSF()` bez `scaleN`, takže se v 1:10 workflow škálovaly pozice, ale ne velikosti značek (oprava v26.4.0). Regrese hlídána v `tests/test_draw_render.js` (TEST 16).

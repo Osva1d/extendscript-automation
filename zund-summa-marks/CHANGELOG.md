@@ -6,8 +6,10 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 
 ## [1.3.0] — 2026-11-05
 
-Bílé značky na tmavý materiál, užší nabídka vrstev v mapování a žádná druhá
-vrstva Graphics.
+Bílé značky na tmavý materiál, užší nabídka vrstev v mapování, žádná druhá
+vrstva Graphics a opravy tichých chyb z
+[auditu vrstev](../docs/reports/2026-11-06-audit-vrstev-zund-summa-marks.md)
+(kódy L v závorkách).
 
 ### Přidáno
 
@@ -16,17 +18,41 @@ vrstva Graphics.
   barvou Cyan; zamítnutý běh (kolize značek, příliš velký artboard) dokument
   nezmění ani tady. Existující Spot 1 zůstane, jak je. Přímá barva jiného jména
   se dál nezakládá.
+- **Upozornění na řezovou barvu bez řádku (L1).** Když v dokumentu leží cesta
+  v barvě řezné metody (Thru-cut, Kiss-cut, CutContour a další) a tato barva nemá
+  řádek v mapování, běh skončí upozorněním s barvou a počtem objektů. Dřív cesta
+  tiše zůstala v tiskové vrstvě. Cesty, které už leží v řezové vrstvě, se
+  nehlásí; režim Pouze značky mlčí.
+- **Upozornění na nečitelné objekty (L3).** Objekt, který skript nedokáže přečíst,
+  zůstane na místě a běh ho spočítá a ohlásí.
 
 ### Změněno
 
 - **Nabídka vrstev v mapování** má jen řezné a nástrojové názvy Zündu: ubyly
   White, Varnish a Register. Vrstva tohoto jména, kterou dokument má, se nabídne
   dál a název jde dopsat ručně.
+- **Dvě barvy do jedné vrstvy (L2).** Dva řádky se stejným názvem vrstvy
+  (`Cut ← Thru-cut`, `Cut ← CutContour`) teď přesunou obě barvy do té vrstvy.
+  Dřív se druhý řádek tiše zahodil i s řezem.
+- **Aktivní vrstva po běhu (L4).** Běh skončí ve vrstvě s grafikou. Dřív zůstala
+  po běhu ZUND aktivní podvrstva značek a co jste do ní pak nakreslili nebo
+  vložili, další běh bez hlášky smazal. Když do podvrstvy značek přepnete ručně,
+  další běh její obsah smaže dál.
+- **Vrstvy se závorkou v názvu (L5).** Vrstva, jejíž jméno začíná `(` nebo `<`, se
+  měří jako každá jiná. Dřív se v ní měřil jen první objekt, takže značky nemusely
+  grafiku obejmout. Pokud taková vrstva má opravdu masku vrstvy, značky teď
+  obejmou i obsah skrytý maskou: spotřebuje se víc materiálu, ale značky neleží
+  přes grafiku. Maskované skupiny se měří podle masky jako dosud.
+- **Názvy v mapování (L13).** Mezery kolem názvu vrstvy se při odeslání dialogu
+  odstraní, takže `Thru-cut ` vytvoří vrstvu `Thru-cut`. Vrstvy Regmarks a Trim
+  jsou v mapování odmítnuté v jakékoli velikosti písmen.
 
 ### Opraveno
 
 - **Druhá vrstva Graphics.** Když dokument vrstvu Graphics už měl jinde než
   dole, běh pojmenoval Graphics i spodní vrstvu. Teď ji nechá pod jejím jménem.
+- **Jeden nečitelný objekt zastavil přesun (L3).** Všechny cesty za ním tiše
+  zůstaly na místě. Teď se přesunou a selhání celého přesunu běh ohlásí.
 
 ## [1.2.0] — 2026-10-28
 
