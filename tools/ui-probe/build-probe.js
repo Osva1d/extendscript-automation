@@ -17,8 +17,10 @@
 //              tools/ai-eval.sh -t 120 "<printed path>"
 //              node tools/ui-probe/build-probe.js --report <tool>
 //              Check tools/ai-eval.sh -e 'app.documents.length' on its own
-//              first, and read the answer. <tool> is a folder name, or
-//              "specimen" for shared/tests/probes/specimen_ui.jsx.
+//              first, and read the answer. <tool> is a folder name,
+//              "specimen" for shared/tests/probes/specimen_ui.jsx, or
+//              "ui-kit" for shared/tests/probes/ui_kit_dialog.jsx behind
+//              the shared modules it is built from.
 // ------------------------------------------------------------------------
 "use strict";
 
@@ -33,7 +35,8 @@ const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYPgPAAE
 // these hold the patched code until the tool's next real run replaces them.
 const NAMESPACE = {
     "grommet-marks": "GM", "zund-summa-marks": "ZSM", "batch-relink-export": "BRE",
-    "tile-export": "TE", "batch-text-edit": "BTE", specimen: "UI_SPECIMEN"
+    "tile-export": "TE", "batch-text-edit": "BTE", specimen: "UI_SPECIMEN",
+    "ui-kit": "UI_KIT_PROBE"
 };
 
 function fail(msg) {
@@ -54,10 +57,21 @@ function report(tool) {
     });
 }
 
+// The kit's dialog behind the shared modules it needs, as a tool's build
+// would cat them.
+function kitDist() {
+    const parts = ["shared/lib/numbers.js", "shared/lib/field_paint.js", "shared/lib/ui_kit.js",
+        "shared/tests/probes/ui_kit_dialog.jsx"];
+    const file = path.join(OUT, "ui-kit.dist.jsx");
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(file, parts.map(function (p) { return fs.readFileSync(path.join(ROOT, p), "utf8"); }).join("\n"));
+    return file;
+}
+
 function build(tool, distArg) {
     const dist = distArg || (tool === "specimen"
         ? path.join(ROOT, "shared/tests/probes/specimen_ui.jsx")
-        : path.join(ROOT, tool, "dist", "illustrator-" + tool + ".jsx"));
+        : (tool === "ui-kit" ? kitDist() : path.join(ROOT, tool, "dist", "illustrator-" + tool + ".jsx")));
     if (!fs.existsSync(dist)) { fail("no build at " + dist); }
     const scenario = path.join(__dirname, "scenarios", tool + ".js");
     if (!fs.existsSync(scenario)) { fail("no scenario at " + scenario); }

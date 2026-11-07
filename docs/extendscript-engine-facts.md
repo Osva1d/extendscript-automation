@@ -973,6 +973,17 @@ nedostal: seznam 236 px, zhruba 340 px řádku prázdných; `maximumSize` seznam
 nemají, tedy patří do skupiny, ne pod strop. Jinde v témže dialogu (cesta
 a Vybrat…) volné místo nebylo, tam se to neukáže.
 
+V řádku cesty se to ukáže, jakmile je panel širší než řádek (sonda UI kitu
+2026-11-07, panel 504 a 594 px): popisek zamčený na 110 px, pole 26 znaků
+s `fill`, `Vybrat…` se stropem 90 px. Tlačítko dostane podíl volného místa,
+strop ho utne a zbytek se ztratí: řádek skončil o 2 px (panel 504) až 14 px
+(panel 594) dřív než řádek s polem a seznamem, v dialogu sondy o 8 px.
+`preferredSize` 90 px k tomu ztratí další 2 px, zamčení na 90 px vezme poli
+všechno nad 160 px. Stačí samotné tlačítko s `alignment = ["right",
+"center"]`, bez vlastní skupiny: zůstane nativních 80 px, pole vezme celé volné
+místo a řádek končí na pixel stejně jako řádek s polem. Zamčený popisek
+podíl neztrácí, řádek textu končí přesně.
+
 Rozbalovací seznam navíc roste s nejdelší položkou: název předvolby o 30
 znacích rozšířil dialog tile-export ze 1178 na 1315 px, dokud byl seznam
 v úzkém sloupci.

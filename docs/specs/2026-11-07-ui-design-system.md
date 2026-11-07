@@ -111,9 +111,9 @@ a přepínač 19, text 15.
 | cesta | 26 znaků, 224 px [M], bere volné místo řádku | [R: TE] |
 | textové pole | 24 znaků | [R: BTE] |
 | běžné tlačítko | nativní, nejméně 80 px [M] | [R] |
-| `Vybrat…` | nativní, nejvýš 90 px | [R: BRE, TE] |
+| `Vybrat…` | nativní, zarovnané vpravo, nejvýš 90 px; řádek končí na hraně textového pole | [M: 80 px, sonda kitu 2026-11-07; BRE a TE dnes končí o 2 až 14 px dřív] |
 | znakové tlačítko | 30 px | [R] |
-| osa popisků | nejdelší popisek bloku, změřený a zamčený | [R: BTE `axis`] |
+| osa popisků | nejdelší popisek bloku, změřený a zamčený; panely pod sebou v jednom sloupci sdílejí jednu osu | [R: BTE `axis`]; jedna osa [N]: dvě osy po panelech (110 a 105 px) posunuly pole o 5 px [M: sonda kitu] |
 
 ### 2.6 Oddělovače a značky
 
@@ -155,13 +155,14 @@ odvozená a změří se po změně.
 | nástroj | dnes | změna | cíl |
 |---|---|---|---|
 | GM | 465 × **678 až 804**, primární y 631 až 757 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne | jedna výška, nejvýš 804 |
-| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, **nejvýš 5 vrstev** (`MAX_LAYERS` z 8 na 5, rozhodnuto 2026-11-07), 5 rezervovaných řádků, žádná přestavba | **851 × asi 545** ve všech stavech [odhad ze snímku; 851 × 634 při 8 řádcích M] |
+| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, **nejvýš 5 vrstev** (`MAX_LAYERS` z 8 na 5, rozhodnuto 2026-11-07), 5 rezervovaných řádků, žádná přestavba | **851 × 545** ve všech stavech [M: maketa 2026-11-07; 851 × 634 při 8 řádcích M] |
 
 Výšku makety s 8 řádky určoval pravý sloupec: řádek vrstvy má 37 px (tlačítko `−` 27
 a mezera 10) a pravý sloupec byl o 89 px vyšší než levý. Při 5 řádcích je o 22 px nižší,
 výšku tedy určuje levý sloupec a oba končí skoro stejně. Šířka zůstane, drží ji osa popisků
-170 a přepínače zdroje. Maketa ve specimenu 1.0.1 má 5 řádků; změří se, až Illustrator
-nebude mít otevřený dokument.
+170 a přepínače zdroje. Maketa ve specimenu 1.0.1 s 5 řádky naměřena 2026-11-07: 851 × 545
+ve všech stavech, levý sloupec končí na 458 px, pravý na 436 px, primární tlačítko stojí
+na y 503 [M].
 | BRE | 460 × 478, stálé | přibude stavový řádek | asi 465 × 500 |
 | TE | 1022 × 836, stálé | patička do řady tlačítek, `Po dokončení…` do panelu Soubory | výška asi stejná |
 | BTE | 1008 × 768, stálé | stavový řádek a patička podle G7 | výška asi stejná |
@@ -182,7 +183,7 @@ Všechny jsou nativní ScriptUI. Sdílená implementace je návrh do §7.
 | **Znakové tlačítko** | `button`, šířka 30, výška nativní | tip je povinný | jen vedle dalšího prvku v řádku |
 | **Číselné pole** | popisek na ose, pole 7 znaků, jednotka za polem mezerou 5 | `Numbers.parse/format`, živá kontrola, červený text | jednotka nikdy v popisku |
 | **Textové pole** | 24 znaků nebo výplň řádku | živá kontrola, kde má smysl | |
-| **Řádek cesty** | popisek, pole 26 znaků s výplní, `Vybrat…` | kontrola při otevřeném dialogu [R: TE] | stejný v BRE i TE |
+| **Řádek cesty** | popisek, pole 26 znaků s výplní, `Vybrat…` zarovnané vpravo [M] | kontrola při otevřeném dialogu [R: TE] | stejný v BRE i TE |
 | **Zaškrtávátko** | text je přímo na něm, začíná na ose polí | klik na text přepíná | žádný popisek s holým zaškrtávátkem |
 | **Přepínače** | popisek na ose, do tří krátkých voleb v řádku, jinak sloupec [R: TE] | změna nikdy nehne rozvržením | radio je i volba režimu |
 | **Seznam** | `dropdownlist`, výplň řádku nebo změřená šířka | chybějící hodnota `název  (chybí)` [R: ZSM] | |
@@ -325,17 +326,26 @@ popiscích, potvrdila obsluha 2026-11-07.
 `shared/lib/ui_kit.js`, factory `buildUiKit(NS)`, jako ostatní moduly v `shared/lib`.
 Splňuje kritérium z `docs/decisions.md`: panel předvoleb je dnes čtyřikrát a rozešel se.
 
-| funkce | nahrazuje |
-|---|---|
-| `presetPanel(parent, handlers)` | `pPreset`, `setPanel` v GM, ZSM, TE, BTE |
-| `footerRow(window, buttons)` | čtyři podoby patičky a řady tlačítek |
-| `statusLine(parent)`, `setStatus(line, kind, text)` | `stReason`, `placeReason`, `stStatus` |
-| `numberRow`, `pathRow`, `checkRow`, `radioRow` | `addRow`, `_addFileRow`, `addRadioRow` |
-| `lockW`, `axis` | tři kopie `lockW` |
-| `TIGHT` | `LAYOUT`, `M.SP_*` |
+| funkce | nahrazuje | stav |
+|---|---|---|
+| `footerRow(window, version, buttons)` | čtyři podoby patičky a řady tlačítek | krok 1 |
+| `statusLine(parent, text)`, `setStatus(line, kind, text)` | `stReason`, `placeReason`, `stStatus` | krok 1 |
+| `numberRow`, `textRow`, `pathRow`, `listRow`, `radioRow`, `checkRow` | `addRow`, `_addFileRow`, `addRadioRow` a řádky psané ručně | krok 1 |
+| `selectItem`, `listValue` | `selectItem` v TE, ruční `(chybí)` v BRE a ZSM | krok 1 |
+| `existingCount`, `confirmOverwrite` | nic, dotaz před přepisem chybí (U5) | krok 1 |
+| `lockW`, `axis` | tři kopie `lockW`, `axis` v BTE | krok 1 |
+| `TIGHT` a šířky z §2.5 | `LAYOUT`, `M.SP_*`, `M.BROWSE_*` | krok 1 |
+| `presetPanel(parent, handlers)` | `pPreset`, `setPanel` v GM, ZSM, TE, BTE | krok 3, s GM |
 
-Barvy zůstávají ve `FieldPaint`, který dostane sady podle jasu. Rozsah a pořadí zavádění
-upřesní plán fáze 3.
+Řádky vracejí `{row, label, …}`; popisky bloku srovná `axis` až po sestavení, jako v BTE.
+Texty dodává nástroj, kit žádné nemá kromě patičky. Mezery a výšky kit nezapisuje, jen
+`TIGHT` mezi polem a jednotkou a šířky z §2.5; hlídá to test.
+
+Panel předvoleb přijde s prvním uživatelem, GM (krok 3). Čtyři nástroje ukládají předvolby
+čtyřmi způsoby a rozhraní navržené bez uživatele by se v kroku 3 psalo znovu.
+
+Barvy zůstávají ve `FieldPaint`: nová funkce `status(ctrl, kind)` bere sadu podle jasu
+(`PALETTES`), kde jas přečíst nejde, dnešní `COLORS`. `field()` a `text()` se nemění.
 
 ---
 
@@ -386,7 +396,7 @@ potvrdí `Ano` a jestli světle červená na tmavém UI působí jako chyba.
 
 ---
 
-## 10. Plán fáze 3 (návrh ke schválení)
+## 10. Plán fáze 3 (schváleno 2026-11-07)
 
 Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
 
@@ -402,9 +412,9 @@ Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
 | krok | větev | co | řeší | proč v tomhle pořadí |
 |---|---|---|---|---|
 | 0 | `docs/family-ux-audit` do main | audit, tento návrh, `tools/ui-probe`, specimen | | vlákna ZSM a TE mají návrh číst ze svého worktree |
-| 1 | `feat/shared-ui-kit` | `shared/lib/ui_kit.js` podle §7; sady barev podle jasu ve `FieldPaint` jako nová funkce, dnešní `COLORS` zůstane, dokud ho nástroje používají; společný dotaz před přepisem; Node testy; měření řádků v Illustratoru | U29, U14 | bez konzumenta se v žádném nástroji nic nezmění, jako sdílené moduly 2026-10-17 |
+| 1 | `feat/shared-ui-kit` | `shared/lib/ui_kit.js` podle §7 bez panelu předvoleb; sady barev podle jasu ve `FieldPaint` jako nová funkce, dnešní `COLORS` zůstane, dokud ho nástroje používají; společný dotaz před přepisem; Node testy; měření řádků v Illustratoru | U29, U14 | bez konzumenta se v žádném nástroji nic nezmění, jako sdílené moduly 2026-10-17 |
 | 2 | BRE 1.3.0 | dotaz před přepisem; živá kontrola místo série `alert`; stavový řádek a šedé Spustit; `Cílová složka:`, `Vzor pojmenování:`, `Kontrola souborů`; pamatovat Přeskočit; patička a tlačítka v jedné řadě | U5, U7, U13, U17, U23, U24 | ztráta dat je nejhorší nález; nejmenší okno bez předvoleb ověří první polovinu kitu (patička, stav, řádek cesty) |
-| 3 | GM 1.5.0 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne; stav nad tlačítky; předvolby a číselné řádky z kitu; co skript našel běžným textem; tipy předvoleb | U1, U6, U15, U26 | denně používaný nástroj s poskakujícím Generovat; ověří druhou polovinu kitu (předvolby, číselné řádky, `stack`) |
+| 3 | GM 1.5.0 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne; stav nad tlačítky; `presetPanel` do kitu a z něj předvolby, číselné řádky z kitu; co skript našel běžným textem; tipy předvoleb | U1, U6, U15, U26 | denně používaný nástroj s poskakujícím Generovat; ověří druhou polovinu kitu (předvolby, číselné řádky, `stack`) |
 | 4 | ZSM 1.4.0 | dva sloupce, nejvýš 5 vrstev, okno bez přestavby, bez `Výchozí`, české termíny, výchozí fokus | U2, U3, U16, U18, U27; U12, pokud ho vlákno ZSM neopraví dřív | největší přestavba přijde, až je kit ověřený na dvou nástrojích |
 | 5 | TE 1.4.0 | jen napojení: předvolby, stav a patička z kitu, barvy; dotaz před přepisem; `Náhled`, `Způsob ořezu:`; `Po dokončení…` do panelu Soubory | U5, U13, U17, U24 | rozvržení TE je stálé, mění se málo |
 | 6 | BTE 1.2.0 | jen napojení: předvolby, stav nad tlačítky, patička, barvy; ochrana Enteru zůstává | U6, U14 | totéž |
