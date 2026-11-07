@@ -417,6 +417,77 @@ jinak. Hodnotu je tedy nutné hledat přes URI jmenného prostoru, ne přes pref
   běhu ale skončilo ve `Vrstva 1` (ruční test tile-export 1.10): pro práci
   rukou platí `doc.activeLayer`, skript bez kontejneru kreslí jinam.
 
+Doměřeno 2026-11-07 (AI 30.8.2): `doc.activeLayer =` projde i na skrytou a zamčenou
+vrstvu, bez výjimky; skrytí nebo zamčení aktivní vrstvy ji aktivní nechá.
+
+### Názvy vrstev a `getByName` (naměřeno 2026-11-07, AI 30.8.2)
+
+- **`getByName` nerozlišuje velikost písmen**, u vrstev, přímých barev i vzorníků:
+  `layers.getByName("cut")` najde `Cut`, `"ZÜND"` najde `Zünd`. Diakritiku rozlišuje
+  (`"Zund"` hodí výjimku) a mezery také (`"Cut "` i `" Cut"` hodí výjimku).
+- Vrstvy `cut` a `Cut` můžou existovat vedle sebe. `getByName` pak vrátí horní z nich,
+  i když se druhá shoduje přesně: s `cut` nahoře vrátí `getByName("Cut")` vrstvu `cut`.
+- Mezery **na konci** názvu Illustrator zahodí (`"Trail  "` se přečte jako `Trail`),
+  mezeru na začátku a tabulátory nechá. Spolu s předchozím bodem: řádek `Cut ` v
+  dokumentu s vrstvou Cut hledání nenajde a založí druhou `Cut`.
+- `"ZÜND".toLowerCase() === "zünd"` platí.
+- Kód, který poznává vlastní vrstvu přesným `===`, se proto s `getByName` rozejde:
+  zund-summa-marks kreslil do vrstvy `regmarks`, měřil ji jako grafiku a artboard rostl
+  o 20 mm každým během. Porovnání je `ZSM.Utils.sameName`.
+
+### Přímá barva z `doc.spots.add()` (naměřeno 2026-11-07, AI 30.8.2)
+
+- Nová barva je hned i vzorník: `swatches.getByName` ji ve stejném skriptu najde,
+  `swatch.color` je `SpotColor` s tintem 100 a cesta s touto výplní ji čte zpět.
+- Bez pojmenování se jmenuje `Přímá barva` (česky).
+- Zástupná CMYK 100/0/0/0 se v CMYK dokumentu přečte stejně, v RGB dokumentu jako
+  `RGBColor` 0/157/224.
+- Běh zund-summa-marks s mapováním, který barvu založil, vrátí příkaz menu Zpět takto:
+  1. značky, vrstvy a barva (aktivní vrstva je zase ta původní), 2. artboard,
+  3. úprava operátora. Přepnutí aktivní vrstvy tedy krok nepřidává.
+
+### Maska vrstvy ze skriptu (naměřeno 2026-11-07, AI 30.8.2)
+
+`Layer` nemá žádnou vlastnost s `clip` nebo `mask` v názvu (`reflect.properties`).
+`path.clipping = true` na volné cestě ve vrstvě projde a hned se přečte `true`, po
+`app.redraw()` ale `false` a PNG je stejné jako před ním: masku vrstvy to nevytvoří.
+Maska udělaná v panelu Vrstvy měřená není.
+
+### PDF a vrstvy (naměřeno 2026-11-07, AI 30.8.2)
+
+Uloženo přes `PDFSaveOptions`, Acrobat 7, obsah stránky čten přímo z PDF:
+
+| | `acrobatLayers = true` | `acrobatLayers = false` |
+|---|---|---|
+| vrstvy v PDF | jen nejvyšší úrovně; podvrstvy Zünd a Summa jsou v jediné Regmarks | žádné |
+| skrytá vrstva nejvyšší úrovně | **v PDF zůstane celá**, jen vypnutá (`/D /OFF`) | v PDF není |
+| skrytá podvrstva | v PDF není | v PDF není |
+
+Ořezový soubor uložený s vrstvami a se skrytou grafikou tedy grafiku pořád obsahuje.
+Jestli ji Zünd Cut Center, GoSign nebo RIP přečtou, neměřeno.
+
+### Běh nástroje bez dialogu (naměřeno 2026-11-07, AI 30.8.2)
+
+`$.global.alert = f` ani `$.global.Window = f` vestavěné nepřepíše. Funguje stínění
+lokálním jménem, se skutečným `Window` předaným zvenku, protože `var Window` uvnitř
+funkce se vyzvedne a `Window` by tam bylo `undefined`:
+
+```js
+var __RW = Window;
+(function (RealWindow) {
+    var alert = function (m) { /* zapsat */ };
+    var Window = function (t, title, b, p) {
+        var w = new RealWindow(t, title, b, p);
+        w.close = function () {};
+        w.show = function () { /* najít tlačítko ok a zavolat onClick */ return 1; };
+        return w;
+    };
+    // sem kód nástroje bez #target, s přepsaným Storage.load a Storage.save
+})(__RW);
+```
+
+Skutečné ScriptUI se tak postaví i validuje. Soubor s nastavením zůstal nedotčený (SHA).
+
 ### Pathfinder z ExtendScriptu
 
 - Panelové příkazy `Pathfinder Crop`, `Pathfinder Intersect`,

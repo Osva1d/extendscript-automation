@@ -74,7 +74,7 @@ Tlačítkem **+ Přidat** lze přidat až 8 vrstev.
 
 Skript přesune všechny cesty s odpovídající přímou barvou na příslušnou vrstvu automaticky. Objekt, který má vedle řezové barvy i tiskovou výplň nebo tah (typicky podkladový tvar samolepky s řezovým tahem), nepřesune a ohlásí ho — v řezové vrstvě nad grafikou by změnil tisk. Po přesunu skript odstraní každou prázdnou viditelnou vrstvu v dokumentu (bez objektů a bez podvrstev), i zamčenou; skrytou a vrstvu z mapování nechá.
 
-Dva řádky mohou mít stejný název vrstvy: `Cut ← Thru-cut` a `Cut ← CutContour` přesunou obě barvy do vrstvy Cut. Cesta v barvě řezné metody, pro kterou řádek chybí, zůstane ve své vrstvě a běh na ni upozorní i s počtem objektů; cesty, které už leží ve vrstvě pojmenované podle řezné metody nebo ve vrstvě z mapování, nehlásí. Mezery kolem názvu vrstvy skript odstraní.
+Dva řádky mohou mít stejný název vrstvy: `Cut ← Thru-cut` a `Cut ← CutContour` přesunou obě barvy do vrstvy Cut. Cesta v barvě řezné metody, pro kterou řádek chybí, zůstane ve své vrstvě a běh na ni upozorní i s počtem objektů; cesty, které už leží ve vrstvě pojmenované podle řezné metody nebo ve vrstvě z mapování, nehlásí. Mezery kolem názvu vrstvy skript odstraní a velikost písmen nerozhoduje: řádek `cut` znamená vrstvu `Cut`, pokud ji dokument má.
 
 Běh skončí v aktivní vrstvě s grafikou (spodní viditelná vrstva mimo Regmarks, Trim a vrstvy z mapování). Podvrstvy Regmarks › Zünd a Summa patří skriptu a každý běh jejich obsah přepíše: nekreslete do nich.
 

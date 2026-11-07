@@ -44,8 +44,10 @@ vrstva Graphics a opravy tichých chyb z
   obejmou i obsah skrytý maskou: spotřebuje se víc materiálu, ale značky neleží
   přes grafiku. Maskované skupiny se měří podle masky jako dosud.
 - **Názvy v mapování (L13).** Mezery kolem názvu vrstvy se při odeslání dialogu
-  odstraní, takže `Thru-cut ` vytvoří vrstvu `Thru-cut`. Vrstvy Regmarks a Trim
-  jsou v mapování odmítnuté v jakékoli velikosti písmen.
+  odstraní. Řádek `Cut ` v dokumentu s vrstvou Cut dřív založil druhou vrstvu Cut
+  a ` Cut` vrstvu s mezerou v názvu. Vrstvy Regmarks a Trim jsou v mapování
+  odmítnuté v jakékoli velikosti písmen. Řádek `cut` znamená vrstvu `Cut`, kterou
+  dokument má, a oba řádky se chovají jako jeden název.
 
 ### Opraveno
 
@@ -53,6 +55,11 @@ vrstva Graphics a opravy tichých chyb z
   dole, běh pojmenoval Graphics i spodní vrstvu. Teď ji nechá pod jejím jménem.
 - **Jeden nečitelný objekt zastavil přesun (L3).** Všechny cesty za ním tiše
   zůstaly na místě. Teď se přesunou a selhání celého přesunu běh ohlásí.
+- **Artboard rostl s vrstvou `regmarks` (L13).** Illustrator v názvech vrstev velikost
+  písmen nerozlišuje, takže skript vrstvu `regmarks` přijal za svou a kreslil do
+  ní, ale měřil ji jako grafiku. Každý další běh artboard zvětšil (změřeno: z 374
+  na 394 mm). Skript teď své vrstvy pozná v jakékoli velikosti písmen, totéž platí
+  pro `trim`.
 
 ## [1.2.0] — 2026-10-28
 
