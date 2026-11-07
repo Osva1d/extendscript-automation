@@ -19,7 +19,8 @@ TE.Check = {
      * @param {Object} tile - {index, clean, expanded} in document points.
      * @param {Object} s - Settings.
      * @param {number} sf - Large Canvas factor of the working document.
-     * @returns {Object} {ratio, clean, panel, mask, cut, page, geo}; cut and
+     * @returns {Object} {ratio, clean, panel, mask, clip, cut, page, geo};
+     *          clip is the mask short of an unprinted part (1.3.0); cut and
      *          geo only in Zünd mode, page is the PDF page the export writes.
      */
     geometry: function (tile, s, sf) {
@@ -33,6 +34,9 @@ TE.Check = {
             g.geo = TE.Core.calculateAll(s, zl.mask, ratio);
             if (g.geo && g.geo.ab) { g.page = g.geo.ab; }
         }
+        // What the artwork is clipped to: the mask, short of an unprinted
+        // part (1.3.0). The page, cut and marks keep the full mask.
+        g.clip = TE.Grid.printClip(g.mask, e, tile.unprinted, 1);
         return g;
     },
 
@@ -45,7 +49,9 @@ TE.Check = {
      */
     shiftTile: function (tile, dx, dy) {
         function sh(r) { return [r[0] + dx, r[1] + dy, r[2] + dx, r[3] + dy]; }
-        return { index: tile.index, clean: sh(tile.clean), expanded: sh(tile.expanded) };
+        // The strip is a side and a width, not a place: it moves as it is.
+        return { index: tile.index, clean: sh(tile.clean), expanded: sh(tile.expanded),
+                 unprinted: tile.unprinted || null };
     },
 
     /**
@@ -301,7 +307,7 @@ TE.Check = {
         art.locked = false;
         art.hidden = false;
         art.translate(move[0], move[1]);
-        var mk = g.mask;
+        var mk = g.clip;
         var m = layG.pathItems.rectangle(mk[1], mk[0], mk[2] - mk[0], mk[1] - mk[3]);
         m.filled = true;
         m.stroked = false;

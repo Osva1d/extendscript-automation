@@ -338,18 +338,33 @@ TE.Export = {
         var art = pi;
         if (s.exportMode === "raster") { art = this.rasterizeArt(tmp, pi, s); }
 
-        // 4. The mask. A plain path, so the DOM can clip — a compound path
-        //    could not (measured; the shaped mask will need makeMask).
-        var m = layPrint.pathItems.rectangle(zl.mask[1], zl.mask[0],
-            zl.mask[2] - zl.mask[0], zl.mask[1] - zl.mask[3]);
+        // 4. The mask. The marks, the cut and the page above keep the full
+        //    mask; only the artwork stops short where the panel carries an
+        //    unprinted part (1.3.0) — a shorter mask would have moved the
+        //    marks into the weld.
+        this.clipArt(layPrint, art, TE.Grid.printClip(zl.mask, tf.artboard, tf.unprinted, tf.k));
+
+        return { cutPaths: cutPaths, layPrint: layPrint, layCut: layCut };
+    },
+
+    /**
+     * Clips the artwork to a rectangle. A plain path, so the DOM can clip —
+     * a compound path could not (measured; the shaped mask will need
+     * makeMask).
+     * @param {Layer} layer - Layer that gets the clipping group.
+     * @param {PageItem} art - The placed or rasterised artwork.
+     * @param {Array} rect - [l, t, r, b] in the temporary document.
+     * @returns {GroupItem} The clipping group.
+     */
+    clipArt: function (layer, art, rect) {
+        var m = layer.pathItems.rectangle(rect[1], rect[0], rect[2] - rect[0], rect[1] - rect[3]);
         m.filled = true;
         m.stroked = false;
-        var g = layPrint.groupItems.add();
+        var g = layer.groupItems.add();
         art.move(g, ElementPlacement.PLACEATEND);
         m.move(g, ElementPlacement.PLACEATBEGINNING);
         g.clipped = true;
-
-        return { cutPaths: cutPaths, layPrint: layPrint, layCut: layCut };
+        return g;
     },
 
     /**
@@ -452,6 +467,9 @@ TE.Export = {
             // the Zünd cut layer (N31). Reopened in Illustrator the layers are
             // there only in an editable PDF; main.js decides which those are.
             tmp.layers[0].name = TE.Config.layerGraphics;
+            // Held now: layers.add() below puts the line's layer at index 0
+            // (measured).
+            var layG = tmp.layers[0];
             if (s.drawLine) {
                 var layLine = tmp.layers.add();
                 layLine.name = s.lineSpot || TE.Config.layerLines;
@@ -460,10 +478,17 @@ TE.Export = {
                 TE.Draw.drawTileLine(tmp, tf.artboard, s, lineScale, layLine);
             }
 
+            var art = pi;
             if (s.exportMode === "raster") {
                 // Only the GRAPHIC is rasterised; the trim line stays vector
                 // on top (N19). See rasterizeArt().
-                this.rasterizeArt(tmp, pi, s);
+                art = this.rasterizeArt(tmp, pi, s);
+            }
+            // A panel that carries an unprinted part gets a mask that stops
+            // the artwork short of it (1.3.0); any other panel stays as the
+            // page alone crops it, object for object as in 1.2.0.
+            if (tf.unprinted) {
+                this.clipArt(layG, art, TE.Grid.printClip(tf.artboard, tf.artboard, tf.unprinted, tf.k));
             }
 
             var name = this.fileName(tile, ctx, s);

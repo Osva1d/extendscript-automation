@@ -328,5 +328,13 @@ assertClose((GRAPHIC[0] - r.tileOrigin[0]) * r.k, r.position[0], 0.001,
 assertClose((GRAPHIC[0] - r10.tileOrigin[0]) * r10.k, r10.position[0], 0.001,
     "a platí i při měřítku výstupu 1:1");
 
+console.log("\n=== 1.3.0: only the artwork leaves the unprinted part out ===");
+var zb = exSrc.slice(exSrc.indexOf("buildZundPanel: function"), exSrc.indexOf("rasterizeArt: function"));
+assert(/calculateAll\(s,\s*zl\.mask,/.test(zb), "Zünd marks come from the full mask");
+assert(/clipArt\(layPrint,\s*art,\s*TE\.Grid\.printClip\(zl\.mask,\s*tf\.artboard,\s*tf\.unprinted,\s*tf\.k\)\)/.test(zb),
+    "only the artwork takes the shortened rectangle");
+assert(/if\s*\(tf\.unprinted\)\s*\{[^}]*clipArt\(layG,\s*art,/.test(exBody), "manual: a mask only on a panel with a strip");
+assert(/var layG\s*=\s*tmp\.layers\[0\]/.test(exBody), "the artwork layer is held before layers.add() reorders them");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
