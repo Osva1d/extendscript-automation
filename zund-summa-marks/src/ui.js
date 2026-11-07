@@ -493,7 +493,7 @@ ZSM.UI = {
         // Populate initial layer rows
         var initLayers = (sData.layers && sData.layers.length > 0)
             ? sData.layers
-            : [{ name: "Cut", color: docData.detectedColor }];
+            : ZSM.UI.defaultsForDocument(docData).layers;
 
         for (var i = 0; i < initLayers.length; i++) {
             layRows.push(buildLayerRow(initLayers[i]));
@@ -712,7 +712,7 @@ ZSM.UI = {
 
             var newLayers = (obj.layers && obj.layers.length > 0)
                 ? obj.layers
-                : [{ name: "Cut", color: docData.detectedColor }];
+                : ZSM.UI.defaultsForDocument(docData).layers;
             for (var i = 0; i < newLayers.length; i++) {
                 layRows.push(buildLayerRow(newLayers[i]));
             }
@@ -1367,10 +1367,12 @@ ZSM.UI = {
 
     /**
      * Factory settings for the open document: ZSM.Config.getDefaults() with
-     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found.
-     * With no cut colour in the document detectCutColor falls back to the
-     * (localized) registration swatch, and the row keeps the canonical
-     * "[Registration]" token that presets store.
+     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found, and
+     * named after it: layer and colour stay in step, whatever the cutter or the
+     * RIP reads (user, 2026-11-07). With no cut colour in the document
+     * detectCutColor falls back to the (localized) registration swatch, and the
+     * row keeps its factory name and the canonical "[Registration]" token that
+     * presets store.
      * @param {Object} docData - {detectedColor, ...} from show().
      * @returns {Object} Settings object.
      */
@@ -1380,6 +1382,7 @@ ZSM.UI = {
         var reg = (ZSM.Draw && ZSM.Draw.getRegistrationName)
             ? ZSM.Draw.getRegistrationName() : "[Registration]";
         if (col && col !== reg && col !== "[Registration]" && d.layers && d.layers.length > 0) {
+            d.layers[0].name = col;
             d.layers[0].color = col;
         }
         return d;

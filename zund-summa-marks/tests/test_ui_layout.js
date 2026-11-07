@@ -712,6 +712,47 @@ assertEq(pA2b.presets["[Default]"].layers[0].color, "[Registration]",
     "no cut colour in the document: the factory row keeps [Registration]");
 ZSM.Draw.detectCutColor = origDetectA2;
 
+// The row is named after the colour: layer and colour stay in step, whatever
+// the cutter or the RIP reads (user, 2026-11-07).
+console.log("\n=== TEST 18b: the factory row is named after the colour it found ===");
+var origDetect18b = ZSM.Draw.detectCutColor;
+ZSM.Draw.detectCutColor = function () { return "Thru-cut"; };
+var p18b = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } };
+var nameField18b = null, resetField18b = null, emptyField18b = null;
+runDialogs(p18b, [function (win) {
+    nameField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+    win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_RESET; }).onClick();
+    resetField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+}]);
+assertEq(p18b.presets["[Default]"].layers[0].name, "Thru-cut", "[Default]: the layer takes the colour's name");
+assertEq(p18b.presets["[Default]"].layers[0].color, "Thru-cut", "[Default]: and keeps the colour");
+assert(nameField18b !== null, "the dialog shows the name in the row");
+assert(resetField18b !== null, "the Defaults button gives the same row");
+
+// A preset without rows (hand-edited) falls back to the same row.
+var mine18b = ZSM.Config.getDefaults();
+mine18b.layers = [];
+var pEmpty18b = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mine18b } };
+runDialogs(pEmpty18b, [function (win) {
+    emptyField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+}]);
+assert(emptyField18b !== null, "a preset without rows falls back to the same row");
+
+// Nothing found: the factory name stays, there is no colour to name it after.
+ZSM.Draw.detectCutColor = function () { return "[Registration]"; };
+var pNone18b = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } };
+runDialogs(pNone18b, [function () {}]);
+assertEq(pNone18b.presets["[Default]"].layers[0].name, "Cut", "no cut colour: the factory name stays");
+assertEq(pNone18b.presets["[Default]"].layers[0].color, "[Registration]", "no cut colour: registration stays");
+ZSM.Draw.detectCutColor = origDetect18b;
+
+// A preset the user saved keeps its own row.
+var saved18b = ZSM.Config.getDefaults();
+saved18b.layers = [{ name: "Cut", color: "Thru-cut" }];
+var pSaved18b = { activePreset: "Saved", presets: { "[Default]": ZSM.Config.getDefaults(), "Saved": saved18b } };
+runDialogs(pSaved18b, [function () {}]);
+assertEq(pSaved18b.presets["Saved"].layers[0].name, "Cut", "a saved preset keeps its own name");
+
 var pA2c = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mineA2 } };
 var a2c = {};
 runDialogs(pA2c, [function (win) {

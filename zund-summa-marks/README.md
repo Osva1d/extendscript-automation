@@ -116,8 +116,9 @@ Každá vrstva je objekt:
 ```
 
 Přítomnost řádku v poli = vrstva je aktivní. Výchozí předvolba má jeden řádek
-Cut s řezovou barvou, kterou skript najde v dokumentu (CutContour, Thru-cut,
-Kiss-cut nebo Cut, v tomto pořadí). Když žádnou nenajde, zůstane
+s řezovou barvou, kterou skript najde v dokumentu (CutContour, Thru-cut,
+Kiss-cut nebo Cut, v tomto pořadí), a vrstva se jmenuje stejně. Když žádnou
+nenajde, je to řádek Cut a zůstane
 `[Registration]` — takový řádek se při běhu přeskočí s upozorněním, protože
 registrační barvou nejde rozpoznat řezové cesty.
 

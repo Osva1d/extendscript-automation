@@ -258,6 +258,10 @@ a přesouvá cesty čistě v řezové barvě.
 - [ ] **6a.6 Cmd+Z.** Běh ZUND s mapováním má dva kroky: značky, vrstvy a Spot 1,
   pak artboard. Měřeno příkazem menu, klávesa neměřena.
 - [ ] **6a.7 U stroje.** Bílé značky ve Spot 1 na tmavém materiálu: kamera je najde.
+- [ ] **6a.8 Výchozí řádek.** Dokument jen s přímou barvou Thru-cut, tlačítko Výchozí
+  → řádek `Thru-cut ← Thru-cut`, vrstva i barva souhlasí.
+- [ ] **6a.9 Zjistit u obsluhy.** Čte Cut Center název vrstvy, nebo barvu? Ukáže skrytou
+  grafiku z ořezového PDF uloženého s vrstvami Acrobatu (v souboru zůstává, změřeno)?
 
 ---
 

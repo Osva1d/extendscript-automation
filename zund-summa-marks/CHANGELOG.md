@@ -31,6 +31,10 @@ vrstva Graphics a opravy tichých chyb z
 - **Nabídka vrstev v mapování** má jen řezné a nástrojové názvy Zündu: ubyly
   White, Varnish a Register. Vrstva tohoto jména, kterou dokument má, se nabídne
   dál a název jde dopsat ručně.
+- **Výchozí řádek mapování se jmenuje podle barvy.** `[Výchozí]` v dokumentu
+  s přímou barvou Thru-cut nabídne `Thru-cut ← Thru-cut`, dřív `Cut ← Thru-cut`,
+  takže název vrstvy a barva souhlasí. Bez řezové barvy v dokumentu zůstává řádek
+  Cut a uložené předvolby se nemění.
 - **Dvě barvy do jedné vrstvy (L2).** Dva řádky se stejným názvem vrstvy
   (`Cut ← Thru-cut`, `Cut ← CutContour`) teď přesunou obě barvy do té vrstvy.
   Dřív se druhý řádek tiše zahodil i s řezem.
