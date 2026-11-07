@@ -82,5 +82,66 @@ BTE.Order = {
             }
         }
         return keys;
+    },
+
+    /**
+     * Orders items sheet by sheet (aršík): the sheets one after another, the
+     * items of each sheet among themselves, the items without a sheet after
+     * the last sheet. Every ordering is sort(), so each uses its own
+     * tolerance (spec 1.1.0, 4.2): sheets by the median of the sheet bounds,
+     * items by the median of the items of their sheet.
+     *
+     * A sheet is ordered by its bounds, and by the smallest `tie` of its
+     * items when two sheets have identical bounds. Items are grouped by
+     * sheet.id; the bounds of the first item's sheet record count.
+     *
+     * @param {Array.<{key: *, bounds: Array.<number>, tie: number,
+     *     sheet: ?{id: *, bounds: Array.<number>}}>} items - as sort(), plus
+     *     the sheet of the item (null for none).
+     * @param {string} mode - "rows" or "cols".
+     * @returns {{keys: Array, sheets: Array.<number>, count: number}} keys
+     *     in order; sheets[i] is the 1-based number of the sheet of keys[i],
+     *     0 for an item without one; count is the number of sheets.
+     * @throws {Error} For any other mode.
+     */
+    sortBySheet: function (items, mode) {
+        var byId = {}, recs = [], loose = [], keys = [], sheets = [];
+        var i, j, it, rec, order, inner;
+
+        if (mode !== "rows" && mode !== "cols") {
+            throw new Error("BTE.Order.sortBySheet: unknown mode \"" + mode + "\"");
+        }
+
+        for (i = 0; i < items.length; i++) {
+            it = items[i];
+            if (!it.sheet) {
+                loose.push(it);
+                continue;
+            }
+            // The prefix keeps a sheet id from colliding with an Object.prototype name.
+            if (!byId.hasOwnProperty("w:" + it.sheet.id)) {
+                rec = { key: "w:" + it.sheet.id, bounds: it.sheet.bounds, tie: it.tie, items: [] };
+                byId["w:" + it.sheet.id] = rec;
+                recs.push(rec);
+            }
+            rec = byId["w:" + it.sheet.id];
+            rec.items.push(it);
+            if (it.tie < rec.tie) { rec.tie = it.tie; }
+        }
+
+        order = BTE.Order.sort(recs, mode);
+        for (i = 0; i < order.length; i++) {
+            inner = BTE.Order.sort(byId[order[i]].items, mode);
+            for (j = 0; j < inner.length; j++) {
+                keys.push(inner[j]);
+                sheets.push(i + 1);
+            }
+        }
+        inner = BTE.Order.sort(loose, mode);
+        for (j = 0; j < inner.length; j++) {
+            keys.push(inner[j]);
+            sheets.push(0);
+        }
+        return { keys: keys, sheets: sheets, count: recs.length };
     }
 };

@@ -33,27 +33,32 @@ BTE.Element = {
      * shape took 97 s for 1000 texts and 9000 shapes in the engine, whose
      * array access slows down as an array grows (docs/findings.md, Task 9).
      *
-     * @param {Array.<{id: *, group: ?{id: *, bounds: Array.<number>}, bounds: Array.<number>, tie: number}>} texts -
+     * @param {Array.<{id: *, group: ?{id: *, bounds: Array.<number>, sheet: ?{id: *, bounds: Array.<number>}}, bounds: Array.<number>, tie: number}>} texts -
      *     bounds are [left, top, right, bottom] in Illustrator coordinates
-     *     (top > bottom); tie is an integer, unique per text.
+     *     (top > bottom); tie is an integer, unique per text; group.sheet is
+     *     the sheet (aršík) of the group, absent or null for none.
      * @param {Array.<{id: *, bounds: Array.<number>}>} shapes - closed paths
      *     and compound paths that are not clipping masks.
-     * @returns {Array.<{key: string, textIds: Array, bounds: Array.<number>, tie: number}>}
+     * @returns {Array.<{key: string, textIds: Array, bounds: Array.<number>, tie: number,
+     *     sheet: ?{id: *, bounds: Array.<number>}}>}
      *     textIds run top to bottom, left to right; bounds are those of the
-     *     group, the shape or the lone text; tie is the smallest text tie.
+     *     group, the shape or the lone text; tie is the smallest text tie;
+     *     sheet is the group's sheet, null for a shape or a lone text.
      */
     build: function (texts, shapes) {
         var byKey = {};
         var recs = [];
         var elements = [];
         var grid = null;
-        var i, t, key, bounds, at, rec, ids;
+        var i, t, key, bounds, sheet, at, rec, ids;
 
         for (i = 0; i < texts.length; i++) {
             t = texts[i];
+            sheet = null;
             if (t.group) {
                 key = "g:" + t.group.id;
                 bounds = t.group.bounds;
+                sheet = t.group.sheet || null;
             } else {
                 // Built on the first loose text: grouped texts never need it.
                 if (grid === null) { grid = BTE.Element.grid(shapes); }
@@ -69,7 +74,7 @@ BTE.Element = {
 
             // Keys carry a prefix, so none can collide with an Object.prototype name.
             if (!byKey.hasOwnProperty(key)) {
-                rec = { key: key, bounds: bounds, tie: t.tie, items: [] };
+                rec = { key: key, bounds: bounds, tie: t.tie, sheet: sheet, items: [] };
                 byKey[key] = rec;
                 recs.push(rec);
             }
@@ -92,7 +97,8 @@ BTE.Element = {
                 key: rec.key,
                 textIds: ids,
                 bounds: [rec.bounds[0], rec.bounds[1], rec.bounds[2], rec.bounds[3]],
-                tie: rec.tie
+                tie: rec.tie,
+                sheet: rec.sheet
             });
         }
         return elements;

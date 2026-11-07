@@ -38,14 +38,22 @@ BTE.Scope = {
      * @param {Document} doc - The document.
      * @param {string} kind - "selection", "artboard" or "document".
      * @param {string} [order] - "rows" (default) or "cols".
-     * @returns {{elements: Array.<{key: string, textIds: Array.<string>, bounds: Array.<number>, tie: number}>,
+     * @param {boolean} [bySheet] - true numbers one sheet (aršík) before the
+     *     next (BTE.Order.sortBySheet); anything else orders all elements
+     *     together.
+     * @returns {{elements: Array.<{key: string, textIds: Array.<string>, bounds: Array.<number>, tie: number,
+     *     sheet: ?{id: string, bounds: Array.<number>}}>,
      *     state: Array.<Array.<string>>, tfs: Array.<Array.<TextFrame>>,
      *     skipped: {locked: number, overflow: number, linked: number},
-     *     cursorInText: boolean, textCount: number}}
+     *     cursorInText: boolean, textCount: number,
+     *     sheets: ?Array.<number>, sheetCount: number}}
+     *     sheets[k] is the 1-based sheet number of row k (0 for an element
+     *     outside any sheet), one entry per row; null when bySheet is not
+     *     true. sheetCount is the number of sheets, 0 when off.
      * @throws {Error} For an unknown kind or order, or when the DOM fails;
      *     the message names what was being read.
      */
-    prepare: function (doc, kind, order) {
+    prepare: function (doc, kind, order, bySheet) {
         var mode = (order === undefined) ? "rows" : order;
         var c = BTE.Scope.collect(doc, kind);
         var onBoard = (kind === "artboard");
@@ -54,7 +62,9 @@ BTE.Scope = {
             elements: [], state: [], tfs: [],
             skipped: onBoard ? { locked: 0, overflow: 0, linked: 0 } : c.skipped,
             cursorInText: c.cursorInText,
-            textCount: 0
+            textCount: 0,
+            sheets: (bySheet === true) ? [] : null,
+            sheetCount: 0
         };
         var recById = {}, loose = false, shapes = [];
         var els, el, textIds, tie, rec, row, tfRow, i, j;
@@ -90,13 +100,13 @@ BTE.Scope = {
                 if (tie < 0 || rec.tie < tie) { tie = rec.tie; }
             }
             if (textIds.length > 0) {
-                out.elements.push({ key: el.key, textIds: textIds, bounds: el.bounds, tie: tie });
+                out.elements.push({ key: el.key, textIds: textIds, bounds: el.bounds, tie: tie, sheet: el.sheet });
                 out.state.push(row);
                 out.tfs.push(tfRow);
                 out.textCount += row.length;
             }
         }
-        return BTE.Scope.reorder(out, mode);
+        return BTE.Scope.reorder(out, mode, bySheet === true);
     },
 
     /**
@@ -107,17 +117,24 @@ BTE.Scope = {
      * objects and the TextFrames with it, not the arrays.
      * @param {Object} prepared - From prepare() (or reorder()).
      * @param {string} order - "rows" or "cols".
-     * @returns {Object} The same shape as prepare() returns.
+     * @param {boolean} [bySheet] - true orders sheet by sheet; anything else
+     *     orders all elements together (the previous sheets are dropped).
+     * @returns {Object} The same shape as prepare() returns: `sheets` has
+     *     one entry per row when bySheet is true, else null.
      * @throws {Error} For an unknown order (BTE.Order.sort).
      */
-    reorder: function (prepared, order) {
-        var keys = BTE.Order.sort(prepared.elements, order);
+    reorder: function (prepared, order, bySheet) {
+        var on = (bySheet === true);
+        var sorted = on ? BTE.Order.sortBySheet(prepared.elements, order) : null;
+        var keys = on ? sorted.keys : BTE.Order.sort(prepared.elements, order);
         var at = {}, s = prepared.skipped, i, k;
         var out = {
             elements: [], state: [], tfs: [],
             skipped: { locked: s.locked, overflow: s.overflow, linked: s.linked },
             cursorInText: prepared.cursorInText,
-            textCount: prepared.textCount
+            textCount: prepared.textCount,
+            sheets: on ? sorted.sheets : null,
+            sheetCount: on ? sorted.count : 0
         };
         for (i = 0; i < prepared.elements.length; i++) { at[prepared.elements[i].key] = i; }
         for (i = 0; i < keys.length; i++) {
@@ -141,12 +158,13 @@ BTE.Scope = {
      * @param {Document} doc - The document.
      * @param {string} kind - "selection", "artboard" or "document".
      * @returns {{cursorInText: boolean,
-     *     texts: Array.<{id: string, tf: TextFrame, group: ?{id: string, bounds: Array.<number>}, bounds: Array.<number>, tie: number, contents: string}>,
+     *     texts: Array.<{id: string, tf: TextFrame, group: ?{id: string, bounds: Array.<number>, sheet: ?{id: string, bounds: Array.<number>}}, bounds: Array.<number>, tie: number, contents: string}>,
      *     skipped: {locked: number, overflow: number, linked: number},
      *     skippedTexts: Array.<Object>}}
      *     tie is the index in doc.textFrames; group is the lowest group
      *     above the text with the bounds it covers on the page
-     *     (groupBounds()), null for a text directly in a layer. skippedTexts
+     *     (groupBounds()) and its sheet (sheetOf()), null for a text
+     *     directly in a layer. skippedTexts
      *     are records of the same shape plus `reason` ("locked", "overflow",
      *     "linked"); their contents are not read.
      * @throws {Error} For an unknown kind, or when the DOM fails.
@@ -158,7 +176,7 @@ BTE.Scope = {
             skipped: { locked: 0, overflow: 0, linked: 0 },
             skippedTexts: []
         };
-        var groups = {};
+        var groups = {}, sheets = {};
         var all, n, sel, picked, ties, tf, i;
 
         if (kind !== "selection" && kind !== "artboard" && kind !== "document") {
@@ -178,7 +196,7 @@ BTE.Scope = {
                 } catch (e) {
                     throw new Error("BTE.Scope: reading text " + (i + 1) + " of the document failed: " + e.message);
                 }
-                BTE.Scope.take(tf, i, groups, out);
+                BTE.Scope.take(tf, i, groups, out, sheets);
             }
             return out;
         }
@@ -198,7 +216,7 @@ BTE.Scope = {
         for (i = 0; i < picked.length; i++) {
             // A text outside doc.textFrames (not seen so far) sorts after all of them.
             BTE.Scope.take(picked[i].tf,
-                ties.hasOwnProperty(picked[i].id) ? ties[picked[i].id] : n + i, groups, out);
+                ties.hasOwnProperty(picked[i].id) ? ties[picked[i].id] : n + i, groups, out, sheets);
         }
         return out;
     },
@@ -287,8 +305,9 @@ BTE.Scope = {
      * @param {number} tie - Its index in doc.textFrames.
      * @param {Object} groups - Group records by uuid, shared across calls.
      * @param {Object} out - The collect() result being filled.
+     * @param {Object} sheets - Sheet records by uuid, shared across calls.
      */
-    take: function (tf, tie, groups, out) {
+    take: function (tf, tie, groups, out, sheets) {
         var reason = null, contents = null, rec;
         try {
             if (tf.editable === false) {
@@ -305,7 +324,7 @@ BTE.Scope = {
             rec = {
                 id: tf.uuid,
                 tf: tf,
-                group: BTE.Scope.groupOf(tf, groups),
+                group: BTE.Scope.groupOf(tf, groups, sheets),
                 bounds: tf.geometricBounds,
                 tie: tie,
                 contents: contents
@@ -345,17 +364,36 @@ BTE.Scope = {
      * The lowest group above a text, read once per group.
      * @param {TextFrame} tf - The frame.
      * @param {Object} groups - Group records by uuid, shared across calls.
-     * @returns {?{id: string, bounds: Array.<number>}} null for a text
-     *     directly in a layer.
+     * @param {Object} sheets - Sheet records by uuid, shared across calls.
+     * @returns {?{id: string, bounds: Array.<number>, sheet: ?{id: string, bounds: Array.<number>}}}
+     *     null for a text directly in a layer; sheet is sheetOf() of the group.
      */
-    groupOf: function (tf, groups) {
+    groupOf: function (tf, groups, sheets) {
         var p = tf.parent, id;
         if (p.typename !== "GroupItem") { return null; }
         id = p.uuid;
         if (!groups.hasOwnProperty(id)) {
-            groups[id] = { id: id, bounds: BTE.Scope.groupBounds(p) || p.geometricBounds };
+            groups[id] = { id: id, bounds: BTE.Scope.groupBounds(p) || p.geometricBounds, sheet: BTE.Scope.sheetOf(p, sheets) };
         }
         return groups[id];
+    },
+
+    /**
+     * The sheet (aršík) of a group: the group directly above it, clip groups
+     * included. Read once per sheet.
+     * @param {GroupItem} group - The lowest group of an element.
+     * @param {Object} sheets - Sheet records by uuid, shared across calls.
+     * @returns {?{id: string, bounds: Array.<number>}} null when the group
+     *     lies directly in a layer.
+     */
+    sheetOf: function (group, sheets) {
+        var p = group.parent, id;
+        if (p.typename !== "GroupItem") { return null; }
+        id = p.uuid;
+        if (!sheets.hasOwnProperty(id)) {
+            sheets[id] = { id: id, bounds: BTE.Scope.groupBounds(p) || p.geometricBounds };
+        }
+        return sheets[id];
     },
 
     /**
