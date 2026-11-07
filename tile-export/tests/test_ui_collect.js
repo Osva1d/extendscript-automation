@@ -269,12 +269,23 @@ eq(TE.L.format(TE.L.CONFIRM_OVERWRITE_FILES, TE.L.count("FILES", 1)), "V cílov�
 eq(TE.L.count("FILES", 3), "3 soubory", "three files");
 eq(TE.L.count("FILES", 5), "5 souborů", "five files");
 var ms = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
-eq(/if \(res\.action !== "export"\) \{ break; \}[\s\S]{0,400}TE\.UiKit\.confirmOverwrite\(/.test(ms), true, "only the export asks");
+eq(/if \(res\.action !== "export"\) \{ break; \}[\s\S]{0,1200}TE\.UiKit\.confirmOverwrite\(/.test(ms), true, "only the export asks");
 eq(/TE\.UiKit\.existingCount\(TE\.Export\.overwritePaths\(/.test(ms), true, "it counts what the run would overwrite");
 eq(ms.indexOf("TE.UiKit.confirmOverwrite(") !== -1 && ms.indexOf("TE.UiKit.confirmOverwrite(") < ms.indexOf("TE.Storage.save(res.wrapper)"),
     true, "before anything is written");
 eq(/pData = res\.wrapper;/.test(ms) && /ctx\.drawingScale = s\.scaleN;/.test(ms), true,
     "Ne: back to the dialog with what was set, the drawing scale too");
+// Review 2026-11-07: a Zünd job whose marks stop it must not ask about files
+// it never writes, and the stop leaves the settings and the document as they were.
+eq(ms.indexOf("TE.Validate.markConflict(") !== -1 && ms.indexOf("TE.Validate.markConflict(") < ms.indexOf("TE.UiKit.existingCount("),
+    true, "the mark check comes before the question");
+eq(ms.indexOf("TE.Validate.markConflict(") < ms.indexOf("TE.Storage.save(res.wrapper)"), true,
+    "and before the settings are saved");
+// Review 2026-11-07: the skip warning needs the part of the last confirmed
+// run, read once from the stored settings before the dialog loop.
+eq(/lastUnprinted:\s*TE\.Grid\.unprintedWidth\(/.test(ms), true, "ctx carries the last run's part");
+eq(ms.indexOf("lastUnprinted:") !== -1 && ms.indexOf("lastUnprinted:") < ms.indexOf("for (;;)"), true,
+    "read before the loop, so a declined run does not count");
 var bs = fs.readFileSync(path.join(__dirname, "..", "tools", "build.sh"), "utf8");
 eq(/"\.\.\/shared\/lib\/ui_kit\.js"/.test(bs) && /buildUiKit\(TE\);/.test(bs), true, "the build carries the kit");
 

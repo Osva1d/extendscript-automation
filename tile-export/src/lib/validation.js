@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Validate — §5 rules. Errors stop the run, warnings do not.
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Core, TE.Export, TE.Utils, TE.L
+// Depends on: TE.Config, TE.Core, TE.Export, TE.Grid, TE.Utils, TE.L
 // ------------------------------------------------------------------------
 var TE = TE || {};
 
@@ -97,7 +97,9 @@ TE.Validate = {
         // the overlap; across a horizontal seam outdoors the lower panel
         // should carry it, so water runs over the weld, not into it; a manual
         // trim needs its line to show where the blank edge ends; and Skip
-        // finished outputs keeps a file whose name the part does not change.
+        // finished outputs keeps a file whose name the part does not change —
+        // also when the part is turned off after a run that left it out
+        // (ctx.lastUnprinted, the last confirmed run's part).
         // Nothing is switched for the user.
         var bare = TE.Grid.unprintedWidth(s);
         if (bare > 0) {
@@ -107,8 +109,8 @@ TE.Validate = {
             }
             if (s.direction === "vertical" && s.overlapCarrier !== "second") { warnings.push(TE.L.WARN_UNPRINTED_WATER); }
             if (!s.zundMode && !s.drawLine) { warnings.push(TE.L.WARN_UNPRINTED_NO_LINE); }
-            if (s.skipExisting) { warnings.push(TE.L.WARN_UNPRINTED_SKIP); }
         }
+        if (s.skipExisting && (bare > 0 || ctx.lastUnprinted > 0)) { warnings.push(TE.L.WARN_UNPRINTED_SKIP); }
 
         // Zünd: the print mask reaches a bleed past the cut, and on the OUTER
         // edges there is only as much artwork as the placed PDF carries. Add

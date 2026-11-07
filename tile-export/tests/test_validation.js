@@ -308,6 +308,16 @@ assert(w({ skipExisting: true }, "unprinted-skip"), "skip cannot see a changed p
 assert(!w({ skipExisting: false }, "unprinted-skip"), "without skip, no warning");
 assert(!w({ overlapMode: "symmetric", skipExisting: true, drawLine: false }, "unprinted-skip") &&
        !w({ overlapMode: "symmetric", skipExisting: true, drawLine: false }, "unprinted-no-line"), "no part, no warnings");
+// Turning the part off is a change too: the last confirmed run left it out,
+// this one prints it, and the names are the same (review 2026-11-07).
+function wl(over, last, key) {
+    var jj = job(merge(B, over));
+    return TE.Utils.indexOf(TE.Validate.check(jj.tiles, ctx({ lastUnprinted: last }), jj.s).warnings, key) !== -1;
+}
+assert(wl({ overlapMode: "symmetric", skipExisting: true }, 30, "unprinted-skip"), "part off after a run with 30: skip warns");
+assert(wl({ overlapUnprinted: 0, skipExisting: true }, 30, "unprinted-skip"), "part cleared to 0 after a run with 30: skip warns");
+assert(!wl({ overlapMode: "symmetric", skipExisting: true }, 0, "unprinted-skip"), "no part now or last run: no warning");
+assert(!wl({ overlapMode: "symmetric", skipExisting: false }, 30, "unprinted-skip"), "part off, skip off: no warning");
 assert(nb({ overlapMode: "onesided", overlapUnprinted: NaN }) === "overlapUnprinted:nan", "a typo counts when the field is live");
 assert(nb({ overlapMode: "symmetric", overlapUnprinted: NaN }) === "", "not while symmetric");
 assert(nb({ overlapMode: "onesided", overlap: 0, overlapUnprinted: NaN }) === "", "nor with overlap 0");

@@ -3,7 +3,7 @@
 // Part of: Illustrator Tile Export
 // Depends on: TE.Config, TE.Doc, TE.Draw, TE.DrawingScale, TE.Export,
 //             TE.Grid, TE.L, TE.Progress, TE.Storage, TE.Summary, TE.UI,
-//             TE.Utils, TE.Validate
+//             TE.UiKit, TE.Utils, TE.Validate
 // ------------------------------------------------------------------------
 (function (TE) {
     try {
@@ -71,7 +71,11 @@
                 mediaWidth: null,
                 // Measured ceiling; the try/catch around artboards.add is the
                 // real guard, because this number ages with the application.
-                maxArtboard: 16200
+                maxArtboard: 16200,
+                // The unprinted part of the last confirmed run, read before the
+                // dialog: Skip finished outputs cannot see the part turned off
+                // either (1.3.0).
+                lastUnprinted: TE.Grid.unprintedWidth(pData.presets[TE.Config.PRESET_KEY_LAST] || {})
             }
         };
 
@@ -97,6 +101,16 @@
             cuts = TE.Grid.computeCuts(s, ext, guides.positions);
             tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
             if (res.action !== "export") { break; }
+            // Zünd marks that would print as one shape stop the export (N26)
+            // before the question and before anything is saved. The dialog
+            // checks the same live, but leaves very many marks to this check.
+            if (s.zundMode) {
+                var conflict = TE.Validate.markConflict(tiles, ctx.validation, s);
+                if (conflict) {
+                    alert(TE.L.ERROR_PREFIX + TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
+                    return;
+                }
+            }
             n = TE.UiKit.existingCount(TE.Export.overwritePaths(tiles, { outFolder: new Folder(s.outputDir),
                 docName: ctx.docName, total: tiles.length, scaleFactor: ctx.validation.scaleFactor,
                 inputsModified: inputsModified }, s));
@@ -113,17 +127,6 @@
         // Mark colour definition, read once from the source document so each
         // temporary document can recreate it.
         var markDef = s.zundMode ? TE.Draw.readSpotDef(doc, s.markColor) : null;
-
-        // Zünd marks that would print as one shape stop the export before
-        // anything changes (N26). The dialog checks the same live, but leaves
-        // panels with very many marks to this one check without a limit.
-        if (res.action === "export" && s.zundMode) {
-            var conflict = TE.Validate.markConflict(tiles, ctx.validation, s);
-            if (conflict) {
-                alert(TE.L.ERROR_PREFIX + TE.Validate.describeMarkConflict(conflict, s) + "\n" + TE.L.MSG_EXPORT_STOPPED);
-                return;
-            }
-        }
 
         // Phase 1 builds the check panels beside the original: every panel
         // masked on its own artboard, with its trim line or its Zünd cut and

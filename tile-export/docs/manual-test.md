@@ -181,6 +181,9 @@ Přeskočit hotové výstupy: „⚠ Přeskočit hotové výstupy nepozná změn
 potisku…“. Uložená hodnota 30 přežije přepnutí na Půl na každou stranu a zpět.
 Export: plát 1 bez pásu, pláty 2 a 3 s prázdným pásem 30 mm vlevo, potisk od
 pole 998 a 1998 (2 mm přes šev); u Zündu značky na stejných místech jako s 0.
+Po tomto exportu spusť znovu, nastav Půl na každou stranu a zapni Přeskočit
+hotové výstupy: upozornění na přeskakování svítí dál, protože poslední běh měl
+část 30 a soubory se stejným názvem mají prázdný pás.
 
 **Brány vydání 1.17:**
 - **RIP:** jeden testovací plát s částí bez potisku v každém RIPu v provozu —

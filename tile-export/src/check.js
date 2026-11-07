@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Check — check panels in the working document (Panels only)
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Core, TE.Doc, TE.Draw, TE.Export, TE.Utils
+// Depends on: TE.Config, TE.Core, TE.Doc, TE.Draw, TE.Export, TE.Grid, TE.Utils
 // ------------------------------------------------------------------------
 var TE = TE || {};
 

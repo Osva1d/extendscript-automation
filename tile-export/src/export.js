@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: TE.Export — temporary document per panel, PDF output
 // Part of: Illustrator Tile Export
-// Depends on: TE.Config, TE.Draw, TE.L, TE.Utils
+// Depends on: TE.Config, TE.Draw, TE.Grid, TE.L, TE.Utils
 // ------------------------------------------------------------------------
 var TE = TE || {};
 

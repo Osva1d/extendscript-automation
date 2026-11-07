@@ -355,7 +355,8 @@ stavu je vypnutá.
 Když by export přepsal aspoň jeden soubor, který volba nechrání, zeptá se
 nejdřív „V cílové složce už je: 3 soubory. Přepsat?“. Ne vrátí do dialogu a nic
 se nezapíše. Část bez potisku název souboru nemění, takže ji Přeskočit hotové
-výstupy nepozná — po její změně volbu vypněte.
+výstupy nepozná — po její změně volbu vypněte. Upozorní na to i po vypnutí
+části, když ji měl poslední potvrzený běh.
 
 ## Známá omezení
 

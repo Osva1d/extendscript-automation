@@ -18,7 +18,8 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - **Upozornění u části bez potisku:** když u Vodorovně nese přelep horní plát
   (venku může zatékat do sváru), když je u ručního ořezu vypnutá linka (okraj
   nepotištěného pásu by nebyl vidět) a když je zapnuté Přeskočit hotové výstupy
-  (změnu části bez potisku nepozná, soubor má stejný název).
+  (změnu části bez potisku nepozná, soubor má stejný název) — i po jejím vypnutí,
+  když ji měl poslední potvrzený běh.
 - **Dotaz před přepisem souborů.** Když by export přepsal aspoň jeden soubor,
   který Přeskočit hotové výstupy nechrání, zeptá se „V cílové složce už je:
   3 soubory. Přepsat?“. Ano přepíše a je výchozí; Ne vrátí do dialogu se vším,
