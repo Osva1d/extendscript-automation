@@ -40,27 +40,41 @@ zůstaly beze změny a `COLORS` taky.
 | ES3, žádné chybějící metody, známé globály | lint celého repa a `tools/typecheck.sh` |
 | sdílené testy | 7/7 suit |
 
-## Co čeká na měření [O]
+## Měření v Illustratoru [M]
 
-Illustrator měl otevřený dokument, sonda se proto nespustila. Spustí se, až bude
-Illustrator bez dokumentů:
+Sonda `node tools/ui-probe/build-probe.js ui-kit` 2026-11-07, Illustrator 30.8.2 bez
+otevřených dokumentů, tmavé UI. Dialog z kitu: panel Soubory (tři cesty, vzor, seznam,
+zaškrtávátko) a panel Čísla (tři čísla, přepínače, zaškrtávátko), stavový řádek, patička.
+Okno se neukazuje, jen se rozvrhne.
 
-```
-node tools/ui-probe/build-probe.js ui-kit
-tools/ai-eval.sh -t 120 "<vytištěná cesta>"
-node tools/ui-probe/build-probe.js --report ui-kit
-```
+| předpoklad | výsledek |
+|---|---|
+| pole všech řádků v panelu začínají na jednom x | ✓ Soubory 150, Čísla 145 |
+| zaškrtávátko začíná na ose polí, prázdný popisek drží šířku osy | ✓ |
+| jednotka 5 px za polem, pole 7 znaků 72 px, 4 znaky 48 px | ✓ |
+| `Vybrat…` nejvýš 90 px, konec řádku cesty na hraně pole a seznamu | ✗ při prvním měření: cesta končila na 491, text a seznam na 499 px; po opravě ✓ 499, `Vybrat…` 80 px |
+| stavový řádek s mezerou má jeden řádek, dlouhý text ho nezvětší | ✓ 503 × 15 před i po textu o 776 px |
+| patička: autor vlevo, tlačítka u pravého okraje v nativní šířce | ✓ okraj 15 px, tlačítka 80 px |
+| popisek přepínačů ve výšce tlačítek | ✓ obojí y 365 |
+| žádný popisek užší než jeho text | ✓ 0 |
+| `measureString("")` | 0 × 15, prázdný popisek osu nerozbije |
+| okno se po zápisu stavu nezmění | ✓ 533 × 520, primární tlačítko y 478 v obou snímcích |
 
-Předpoklady, které sonda potvrdí nebo vyvrátí:
+Oprava `Vybrat…`: tlačítko bez zarovnání dostane v řádku s `fill` podíl volného místa
+a strop 90 px ho utne. Zbytek se ztratí, takže řádek skončil o 2 až 14 px dřív podle
+šířky panelu. Změřené varianty jsou v engine-facts. Se zarovnáním vpravo zůstane tlačítko
+nativní a pole dojde na konec řádku (commit 64887db). TE i BRE mají dnes tlačítko bez
+zarovnání, takže jejich řádek cesty končí dřív. Opraví se napojením na kit v krocích 2 a 5.
 
-1. Pole všech druhů řádků v jednom panelu začínají na stejném x (osa + nativní mezera 10).
-2. Zaškrtávátko v `checkRow` začíná na téže ose; prázdný popisek zamčený na šířku osy drží.
-3. Jednotka stojí 5 px za polem; pole 7 znaků má 72 px.
-4. `Vybrat…` je nejvýš 90 px a cesta bere zbytek řádku; konce cesty, vzoru a seznamu
-   jsou na jedné hraně.
-5. Stavový řádek založený s mezerou má výšku jednoho řádku a dlouhý text ho nezvětší.
-6. Patička: autor vlevo, tlačítka u pravého okraje, žádné tlačítko širší než nativní.
-7. Popisek přepínačů stojí v jedné výšce s textem tlačítek.
+Zjištění pro nástroje: osa se počítá po blocích a dva panely pod sebou s vlastní osou
+mají pole posunutá o rozdíl popisků (tady 5 px). Návrh §2.5 proto říká, že panely jednoho
+sloupce sdílejí jednu osu. Ověří se na GM v kroku 3.
 
-Okem obsluhy se kit ověří až v kroku 2 na BRE; samostatný ruční test krok 1 nemá, protože
+Okem obsluhy se kit ověří v kroku 2 na BRE. Samostatný ruční test krok 1 nemá, protože
 nic nezobrazuje.
+
+## Maketa ZSM s 5 vrstvami [M]
+
+Sonda `specimen` téhož dne: okno makety 851 × 545 px ve všech stavech (výchozí, Summa,
+plno vrstev), primární tlačítko na y 503. Levý sloupec končí na 458 px, pravý na 436 px.
+Odhad 545 z fáze 2 platí, návrh §3 má naměřené číslo.
