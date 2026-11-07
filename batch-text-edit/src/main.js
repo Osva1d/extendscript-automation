@@ -36,6 +36,9 @@ var BTE = BTE || {};
             // throws anything else (a broken edit list) before it touches
             // the document, and that goes to the boundary below.
             if (typeof writeErr.written !== "number") { throw writeErr; }
+            // Part of the document is written: a failure of the log or the
+            // summary below must not claim it is unchanged.
+            changed = true;
             log(String(writeErr.detail));
             BTE.Summary.show(BTE.UIModel.writeFailureSummary(writeErr));
             return;

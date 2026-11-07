@@ -227,7 +227,7 @@ function runMain(opts) {
         if (opts.verifyThrows) { throw opts.verifyThrows; }
         return opts.mismatches || [];
     };
-    BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); } };
+    BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); if (opts.summaryThrows) { throw opts.summaryThrows; } } };
     global.$ = { writeln: function (s) { logged.push(s); } };
     global.File = MockFile;
     global.Folder = MockFolder;
@@ -287,6 +287,11 @@ h.eq(m.logged.join("|"), "[BTE] " + wErr.detail, "main: the detail is logged");
 h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d BTE\.Write\.apply: step 1, element 7, text 2: the DOM said no\n$/.test(m.logFile), true,
     "main: and appended to the log file, one line with a stamp");
 h.eq(m.logFile.indexOf(wErr.message), -1, "main: the user's message is not what the file holds");
+
+// a write that stopped, then the summary itself fails: the document IS partly changed, so ERR_CRITICAL
+m = runMain({ res: r, applyThrows: wErr, summaryThrows: new Error("BTE.Summary: window failed") });
+h.eq(m.alerts.length === 1 && m.alerts[0].indexOf("Cmd+Z") !== -1 && m.alerts[0].indexOf("Dokument nebyl změněn.") === -1, true,
+    "main: a failing summary after a halfway write is ERR_CRITICAL, never 'unchanged'");
 
 // the log file cannot be opened: the run still ends with the summary, the console has the detail and the reason
 m = runMain({ res: r, applyThrows: wErr, logOpenFails: true });
