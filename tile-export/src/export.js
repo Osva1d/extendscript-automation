@@ -213,6 +213,27 @@ TE.Export = {
     },
 
     /**
+     * Full paths of every file the export writes — the PDF, and in Zünd mode
+     * the _cut PDF too — without the panels Přeskočit hotové výstupy skips.
+     * What the question before overwriting counts (audit U5, 1.3.0).
+     * @param {Array} tiles - From TE.Grid.computeTiles().
+     * @param {Object} ctx - {outFolder, docName, total, scaleFactor,
+     *        inputsModified}, as the export's context has them.
+     * @param {Object} s - Settings.
+     * @returns {Array} Paths.
+     */
+    overwritePaths: function (tiles, ctx, s) {
+        var out = [], dir = ctx.outFolder.fsName + "/", i, name;
+        for (i = 0; i < tiles.length; i++) {
+            if (s.skipExisting && this.panelOutputState(tiles[i], ctx, s) === "fresh") { continue; }
+            name = this.fileName(tiles[i], ctx, s);
+            out.push(dir + name + ".pdf");
+            if (s.zundMode) { out.push(dir + this.cutName(name) + ".pdf"); }
+        }
+        return out;
+    },
+
+    /**
      * The later of the working document's and the placed PDF's modified
      * dates, as saved on disk; null when either is unknown — a document
      * never saved has no file, and its fullName throws.

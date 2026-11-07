@@ -75,12 +75,37 @@
             }
         };
 
-        var res = TE.UI.show(pData, ctx);
-        if (!res || !res.action) { return; }
+        // What a finished output must be newer than (audit P2): read once,
+        // for the question below and for the export.
+        var inputsModified = TE.Export.inputsModified(doc, graphics[0]);
+
+        // The dialog, and before an export that would overwrite files the
+        // question (audit U5, 1.3.0). Ne goes back to the dialog with nothing
+        // written: the fields come back from the run the wrapper now holds,
+        // the drawing scale from ctx, which takes the typed value only in
+        // memory — the document gets it after a confirmed run.
+        var res, s, guides, ext, cuts, tiles, n;
+        for (;;) {
+            res = TE.UI.show(pData, ctx);
+            if (!res || !res.action) { return; }
+            s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
+                || res.wrapper.presets[res.wrapper.activePreset];
+            guides = ctx.guidesByDirection[s.direction];
+            ext = (s.direction === "horizontal")
+                ? { start: clean.rect[0], end: clean.rect[2] }
+                : { start: clean.rect[3], end: clean.rect[1] };
+            cuts = TE.Grid.computeCuts(s, ext, guides.positions);
+            tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
+            if (res.action !== "export") { break; }
+            n = TE.UiKit.existingCount(TE.Export.overwritePaths(tiles, { outFolder: new Folder(s.outputDir),
+                docName: ctx.docName, total: tiles.length, scaleFactor: ctx.validation.scaleFactor,
+                inputsModified: inputsModified }, s));
+            if (TE.UiKit.confirmOverwrite(n, TE.L.format(TE.L.CONFIRM_OVERWRITE_FILES, TE.L.count("FILES", n)))) { break; }
+            pData = res.wrapper;
+            ctx.drawingScale = s.scaleN;
+        }
 
         if (!TE.Storage.save(res.wrapper)) { alert(TE.L.ERR_WRITE_SETTINGS + " " + TE.L.RUN_CONTINUES); }
-        var s = res.wrapper.presets[TE.Config.PRESET_KEY_LAST]
-             || res.wrapper.presets[res.wrapper.activePreset];
         // The document remembers its drawing scale for the next run (1.1.0).
         TE.DrawingScale.save(doc, s.scaleN);
 
@@ -88,13 +113,6 @@
         // Mark colour definition, read once from the source document so each
         // temporary document can recreate it.
         var markDef = s.zundMode ? TE.Draw.readSpotDef(doc, s.markColor) : null;
-
-        var guides = ctx.guidesByDirection[s.direction];
-        var ext = (s.direction === "horizontal")
-            ? { start: clean.rect[0], end: clean.rect[2] }
-            : { start: clean.rect[3], end: clean.rect[1] };
-        var cuts = TE.Grid.computeCuts(s, ext, guides.positions);
-        var tiles = TE.Grid.computeTiles(cuts, clean.rect, s);
 
         // Zünd marks that would print as one shape stop the export before
         // anything changes (N26). The dialog checks the same live, but leaves
@@ -188,8 +206,7 @@
             total: tiles.length,
             pdfOptions: pdfOpts,
             markDef: markDef,
-            // What a finished output must be newer than (audit P2).
-            inputsModified: TE.Export.inputsModified(doc, graphics[0])
+            inputsModified: inputsModified
         };
 
         // The export shows its progress and stops on held Esc, after the

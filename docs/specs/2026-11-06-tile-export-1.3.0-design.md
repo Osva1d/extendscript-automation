@@ -29,6 +29,7 @@ TE dnes tiskne celý přelep, takže pás by se musel ručně maskovat v každé
 | 2 | Šířka sváru je hodnota v poli a v předvolbě, ne konstanta. Dílna počítá asi s 30 mm, ještě se potvrdí ve finiši. | uživatel, 2026-11-06 |
 | 3 | Rysky pro prořez nejsou v této verzi. Pláty se spasují podle obrazu, rysky by jen zrychlily práci. Nejdřív ruční zkouška na zakázce (§7). | uživatel, 2026-11-06 |
 | 4 | Žádný přestavěný dialog, žádný nový režim „technika spoje“ (§7). | uživatel, 2026-11-06 |
+| 5 | Před exportem, který přepíše aspoň jeden soubor nechráněný volbou Přeskočit hotové výstupy, se dialog zeptá „V cílové složce už je: %s. Přepsat?“ s počtem souborů. Ano přepíše a je výchozí, Ne vrátí do dialogu se vším, jak bylo, a nic nezapíše. Jen pláty se neptá. Ze sjednocení řady: návrh `2026-11-07-ui-design-system.md` §5.5 a §6.3, audit U5; z kitu jen `UiKit.existingCount` a `UiKit.confirmOverwrite`. | uživatel, 2026-11-07 |
 
 Verze **1.3.0**: nová schopnost, předvolby se nerozbijí (`docs/conventions.md`,
 kdy bumpovat).

@@ -11,6 +11,9 @@ global.app = { documents: { length: 1 }, activeDocument: { scaleFactor: 1 } };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8"));
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "export.js"), "utf8"));
+// The Zünd page behind {size} comes from the shared geometry.
+eval(fs.readFileSync(path.join(__dirname, "..", "..", "shared", "lib", "cut_marks.js"), "utf8"));
+buildCutMarks(TE);
 
 var pass = 0, fail = 0, total = 0;
 function assertClose(a, b, tol, msg) {
@@ -290,6 +293,26 @@ var IM = TE.Export.inputsModified;
 assert(IM({ fullName: { modified: D(8) } }, { file: { modified: D(9) } }).getTime() === D(9).getTime(), "the later of the two inputs");
 assert(IM({ get fullName() { throw new Error("never saved"); } }, { file: { modified: D(9) } }) === null,
     "a document never saved has no date");
+
+console.log("\n=== 1.3.0: the files an export would overwrite (audit U5) ===");
+// The question before overwriting counts these: every file the export writes,
+// without the panels Přeskočit hotové výstupy leaves alone.
+var HAVE = {};
+global.File = function (p) { this.exists = HAVE.hasOwnProperty(p); this.modified = HAVE[p] || null; };
+function ow(over) { var o = TE.Config.getDefaults(), k; for (k in over) { if (over.hasOwnProperty(k)) { o[k] = over[k]; } } return o; }
+function eqList(got, want, msg) { assert(got.join("|") === want.join("|"), msg + " | got=" + got.join("|")); }
+var T2 = [{ index: 1, clean: [0, 100, 100, 0], expanded: [0, 100, 101, 0] },
+          { index: 2, clean: [100, 100, 200, 0], expanded: [99, 100, 200, 0] }];
+var OCTX = { outFolder: { fsName: "/out" }, docName: "zed", total: 2, scaleFactor: 1, inputsModified: D(10) };
+eqList(TE.Export.overwritePaths(T2, OCTX, ow({ namePattern: "{doc}_{n}" })), ["/out/zed_01.pdf", "/out/zed_02.pdf"], "every PDF");
+eqList(TE.Export.overwritePaths(T2, OCTX, ow({ namePattern: "{doc}_{n}", zundMode: true })),
+    ["/out/zed_01.pdf", "/out/zed_01_cut.pdf", "/out/zed_02.pdf", "/out/zed_02_cut.pdf"], "Zünd: both files");
+HAVE = { "/out/zed_01.pdf": D(12), "/out/zed_02.pdf": D(9) };   // 01 finished, 02 stale
+eqList(TE.Export.overwritePaths(T2, OCTX, ow({ namePattern: "{doc}_{n}", skipExisting: true })), ["/out/zed_02.pdf"],
+    "skip leaves out the finished panel, not the stale one");
+eqList(TE.Export.overwritePaths(T2, OCTX, ow({ namePattern: "{doc}_{n}", skipExisting: false })),
+    ["/out/zed_01.pdf", "/out/zed_02.pdf"], "without skip every file counts");
+HAVE = {};
 
 console.log("\n=== sourceOrigin, tileOrigin, k ===");
 assertClose(r.sourceOrigin[0], GRAPHIC[0], 0.001, "sourceOrigin drží levý okraj grafiky");
