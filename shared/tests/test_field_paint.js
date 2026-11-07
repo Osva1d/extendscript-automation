@@ -163,5 +163,71 @@ threw = false;
 try { NS2.FieldPaint.field(hostile2, false); } catch (e2) { threw = true; }
 assert(!threw, "without NS.Utils a refused pen is still quiet");
 
+console.log("\n=== status: one set of colours per UI brightness ===");
+// The design system's sets (§2.3), from the specimen the operator saw in all
+// four brightnesses on 2026-11-07.
+assert(sameRGB({ color: P.PALETTES.dark.ERR.concat([1]) }, [1.00, 0.71, 0.69]), "dark error 1.00 0.71 0.69");
+assert(sameRGB({ color: P.PALETTES.dark.WARN.concat([1]) }, [1.00, 0.78, 0.40]), "dark warning 1.00 0.78 0.40");
+assert(sameRGB({ color: P.PALETTES.dark.OK.concat([1]) }, [0.60, 0.88, 0.58]), "dark OK 0.60 0.88 0.58");
+assert(sameRGB({ color: P.PALETTES.light.ERR.concat([1]) }, [0.52, 0.03, 0.03]), "light error 0.52 0.03 0.03");
+assert(sameRGB({ color: P.PALETTES.light.WARN.concat([1]) }, [0.40, 0.23, 0.00]), "light warning 0.40 0.23 0.00");
+assert(sameRGB({ color: P.PALETTES.light.OK.concat([1]) }, [0.05, 0.31, 0.09]), "light OK 0.05 0.31 0.09");
+
+// WCAG contrast against the theme backgrounds Illustrator 30.8.2 draws in its
+// four brightnesses (read by the specimen, 2026-11-07). An edit that drops a
+// colour under 4.5 fails here, before anyone has to look.
+function luminance(rgb) {
+    var lin = [], i, c;
+    for (i = 0; i < 3; i++) {
+        c = rgb[i];
+        lin.push(c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    }
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+}
+function contrast(rgb, grey) {
+    var a = luminance(rgb), b = luminance([grey, grey, grey]);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+var BACKGROUNDS = { dark: [0.196, 0.326], light: [0.726, 0.941] };
+var set, kind, bi;
+for (set in BACKGROUNDS) {
+    for (kind in P.PALETTES[set]) {
+        for (bi = 0; bi < BACKGROUNDS[set].length; bi++) {
+            assert(contrast(P.PALETTES[set][kind], BACKGROUNDS[set][bi]) >= 4.5,
+                set + " " + kind + " keeps 4.5:1 on " + BACKGROUNDS[set][bi] +
+                " (" + contrast(P.PALETTES[set][kind], BACKGROUNDS[set][bi]).toFixed(2) + ")");
+        }
+    }
+}
+
+var sD = mockControl({}, false, 0.196);
+P.status(sD, "ERR");
+assert(sameRGB(sD.graphics.foregroundColor, P.PALETTES.dark.ERR), "dark background 0.196: the dark error");
+var sMD = mockControl({}, false, 0.326);
+P.status(sMD, "WARN");
+assert(sameRGB(sMD.graphics.foregroundColor, P.PALETTES.dark.WARN), "Medium Dark 0.326: the dark warning");
+var sML = mockControl({}, false, 0.726);
+P.status(sML, "WARN");
+assert(sameRGB(sML.graphics.foregroundColor, P.PALETTES.light.WARN), "Medium Light 0.726: the light warning");
+var sL = mockControl({}, false, 0.941);
+P.status(sL, "OK");
+assert(sameRGB(sL.graphics.foregroundColor, P.PALETTES.light.OK), "Light 0.941: the light OK");
+var sU = mockControl({});
+P.status(sU, "ERR");
+assert(sameRGB(sU.graphics.foregroundColor, P.COLORS.ERR), "unknown brightness: today's single set, as before");
+
+logged.length = 0;
+threw = false;
+try {
+    P.status(null, "ERR");
+    P.status({ graphics: {} }, "ERR");
+    P.status(mockControl({}, false, 0.196), "NOPE");
+    var hostile3 = mockControl({}, false, 0.941);
+    hostile3.graphics.newPen = function () { throw new Error("pen refused"); };
+    P.status(hostile3, "OK");
+} catch (e3) { threw = true; }
+assert(!threw, "status: missing graphics, an unknown kind and a refused pen are quiet");
+assert(logged.length === 1 && /status: pen refused/.test(logged[0]), "...and the refused pen is logged");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

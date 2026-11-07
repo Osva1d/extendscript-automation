@@ -17,6 +17,7 @@ SUITES=(
     "test_drawing_scale.js"
     "test_progress.js"
     "test_summary.js"
+    "test_ui_kit.js"
 )
 
 PASSED=0

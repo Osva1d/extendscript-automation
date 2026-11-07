@@ -27,6 +27,13 @@
 // visibly dimmer than the white the host draws its fields in, and 0.75 looked
 // like it (user screenshots 2026-10-23). The theme brush "background" tells
 // the two apart (Illustrator 30.8.2: 0.94 on Light, 0.20 on Dark).
+//
+// status() paints a status text from one of two sets, chosen by the same
+// brush (docs/specs/2026-11-07-ui-design-system.md §2.3). The single COLORS
+// set fell to 1.12:1 on Medium Light and was faint on Light (audit U14); each
+// colour of the two sets keeps 4.5:1 on both backgrounds of its side, and the
+// operator saw them readable in all four brightnesses (specimen 2026-11-07).
+// COLORS stays for field() and text() while the tools paint with it.
 // ------------------------------------------------------------------------
 function buildFieldPaint(NS) {
     function log(msg) {
@@ -39,6 +46,14 @@ function buildFieldPaint(NS) {
             ERR:  [0.90, 0.20, 0.20],
             WARN: [0.96, 0.60, 0.38],
             OK:   [0.36, 0.60, 0.34]
+        },
+
+        // Status colours per UI brightness, RGB 0-1 (design system §2.3).
+        // Theme backgrounds of Illustrator 30.8.2: 0.196 and 0.326 on the
+        // dark side, 0.726 and 0.941 on the light side.
+        PALETTES: {
+            dark:  { ERR: [1.00, 0.71, 0.69], WARN: [1.00, 0.78, 0.40], OK: [0.60, 0.88, 0.58] },
+            light: { ERR: [0.52, 0.03, 0.03], WARN: [0.40, 0.23, 0.00], OK: [0.05, 0.31, 0.09] }
         },
 
         // The pen a field gets back after red on the dark UI, where it looks
@@ -127,6 +142,26 @@ function buildFieldPaint(NS) {
                 g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, rgb.concat([1]), 1);
             } catch (e) {
                 log("FieldPaint.text: " + e.message);
+            }
+        },
+
+        /**
+         * Paints a status text in the colour of its state from the set for
+         * the current UI brightness. Where the brightness cannot be read the
+         * single COLORS set is used, as before the two sets. Never throws.
+         * @param {Object} ctrl - A statictext.
+         * @param {string} kind - "ERR", "WARN" or "OK".
+         */
+        status: function (ctrl, kind) {
+            var g = ctrl && ctrl.graphics;
+            if (!g || !g.newPen) { return; }
+            var dark = this.isDarkUI(g);
+            var rgb = (dark === null) ? this.COLORS[kind] : this.PALETTES[dark ? "dark" : "light"][kind];
+            if (!rgb) { return; }
+            try {
+                g.foregroundColor = g.newPen(g.PenType.SOLID_COLOR, rgb.concat([1]), 1);
+            } catch (e) {
+                log("FieldPaint.status: " + e.message);
             }
         }
     };
