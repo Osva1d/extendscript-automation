@@ -66,7 +66,7 @@ function refs(o) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(150),
         cbLine: cb(true), etSpot: et("CutContour"), etLineW: et(0.3),
         ddPdf: { selection: null }, etOut: et("/Users/shop/out"), etPattern: et("{doc}_{n}"),
-        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null, etUnprinted: et(0),
         gManual: { visible: true }, gZundFields: { visible: false },
         gScaleRow: { visible: true }, gScaleOne: { visible: false },
         stCleanInfo: { text: "" }, stBleedInfo: { text: "" }, stBleedInfo2: { text: "" }, stWidthLbl: { text: "", helpTip: "" },
@@ -517,6 +517,21 @@ has(t5, "5 | 600 × 1000 | 610 × 1000 | 61 × 100", "and the last its own");
 has(summary({ etCount: { text: "5", enabled: true }, etOverlap: { text: "0" } }),
     "1–5 | 600 × 1000 | 600 × 1000 | 60 × 100", "without overlap all five are one row");
 eq(TE.UI.groupRows([[1, "a", "b", "c"], [2, "a", "b", "x"], [3, "a", "b", "c"]]).length, 3, "only neighbours merge");
+
+console.log("\n=== 1.3.0: the unprinted part in the dialog ===");
+var CARRIER2 = [{ value: false }, { value: false }, { value: true }];
+function weld(o) {
+    var b = { rbOverlapMode: CARRIER2, etOverlap: { text: "32", enabled: true }, etUnprinted: { text: "30", enabled: true } }, k;
+    for (k in o) { if (o.hasOwnProperty(k)) { b[k] = o[k]; } }
+    return b;
+}
+has(summary(weld({})), "Přelep 32 mm: 30 mm bez potisku, 2 mm potisku přes šev.", "the Result says what is left out");
+eq(summary({ etUnprinted: { text: "30", enabled: true } }).indexOf("bez potisku"), -1, "not while symmetric");
+eq(run(weld({})).etUnprinted.enabled, true, "live when one-sided");
+eq(run({}).etUnprinted.enabled, false, "grey while symmetric");
+eq(run(weld({ etOverlap: { text: "0", enabled: true } })).etUnprinted.enabled, false, "grey with overlap 0");
+eq(run({ etUnprinted: { text: "3O", enabled: true } }).st.numbersOk, true, "a typo in the grey field blocks nothing");
+has(summary(weld({ etUnprinted: { text: "3O", enabled: true } })), "Pole „Z toho bez potisku“", "a typo in the live field names it");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

@@ -56,7 +56,8 @@ function refs() {
         rbExpMode: rb(2), rbExpScale: rb(2), etDPI: et(),
         cbLine: cb(), etSpot: et(), etLineW: et(),
         ddPdf: dd(["[Výchozí Illustratoru]", "[PDF/X-4:2008]"], 1),
-        etOut: et(), etPattern: et(), cbSkip: cb(), cbOpen: cb(), rbOutType: null
+        etOut: et(), etPattern: et(), cbSkip: cb(), cbOpen: cb(), rbOutType: null,
+        etUnprinted: et()
     };
 }
 
@@ -198,6 +199,15 @@ var filled = TE.Storage.fillDefaults({ overlap: null, addTop: 7 });
 eq(TE.Storage.fillDefaults({ overlap: 20 }).overlapUnprinted, 0, "an older preset gets no unprinted part (1.3.0)");
 eq(filled.overlap, TE.Config.getDefaults().overlap, "null overlap: the default");
 eq(filled.addTop, 7, "a stored number stays");
+
+console.log("\n=== 1.3.0: the unprinted part survives apply -> collect, even while unused ===");
+s = TE.Config.getDefaults(); s.overlapMode = "symmetric"; s.overlapUnprinted = 30;
+r = refs(); TE.UI.apply(r, s);
+eq(r.etUnprinted.text, "30", "the field shows the stored value");
+eq(TE.UI.collect(r).overlapUnprinted, 30, "and keeps it");
+s.overlapUnprinted = 2.5; TE.UI.apply(r, s);
+eq(r.etUnprinted.text, "2,5", "with the decimal comma");
+eq(TE.UI.presetValues(s).overlapUnprinted, 2.5, "it belongs to a preset");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

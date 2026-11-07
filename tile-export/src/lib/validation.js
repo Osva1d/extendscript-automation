@@ -18,6 +18,7 @@ TE.Validate = {
         { key: "tileWidth",  when: function (s) { return s.divideMode === "width"; } },
         { key: "guideRound", min: 0, when: function (s) { return s.divideMode === "guides"; } },
         { key: "overlap",    min: 0 },
+        { key: "overlapUnprinted", min: 0, when: function (s) { return TE.Grid.oneSidedOverlap(s); } },
         { key: "addTop",     min: 0 },
         { key: "addBottom",  min: 0 },
         { key: "addLeft",    min: 0 },
@@ -90,6 +91,23 @@ TE.Validate = {
             errors.push(TE.L.format(TE.L.ERR_OVERLAP_BIG,
                 TE.Utils.formatMM(Number(s.overlap), TE.L.DEC_SEP),
                 TE.Utils.formatMM(TE.Utils.fromDoc(shortest, s), TE.L.DEC_SEP)));
+        }
+
+        // The unprinted part of a one-sided overlap (1.3.0). It fits inside
+        // the overlap; across a horizontal seam outdoors the lower panel
+        // should carry it, so water runs over the weld, not into it; a manual
+        // trim needs its line to show where the blank edge ends; and Skip
+        // finished outputs keeps a file whose name the part does not change.
+        // Nothing is switched for the user.
+        var bare = TE.Grid.unprintedWidth(s);
+        if (bare > 0) {
+            if (bare > Number(s.overlap) + 1e-9) {
+                errors.push(TE.L.format(TE.L.ERR_UNPRINTED_BIG,
+                    TE.Utils.formatMM(bare, TE.L.DEC_SEP), TE.Utils.formatMM(Number(s.overlap), TE.L.DEC_SEP)));
+            }
+            if (s.direction === "vertical" && s.overlapCarrier !== "second") { warnings.push(TE.L.WARN_UNPRINTED_WATER); }
+            if (!s.zundMode && !s.drawLine) { warnings.push(TE.L.WARN_UNPRINTED_NO_LINE); }
+            if (s.skipExisting) { warnings.push(TE.L.WARN_UNPRINTED_SKIP); }
         }
 
         // Zünd: the print mask reaches a bleed past the cut, and on the OUTER

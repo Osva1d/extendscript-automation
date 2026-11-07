@@ -44,7 +44,8 @@ TE.UI = {
     NUMBER_CONTROLS: {
         scaleN: ["etScaleN", "FIELD_SCALE"], tileCount: ["etCount", "LBL_COUNT"],
         tileWidth: ["etWidth", "LBL_WIDTH"], guideRound: ["etRound", "LBL_ROUND"],
-        overlap: ["etOverlap", "LBL_OVERLAP"], addTop: ["etAddTop", "LBL_ADD_TOP"],
+        overlap: ["etOverlap", "LBL_OVERLAP"], overlapUnprinted: ["etUnprinted", "LBL_UNPRINTED"],
+        addTop: ["etAddTop", "LBL_ADD_TOP"],
         addBottom: ["etAddBottom", "LBL_ADD_BOTTOM"], addLeft: ["etAddLeft", "LBL_ADD_LEFT"],
         addRight: ["etAddRight", "LBL_ADD_RIGHT"], rasterDPI: ["etDPI", "LBL_DPI"],
         lineWidth: ["etLineW", "LBL_LINE_WIDTH"], cutBleed: ["etBleed", "LBL_CUT_BLEED"],
@@ -399,6 +400,9 @@ TE.UI = {
         var rbOverlapMode = this.addRadioColumn(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);
+        // The part of a one-sided overlap left unprinted for a weld (1.3.0):
+        // under the placement it belongs to, live only while that is one-sided.
+        var etUnprinted = this.addRow(pEdges, l.LBL_UNPRINTED, s.overlapUnprinted, l.TIP_UNPRINTED, "mm");
 
         var etAddTop    = this.addRow(pEdges, l.LBL_ADD_TOP,    s.addTop,    l.TIP_ADD, "mm");
         var etAddBottom = this.addRow(pEdges, l.LBL_ADD_BOTTOM, s.addBottom, l.TIP_ADD, "mm");
@@ -685,7 +689,7 @@ TE.UI = {
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
-            etOverlap: etOverlap, rbOverlapMode: rbOverlapMode,
+            etOverlap: etOverlap, rbOverlapMode: rbOverlapMode, etUnprinted: etUnprinted,
             etAddTop: etAddTop, etAddBottom: etAddBottom,
             etAddLeft: etAddLeft, etAddRight: etAddRight,
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
@@ -737,7 +741,7 @@ TE.UI = {
 
         var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
-                      etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
+                      etOverlap, etUnprinted, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, cbOpen, ddPdf,
                       etMarkSize, etGapInner, etMaxDist, etOrient, etBleed, ddCutSpot,
                       ddMarkColor];
@@ -1007,6 +1011,7 @@ TE.UI = {
         s.overlap     = TE.Numbers.parse(r.etOverlap.text);
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
         s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
+        s.overlapUnprinted = TE.Numbers.parse(r.etUnprinted.text);
         s.addTop      = TE.Numbers.parse(r.etAddTop.text);
         s.addBottom   = TE.Numbers.parse(r.etAddBottom.text);
         s.addLeft     = TE.Numbers.parse(r.etAddLeft.text);
@@ -1165,6 +1170,7 @@ TE.UI = {
         r.rbOverlapMode[0].value = !oneSided;
         r.rbOverlapMode[1].value = oneSided && !carrier2nd;
         r.rbOverlapMode[2].value = carrier2nd;
+        r.etUnprinted.text = TE.Numbers.format(s.overlapUnprinted);
         r.etAddTop.text = TE.Numbers.format(s.addTop);
         r.etAddBottom.text = TE.Numbers.format(s.addBottom);
         r.etAddLeft.text = TE.Numbers.format(s.addLeft);
@@ -1344,6 +1350,7 @@ TE.UI = {
         if (r.gManual) { r.gManual.visible = !s.zundMode; }
         if (r.gZundFields) { r.gZundFields.visible = s.zundMode; }
         r.etSpot.enabled  = s.drawLine;
+        r.etUnprinted.enabled = TE.Grid.oneSidedOverlap(s);
         r.etLineW.enabled = s.drawLine;
 
         // The artboard, the same rect the run divides (N27).
@@ -1425,6 +1432,13 @@ TE.UI = {
                 if (r.ddMarkColor && r.ddMarkColor.selection && r.ddMarkColor.selection.teMissing) {
                     warns.push("\u26a0 " + l.format(l.WARN_MARK_COLOR_MISSING, s.markColor));
                 }
+            }
+
+            // What the weld leaves out, beside the panels it is left out of.
+            var bare = TE.Grid.unprintedWidth(s);
+            if (bare > 0) {
+                info.push(l.format(l.INFO_UNPRINTED, TE.Utils.formatMM(Number(s.overlap), l.DEC_SEP),
+                    TE.Utils.formatMM(bare, l.DEC_SEP), TE.Utils.formatMM(Math.max(0, Number(s.overlap) - bare), l.DEC_SEP)));
             }
 
             // Every file the export will write, under the name it will get, so

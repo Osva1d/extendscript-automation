@@ -42,7 +42,8 @@ function refs(textOverrides) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(d.rasterDPI),
         cbLine: cb(true), etSpot: et(d.lineSpot), etLineW: et(d.lineWidth),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et(d.namePattern),
-        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
+        etUnprinted: et(0)
     };
     var k;
     for (k in textOverrides) { if (textOverrides.hasOwnProperty(k)) { r[k].text = textOverrides[k]; } }
@@ -259,6 +260,10 @@ var rOpen = refs({});
 rOpen.cbOpen.value = true;
 eq(TE.UI.collect(rOpen).openOutput, true, "the option is collected");
 eq(TE.Config.getDefaults().openOutput, false, "and off unless asked for");
+console.log("\n=== 1.3.0: the unprinted part ===");
+eq(TE.UI.collect(refs({ etUnprinted: "30" })).overlapUnprinted, 30, "reads the field");
+eq(isNaN(TE.UI.collect(refs({ etUnprinted: "3O" })).overlapUnprinted), true, "3O is no number");
+
 console.log("\n=== 1.3.0: ask before the export overwrites files (audit U5) ===");
 eq(TE.L.format(TE.L.CONFIRM_OVERWRITE_FILES, TE.L.count("FILES", 1)), "V cílové složce už je: 1 soubor. Přepsat?", "one file");
 eq(TE.L.count("FILES", 3), "3 soubory", "three files");
