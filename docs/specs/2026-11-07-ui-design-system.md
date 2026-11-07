@@ -1,7 +1,8 @@
 # Společný design systém řady nástrojů — návrh (fáze 2)
 
-Datum: 2026-11-07. Stav: **návrh ke schválení, ne kánon.** Do `UI_UX_CANON.md` půjde až
-to, co bude implementované a ověřené ve fázích 3 a 4. Navazuje na
+Datum: 2026-11-07. Stav: **návrh ke schválení, ne kánon.** Vzhled prošel pohledem obsluhy
+ve specimenu ve všech čtyřech jasech UI (§9). Do `UI_UX_CANON.md` půjde až to, co bude
+implementované a ověřené ve fázích 3 a 4. Navazuje na
 [audit z 2026-11-07](../reports/2026-11-07-audit-ux-ui-rady-nastroju.md) a na kánon
 ve skillu `extendscript-ui-standards` §12; kódy U… a R… jsou z auditu.
 
@@ -12,7 +13,8 @@ Značky důkazu:
 | **[M]** | naměřeno 2026-11-07 v Illustratoru 30.8.2, macOS, nezobrazené okno (`tools/ui-probe`) |
 | **[D]** | naměřeno dřív, zdroj je `docs/extendscript-engine-facts.md` |
 | **[R]** | vzor už běží v uvedeném nástroji |
-| **[O]** | čeká na pohled obsluhy ve `shared/tests/probes/specimen_ui.jsx` |
+| **[V]** | viděla obsluha 2026-11-07 ve `shared/tests/probes/specimen_ui.jsx`, snímky obrazovky ve čtyřech jasech |
+| **[O]** | ještě čeká na pohled nebo zkoušku obsluhy |
 | **[N]** | návrh, který zatím nikde neběží |
 
 ---
@@ -51,26 +53,34 @@ Písmo okna je Lucida Grande 11 [M]. Název ani velikost se nenastavují.
 | titulek okna | `<Název> v<verze>`, beze změny za běhu | nativní |
 | titulek panelu | podstatné jméno, bez dvojtečky a bez čísla | nativní |
 | text | popisky, hodnoty, tlačítka, tipy | nativní |
-| stav | jediná tučná věc v okně | `ScriptUI.newFont(jméno, "BOLD", velikost)` [D] |
-| šedý řádek | co skript našel v dokumentu, patička | `enabled = false` [R: GM, ZSM, TE] |
+| stav | symbol a barva podle §2.3 | bez tučného písma: `"BOLD"` ani `"Bold"` se nezobrazí [V] |
+| šedý řádek | patička a pomocný text, bez kterého se dá pracovat | `enabled = false` [R: GM, ZSM, TE] |
+
+Šedý řádek je na tmavých jasech čitelný, na 0,726 a 0,941 slabý [V]. Co skript našel
+v dokumentu (výběr, rozměr, počet), proto patří do běžného textu [N]; dnes je šedě v GM,
+ZSM a TE.
 
 ### 2.3 Barvy
 
 Vlastní barvu má jen stav. Text polí a popisků drží barvu Illustratoru, pole se obarví
 jen dokud je neplatné [R: `FieldPaint.field`].
 
-Dnešní jedna sada má na světlém UI kontrast 1,91 až 3,77 a na tmavém 2,97 až 5,86 [M].
-Návrh má dvě sady podle jasu UI, rozlišuje je `FieldPaint.isDarkUI` [R]:
+Pozadí motivu ve čtyřech jasech je 0,196, 0,326, 0,726 a 0,941 [V, čte ho specimen].
+Dnešní jedna sada na nich má kontrast 1,12 až 5,87: upozornění na 0,726 má 1,12 a na
+snímku skoro mizí, na 0,941 je slabé [V]. Návrh má dvě sady podle jasu UI, rozlišuje je
+`FieldPaint.isDarkUI` [R]:
 
-| stav | symbol | tmavé UI (RGB 0–1) | kontrast na 0,196 / 0,325 | světlé UI (RGB 0–1) | kontrast na 0,72 / 0,94 |
+| stav | symbol | tmavé UI (RGB 0–1) | kontrast na 0,196 / 0,326 | světlé UI (RGB 0–1) | kontrast na 0,726 / 0,941 |
 |---|---|---|---|---|---|
-| chyba | ✗ | 1,00 0,70 0,68 | 7,49 / 4,50 | 0,52 0,03 0,03 | 5,20 / 9,06 |
-| upozornění | ⚠ | 1,00 0,78 0,40 | 8,31 / 4,99 | 0,40 0,23 0,00 | 4,83 / 8,42 |
-| v pořádku | ✓ | 0,60 0,88 0,58 | 8,23 / 4,95 | 0,05 0,31 0,09 | 4,90 / 8,55 |
+| chyba | ✗ | 1,00 0,71 0,69 | 7,63 / 4,57 | 0,52 0,03 0,03 | 5,29 / 9,09 |
+| upozornění | ⚠ | 1,00 0,78 0,40 | 8,31 / 4,97 | 0,40 0,23 0,00 | 4,91 / 8,44 |
+| v pořádku | ✓ | 0,60 0,88 0,58 | 8,24 / 4,93 | 0,05 0,31 0,09 | 4,99 / 8,57 |
 
-Pozadí 0,196 je změřené [M], 0,94 pochází z `field_paint.js` [D]; 0,325 a 0,72 jsou zatím
-předpoklad pro střední jasy a specimen je ukáže [O]. Jestli je světlá červená ještě
-čitelná jako chyba, rozhodne oko [O].
+Všechny tři barvy obou sad jsou na snímcích čitelné ve všech čtyřech jasech a hranice
+světlá a tmavá sada (průměr pozadí 0,5) padla správně [V]. Chyba na tmavém UI je proti
+specimenu (1,00 0,70 0,68, kontrast 4,48 na 0,326) o setinu světlejší, aby držela 4,5;
+okem rozdíl není poznat. Jestli světle červená na tmavém působí jako chyba, obsluha
+nekomentovala [O].
 
 ### 2.4 Rozestupy
 
@@ -109,6 +119,8 @@ a přepínač 19, text 15.
 
 Skupinu tvoří `panel`. Tenká čára je povolená jen uvnitř panelu, pod hlavičkou tabulky
 [R: GM]. Značky jsou jen znaky `↺ + − ↑ ↓ ✓ ⚠ ✗`, každá na tlačítku s tipem. Žádné obrázky.
+Tlačítko zamčené na 30 px je kruh; `↺` se v něm kreslí menší než ostatní znaky [V], tip je
+proto u něj nutný.
 
 ---
 
@@ -143,7 +155,11 @@ odvozená a změří se po změně.
 | nástroj | dnes | změna | cíl |
 |---|---|---|---|
 | GM | 465 × **678 až 804**, primární y 631 až 757 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne | jedna výška, nejvýš 804 |
-| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, 8 rezervovaných řádků, žádná přestavba | **851 × 634** ve všech stavech [M: maketa] |
+| ZSM | 465 × **749 až 932**; SUMMA s 8 řádky chce 959, okno má 932 a tlačítko je z 15 px pod okrajem | dva sloupce, rezervované řádky do `MAX_LAYERS`, žádná přestavba | **851 × 634** ve všech stavech při 8 řádcích [M: maketa]; při 6 asi 560, při 5 asi 545 [odhad ze snímku] |
+
+Výšku ZSM určuje pravý sloupec: řádek vrstvy má 37 px (tlačítko `−` 27 a mezera 10).
+Pravý sloupec je o 89 px vyšší než levý, takže pod 5 řádků už okno nesníží; pak rozhoduje
+levý sloupec. Šířka zůstane, drží ji osa popisků 170 a přepínače zdroje.
 | BRE | 460 × 478, stálé | přibude stavový řádek | asi 465 × 500 |
 | TE | 1022 × 836, stálé | patička do řady tlačítek, `Po dokončení…` do panelu Soubory | výška asi stejná |
 | BTE | 1008 × 768, stálé | stavový řádek a patička podle G7 | výška asi stejná |
@@ -156,11 +172,11 @@ Všechny jsou nativní ScriptUI. Sdílená implementace je návrh do §7.
 
 | komponenta | provedení a rozměr | stavy a chování | pravidlo |
 |---|---|---|---|
-| **Primární tlačítko** | `button`, `{name:"ok"}`, vpravo v řadě | zešedne při neplatném vstupu; Enter na šedém nic nespustí [D] | sloveso říká, co se stane |
+| **Primární tlačítko** | `button`, `{name:"ok"}`, vpravo v řadě; od ostatních ho odliší jen silnější nativní obrys [V] | zešedne při neplatném vstupu; Enter na šedém nic nespustí [D] | sloveso říká, co se stane |
 | **Storno** | `button`, `{name:"cancel"}`, vlevo od primárního | vždy živé; neukládá nic | vždy `Storno` |
 | **Vedlejší akce dialogu** | `button` mezi Storno a primárním [R: TE] | šedne podle své podmínky | jen když je to jiný výsledek téže práce |
 | **Vedlejší tlačítko panelu** | `button`, nativní šířka | `…` otevírá další okno | ve skupině zarovnané vpravo, aby nezískalo volné místo [D] |
-| **Destruktivní tlačítko** | `button` bez barvy, text `Smazat` | po kliknutí dotaz; šedne, když není co mazat | barva nativního tlačítka nejde [M] |
+| **Destruktivní tlačítko** | `button` bez barvy, text `Smazat` | po kliknutí dotaz; šedne, když není co mazat | pozadí vyhodí chybu [M], pero a písmo se neprojeví [V] |
 | **Znakové tlačítko** | `button`, šířka 30, výška nativní | tip je povinný | jen vedle dalšího prvku v řádku |
 | **Číselné pole** | popisek na ose, pole 7 znaků, jednotka za polem mezerou 5 | `Numbers.parse/format`, živá kontrola, červený text | jednotka nikdy v popisku |
 | **Textové pole** | 24 znaků nebo výplň řádku | živá kontrola, kde má smysl | |
@@ -168,16 +184,16 @@ Všechny jsou nativní ScriptUI. Sdílená implementace je návrh do §7.
 | **Zaškrtávátko** | text je přímo na něm, začíná na ose polí | klik na text přepíná | žádný popisek s holým zaškrtávátkem |
 | **Přepínače** | popisek na ose, do tří krátkých voleb v řádku, jinak sloupec [R: TE] | změna nikdy nehne rozvržením | radio je i volba režimu |
 | **Seznam** | `dropdownlist`, výplň řádku nebo změřená šířka | chybějící hodnota `název  (chybí)` [R: ZSM] | |
-| **Záložky** | nepoužívají se [O] | | skryly by nastavení; režim je radio a `stack` |
+| **Záložky** | nepoužívají se | `tabbedpanel` vypadá nativně, ale Tab ho přeskočí [V] | skryly by nastavení; režim je radio a `stack` |
 | **Skupina prvků** | `panel` s titulkem | v režimu, kterého se netýká, zešedne celá [N] | bez čísla |
 | **Tabulka** | `listbox` s hlavičkou, pevná výška | znovu se staví jen při změně počtu řádků [R: BTE] | |
 | **Rámeček podrobností** | víceřádkový `edittext` jen pro čtení, pevná výška [R: TE, BTE] | chyby první, pak upozornění, pak ostatní | |
-| **Šedý řádek** | `statictext`, `enabled = false` | beze změny rozměru | co skript našel, ne proč nejde spustit |
-| **Stavový řádek** | jeden, přes celou šířku nad patičkou | symbol, barva §2.3, tučně, `truncate` | jediné místo s důvodem šedého tlačítka |
-| **Potvrzovací dialog** | nativní `confirm` [O] | Enter a Esc [O] | otázka se slovesem, §5.5 |
+| **Šedý řádek** | `statictext`, `enabled = false` | beze změny rozměru | patička a pomocný text, §2.2 |
+| **Stavový řádek** | jeden, přes celou šířku nad patičkou | symbol a barva §2.3, `truncate` | jediné místo s důvodem šedého tlačítka |
+| **Potvrzovací dialog** | nativní `confirm`: tlačítka `Ne` a `Ano`, výchozí `Ano` [V] | Enter [O] | otázka, na kterou `Ano` znamená akci, §5.5 |
 | **Chybová hláška** | nativní `alert`, §6.3 | | ne na chybu v poli |
 | **Průběh** | `NS.Progress` [R] | zastavení podržením Esc [D] | |
-| **Souhrn** | `NS.Summary` [R] | jen tlačítko `Zavřít`; Esc [O] | |
+| **Souhrn** | `NS.Summary` [R] | jen tlačítko `Zavřít`; okno s jediným tlačítkem zavře Esc i Enter [V] | |
 
 ---
 
@@ -193,16 +209,19 @@ a znamená „teď neplatí“; je přednostní před skrytím.
 - Enter spustí primární akci, šedá je nespustí [D].
 - Esc zavře dialog jako Storno; běžící dávku zastaví podržením [D].
 - Tab jde pořadím vytvoření, takže kód staví prvky v pořadí čtení: levý sloupec, pravý
-  sloupec, tlačítka. Tab přes seznamy a přepínače závisí na nastavení macOS [O].
+  sloupec, tlačítka. Zastaví se i na seznamu, záložky přeskočí a mezi panely chce jedno
+  stisknutí navíc [V]. Jiné pořadí ScriptUI nastavit neumí, proto na Tabu žádné pravidlo
+  nestojí: klávesnice v dialogu znamená psát čísla, Enter a Esc.
 - Ochrana BTE (Enter po úpravě pole přepočítá a teprve druhý spustí) zůstává jako jediná
   výjimka, protože běh musí odpovídat náhledu, který obsluha viděla [R].
 
 ### 5.3 Výchozí fokus
 
-Každý dialog fokus nastavuje výslovně, ne náhodou. Pravidlo čeká na test ve specimenu,
-kam po otevření padne text [O]. Návrh: první pole, které obsluha v tom nástroji mění
-nejčastěji [R: ZSM]. Fokus se nepřesouvá sám po změně stavu ani na neplatné pole, protože
-`active = true` může přepsat celý text [D].
+Bez `active` nemá po otevření fokus nic a psaní nikam nepadne [V]. Každý dialog proto
+fokus nastaví výslovně na pole, které obsluha v tom nástroji mění nejčastěji. ZSM to dělá
+(`inp.active = true` na mezeru od grafiky) [R]; jestli psaní po otevření ZSM opravdu padne
+do toho pole, zbývá vyzkoušet [O]. Fokus se nepřesouvá sám po změně stavu ani na neplatné
+pole, protože `active = true` může přepsat celý text [D].
 
 ### 5.4 Kontrola vstupu
 
@@ -216,7 +235,7 @@ přechází ze série `alert` [N].
 | situace | potvrzení |
 |---|---|
 | smazat předvolbu, přepsat předvolbu | ano [R] |
-| přepsat soubory | ano, jen když běh opravdu přepíše aspoň jeden soubor; s počtem; výchozí Přepsat [N, rozhodnuto Q5] |
+| přepsat soubory | ano, jen když běh opravdu přepíše aspoň jeden soubor; s počtem; výchozí `Ano` = přepsat, `Ne` = zpět do dialogu bez zápisu [N, rozhodnuto Q5; tlačítka `confirm` V] |
 | zavřít neuloženou šablonu v BRE | ano [R] |
 | kreslení do dokumentu, vratné přes Cmd+Z | ne |
 
@@ -233,8 +252,8 @@ přechází ze série `alert` [N].
   režimu (U12).
 - Předvolby podle kánonu §12.4 [R]. Stejné ovládání ve všech nástrojích s předvolbami:
   popisek `Předvolba:`, seznam, ↺, pak `Uložit`, `Uložit jako…`, `Smazat`.
-- `Výchozí` mimo seznam má jen ZSM. Návrh: **odebrat**, protože `[Výchozí]` je v seznamu
-  a funkce tím nezmizí.
+- `Výchozí` mimo seznam má jen ZSM. **Odebrat** (potvrdila obsluha 2026-11-07), protože
+  `[Výchozí]` je v seznamu a funkce tím nezmizí.
 - BRE si bude pamatovat i `Přeskočit hotové výstupy`, jako TE. Zdrojová složka se dál
   nepamatuje, mění se s dávkou.
 
@@ -267,8 +286,10 @@ Jeden pojem, jeden význam. Vedle rozhodnutí z kánonu §12.8:
 | **Nejde…** | nemožnost ve stavu i v hlášce | `Nelze…` |
 | **běh** | spuštění nástroje | `dávka` v hláškách o nastavení |
 
-Anglické závorky v ZSM (`Auto-fit`, `Fixed`, `Top`, `Bottom`, `Feed`) se odstraní, pokud
-obsluha ty termíny nepoužívá. `PDF preset`, `artboard` a názvy nástrojů zůstávají.
+Anglické závorky v ZSM (`Auto-fit`, `Fixed`, `Top`, `Bottom`, `Feed`) se odstraní.
+`PDF preset`, `artboard` a názvy nástrojů zůstávají. Tohle i nové popisky BRE
+`Cílová složka:` a `Vzor pojmenování:`, které ruší rozhodnutí z 2026-10-28 o krátkých
+popiscích, potvrdila obsluha 2026-11-07.
 
 ### 6.2 Tvar textů
 
@@ -321,11 +342,12 @@ upřesní plán fáze 3.
 | požadavek zadání | zjištění | rozhodnutí |
 |---|---|---|
 | barva pozadí tlačítka | `backgroundColor` vyhodí chybu [M] | nepoužívat |
-| barva a tučnost textu tlačítka | zápis projde bez chyby [M], účinek [O] | nepoužívat, ať už funguje, nebo ne: primární tlačítko odliší Illustrator |
+| barva a tučnost textu tlačítka | zápis projde bez chyby [M], na tlačítku se neprojeví [V] | nepoužívat: primární tlačítko odliší Illustrator obrysem |
+| tučný text | `"BOLD"` ani `"Bold"` se na `statictext` nezobrazí [V] | nepoužívat; zdůraznění nese symbol a barva |
 | hover | posluchače `mouseover` jdou připojit [M], ale nativní prvek by se musel kreslit sám | nepoužívat |
 | poloměr rohů, stíny | žádná vlastnost; jen vlastní kreslení | nepoužívat |
-| záložky | `tabbedpanel` jde vytvořit [M], vzhled [O] | nepoužívat |
-| velikost písma | `newFont` vrátí velikost 14 [M], účinek [O] | nepoužívat |
+| záložky | `tabbedpanel` jde vytvořit [M], vypadá nativně a přepíná, Tab ho přeskočí [V] | nepoužívat |
+| velikost písma | `newFont` vrátí velikost 14 [M], účinek neověřen | nepoužívat, ověřovat není proč |
 | vlastní kreslený prvek | `onDraw` funguje na `iconbutton` [R: vzorek barvy ZSM] | jen pro náhled barvy |
 
 Vlastní kreslení by vzalo nativní výchozí tlačítko, fokus a přizpůsobení jasu UI a přineslo
@@ -337,13 +359,25 @@ víc kódu bez přínosu pro práci obsluhy.
 
 Specimen (`shared/tests/probes/specimen_ui.jsx`) ukazuje komponenty a maketu ZSM. Změřené
 bez zobrazení: maketa má ve všech třech stavech 851 × 634 px a žádný popisek není užší než
-svůj text [M]. **Vzhled zatím nikdo neviděl.**
+svůj text [M].
 
-Čeká na pohled obsluhy:
+Obsluha ho 2026-11-07 spustila ve všech čtyřech jasech UI a poslala snímky [V]. Výsledek:
 
-- stavové barvy ve všech jasech UI a čitelnost světlé červené;
-- účinek červeného pera a tučnosti na nativním tlačítku, `Bold` proti `BOLD`;
-- vzhled `tabbedpanel`;
-- kam po otevření padne text; Tab přes seznamy a přepínače;
-- Esc v okně jen se `Zavřít`; popisky a Enter v nativním `confirm`;
-- maketa ZSM: je rozložení ve dvou sloupcích pro denní práci lepší než dnešní okno?
+| otázka | odpověď | dopad na návrh |
+|---|---|---|
+| stavové barvy | dnešní upozornění na světlých jasech skoro mizí; obě navržené sady čitelné všude | sady podle jasu platí, §2.3 |
+| pero a tučnost na tlačítku | bez účinku | §8, primární odliší obrys |
+| `Bold` proti `BOLD` | ani jedno nezobrazí tučně | stav bez tučného písma, §2.2 |
+| šedý řádek | na světlých jasech slabý | jen patička a pomocný text, §2.2 |
+| `tabbedpanel` | nativní, Tab ho přeskočí | dál nepoužívat |
+| fokus po otevření | bez `active` nikde | fokus výslovně, §5.3 |
+| Tab | i na seznam, mezi panely stisknutí navíc | na Tabu nic nestojí, §5.2 |
+| okno jen se `Zavřít` | Esc i Enter ho zavřou | souhrn s jedním tlačítkem stačí |
+| `confirm` | `Ne` a `Ano`, výchozí `Ano` | otázka, na kterou `Ano` znamená akci |
+| maketa ZSM | obsluze nic nechybí | dva sloupce platí; zbývá nejvyšší počet vrstev, §3 |
+
+Maketa nemá napojené `Jen značky`; skutečné ZSM při něm tabulku vrstev zešedí [R:
+`applyMarksOnlyState`] a nový dialog to převezme.
+
+Zbývá [O]: jestli psaní po otevření ZSM padne do pole mezery, jestli Enter v `confirm`
+potvrdí `Ano` a jestli světle červená na tmavém UI působí jako chyba.

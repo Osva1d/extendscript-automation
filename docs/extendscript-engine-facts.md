@@ -1038,14 +1038,36 @@ a primární tlačítko končí na y 947. Jestli to tak vypadá i po zobrazení,
 | `button` | nejméně 80 px, výška 27; `Uložit jako…` 103 px |
 | `checkbox`, `radiobutton` / `statictext` / `progressbar` | výška 19 / 15 / 17 |
 | `button.graphics.backgroundColor =` | vyhodí „Cannot set backgroundColor property for this element type“ |
-| `button.graphics.foregroundColor =` skutečné pero, `button.graphics.font =` | projde bez chyby, vzhled neověřen |
+| `button.graphics.foregroundColor =` skutečné pero, `button.graphics.font =` | projde bez chyby; po zobrazení bez účinku (oddíl níž) |
 | `panel.graphics.backgroundColor =` | projde bez chyby, vzhled neověřen |
-| `tabbedpanel` se dvěma `tab` | jde vytvořit (213 × 70 px), vzhled neověřen |
+| `tabbedpanel` se dvěma `tab` | jde vytvořit (213 × 70 px); po zobrazení oddíl níž |
 | `button.addEventListener("mouseover", …)` | jde připojit, spuštění neověřeno |
 | `ScriptUI.newFont(jméno, "REGULAR", 14)` | vrátí velikost 14, vzhled neověřen |
 
 Rozměry skutečných dialogů se měří přes `tools/ui-probe`, která na okně nahradí `show()`
 a dialog ukončí jako Storno.
+
+### ScriptUI: co je vidět po zobrazení (pohled obsluhy 2026-11-07, AI 30.8.2)
+
+Specimen `shared/tests/probes/specimen_ui.jsx` spuštěný obsluhou ve všech čtyřech jasech
+UI, macOS; důkazem jsou snímky obrazovky a to, co obsluha nahlásila z klávesnice. Pozadí
+čte specimen z motivu (`newBrush(THEME_COLOR, "background")`).
+
+| co | výsledek |
+|---|---|
+| pozadí motivu ve čtyřech jasech | 0,196 / 0,326 / 0,726 / 0,941 |
+| `ScriptUI.newFont(jméno, "BOLD")` i `"Bold"` na `statictext` | tučně se nezobrazí: úsek `1234 × 567 mm` má na snímku stejnou šířku jako v běžném řádku |
+| pero `graphics.foregroundColor` na `statictext` a `edittext` | barva se zobrazí |
+| pero i písmo na `button` | bez účinku, text zůstane nativní |
+| `button` | nativní zaoblené tlačítko; `{name: "ok"}` má silnější obrys a jiné odlišení nemá; šedé má plnou šedou výplň |
+| `button` zamčený na 30 px | kruh; `↺` se kreslí menší než `+ − ↑ ↓` |
+| `edittext` s `enabled = false` | hodnota je ve všech jasech sotva vidět |
+| `statictext` s `enabled = false` | na tmavých jasech čitelný, na 0,726 a 0,941 slabý |
+| `tabbedpanel` | nativní záložky, vybraná podtržená, přepínání funguje; Tab záložky přeskočí |
+| fokus po otevření, když žádný prvek nemá `active` | nikde, psaní nikam nepadne |
+| Tab | zastaví se i na `dropdownlist` (obrys fokusu na snímku); mezi panely je potřeba jedno stisknutí navíc a není vidět, na čem se zastaví |
+| okno s jediným tlačítkem `{name: "ok"}` | zavře ho Esc i Enter |
+| `confirm(text)` | nativní dialog macOS s ikonou Illustratoru, tlačítka `Ne` a `Ano`, výchozí (modré) je `Ano`; Enter nezkoušen |
 
 ### ScriptUI: `layout(true)` nepřeměří změněný text (naměřeno 2026-10-03, AI 30.8.2)
 
