@@ -85,14 +85,13 @@ ani spad. Používá ji export i kontrolní pláty.
 
 ## 4. Dialog
 
-Panel Přelep a přídavky, za volbou Umístění přelepu:
+Panel Přelep a přídavky, na řádku Přelep (varianta B, viz změřeno níž):
 
 ```
-Přelep:              [ 32 ] mm
+Přelep:              [ 32 ] mm   Z toho bez potisku: [ 30 ] mm
 Umístění přelepu:    ( ) Půl na každou stranu
                      ( ) Celý na levý / horní
                      (•) Celý na pravý / dolní
-Z toho bez potisku:  [ 30 ] mm
 ```
 
 - Pole je aktivní jen u jednostranného přelepu většího než 0, jinak šedé.
@@ -145,12 +144,14 @@ vedle `INFO_MARKS_CUT`. Klíče anglicky, EN i CS, tón podle kánonu §12.
 | `ERR_UNPRINTED_BIG` | platí a je větší než přelep | chyba, stopne vše | Část bez potisku (%s mm) nesmí být větší než přelep (%s mm). |
 | `WARN_UNPRINTED_WATER` | platí, Vodorovně, lem nese horní plát | upozornění | Přelep nese horní plát, takže dolní leží na něm. Venku může voda zatékat do sváru; obvykle se volí Celý na pravý / dolní. |
 | `WARN_UNPRINTED_NO_LINE` | platí, ruční ořez, linka vypnutá | upozornění | Linka je vypnutá: okraj části bez potisku nebude na tisku vidět. |
-| `WARN_UNPRINTED_SKIP` | platí, Přeskočit hotové výstupy zapnuté | upozornění | Přeskočit hotové výstupy nepozná změnu části bez potisku a soubor se stejným názvem by zůstal. Po její změně volbu vypněte. |
+| `WARN_UNPRINTED_SKIP` | platí nebo platila při posledním potvrzeném běhu, Přeskočit hotové výstupy zapnuté | upozornění | Přeskočit hotové výstupy nepozná změnu části bez potisku a soubor se stejným názvem by zůstal. Po její změně volbu vypněte. |
 | `INFO_UNPRINTED` | platí | informace ve Výsledku | Přelep %s mm: %s mm bez potisku, %s mm potisku přes šev. |
 
 Část bez potisku nemění název souboru ani stránku, takže Přeskočit hotové výstupy
-by po její změně nechalo starý soubor s inkoustem v místě sváru. Proto třetí
-upozornění. Nic se nepřepíná samo. Tip pole (`TIP_UNPRINTED`) řekne, k čemu pole je, že plát
+by po její změně nechalo starý soubor s inkoustem v místě sváru, a po jejím
+vypnutí starý soubor s prázdným pásem. Proto třetí upozornění, i když část právě
+neplatí, ale platila při posledním potvrzeném běhu (`[Last Settings]`, čte se
+před dialogem; review 2026-11-07). Nic se nepřepíná samo. Tip pole (`TIP_UNPRINTED`) řekne, k čemu pole je, že plát
 s lemem leží při sváru dole a že přelep 32 s 30 bez potisku nechá 2 mm potisku
 jako krytí nespasování.
 
