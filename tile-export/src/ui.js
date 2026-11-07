@@ -245,10 +245,9 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns, balanced by measured heights. 2026-10-11, with the
-        // presets in two rows at the top of the left column and the
-        // placeholder row: both columns 647 px, the Result stretched from its
-        // 85 px floor to 99, the dialog 1178 x 749 px. Stacked in one column the
+        // Two columns, balanced by measured heights. 2026-11-07 (ui-probe,
+        // 1.3.0, the unprinted part on the overlap row): both columns end on
+        // one line, the dialog 1116 x 836 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -385,6 +384,17 @@ TE.UI = {
         pEdges.alignment = ["fill", "fill"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
+        // The part of a one-sided overlap left unprinted for a weld (1.3.0),
+        // live only while the overlap is one-sided. On the overlap's own row:
+        // a row of its own made the dialog 1022 x 865 px (ui-probe,
+        // 2026-11-07), over the ~850 px a laptop shows.
+        var gOverlap = etOverlap.parent;
+        var stUnprinted = gOverlap.add("statictext", undefined, l.LBL_UNPRINTED);
+        stUnprinted.helpTip = l.TIP_UNPRINTED;
+        var etUnprinted = gOverlap.add("edittext", undefined, TE.Numbers.format(s.overlapUnprinted));
+        etUnprinted.characters = this.M.NUM_FIELD;
+        etUnprinted.helpTip = l.TIP_UNPRINTED;
+        gOverlap.add("statictext", undefined, "mm");
         // Three options for two settings: the mode (symmetric or one-sided) and,
         // when one-sided, which panel of the seam carries the material. Kept as
         // one row because the second question only exists inside the second
@@ -400,9 +410,6 @@ TE.UI = {
         var rbOverlapMode = this.addRadioColumn(pEdges, l.LBL_OVERLAP_MODE,
             [l.OVERLAP_SYMMETRIC, l.OVERLAP_FIRST, l.OVERLAP_SECOND],
             carrierIdx, l.TIP_OVERLAP_MODE);
-        // The part of a one-sided overlap left unprinted for a weld (1.3.0):
-        // under the placement it belongs to, live only while that is one-sided.
-        var etUnprinted = this.addRow(pEdges, l.LBL_UNPRINTED, s.overlapUnprinted, l.TIP_UNPRINTED, "mm");
 
         var etAddTop    = this.addRow(pEdges, l.LBL_ADD_TOP,    s.addTop,    l.TIP_ADD, "mm");
         var etAddBottom = this.addRow(pEdges, l.LBL_ADD_BOTTOM, s.addBottom, l.TIP_ADD, "mm");

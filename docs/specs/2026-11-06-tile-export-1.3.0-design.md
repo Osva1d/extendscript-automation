@@ -110,6 +110,10 @@ přidá řádek do hotového dialogu 1.2.0 a přečte rozměry; vybere se varian
 se vejde do stropu. Zastaralý komentář v `ui.js` o 1178 × 749 px se při tom
 opraví na změřený rozměr.
 
+**Změřeno 2026-11-07 (ui-probe):** vlastní řádek pod Umístěním dal 1022 × 865 px,
+nad stropem. Pole je proto na řádku Přelep a dialog má 1116 × 836 px: výška
+jako v 1.2.0, šířka o 94 px větší.
+
 ## 5. Export a kontrolní pláty
 
 **Zünd.** Značky se počítají z masky (`buildZundPanel`), a právě v tom je past:

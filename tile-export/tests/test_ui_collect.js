@@ -298,5 +298,13 @@ eq(/activePreset === c\.PRESET_KEY_DEFAULT\) \{ btnSaveAs\.onClick\(\); return; 
     "Save on [Default] hands over to Save As");
 eq(/btnSave\.enabled = modified && numbersOk;/.test(ui), true, "and is live on [Default] once something changed");
 
+console.log("\n=== 1.3.0: the unprinted part sits on the overlap row ===");
+// A row of its own made the dialog 1022 x 865 px (ui-probe, 2026-11-07), over
+// the ~850 px a laptop shows; the spec's fallback is the overlap row.
+eq(/addRow\(pEdges,\s*l\.LBL_UNPRINTED/.test(ui), false, "no row of its own");
+eq(/gOverlap\s*=\s*etOverlap\.parent;/.test(ui), true, "the overlap row is the field's row");
+eq(/gOverlap\.add\("statictext",\s*undefined,\s*l\.LBL_UNPRINTED\)/.test(ui), true, "its label joins that row");
+eq(/etUnprinted\s*=\s*gOverlap\.add\("edittext"/.test(ui), true, "and so does its field");
+
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
