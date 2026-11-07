@@ -28,6 +28,11 @@ vrstva Graphics a opravy tichých chyb z
 
 ### Změněno
 
+- **Nejvýš 5 řádků mapování.** Dialog SUMMA s osmi řádky chtěl 959 px, okno
+  má na displeji 982 px nejvýš 932, a Generovat leželo pod jeho okrajem. S pěti
+  řádky měří SUMMA 872 px, ZUND 836 px. Předvolba nebo poslední běh s víc
+  řádky ukáže prvních pět a upozorní, které řádky se nenačetly. Uložená
+  předvolba zůstane, jak je, dokud ji neuložíte.
 - **Nabídka vrstev v mapování** má jen řezné a nástrojové názvy Zündu: ubyly
   White, Varnish a Register. Vrstva tohoto jména, kterou dokument má, se nabídne
   dál a název jde dopsat ručně.

@@ -210,10 +210,11 @@ a přesouvá cesty čistě v řezové barvě.
   Uživatelské rozhraní › Jas): červená je čitelná, šedý nález vypadá jako
   zašedlý text, ne jinak.
 - [ ] **6.9 Dialog na displeji 13".** ZUND i SUMMA, česky i anglicky: dialog je
-  vidět celý i s tlačítky Storno a Generovat (bez záhlaví okna měří ZUND 720
-  px, SUMMA 756 px, šířka 465 px; změřeno). S osmi řádky mapování měří 923 a
-  932 px a na 13" displeji se nemusí vejít — stejně jako v 1.1.0; zapište, od
-  kolika řádků se tlačítka schovají.
+  vidět celý i s tlačítky Storno a Generovat (bez záhlaví okna měří s jedním
+  řádkem mapování ZUND 720 px, SUMMA 756 px, šířka 465 px; změřeno). Od 1.3.0
+  dialog dovolí nejvýš 5 řádků: ZUND 836 px, SUMMA 872 px, po „+ Přidat“ o
+  10 px víc (změřeno 2026-11-07). Na displeji do 900 px výšky se SUMMA s pěti
+  řádky nemusí vejít; zapište, jestli jsou tlačítka vidět.
 - [ ] **6.10 Hlášky (J5, J6).** Bez otevřeného dokumentu → „Před spuštěním
   skriptu otevřete dokument.“ Prázdný dokument, Dle grafiky → „CHYBA:
   V dokumentu není žádná grafika… Dokument nebyl změněn.“ a počátek pravítek,
@@ -262,6 +263,14 @@ a přesouvá cesty čistě v řezové barvě.
   → řádek `Thru-cut ← Thru-cut`, vrstva i barva souhlasí.
 - [ ] **6a.9 Zjistit u obsluhy.** Čte Cut Center název vrstvy, nebo barvu? Ukáže skrytou
   grafiku z ořezového PDF uloženého s vrstvami Acrobatu (v souboru zůstává, změřeno)?
+- [ ] **6a.10 Fokus po otevření.** Hned po otevření dialogu, bez kliknutí, napište
+  číslo. ZUND se zdrojem Dle grafiky: padne do pole Mezera od grafiky. ZUND se zdrojem
+  Dle artboardu a SUMMA: padne do pole Mezera od okraje. Zapište, kam padlo, nebo
+  že nikam. Kód fokus nastavuje, jestli platí na obrazovce, neověřeno.
+- [ ] **6a.11 Pět řádků.** Přidávejte řádky mapování v režimu SUMMA: po pátém
+  „+ Přidat“ zešedne a Storno i Generovat jsou pořád vidět (SUMMA s pěti řádky
+  měří 882 px, změřeno). Upozornění na nenačtené řádky (předvolba s víc než pěti
+  řádky) změřila sonda 2026-11-07; vaše předvolby mají nejvýš dva řádky.
 
 ---
 
