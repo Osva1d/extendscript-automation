@@ -70,6 +70,7 @@ BTE.Storage = {
             s.repeats = "1";
             s.reset = "";
             s.format = "1";
+            s.perSheet = false;
         } else if (type === "case") {
             s.mode = "upper";
         } else {
@@ -83,10 +84,11 @@ BTE.Storage = {
      * (spec 6.4). Its "Kde" is {kind: "auto"}; the dialog resolves it with
      * defaultWhere when it opens, so a saved preset always holds a concrete
      * "Kde". Built on every call, so nobody can change the factory values.
-     * @returns {{order: string, steps: Array}} A new preset.
+     * "bySheet" is off.
+     * @returns {{order: string, bySheet: boolean, steps: Array}} A new preset.
      */
     defaultPreset: function () {
-        return { order: "rows", steps: [BTE.Storage.newStep("number")] };
+        return { order: "rows", bySheet: false, steps: [BTE.Storage.newStep("number")] };
     },
 
     /**
@@ -101,10 +103,12 @@ BTE.Storage = {
      * newer version) are not kept. An invalid Formát or Režim becomes the
      * default without a note, an invalid Kde or order with one. A preset
      * with no step left gets one Number step, so the dialog always has a
-     * selected step. "auto" passes through, so the default preset is a fixed
+     * selected step. "bySheet" is true only when stored as true, anything
+     * else (also a 1.0.0 preset, which has no such key) is false, without a
+     * note. "auto" passes through, so the default preset is a fixed
      * point. A second pass changes nothing and has no notes.
      * @param {*} values - A stored preset, or anything.
-     * @returns {{values: {order: string, steps: Array}, notes: Array.<string>}}
+     * @returns {{values: {order: string, bySheet: boolean, steps: Array}, notes: Array.<string>}}
      *     The preset, and what was repaired, in the user's language and
      *     without the preset's name (load() adds it).
      */
@@ -112,7 +116,7 @@ BTE.Storage = {
         var L = BTE.L;
         var v = (values !== null && typeof values === "object") ? values : {};
         var notes = [];
-        var out = { order: "rows", steps: [] };
+        var out = { order: "rows", bySheet: false, steps: [] };
         var raw, i, step, fallback;
 
         if (v.order === "rows" || v.order === "cols") {
@@ -120,6 +124,8 @@ BTE.Storage = {
         } else {
             notes.push(L.NOTE_ORDER_RESET);
         }
+
+        out.bySheet = (v.bySheet === true);
 
         raw = BTE.Utils.isArray(v.steps) ? v.steps : [];
         for (i = 0; i < raw.length; i++) {
@@ -181,6 +187,7 @@ BTE.Storage = {
                 s[fields[i]] = str(raw[fields[i]], s[fields[i]]);
             }
             s.format = oneOf(raw.format, ["1", "A", "a"], s.format);
+            s.perSheet = bool(raw.perSheet, false);
         } else {
             s.mode = oneOf(raw.mode, ["upper", "lower", "title", "sentence"], s.mode);
         }
