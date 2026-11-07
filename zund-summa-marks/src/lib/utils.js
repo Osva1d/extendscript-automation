@@ -87,6 +87,18 @@ ZSM.Utils = {
     },
 
     /**
+     * True when two names mean one layer to Illustrator: getByName ignores case
+     * (not spaces), so "regmarks" is the layer getByName("Regmarks") answers with
+     * (measured, docs/extendscript-engine-facts.md).
+     * @param {string} a
+     * @param {string} b
+     * @returns {boolean}
+     */
+    sameName: function (a, b) {
+        return String(a).toLowerCase() === String(b).toLowerCase();
+    },
+
+    /**
      * Writes a debug message to the ExtendScript console.
      * Only active when ZSM.Config.debug is true.
      * @param {string} msg - Message to log.

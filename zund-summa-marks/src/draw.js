@@ -273,10 +273,12 @@ ZSM.Draw = {
                         }
                         // "l_" prefix keeps user layer names like "toString"
                         // from colliding with inherited Object.prototype members.
-                        var targetLay = rowLayers["l_" + layDef.name];
+                        // Lower case: getLay finds the one layer for any case.
+                        var rowKey = "l_" + layDef.name.toLowerCase();
+                        var targetLay = rowLayers[rowKey];
                         if (!targetLay) {
                             targetLay = this.getLay(layDef.name, unhidden);
-                            rowLayers["l_" + layDef.name] = targetLay;
+                            rowLayers[rowKey] = targetLay;
                             // Guard against self-move (would happen if getLay
                             // resolved to the same Layer instance as refLayer,
                             // e.g. on the first iteration when targetLay is
@@ -328,10 +330,11 @@ ZSM.Draw = {
             //     it): the user wants them gone (2026-11-06). Skip Regmarks,
             //     target layers just created above, artifact layers, and hidden
             //     layers.
+            // Lower case: a row "cut" means the layer "Cut" (ZSM.Utils.sameName).
             var sysNames = {};
-            sysNames[ZSM.Config.layerRegmarks] = true;
+            sysNames[ZSM.Config.layerRegmarks.toLowerCase()] = true;
             for (var si = 0; si < s.layers.length; si++) {
-                if (s.layers[si].name) sysNames[s.layers[si].name] = true;
+                if (s.layers[si].name) sysNames[s.layers[si].name.toLowerCase()] = true;
             }
             // Skip empty-layer cleanup in marks-only mode — never remove the
             // user's pre-separated layers.
@@ -340,7 +343,7 @@ ZSM.Draw = {
                     if (doc.layers.length <= 1) break; // Illustrator requires at least 1 layer
                     try {
                         var elay = doc.layers[ei];
-                        if (sysNames[elay.name]) continue;
+                        if (sysNames[elay.name.toLowerCase()]) continue;
                         if (ZSM.Bounds.isArtifactLayer(elay)) continue;
                         if (!elay.visible) continue;
                         if (elay.pageItems.length === 0 && elay.layers.length === 0) {
@@ -448,7 +451,7 @@ ZSM.Draw = {
                 // a customer proof, an old version) — leave it exactly as it is.
                 // It used to be renamed Graphics and made visible, i.e. printed.
                 var gfxLayer = doc.layers[doc.layers.length - 1];
-                if (gfxLayer.name !== ZSM.Config.layerRegmarks && !ZSM.Bounds.isArtifactLayer(gfxLayer)
+                if (!ZSM.Utils.sameName(gfxLayer.name, ZSM.Config.layerRegmarks) && !ZSM.Bounds.isArtifactLayer(gfxLayer)
                     && gfxLayer.visible) {
                     // Don't auto-rename a layer the user explicitly mapped in the
                     // layer table. The move/remove passes above can leave a real,
@@ -461,7 +464,7 @@ ZSM.Draw = {
                     // second one of that name would only confuse.
                     var hasGraphics = true;
                     try { doc.layers.getByName(ZSM.Config.layerGraphics); } catch (eG) { hasGraphics = false; }
-                    if (!sysNames[gfxLayer.name] && !hasGraphics) {
+                    if (!sysNames[gfxLayer.name.toLowerCase()] && !hasGraphics) {
                         // Track rename so endSession() can restore lock state (W3)
                         var oldGfxName = gfxLayer.name;
                         gfxLayer.name    = ZSM.Config.layerGraphics;
@@ -517,7 +520,7 @@ ZSM.Draw = {
      * leave their sublayer active and a new layer becomes active too (measured),
      * and hand work follows the active layer, so what the operator drew or pasted
      * next went into the marks sublayer, which the next run deletes.
-     * @param {Object} sysNames - Regmarks and every mapped layer name.
+     * @param {Object} sysNames - Regmarks and every mapped layer name, lower case.
      * @private
      */
     _activateArtworkLayer: function (sysNames) {
@@ -525,7 +528,7 @@ ZSM.Draw = {
         for (var i = doc.layers.length - 1; i >= 0; i--) {
             try {
                 var lay = doc.layers[i];
-                if (sysNames[lay.name] || lay.name === ZSM.Config.layerTrim) continue;
+                if (sysNames[lay.name.toLowerCase()] || ZSM.Utils.sameName(lay.name, ZSM.Config.layerTrim)) continue;
                 if (ZSM.Bounds.isArtifactLayer(lay) || !lay.visible) continue;
                 doc.activeLayer = lay;
                 return;
@@ -831,7 +834,7 @@ ZSM.Draw = {
             }
             var subs = reg.layers;
             for (var j = 0; j < subs.length; j++) {
-                if (subs[j].name !== "Zünd" && subs[j].name !== "Summa") foreign++;
+                if (!ZSM.Utils.sameName(subs[j].name, "Zünd") && !ZSM.Utils.sameName(subs[j].name, "Summa")) foreign++;
             }
         } catch (e) {
             ZSM.Utils.log("_countForeignInRegmarks: " + e.message);
@@ -849,17 +852,16 @@ ZSM.Draw = {
      * layers (Regmarks, Trim), or null. The script rewrites those layers'
      * content, so paths routed there were deleted in the same run. Rows the
      * run ignores (no name or colour; marks-only mode) don't count. Any case
-     * counts: "regmarks" beside "Regmarks" is a mistake, not a choice.
+     * counts: getLay("regmarks") would answer with the Regmarks layer itself.
      * @param {Object} s - Settings.
      * @returns {string|null}
      */
     reservedMappingName: function (s) {
         if (!s || s.marksOnly || !s.layers) return null;
-        var reg = ZSM.Config.layerRegmarks.toLowerCase(), trim = ZSM.Config.layerTrim.toLowerCase();
         for (var i = 0; i < s.layers.length; i++) {
             var n = s.layers[i].name;
             if (!n || !s.layers[i].color) continue;
-            if (n.toLowerCase() === reg || n.toLowerCase() === trim) return n;
+            if (ZSM.Utils.sameName(n, ZSM.Config.layerRegmarks) || ZSM.Utils.sameName(n, ZSM.Config.layerTrim)) return n;
         }
         return null;
     },
@@ -907,7 +909,7 @@ ZSM.Draw = {
         try {
             var lay = item.layer;
             while (lay && lay.typename === "Layer") {
-                if (lay.name === ZSM.Config.layerRegmarks || lay.name === ZSM.Config.layerTrim) return true;
+                if (ZSM.Utils.sameName(lay.name, ZSM.Config.layerRegmarks) || ZSM.Utils.sameName(lay.name, ZSM.Config.layerTrim)) return true;
                 lay = lay.parent;
             }
             return false;
@@ -1383,8 +1385,8 @@ ZSM.Draw = {
             var layers = app.activeDocument.layers;
             for (var i = 0; i < layers.length; i++) {
                 var n = layers[i].name;
-                if (n === ZSM.Config.layerRegmarks || n === ZSM.Config.layerGraphics
-                    || n === ZSM.Config.layerTrim) continue;
+                if (ZSM.Utils.sameName(n, ZSM.Config.layerRegmarks) || ZSM.Utils.sameName(n, ZSM.Config.layerGraphics)
+                    || ZSM.Utils.sameName(n, ZSM.Config.layerTrim)) continue;
                 // Skip artifact layers (bracket-prefixed names like <Clip Group>)
                 if (ZSM.Bounds.isArtifactLayer(layers[i])) continue;
                 docNames.push(n);

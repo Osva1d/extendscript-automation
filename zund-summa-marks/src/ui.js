@@ -592,8 +592,9 @@ ZSM.UI = {
         }
 
         /**
-         * A mapping row's layer name without surrounding spaces: "Thru-cut " would
-         * make a layer that no cutter's method list knows, and looks the same.
+         * A mapping row's layer name without surrounding spaces. getByName does not
+         * find "Cut " and Illustrator drops the trailing space when naming, so the
+         * row added a second layer "Cut"; a leading space stayed in the name (measured).
          * @param {Object} row - A row of layRows.
          * @returns {string}
          */

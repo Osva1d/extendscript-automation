@@ -1831,7 +1831,8 @@ console.log("\n=== TEST 25 (spec 1.2.0 §17): no cut colour in the status line =
 // =====================================================
 // TEST (audit L13): a layer name goes out without its surrounding spaces
 // =====================================================
-// "Thru-cut " made a layer the cutter's method list would not know, invisibly.
+// getByName does not find "Cut " and Illustrator drops the trailing space when
+// naming, so the row added a second "Cut"; a leading space stayed in the name.
 console.log("\n=== TEST L13: mapping names are trimmed on Generate and on Save ===");
 // A named preset: show() rebuilds [Default] from the code on every open.
 function namedPresetL13(layers) {

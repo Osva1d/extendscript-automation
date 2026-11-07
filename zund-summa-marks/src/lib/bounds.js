@@ -15,7 +15,7 @@
 // Internal helpers (kept on the namespace for testability):
 //   _measureLayer, _getEffectiveBounds
 //
-// Depends on: ZSM.Config (layerRegmarks, layerGraphics)
+// Depends on: ZSM.Config (layerRegmarks, layerGraphics), ZSM.Utils (sameName)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -53,18 +53,20 @@ ZSM.Bounds = {
         var bRef = { found: false };
         var currentMode = (s && s.mode === "SUMMA") ? "Summa" : "Zünd";
 
-        // Per-layer skip rules for sublayer recursion
+        // Per-layer skip rules for sublayer recursion, names in lower case: the
+        // layer the run draws into may be "regmarks" (see ZSM.Utils.sameName), and
+        // measuring its marks as artwork would grow the artboard on every run.
         var regmarksSkip = {};
-        regmarksSkip[currentMode] = true;
+        regmarksSkip[currentMode.toLowerCase()] = true;
         // A Zünd run removes the Summa output (see ZSM.Draw.removeSummaOutput),
         // so it must not count as a boundary either. render() removes it only
         // after the new artboard has been accepted — nothing is deleted before
         // the run is known to succeed.
-        if (currentMode === "Zünd") regmarksSkip["Summa"] = true;
+        if (currentMode === "Zünd") regmarksSkip["summa"] = true;
         // Legacy: pre-v26.5.0 versions drew trim as a Graphics/Trim SUBLAYER —
         // keep skipping it so old documents don't inflate bounds either.
         var graphicsSkip = {};
-        graphicsSkip[ZSM.Config.layerTrim] = true;
+        graphicsSkip[ZSM.Config.layerTrim.toLowerCase()] = true;
 
         for (var li = 0; li < doc.layers.length; li++) {
             try {
@@ -79,9 +81,9 @@ ZSM.Bounds = {
                 // sit at the artboard edges — beyond the graphic — so measuring
                 // them would inflate bounds on every re-run (artboard grows each
                 // time = idempotence violation). Never measure it.
-                if (layName === ZSM.Config.layerTrim) continue;
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerTrim)) continue;
 
-                if (layName === ZSM.Config.layerRegmarks) {
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerRegmarks)) {
                     // Regmarks is OUR output layer. Skip its direct items
                     // (legacy/migrated marks would inflate bounds onto themselves).
                     // Recurse only into the OTHER mode's sublayer — those marks
@@ -91,7 +93,7 @@ ZSM.Bounds = {
                     for (var rsi = 0; rsi < regSubs.length; rsi++) {
                         try {
                             var rsub = regSubs[rsi];
-                            if (regmarksSkip[rsub.name]) continue;  // skip current mode
+                            if (regmarksSkip[rsub.name.toLowerCase()]) continue;  // skip current mode
                             this._measureLayer(rsub, b, bRef, null);
                         } catch (rse) {}
                     }
@@ -99,7 +101,7 @@ ZSM.Bounds = {
                 }
 
                 var skipNames = null;
-                if (layName === ZSM.Config.layerGraphics) skipNames = graphicsSkip;
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerGraphics)) skipNames = graphicsSkip;
 
                 this._measureLayer(layer, b, bRef, skipNames);
             } catch (le) {
@@ -129,7 +131,7 @@ ZSM.Bounds = {
      * @param {Layer}  layer     - Layer to measure.
      * @param {Array}  b         - Bounds accumulator [L, T, R, B].
      * @param {Object} bRef      - {found: bool} flag updated on first hit.
-     * @param {Object} skipNames - Map of sublayer names to skip (or null).
+     * @param {Object} skipNames - Map of lower-case sublayer names to skip (or null).
      * @private
      */
     _measureLayer: function (layer, b, bRef, skipNames) {
@@ -167,7 +169,7 @@ ZSM.Bounds = {
             for (var sli = 0; sli < subs.length; sli++) {
                 try {
                     var sub = subs[sli];
-                    if (skipNames && skipNames[sub.name]) continue;
+                    if (skipNames && skipNames[sub.name.toLowerCase()]) continue;
                     this._measureLayer(sub, b, bRef, skipNames);
                 } catch (se) {}
             }

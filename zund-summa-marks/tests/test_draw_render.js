@@ -2028,6 +2028,55 @@ assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Trimming"
     "L13: a longer name is free");
 
 
+// Illustrator finds "regmarks" under getByName("Regmarks") (measured), so the
+// script adopts such a layer. Everything that recognises its own layers has to
+// agree, or the marks it drew there are measured as artwork on the next run and
+// the artboard grows every time (measured on 1.3.0c: 374 -> 394 mm).
+console.log("\n=== TEST 1.3.0-J (L13): the script's layers in any case ===");
+function rectOf(doc) { return doc.artboards[0].artboardRect.join(","); }
+
+var docJ = setupDoc({ layers: [{ name: "regmarks" }, { name: "Art", items: [artE] }] });
+runD(makeSettings());
+var firstJ = rectOf(docJ);
+assert(findSublayer(findLayer(docJ, "regmarks"), "Zünd") !== null, "L13: marks go into the existing regmarks layer");
+runD(makeSettings());
+assertEq(rectOf(docJ), firstJ, "L13: the marks in regmarks are not measured as artwork");
+assertEq(docJ.activeLayer.name, "Graphics", "L13: regmarks is no artwork layer to end on");
+
+// The mode sublayer in another case is the script's own: replaced, not foreign.
+docJ = setupDoc({ layers: [{ name: "REGMARKS", sublayers: [{ name: "ZÜND", items: [{ type: "path", bounds: [-50, 350, -40, 340] }] }] },
+                           { name: "Art", items: [artE] }] });
+var outJ = runD(makeSettings());
+assert(findSublayer(findLayer(docJ, "REGMARKS"), "Zünd") !== null, "L13: the old sublayer goes, whatever its case");
+assertEq(findSublayer(findLayer(docJ, "REGMARKS"), "ZÜND"), null, "L13: no second sublayer beside it");
+assert(outJ.alerts.indexOf("regforeign") < 0, "L13: a sublayer in another case is not foreign");
+
+// The same for trim lines.
+docJ = setupDoc({ layers: [{ name: "Art", items: [artE] }, { name: "trim" }] });
+docJ._layers.reverse();
+runD(makeSettings({ mode: "SUMMA", drawRed: true }));
+firstJ = rectOf(docJ);
+runD(makeSettings({ mode: "SUMMA", drawRed: true }));
+assertEq(rectOf(docJ), firstJ, "L13: lines in a lower-case trim layer are not measured");
+
+// A path on a reserved layer in another case is never routed off it.
+docJ = setupDoc({ layers: [{ name: "REGMARKS", items: [cutE("Cut", 20)] }, { name: "Art", items: [artE] }] });
+ZSM.Draw.movePaths([{ name: "Cut", color: "Cut", layer: ZSM.Draw.getLay("Cut") }]);
+assertEq(countItems(findLayer(docJ, "Cut"), "PathItem"), 0, "L13: nothing leaves REGMARKS");
+
+// A row in another case means the layer the document has: placed once, kept when empty.
+var docJ2 = setupDoc({ layers: [{ name: "Cut" }, { name: "Art", items: [artE, cutE("Thru-cut", 20), cutE("Kiss-cut", 30)] }] });
+var movesJ = 0, origMoveJ = Mock.MockLayer.prototype.move;
+Mock.MockLayer.prototype.move = function () { movesJ++; return origMoveJ.apply(this, arguments); };
+runD(makeSettings({ layers: [{ name: "cut", color: "Thru-cut" }, { name: "Score", color: "Kiss-cut" }, { name: "CUT", color: "Ghost" }] }));
+Mock.MockLayer.prototype.move = origMoveJ;
+assertEq(countItems(findLayer(docJ2, "Cut"), "PathItem"), 1, "L13: a row in another case routes into the layer");
+assertEq(movesJ, 2, "L13: rows in another case place that layer once");
+var docJ3 = setupDoc({ layers: [{ name: "Cut" }, { name: "Art", items: [artE] }] });
+runD(makeSettings({ layers: [{ name: "cut", color: "Ghost" }] }));
+assert(findLayer(docJ3, "Cut") !== null, "L13: a mapped layer stays when empty, whatever the row's case");
+
+
 // =====================================================
 // TEARDOWN
 // =====================================================

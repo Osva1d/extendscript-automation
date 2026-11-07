@@ -92,9 +92,11 @@
     function wrapCollection(arr, opts) {
         opts = opts || {};
         var coll = arr.slice();   // snapshot — production reads length once at iteration start
+        // Case-insensitive, spaces count, the first match wins (layers, spots and
+        // swatches measured, docs/extendscript-engine-facts.md "getByName").
         coll.getByName = function (name) {
             for (var i = 0; i < arr.length; i++) {
-                if (arr[i].name === name) return arr[i];
+                if (String(arr[i].name).toLowerCase() === String(name).toLowerCase()) return arr[i];
             }
             throw new Error("Not found: " + name);
         };
