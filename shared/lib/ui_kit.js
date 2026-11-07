@@ -134,7 +134,8 @@ function buildUiKit(NS) {
 
         /**
          * A path row: label, a path field of 26 characters that takes the
-         * rest of the row, and Vybrat… capped at 90 px. A picked path fills
+         * rest of the row, and Vybrat… at its native width, capped at 90 px,
+         * ending on the same edge as a text or list row. A picked path fills
          * the field and calls onPick; a picked path does not fire the field's
          * onChanging, so a tool that checks the field live does it there.
          * @param {Object} parent - ScriptUI container.
@@ -150,6 +151,12 @@ function buildUiKit(NS) {
             field.alignment = ["fill", "center"];
             if (o.tip) { field.helpTip = o.tip; }
             var btn = r.row.add("button", undefined, o.button);
+            // Aligned right, the button keeps its native width and the field
+            // takes all the slack, ending where a text row's field ends. With
+            // no alignment it takes a share of the slack, and what the cap
+            // cuts off is lost: the row ended 2 to 14 px short (measured
+            // 2026-11-07, engine-facts).
+            btn.alignment = ["right", "center"];
             btn.maximumSize.width = NS.UiKit.BROWSE_MAX;
             if (o.tipButton) { btn.helpTip = o.tipButton; }
             btn.onClick = function () {

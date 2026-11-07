@@ -89,6 +89,7 @@ var pr = K.pathRow(w, { label: "Cílová složka:", value: "/old", tip: "Kam se 
 assert(types(pr.row) === "statictext,edittext,button", "label, field, button");
 assert(pr.field.text === "/old" && pr.field.characters === 26 && pr.field.alignment[0] === "fill", "the path field: 26 characters, fills");
 assert(pr.button.text === "Vybrat…" && pr.button.maximumSize.width === K.BROWSE_MAX && K.BROWSE_MAX === 90, "the button is capped at 90 px");
+assert(pr.button.alignment[0] === "right", "aligned right, so the slack goes to the field and the row ends flush (measured)");
 assert(pr.button.helpTip === "Vybere složku." && pr.field.helpTip === "Kam se ukládá.", "the button's own tip, the field the label's");
 pr.button.onClick();
 assert(picked.folder === "Vyberte cílovou složku" && pr.field.text === "/Users/x/Výstup", "a picked folder fills the field");
