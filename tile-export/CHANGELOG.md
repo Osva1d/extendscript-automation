@@ -4,6 +4,26 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.3.0] — nevydáno
+
+### Přidáno
+
+- **Část přelepu bez potisku pro svár plachet.** Na řádku Přelep je nové
+  pole **Z toho bez potisku**. Platí jen pro přelep celý na jedné straně: plát,
+  který přelep nese, leží při sváru dole a od své vnější hrany zůstane bez
+  potisku. Přelep 32 mm s 30 mm bez potisku nechá 2 mm potisku přes šev jako
+  krytí nespasování. Funguje pro ruční ořez i Zünd a stejně to ukážou kontrolní
+  pláty; značky Zünd, řez a rozměr stránky zůstávají jako bez něj. Výsledek
+  řekne, kolik se netiskne a kolik potisku jde přes šev.
+- **Upozornění u části bez potisku:** když u Vodorovně nese přelep horní plát
+  (venku může zatékat do sváru), když je u ručního ořezu vypnutá linka (okraj
+  nepotištěného pásu by nebyl vidět) a když je zapnuté Přeskočit hotové výstupy
+  (změnu části bez potisku nepozná, soubor má stejný název).
+- **Dotaz před přepisem souborů.** Když by export přepsal aspoň jeden soubor,
+  který Přeskočit hotové výstupy nechrání, zeptá se „V cílové složce už je:
+  3 soubory. Přepsat?“. Ano přepíše a je výchozí; Ne vrátí do dialogu se vším,
+  jak bylo nastavené, a nic nezapíše. Jen pláty se neptá.
+
 ## [1.2.0] — 2026-10-27
 
 ### Přidáno

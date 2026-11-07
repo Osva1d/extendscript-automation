@@ -169,6 +169,24 @@ stejně odřízne. Rozhoduje až tam, kde překryv na grafice zůstane: pak má
 překrývající hrana ležet odvrácená od hlavního směru pohledu, aby nevrhala
 viditelný stín.
 
+**Z toho bez potisku** je pro svařované plachty, které jdou přes TE: strojový
+ořez nebo šev mimo text. Běžnou plachtu s rovnoměrnými švy připraví lépe RIP.
+Plát, který nese jednostranný přelep, leží při sváru dole a od své vnější hrany
+zůstane bez potisku; zbytek přelepu u švu se tiskne jako krytí nespasování.
+Svisle, přelep celý na pravý, přelep 32 a z toho bez potisku 30, zeď 6000 mm
+na tři pláty:
+
+| plát | řez | potisk | bez potisku |
+|---|---|---|---|
+| 1 | 2000 mm | 2000 mm | nic |
+| 2 | 2032 mm | 2002 mm | 30 mm vlevo |
+| 3 | 2032 mm | 2002 mm | 30 mm vlevo |
+
+U vodorovných švů venku má přelep nést dolní plát (**Celý na pravý / dolní**),
+aby horní ležel navrchu a voda stékala přes svár, ne do něj. Pole je aktivní
+jen u přelepu celého na jedné straně; jinak hodnota čeká v předvolbě a nic se
+nevynechá.
+
 **Červená linka** se kreslí po obvodu **tiskového** plátu — včetně přelepu
 a přídavků, tedy přesně po MediaBoxu exportovaného PDF — v přímé barvě. Leží
 středem na hraně plátu a má dvojnásobnou tloušťku: vnější polovinu ořízne okraj
@@ -333,6 +351,11 @@ zakázce se stejným názvem nebo dřívějšímu stavu této, takže se vytvoř
 a souhrn to u plátu napíše. Neuložené změny pracovního dokumentu volba
 nepozná; dokument, který ještě nebyl uložen, nepřeskočí nic. Ve výchozím
 stavu je vypnutá.
+
+Když by export přepsal aspoň jeden soubor, který volba nechrání, zeptá se
+nejdřív „V cílové složce už je: 3 soubory. Přepsat?“. Ne vrátí do dialogu a nic
+se nezapíše. Část bez potisku název souboru nemění, takže ji Přeskočit hotové
+výstupy nepozná — po její změně volbu vypněte.
 
 ## Známá omezení
 

@@ -171,6 +171,31 @@ kontrolních plátů (i řez u Zündu) jsou plné, s rovnými konci.
 znovu otevřít: v poli `2,5`, ne `2.5`. [Výchozí] ukáže PDF preset
 [Kvalitní tisk].
 
+**1.17 Část bez potisku (1.3.0).** Arch, přelep 32, Půl na každou stranu: pole
+Z toho bez potisku na řádku Přelep šedé. Celý na pravý / dolní: pole aktivní, napiš 30;
+Výsledek „Přelep 32 mm: 30 mm bez potisku, 2 mm potisku přes šev.“ Přelep 0:
+pole zase šedé. 33 při přelepu 32: „✗ Část bez potisku (33 mm) nesmí být větší
+než přelep (32 mm).“ Vodorovně s Celý na levý / horní: „⚠ Přelep nese horní
+plát…“; vypnutá linka u ručního ořezu: „⚠ Linka je vypnutá…“; zapnuté
+Přeskočit hotové výstupy: „⚠ Přeskočit hotové výstupy nepozná změnu části bez
+potisku…“. Uložená hodnota 30 přežije přepnutí na Půl na každou stranu a zpět.
+Export: plát 1 bez pásu, pláty 2 a 3 s prázdným pásem 30 mm vlevo, potisk od
+pole 998 a 1998 (2 mm přes šev); u Zündu značky na stejných místech jako s 0.
+
+**Brány vydání 1.17:**
+- **RIP:** jeden testovací plát s částí bez potisku v každém RIPu v provozu —
+  prázdný pás musí zůstat na tisku, nesmí se oříznout jako bílý okraj.
+  Rizikový je hlavně ruční ořez s vypnutou linkou.
+- **Materiál:** jeden svár se Zündem na skutečné plachtě — značky, řez, šířka
+  pásu, krytí 2 mm a kam jde tryska.
+
+**1.18 Dotaz před přepisem (1.3.0).** Export do složky, kde už výstupy jsou:
+„V cílové složce už je: 3 soubory. Přepsat?“, Ano je výchozí (Enter). Ne:
+dialog se vrátí se stejnými hodnotami včetně měřítka kresby a v dokumentu ani
+ve složce se nic nezmění. Ano: přepíše. Se zapnutým Přeskočit hotové výstupy
+a samými hotovými výstupy se neptá; Jen pláty se neptá nikdy; prázdná složka
+se neptá.
+
 ---
 
 ## 2. Regresní přehled
@@ -202,6 +227,8 @@ v milimetrech.
 | arch, Zünd, Šířka plátu 1460, přelep 0 | „✗ Export nejde, Jen pláty ano: 1 chyba, viz níže."; řádky „1–2" se stránkou 149 × 103 a „3" s 11 × 103; „✗ Plát 3: orientační značka by se dotýkala jiné značky nebo ji překrývala (středy 0 mm od sebe, průměr 5 mm)…" | export šedý, Jen pláty aktivní |
 | zeď, Zünd, Max. rozteč značek 4 | bez hlášky — plát nese přes 100 značek, ty dialog nekontroluje | „CHYBA: Plát 1: Zünd značky by se dotýkaly nebo překrývaly (středy 4 mm od sebe, průměr 5 mm)… Nic se neexportovalo a dokument zůstal beze změny."; artboardy ani linky se nezmění |
 | arch, Přelep `2O`, prázdný nebo `-5` | „✗ Nejde spustit: 1 chyba, viz níže."; „✗ Pole „Přelep“: zadejte číslo, třeba 20 nebo 2,5.", u `-5` „… nesmí být záporné."; tabulka prázdná, pole červené | nic nejde spustit, Uložit i Uložit jako… šedé |
+| arch, přelep 32, Celý na pravý / dolní, z toho bez potisku 30 | „Přelep 32 mm: 30 mm bez potisku, 2 mm potisku přes šev."; S přídavky 1000 \| 1032 \| 1032 × 1000, Stránka PDF 100 × 100 \| 103,2 × 100 \| 103,2 × 100; názvy `…_01_1000x1000mm_1ku10.pdf`, `…_02_1032x1000mm_1ku10.pdf` | pláty 2 a 3 vlevo 3 mm (30 mm skutečně) bez potisku, potisk od pole 998 a 1998; plát 1 jako dřív |
+| zeď, Zünd, totéž | Stránka PDF 203 × 103 \| 206,2 × 103 \| 206,2 × 103, stejná jako bez části bez potisku | pás bez potisku vlevo na plátech 2 a 3, bez spadu; značky, řez a `_cut` jako s 0 |
 | arch, Měřítko kresby prázdné | „✗ Pole „Měřítko kresby“: zadejte číslo…"; Dokument „—" | totéž |
 | arch, Rastr, Rozlišení 71 (jen s `RASTER_ENABLED`) | „✗ Rozlišení 71 DPI je příliš nízké: Illustrator rastruje až od 72 DPI." | export šedý; se 72 projde |
 
@@ -215,4 +242,4 @@ pláty podruhé → „Počet vytvořených plátů: 3 (předchozí nahrazeny)."
 ## 3. Jak hlásit
 
 Nastavení dialogu (nebo otisk), co vyšlo a co jsi čekal. Nový nález dostane
-další číslo v [nálezech](findings.md), naposledy N52.
+další číslo v [nálezech](findings.md), naposledy N53.
