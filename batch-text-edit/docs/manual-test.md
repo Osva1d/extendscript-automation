@@ -13,7 +13,7 @@ Cmd+Z a skutečné soubory.
 ## 0. Příprava
 
 - Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.1.0a-test.jsx`,
-  SHA-256 `SHA_1_1_0A`.
+  SHA-256 `eb7b30677d9e560b609d700c67e571192ff4480b47806e3d91af1dcaba72c660`.
 - Spouštět přes **Soubor › Skripty › Jiný skript…** (tak se skript bude
   spouštět i v provozu).
 - Testovat na **kopiích** tří souborů ze sondy 2026-10-29 (240 samolepek,
