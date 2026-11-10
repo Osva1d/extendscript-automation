@@ -521,3 +521,26 @@ From the worktree root, with 0 documents open:
     tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
 
 One part per run. The first run builds the 240 prefabs slowly (about 40 s once, then 0.4-2.5 s).
+
+## Manual-test probe (1.1.0a)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_manual.jsx`, run on the modules of the 1.1.0a test build (a build of the same sources gives its SHA-256 `eb7b3067…`). It opens a copy of one of the user's three test files, builds the real dialog without showing it, drives it the way `docs/manual-test.md` does (field text with onChanging/onChange, dropdown selection, onClick), clicks Použít after `BTE.UI.HOLD_MS`, runs the real `src/main.js` and captures only the summary window. The written document is read back by position (reading order of the text frames' centres; aršík = the group above the sticker), not from the tool's own order, and every text's font, size, colour, horizontal scale, tracking and anchor and every path's bounds are compared before and after. The settings file and the log are files of the probe's own; `alert`, `confirm` and `prompt` are locals of the wrapper (the globals cannot be reassigned). 15 parts, one write at most per part, every document closed unsaved; the user's `settings.json` and the three originals stayed byte for byte.
+
+All 48 checks passed:
+
+| manual test | what the probe checked |
+|---|---|
+| 1.0 | a 1.0.0 settings file (no `bySheet`, no `perSheet`) opens without a repair note; "*" only when the last run differs; the file is not rewritten |
+| 1.1–1.4 | title, Rozsah, "240 prvků, 480 textů", Po aršících off, footer; no statictext, button or checkbox wider than its control; Kde items with counts; 37 controls, each with a helpTip of at most two sentences, none on Použít and Storno |
+| 1.5 | wiring only: Storno is the button named "cancel" |
+| 2.1–2.5, 3.1–3.3 | preview, status and messages; 240 / 480 / 0 in the summary; 001–240 and SNB SK 101–340 in reading order on the sheet; format, anchors and the artwork unchanged |
+| 5.1–5.5 | the arch file numbered by rows across aršíky; one selected aršík = 12 elements, 001–012; the file without groups pairs code and number (240 of 240) and numbers by columns; a second artboard over the left half holds 120 elements |
+| 6.2, 6.6–6.8 | ↑ ↓ + −; "1O": ✗ in the status and on the step, Použít, Uložit and Uložit jako… grey, no hold hint, the field's pen red (0.9, 0.2, 0.2) and grey 0.75 again after the fix; Do 230 cuts 10 with both warnings; lower case written, format unchanged |
+| 6.5 | logic only: the step's tick cleared in the list without any event, Použít holds with the hint, the next Použít writes without that step |
+| 7.2 | a locked text: "· přeskočené texty: 1", summary 1 skipped with a ⚠ line, the text unchanged, its sticker numbered |
+| 8.1–8.4 | "*" after the last run, ↺, [Výchozí] with Uložit asking for a name and the file unchanged, the delete question word for word, the preset gone from list and file |
+| 10.1–10.6 | Do 100: 001–100 by rows, 140 `{n}`, both warnings in the summary details; Po aršících: "20 aršíků", # from "1 · 1" to "20 · 240", aršík s holds 12s+1…12s+12; v každém aršíku + Do 10: 001–010 and two `{n}` in every aršík; "v každém aršíku" grey with its tick and the warning; the warning without aršíky and the same order; preset „Aršíky“ keeps both ticks |
+
+Times: dialog build 0.8–1.4 s (2.9 s on the file without groups), a committed field 52–91 ms (median 83), Po aršících 84–117 ms, write + check + summary 3.6–6.4 s.
+
+Not covered, by nature: Cmd+Z (4.1, 4.2), a real click, Enter and focus change (6.1, 6.3–6.5), a cursor in a text (7.1: a script cannot place one), and how things look on screen: a truncated cell (# column 68 px against 50 px of "20 · 240" is a measurement, not a rendering), the red field, the ⚠ glyph (summary.js unchanged since 1.0.0).
