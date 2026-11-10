@@ -40,7 +40,11 @@ Cmd+Z a skutečné soubory.
   a CHANGELOG tvrdí, že celý běh vrátí jedno Cmd+Z, že Použít nikdy
   nezapíše nic, co náhled neukázal, že Do ukončí řadu a že Po aršících
   a „v každém aršíku“ číslují aršík po aršíku; ověří to jen tyto testy. Bez
-  nich se 1.1.0 nevydá.
+  nich se 1.1.0 nevydá. Brány 10.1–10.3 ověřila 2026-11-10 sonda
+  `tests/probes/probe_manual.jsx` na kopiích těchto souborů (skutečný
+  dialog a `main.js`, zápis přečtený zpět podle polohy; `docs/findings.md`,
+  „Manual-test probe (1.1.0a)“); uživatel ji přijal místo ručního běhu.
+  Ručně zůstávají 4.1, 4.2 a 6.3–6.5.
 
 Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 
