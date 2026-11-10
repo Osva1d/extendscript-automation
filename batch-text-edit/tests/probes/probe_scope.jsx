@@ -17,8 +17,9 @@
 //              order, the skipped counts and the time of prepare (and of its
 //              parts). Creates one document per run and closes only that
 //              one, unsaved. Nothing is written to the user's documents.
-//              1.1.0 (order by sheet): parts bysheet, bysheetclip and
-//              bysheetmasked build 20 sheets (aršíky) of 3 x 4 prefabs, 4
+//              1.1.0 (order by sheet): parts bysheet, bysheetclip,
+//              bysheetmasked (sticker clip group > plain group > texts) and
+//              bysheetcliptexts build 20 sheets (aršíky) of 3 x 4 prefabs, 4
 //              across and 5 down, and run prepare(doc, "document", "rows",
 //              true/false); part real opens the files in REAL_FILES read-only.
 // Usage:       The probe needs a header line and the real modules in front
@@ -34,7 +35,7 @@
 //              The header resets BTE, which the engine keeps between runs,
 //              so the modules that follow load fresh. Parts: group, sheets,
 //              loose, select, artboard, loose1000, loose10k, mixed,
-//              groupbounds, bysheet, bysheetclip, bysheetmasked, real. One
+//              groupbounds, bysheet, bysheetclip, bysheetmasked, bysheetcliptexts, real. One
 //              part per run. PARTS_FIRST = true times the
 //              parts of prepare before prepare itself (the first read of a
 //              fresh document is the slow one). Optional: var LOG_PATH =
@@ -329,8 +330,10 @@
     // 1.1.0: `across x down` sheets (aršíky) of 3 x 4 prefabs. mode:
     // "plain" - sheet group > prefab group > {clip graphic, texts, cut circle};
     // "clipsheet" - the sheet group is itself a clip group (mask = its box);
-    // "maskedprefab" - the two texts sit in a clip group directly, so the
-    // lowest group of an element is that clip group and its sheet the prefab.
+    // "maskedsticker" - sheet group > clip group > plain group > the texts
+    // (spec 4.3): the sheet is the sticker's own clip group, one element each;
+    // "cliptexts" - the texts sit in a clip group directly (element = clip
+    // group, its sheet the prefab group).
     function buildBySheet(L, mode, across, down) {
         var SC = 3, SR = 4, H = down * SR * PITCH, sx, sy, i, sg, pg, clip, cx, cy, r, c, n = 0;
         for (sy = 0; sy < down; sy++) {
@@ -342,7 +345,16 @@
                     cx = c * PITCH + PITCH / 2;
                     cy = H - (r * PITCH + PITCH / 2);
                     pg = sg.groupItems.add();
-                    if (mode === "maskedprefab") {
+                    if (mode === "maskedsticker") {
+                        // spec 4.3: sheet group > clip group (mask + graphic)
+                        // > plain group > the two texts. pg is the clip group.
+                        pg.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+                        clip = pg.groupItems.add();
+                        point(clip, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+                        point(clip, cx - 10, cy - 45, "{n}");
+                        circle(pg, cx, cy, MASK);
+                        pg.clipped = true;
+                    } else if (mode === "cliptexts") {
                         clip = pg.groupItems.add();
                         clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
                         point(clip, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
@@ -416,6 +428,35 @@
         return r;
     }
 
+    // Booleans computed here so the result need not be read by eye.
+    function expectFor(mode, r) {
+        var e = {}, k, all12 = true, i, want = [];
+        if (mode === "maskedsticker" || mode === "cliptexts") {
+            e.sheetCountIsElements = (r.sheetCountOn === r.elements);
+            e.elements240 = (r.elements === 240);
+            e.offSheetsNull = r.sheetsOffIsNull && r.sheetCountOff === 0;
+            e.first13Is1to13 = (r.first13.join(",") === "1,2,3,4,5,6,7,8,9,10,11,12,13");
+            e.sheet49Is49 = (r.sheet49 === 49);
+        } else {
+            for (k in r.perSheet) { if (r.perSheet.hasOwnProperty(k) && r.perSheet[k] !== 12) { all12 = false; } }
+            for (i = 0; i < 12; i++) { want.push(1); }
+            want.push(2);
+            e.elements240 = (r.elements === 240);
+            e.offSheetsNull = r.sheetsOffIsNull && r.sheetCountOff === 0;
+            e.sheetCountOn20 = (r.sheetCountOn === 20);
+            e.every12 = all12;
+            e.first13Is1x12Then2 = (r.first13.join(",") === want.join(","));
+            e.sheet49Is5 = (r.sheet49 === 5);
+            e.offElement4IsOnElement13 = r.offElement4IsOnElement13;
+            e.sameKeySet = r.sameKeySet;
+            e.monotone = r.sheetsMonotone;
+        }
+        e.repeatStable = r.onMatchesRepeat;
+        e.ok = true;
+        for (k in e) { if (e.hasOwnProperty(k) && k !== "ok" && e[k] !== true) { e.ok = false; } }
+        return e;
+    }
+
     function bySheetPart(mode) {
         var s, n;
         d = app.documents.add(DocumentColorSpace.RGB, 12 * PITCH, 20 * PITCH);
@@ -427,6 +468,7 @@
         log("built " + n + " prefabs in " + out.buildMs + " ms");
         out.mode = mode;
         out.result = bySheetRun(d, "rows");
+        out.expect = expectFor(mode, out.result);
         log("result " + j(out.result));
     }
 
@@ -493,7 +535,8 @@
         else if (part === "groupbounds") { groupBoundsPart(); }
         else if (part === "bysheet") { bySheetPart("plain"); }
         else if (part === "bysheetclip") { bySheetPart("clipsheet"); }
-        else if (part === "bysheetmasked") { bySheetPart("maskedprefab"); }
+        else if (part === "bysheetmasked") { bySheetPart("maskedsticker"); }
+        else if (part === "bysheetcliptexts") { bySheetPart("cliptexts"); }
         else if (part === "real") { realPart(); }
         else { out.notes.push("unknown PART \"" + part + "\""); }
     } catch (e) {
