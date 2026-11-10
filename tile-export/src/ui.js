@@ -44,7 +44,8 @@ TE.UI = {
     NUMBER_CONTROLS: {
         scaleN: ["etScaleN", "FIELD_SCALE"], tileCount: ["etCount", "LBL_COUNT"],
         tileWidth: ["etWidth", "LBL_WIDTH"], guideRound: ["etRound", "LBL_ROUND"],
-        overlap: ["etOverlap", "LBL_OVERLAP"], addTop: ["etAddTop", "LBL_ADD_TOP"],
+        overlap: ["etOverlap", "LBL_OVERLAP"], overlapUnprinted: ["etUnprinted", "LBL_UNPRINTED"],
+        addTop: ["etAddTop", "LBL_ADD_TOP"],
         addBottom: ["etAddBottom", "LBL_ADD_BOTTOM"], addLeft: ["etAddLeft", "LBL_ADD_LEFT"],
         addRight: ["etAddRight", "LBL_ADD_RIGHT"], rasterDPI: ["etDPI", "LBL_DPI"],
         lineWidth: ["etLineW", "LBL_LINE_WIDTH"], cutBleed: ["etBleed", "LBL_CUT_BLEED"],
@@ -244,10 +245,9 @@ TE.UI = {
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
 
-        // Two columns, balanced by measured heights. 2026-10-11, with the
-        // presets in two rows at the top of the left column and the
-        // placeholder row: both columns 647 px, the Result stretched from its
-        // 85 px floor to 99, the dialog 1178 x 749 px. Stacked in one column the
+        // Two columns, balanced by measured heights. 2026-11-07 (ui-probe,
+        // 1.3.0, the unprinted part on the overlap row): both columns end on
+        // one line, the dialog 1116 x 836 px. Stacked in one column the
         // dialog once measured 932 px tall, which does not fit a 1512 x 982
         // logical screen once the menu bar and Dock are gone. ScriptUI has no scrollable container — scrollbar is a
         // control, not a viewport — so the fix is layout, not scrolling.
@@ -384,6 +384,17 @@ TE.UI = {
         pEdges.alignment = ["fill", "fill"];
 
         var etOverlap = this.addRow(pEdges, l.LBL_OVERLAP, s.overlap, l.TIP_OVERLAP, "mm");
+        // The part of a one-sided overlap left unprinted for a weld (1.3.0),
+        // live only while the overlap is one-sided. On the overlap's own row:
+        // a row of its own made the dialog 1022 x 865 px (ui-probe,
+        // 2026-11-07), over the ~850 px a laptop shows.
+        var gOverlap = etOverlap.parent;
+        var stUnprinted = gOverlap.add("statictext", undefined, l.LBL_UNPRINTED);
+        stUnprinted.helpTip = l.TIP_UNPRINTED;
+        var etUnprinted = gOverlap.add("edittext", undefined, TE.Numbers.format(s.overlapUnprinted));
+        etUnprinted.characters = this.M.NUM_FIELD;
+        etUnprinted.helpTip = l.TIP_UNPRINTED;
+        gOverlap.add("statictext", undefined, "mm");
         // Three options for two settings: the mode (symmetric or one-sided) and,
         // when one-sided, which panel of the seam carries the material. Kept as
         // one row because the second question only exists inside the second
@@ -685,7 +696,7 @@ TE.UI = {
             rbDir: rbDir, rbMode: rbMode,
             etCount: etCount, etWidth: etWidth, stWidthLbl: stWidthLbl, etRound: etRound,
             cbEqual: cbEqual,
-            etOverlap: etOverlap, rbOverlapMode: rbOverlapMode,
+            etOverlap: etOverlap, rbOverlapMode: rbOverlapMode, etUnprinted: etUnprinted,
             etAddTop: etAddTop, etAddBottom: etAddBottom,
             etAddLeft: etAddLeft, etAddRight: etAddRight,
             rbExpMode: rbExpMode, rbExpScale: rbExpScale, etDPI: etDPI,
@@ -737,7 +748,7 @@ TE.UI = {
 
         var i, all = [etScaleN, etCount, etWidth,
                       etRound, cbEqual,
-                      etOverlap, etAddTop, etAddBottom, etAddLeft, etAddRight,
+                      etOverlap, etUnprinted, etAddTop, etAddBottom, etAddLeft, etAddRight,
                       etDPI, cbLine, etSpot, etLineW, etOut, etPattern, cbSkip, cbOpen, ddPdf,
                       etMarkSize, etGapInner, etMaxDist, etOrient, etBleed, ddCutSpot,
                       ddMarkColor];
@@ -1007,6 +1018,7 @@ TE.UI = {
         s.overlap     = TE.Numbers.parse(r.etOverlap.text);
         s.overlapMode    = r.rbOverlapMode[0].value ? "symmetric" : "onesided";
         s.overlapCarrier = r.rbOverlapMode[2].value ? "second" : "first";
+        s.overlapUnprinted = TE.Numbers.parse(r.etUnprinted.text);
         s.addTop      = TE.Numbers.parse(r.etAddTop.text);
         s.addBottom   = TE.Numbers.parse(r.etAddBottom.text);
         s.addLeft     = TE.Numbers.parse(r.etAddLeft.text);
@@ -1165,6 +1177,7 @@ TE.UI = {
         r.rbOverlapMode[0].value = !oneSided;
         r.rbOverlapMode[1].value = oneSided && !carrier2nd;
         r.rbOverlapMode[2].value = carrier2nd;
+        r.etUnprinted.text = TE.Numbers.format(s.overlapUnprinted);
         r.etAddTop.text = TE.Numbers.format(s.addTop);
         r.etAddBottom.text = TE.Numbers.format(s.addBottom);
         r.etAddLeft.text = TE.Numbers.format(s.addLeft);
@@ -1344,6 +1357,7 @@ TE.UI = {
         if (r.gManual) { r.gManual.visible = !s.zundMode; }
         if (r.gZundFields) { r.gZundFields.visible = s.zundMode; }
         r.etSpot.enabled  = s.drawLine;
+        r.etUnprinted.enabled = TE.Grid.oneSidedOverlap(s);
         r.etLineW.enabled = s.drawLine;
 
         // The artboard, the same rect the run divides (N27).
@@ -1425,6 +1439,13 @@ TE.UI = {
                 if (r.ddMarkColor && r.ddMarkColor.selection && r.ddMarkColor.selection.teMissing) {
                     warns.push("\u26a0 " + l.format(l.WARN_MARK_COLOR_MISSING, s.markColor));
                 }
+            }
+
+            // What the weld leaves out, beside the panels it is left out of.
+            var bare = TE.Grid.unprintedWidth(s);
+            if (bare > 0) {
+                info.push(l.format(l.INFO_UNPRINTED, TE.Utils.formatMM(Number(s.overlap), l.DEC_SEP),
+                    TE.Utils.formatMM(bare, l.DEC_SEP), TE.Utils.formatMM(Math.max(0, Number(s.overlap) - bare), l.DEC_SEP)));
             }
 
             // Every file the export will write, under the name it will get, so

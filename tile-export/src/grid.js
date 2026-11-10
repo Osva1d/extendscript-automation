@@ -95,6 +95,50 @@ TE.Grid = {
 
 
     /**
+     * Whether the overlap sits wholly on one panel of each seam, the only
+     * placement an unprinted part can belong to (1.3.0). PURE FUNCTION.
+     * @param {Object} s - Settings.
+     * @returns {boolean}
+     */
+    oneSidedOverlap: function (s) {
+        return s.overlapMode === "onesided" && Number(s.overlap) > 0;
+    },
+
+    /**
+     * The unprinted part of the overlap in real millimetres, or 0 where it
+     * does not apply: a symmetric overlap, no overlap, or a value that is no
+     * number (the dialog names that one). PURE FUNCTION.
+     * @param {Object} s - Settings.
+     * @returns {number}
+     */
+    unprintedWidth: function (s) {
+        var w = Number(s.overlapUnprinted);
+        return (this.oneSidedOverlap(s) && w > 0) ? w : 0;
+    },
+
+    /**
+     * The rectangle the artwork of a panel is clipped to: the mask, with the
+     * side that carries an unprinted part moved in from the panel's edge by
+     * its width. That side then has no bleed either. Without a strip it is
+     * the mask itself. PURE FUNCTION.
+     * @param {Array} mask - [l, t, r, b] the artwork reaches today.
+     * @param {Array} panel - [l, t, r, b] of the panel in the same space.
+     * @param {Object|null} unprinted - {side, width} from computeTiles().
+     * @param {number} k - Scale from document points into that space.
+     * @returns {Array} [l, t, r, b].
+     */
+    printClip: function (mask, panel, unprinted, k) {
+        if (!unprinted) { return mask; }
+        var w = unprinted.width * k;
+        var r = [mask[0], mask[1], mask[2], mask[3]];
+        if (unprinted.side === "left")   { r[0] = panel[0] + w; }
+        if (unprinted.side === "right")  { r[2] = panel[2] - w; }
+        if (unprinted.side === "top")    { r[1] = panel[1] - w; }
+        if (unprinted.side === "bottom") { r[3] = panel[3] + w; }
+        return r;
+    },
+
+    /**
      * Panel geometry. Two rules that never meet on the same edge:
      * an OUTER edge of the graphic gets the per-edge add, an INNER edge
      * (a seam with a neighbour) gets the overlap.
@@ -107,8 +151,10 @@ TE.Grid = {
      * @param {Array} cleanRect - [left, top, right, bottom] of the whole
      *        graphic, top > bottom.
      * @param {Object} s - Settings.
-     * @returns {Array} [{index, clean:[l,t,r,b], expanded:[l,t,r,b]}], for
-     *          vertical numbered from the top down.
+     * @returns {Array} [{index, clean:[l,t,r,b], expanded:[l,t,r,b],
+     *          unprinted}], for vertical numbered from the top down.
+     *          unprinted is {side, width in document points} on a panel that
+     *          carries an unprinted part of the overlap, else null (1.3.0).
      */
     computeTiles: function (cuts, cleanRect, s) {
         var L = cleanRect[0], T = cleanRect[1], R = cleanRect[2], B = cleanRect[3];
@@ -122,6 +168,14 @@ TE.Grid = {
         // panel that comes first in numbering: left when splitting across,
         // upper when splitting down.
         var firstCarries = (s.overlapCarrier !== "second");
+        // The carrier of a one-sided overlap lies underneath at a weld; its
+        // unprinted part sits on the side of its seam. The geometry above does
+        // not change, only the label.
+        var bare = TE.Utils.toDoc(this.unprintedWidth(s), s);
+        function strip(i, n, side) {
+            var carries = firstCarries ? (i < n - 1) : (i > 0);
+            return (bare > 0 && carries) ? { side: side, width: bare } : null;
+        }
         var tiles = [];
         var b = [], i, n, lo, hi;
 
@@ -139,7 +193,8 @@ TE.Grid = {
                 tiles.push({
                     index: i + 1,
                     clean:    [b[i], T, b[i + 1], B],
-                    expanded: [lo, T + aT, hi, B - aB]
+                    expanded: [lo, T + aT, hi, B - aB],
+                    unprinted: strip(i, n, firstCarries ? "right" : "left")
                 });
             }
             return tiles;
@@ -160,7 +215,8 @@ TE.Grid = {
             tiles.push({
                 index: i + 1,
                 clean:    [L, b[i], R, b[i + 1]],
-                expanded: [L - aL, hi, R + aR, lo]
+                expanded: [L - aL, hi, R + aR, lo],
+                unprinted: strip(i, n, firstCarries ? "bottom" : "top")
             });
         }
         return tiles;

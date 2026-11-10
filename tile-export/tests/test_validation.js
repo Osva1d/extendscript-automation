@@ -18,6 +18,10 @@ TE.L = {
     ERR_MARKS_OVERLAP: "marks-overlap",
     ERR_MARKS_ORIENT:  "marks-orient",
     ERR_MARKS_OUTSIDE: "marks-outside",
+    ERR_UNPRINTED_BIG: "unprinted-big",
+    WARN_UNPRINTED_WATER: "unprinted-water",
+    WARN_UNPRINTED_NO_LINE: "unprinted-no-line",
+    WARN_UNPRINTED_SKIP: "unprinted-skip",
     format: function (t) { return t; }
 };
 eval(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "utils.js"), "utf8"));
@@ -285,6 +289,39 @@ assert(d23 !== null && d23.a === 1 && d23.b === 2, "and the first pair, not the 
 assert(dn([]) === null && dn(["a"]) === null, "nothing to compare");
 var dp = dn(["hasOwnProperty", "constructor", "hasOwnProperty"]);
 assert(dp !== null && dp.a === 0 && dp.b === 2, "names that are Object members are names too");
+
+console.log("\n=== 1.3.0: the unprinted part of the overlap ===");
+var B = { overlap: 32, overlapUnprinted: 30, overlapMode: "onesided", overlapCarrier: "second" };
+function vc(over) { var jj = job(over); return TE.Validate.check(jj.tiles, ctx(), jj.s); }
+function w(over, key) { return TE.Utils.indexOf(vc(merge(B, over)).warnings, key) !== -1; }
+assert(TE.Utils.indexOf(vc(merge(B, { overlapUnprinted: 33 })).errors, "unprinted-big") !== -1, "more than the overlap stops the run");
+assert(vc(merge(B, { overlapUnprinted: 32 })).errors.length === 0, "equal to the overlap is allowed");
+assert(vc(merge(B, { overlapMode: "symmetric", overlapUnprinted: 33 })).errors.length === 0, "ignored while symmetric");
+assert(vc(merge(B, { overlap: 0, overlapUnprinted: 33 })).errors.length === 0, "ignored with overlap 0");
+assert(w({ direction: "vertical", overlapCarrier: "first" }, "unprinted-water"), "the upper panel carries: water");
+assert(!w({ direction: "vertical", overlapCarrier: "second" }, "unprinted-water"), "the lower carries: fine");
+assert(!w({ direction: "horizontal", overlapCarrier: "first" }, "unprinted-water"), "only across a horizontal seam");
+assert(w({ zundMode: false, drawLine: false }, "unprinted-no-line"), "manual trim, line off");
+assert(!w({ zundMode: false, drawLine: true }, "unprinted-no-line"), "the line shows the edge");
+assert(!w({ zundMode: true, drawLine: false }, "unprinted-no-line"), "Zünd has marks and a cut");
+assert(w({ skipExisting: true }, "unprinted-skip"), "skip cannot see a changed part");
+assert(!w({ skipExisting: false }, "unprinted-skip"), "without skip, no warning");
+assert(!w({ overlapMode: "symmetric", skipExisting: true, drawLine: false }, "unprinted-skip") &&
+       !w({ overlapMode: "symmetric", skipExisting: true, drawLine: false }, "unprinted-no-line"), "no part, no warnings");
+// Turning the part off is a change too: the last confirmed run left it out,
+// this one prints it, and the names are the same (review 2026-11-07).
+function wl(over, last, key) {
+    var jj = job(merge(B, over));
+    return TE.Utils.indexOf(TE.Validate.check(jj.tiles, ctx({ lastUnprinted: last }), jj.s).warnings, key) !== -1;
+}
+assert(wl({ overlapMode: "symmetric", skipExisting: true }, 30, "unprinted-skip"), "part off after a run with 30: skip warns");
+assert(wl({ overlapUnprinted: 0, skipExisting: true }, 30, "unprinted-skip"), "part cleared to 0 after a run with 30: skip warns");
+assert(!wl({ overlapMode: "symmetric", skipExisting: true }, 0, "unprinted-skip"), "no part now or last run: no warning");
+assert(!wl({ overlapMode: "symmetric", skipExisting: false }, 30, "unprinted-skip"), "part off, skip off: no warning");
+assert(nb({ overlapMode: "onesided", overlapUnprinted: NaN }) === "overlapUnprinted:nan", "a typo counts when the field is live");
+assert(nb({ overlapMode: "symmetric", overlapUnprinted: NaN }) === "", "not while symmetric");
+assert(nb({ overlapMode: "onesided", overlap: 0, overlapUnprinted: NaN }) === "", "nor with overlap 0");
+assert(nb({ overlapMode: "onesided", overlapUnprinted: -1 }) === "overlapUnprinted:negative", "negative is an error");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);
