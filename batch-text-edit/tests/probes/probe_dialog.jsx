@@ -1,13 +1,18 @@
 // ------------------------------------------------------------------------
 // Script:      probe_dialog.jsx
-// Version:     1.0.0
+// Version:     1.1.0
 // Author:      Ladislav Osvald
-// Updated:     2026-10-30
-// Description: Dialog probe for Batch Text Edit (Task 12). Builds its own
-//              document with 240 prefabs (12 x 20 groups of "{kód}" over
-//              "{n}", the builder of probe_scope.jsx), then builds the real
-//              BTE.UI dialog WITHOUT showing it, in Czech and in English, and
-//              reports: the window size, whether [Výchozí] shows "*" right
+// Updated:     2026-11-10
+// Description: Dialog probe for Batch Text Edit (Task 12, 1.1.0 Task 6).
+//              Builds its own document with 240 prefabs in 20 aršíky of
+//              3 x 4 (groups of "{kód}" over "{n}" inside sheet groups, the
+//              blocks of test_scope.js), then builds the real BTE.UI dialog
+//              WITHOUT showing it, in Czech and in English, and reports the
+//              1.1.0 checks (a)-(h) in `checks` (Po aršících in the Pořadí
+//              row, the # column "2 · 13" and "20 · 240", v každém aršíku,
+//              the Do cut per sheet, a thrown string in a handler, the hold
+//              hint only with Použít on, a preset opened with Po aršících)
+//              and: the window size, whether [Výchozí] shows "*" right
 //              after opening, the time of every kind of refresh with 240
 //              preview rows (a field committed with Enter, selecting a step,
 //              Pořadí, Rozsah, adding a step) and of their parts, every
@@ -107,22 +112,31 @@
         tf.contents = text;
         return tf;
     }
-    // probe_scope.jsx's builder, mode "group": one group per prefab with a
-    // clip group (the graphic), a code text above the centre and a number
-    // below it, and a cut circle on the layer.
-    function buildSheet(L, cols, rows, H) {
-        var n = cols * rows, i, cx, cy, parent, clip;
-        for (i = 0; i < n; i++) {
-            cx = (i % cols) * PITCH + PITCH / 2;
-            cy = H - (Math.floor(i / cols) * PITCH + PITCH / 2);
-            parent = L.groupItems.add();
-            clip = parent.groupItems.add();
-            clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
-            circle(clip, cx, cy, MASK);
-            clip.clipped = true;
-            point(parent, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
-            point(parent, cx - 10, cy - 45, "{n}");
-            circle(L, cx, cy, CUT);
+    // 20 aršíky of 3 x 4 prefabs, 4 across and 5 down, GAP apart: the blocks
+    // of test_scope.js (Task 3). An aršík is a group on the layer; a prefab
+    // is a group in it with a clip group (the graphic), a code text above the
+    // centre and a number below it; its cut circle lies on the layer.
+    var SHEET_COLS = 4, SHEET_ROWS = 5, BC = 3, BR = 4, GAP = 100;
+    var BW = BC * PITCH, BH = BR * PITCH;
+    var DOC_W = SHEET_COLS * (BW + GAP), DOC_H = SHEET_ROWS * (BH + GAP);
+    function buildSheets(L, H) {
+        var s, k, ox, oy, sg, cx, cy, parent, clip;
+        for (s = 0; s < SHEET_COLS * SHEET_ROWS; s++) {
+            ox = (s % SHEET_COLS) * (BW + GAP);
+            oy = H - Math.floor(s / SHEET_COLS) * (BH + GAP);
+            sg = L.groupItems.add();
+            for (k = 0; k < BC * BR; k++) {
+                cx = ox + (k % BC) * PITCH + PITCH / 2;
+                cy = oy - (Math.floor(k / BC) * PITCH + PITCH / 2);
+                parent = sg.groupItems.add();
+                clip = parent.groupItems.add();
+                clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+                circle(clip, cx, cy, MASK);
+                clip.clipped = true;
+                point(parent, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+                point(parent, cx - 10, cy - 45, "{n}");
+                circle(L, cx, cy, CUT);
+            }
         }
         app.redraw();
     }
@@ -219,6 +233,234 @@
         }
         w.close();
         return res;
+    }
+
+    // ---- 1.1.0 (Task 6): Po aršících, v každém aršíku, M5, M6 --------------
+    var DOT = " " + String.fromCharCode(183) + " ";
+    // The inset a preview cell needs beside its text: the spare the 1.0 #
+    // column (40 px) left around "240" (23 px), which showed whole in use.
+    // Not measured itself; a rendered cell cannot be read headless.
+    var CELL_PAD = 17;
+    var THROWN = "probe: a plain string";
+
+    // One check in a try of its own: a missing control fails that check and
+    // the run goes on (the run before the change).
+    function attempt(acc, name, fn) {
+        try {
+            acc[name] = fn();
+        } catch (e) {
+            acc[name] = { pass: false, error: ascii(e.message + " (line " + e.line + ")") };
+        }
+    }
+    function passed(c) { return !!c && c.pass === true; }
+    function lastChild(g) { return g.children[g.children.length - 1]; }
+
+    // (a)-(g) on the open dialog; the dialog is left as it came: Po aršících
+    // and v každém aršíku off, Do as before, Pořadí Po řádcích, step 2 selected.
+    function sheetChecks(dlg) {
+        var w = dlg.win, R = dlg.refs, S = dlg.state, sh = {};
+        var num = R.ed.number;
+        var to0 = num.fields.to.text;
+        R.lbSteps.selection = 1;   // Číslovat {n}
+
+        // (a) Po aršících at the end of the Pořadí row, whole, off
+        attempt(sh, "a", function () {
+            var cb = R.cbBySheet, a;
+            if (!cb) { return { pass: false, error: "no refs.cbBySheet" }; }
+            a = { lastInOrderRow: lastChild(R.gOrder).type === "checkbox" && lastChild(R.gOrder).text === BTE.L.LBL_BY_SHEET,
+                text: ascii(cb.text), textW: textW(cb, cb.text), ctrlW: cb.size.width,
+                tip: cb.helpTip === BTE.L.TIP_BY_SHEET, value: cb.value, scopeLine: ascii(R.stScope.text) };
+            w.layout.layout(true);
+            a.window = size(w);
+            a.pass = a.lastInOrderRow && a.tip && a.value === false && a.textW + 18 <= a.ctrlW &&
+                a.window[0] === 1008 && a.window[1] === 768;
+            return a;
+        });
+        // (d), first half: v každém aršíku in the Znovu po row, grey while Po aršících is off
+        attempt(sh, "dOff", function () {
+            var cb = num.cbPerSheet, row;
+            if (!cb) { return { pass: false, error: "no ed.number.cbPerSheet" }; }
+            row = num.fields.reset.parent;
+            return { lastInResetRow: lastChild(row).type === "checkbox" && lastChild(row).text === BTE.L.CB_PER_SHEET,
+                tip: cb.helpTip === BTE.L.TIP_PER_SHEET, enabled: cb.enabled, value: cb.value,
+                text: ascii(cb.text), textW: textW(cb, cb.text), ctrlW: cb.size.width };
+        });
+        // (b) ticking Po aršících: row 13 opens aršík 2
+        attempt(sh, "b", function () {
+            var b = {};
+            R.cbBySheet.value = true;
+            b.ms = timed(function () { R.cbBySheet.onClick(); });
+            b.bySheet = S.bySheet;
+            b.row1 = ascii(R.lbPrev.items[0].text);
+            b.row12 = ascii(R.lbPrev.items[11].text);
+            b.row13 = ascii(R.lbPrev.items[12].text);
+            b.scopeLine = ascii(R.stScope.text);
+            b.sheetCount = S.prepared.sheetCount;
+            b.status = ascii(R.stStatus.text);
+            b.pass = S.bySheet === true && R.lbPrev.items[12].text === "2" + DOT + "13";
+            return b;
+        });
+        // (c) the # column holds "20 · 240" whole
+        attempt(sh, "c", function () {
+            var lb = R.lbPrev, n = lb.items.length, last = n > 0 ? lb.items[n - 1].text : "";
+            var pw = lb.columns.preferredWidths, cols = [], samples = {}, texts, i, c;
+            for (i = 0; i < pw.length; i++) { cols.push(pw[i]); }
+            texts = ["240", "20" + DOT + "240", "99" + DOT + "999", BTE.L.SHEET_NONE_MARK + DOT + "240", "999" + DOT + "9999"];
+            for (i = 0; i < texts.length; i++) { samples[ascii(texts[i])] = textW(lb, texts[i]); }
+            c = { rows: n, text: ascii(last), textW: textW(lb, last), colW: cols[0], cols: cols, pad: CELL_PAD, samples: samples,
+                listW: lb.size.width };
+            c.pass = last === "20" + DOT + "240" && c.textW + CELL_PAD <= c.colW;
+            return c;
+        });
+        // (d), second half: live with Po aršících; on, Od 1 starts again in aršík 2
+        attempt(sh, "d", function () {
+            var cb = num.cbPerSheet, d = { offEnabled: sh.dOff ? sh.dOff.enabled : null, onEnabled: cb.enabled };
+            d.row13FinalBefore = ascii(R.lbPrev.items[12].subItems[2].text);
+            cb.value = true;
+            cb.onClick();
+            d.perSheet = S.steps[1].perSheet;
+            d.from = num.fields.from.text;
+            d.row12Final = ascii(R.lbPrev.items[11].subItems[2].text);
+            d.row13Final = ascii(R.lbPrev.items[12].subItems[2].text);
+            d.row240Final = ascii(R.lbPrev.items[239].subItems[2].text);
+            d.status = ascii(R.stStatus.text);
+            d.pass = d.offEnabled === false && d.onEnabled === true && d.perSheet === true && d.from === "1" &&
+                /\| 001$/.test(R.lbPrev.items[12].subItems[2].text) && sh.dOff.lastInResetRow === true && sh.dOff.tip === true;
+            return d;
+        });
+        // (e) Do 10 in every aršík: 2 of 12 cut in each, 40 in all
+        attempt(sh, "e", function () {
+            var line = BTE.UIModel.text({ key: "WARN_TO_CUT", args: ["40", "10"] }), e;
+            num.fields.to.text = "10";
+            commit(num.fields.to);
+            e = { expected: ascii(line), messages: ascii(R.etMsgs.text), status: ascii(R.stStatus.text), ok: R.btnOk.enabled,
+                row10Final: ascii(R.lbPrev.items[9].subItems[2].text), row11Final: ascii(R.lbPrev.items[10].subItems[2].text),
+                row13Final: ascii(R.lbPrev.items[12].subItems[2].text) };
+            w.layout.layout(true);
+            e.window = size(w);
+            e.pass = String(R.etMsgs.text).indexOf(line) !== -1 && R.btnOk.enabled === true &&
+                e.window[0] === 1008 && e.window[1] === 768;
+            return e;
+        });
+        // back: Do as before, v každém aršíku off, Po aršících off (grey again)
+        attempt(sh, "off", function () {
+            var o;
+            num.fields.to.text = to0;
+            commit(num.fields.to);
+            num.cbPerSheet.value = false;
+            num.cbPerSheet.onClick();
+            R.cbBySheet.value = false;
+            R.cbBySheet.onClick();
+            o = { bySheet: S.bySheet, sheets: S.prepared.sheets, perSheet: S.steps[1].perSheet, perSheetEnabled: num.cbPerSheet.enabled,
+                row13: ascii(R.lbPrev.items[12].text), scopeLine: ascii(R.stScope.text), ok: R.btnOk.enabled, status: ascii(R.stStatus.text) };
+            o.pass = o.bySheet === false && o.sheets === null && o.perSheet === false && o.perSheetEnabled === false && o.row13 === "13";
+            return o;
+        });
+        // (f) a handler that throws a plain string: the string is shown, and
+        // the buttons go grey before the status is drawn (M6)
+        attempt(sh, "f", function () {
+            var real = BTE.Scope.reorder, realPaint = BTE.FieldPaint.text, f = {}, msgs;
+            BTE.Scope.reorder = function () { throw THROWN; };
+            try {
+                R.rbOrder[1].value = true;
+                R.rbOrder[1].onClick();
+            } finally {
+                BTE.Scope.reorder = real;
+            }
+            msgs = String(R.etMsgs.text);
+            f.messages = ascii(msgs);
+            f.status = ascii(R.stStatus.text);
+            f.ok = R.btnOk.enabled;
+            f.save = R.btnSave.enabled;
+            f.saveAs = R.btnSaveAs.enabled;
+            f.shown = msgs.indexOf(THROWN) !== -1 && msgs.indexOf("undefined") === -1;
+            R.rbOrder[0].value = true;
+            dlg.refresh();
+            f.okAgain = R.btnOk.enabled;
+            BTE.Scope.reorder = function () { throw THROWN; };
+            BTE.FieldPaint.text = function () { throw new Error("probe: the status cannot be drawn"); };
+            try {
+                R.rbOrder[1].value = true;
+                R.rbOrder[1].onClick();
+            } finally {
+                BTE.Scope.reorder = real;
+                BTE.FieldPaint.text = realPaint;
+            }
+            f.statusFails = { ok: R.btnOk.enabled, save: R.btnSave.enabled, saveAs: R.btnSaveAs.enabled };
+            R.rbOrder[0].value = true;
+            dlg.refresh();
+            f.restored = { order: S.order, ok: R.btnOk.enabled, status: ascii(R.stStatus.text) };
+            f.pass = f.shown && f.ok === false && f.save === false && f.saveAs === false && f.okAgain === true &&
+                f.statusFails.ok === false && f.statusFails.save === false && f.statusFails.saveAs === false &&
+                f.restored.order === "rows" && f.restored.ok === true;
+            return f;
+        });
+        // (g) M5: Použít holds a preview that turned invalid, without the hint
+        attempt(sh, "g", function () {
+            var g = {};
+            num.fields.from.text = "1O";
+            num.fields.from.onChanging();   // typed, not committed
+            R.btnOk.onClick();
+            g.closed = dlg.result() !== null;
+            g.ok = R.btnOk.enabled;
+            g.holdHint = S.holdHint;
+            g.first = ascii(msgLines(R.etMsgs)[0]);
+            g.status = ascii(R.stStatus.text);
+            g.pass = !g.closed && g.ok === false && g.holdHint === false && String(R.etMsgs.text).indexOf(BTE.L.HOLD_HINT) === -1;
+            num.fields.from.text = "1";
+            commit(num.fields.from);
+            return g;
+        });
+        return sh;
+    }
+
+    // (h) the dialog opened on a last run with Po aršících and v každém
+    // aršíku on (prepare gets bySheet), then ↺ to [Výchozí] (applyValues
+    // reorders back without reading the document).
+    function openWithSheets() {
+        var stub = BTE.Storage.load, h = {}, dlg = null, R, S, step;
+        BTE.Storage.load = function () {
+            var p = BTE.Storage.fresh();
+            step = BTE.Storage.newStep("number");
+            step.where = { kind: "var", text: "{n}" };
+            step.to = "10";
+            step.perSheet = true;
+            p.presets[BTE.Config.PRESET_KEY_LAST] = { order: "rows", bySheet: true, steps: [step] };
+            return p;
+        };
+        try {
+            dlg = BTE.UI.build(d);
+        } finally {
+            BTE.Storage.load = stub;
+        }
+        try {
+            R = dlg.refs;
+            S = dlg.state;
+            dlg.win.layout.layout(true);
+            h.open = { window: size(dlg.win), bySheet: S.bySheet, cb: R.cbBySheet ? R.cbBySheet.value : null,
+                perSheetCb: R.ed.number.cbPerSheet ? [R.ed.number.cbPerSheet.value, R.ed.number.cbPerSheet.enabled] : null,
+                sheetCount: S.prepared.sheetCount, scopeLine: ascii(R.stScope.text), row13: ascii(R.lbPrev.items[12].text),
+                row13After: ascii(R.lbPrev.items[12].subItems[1].text), status: ascii(R.stStatus.text), messages: ascii(R.etMsgs.text),
+                preset: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null };
+            h.open.cut = String(R.etMsgs.text).indexOf(BTE.UIModel.text({ key: "WARN_TO_CUT", args: ["40", "10"] })) !== -1;
+            R.btnRevert.onClick();
+            h.revert = { bySheet: S.bySheet, sheets: S.prepared.sheets, cb: R.cbBySheet ? R.cbBySheet.value : null,
+                perSheetCb: R.ed.number.cbPerSheet ? [R.ed.number.cbPerSheet.value, R.ed.number.cbPerSheet.enabled] : null,
+                scopeLine: ascii(R.stScope.text), row13: ascii(R.lbPrev.items[12].text),
+                preset: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null, status: ascii(R.stStatus.text) };
+            h.pass = h.open.bySheet === true && h.open.cb === true && h.open.sheetCount === 20 &&
+                R.lbPrev.items.length === 240 && h.open.row13 === ascii("2" + DOT + "13") && /\| 001$/.test(h.open.row13After) &&
+                h.open.perSheetCb !== null && h.open.perSheetCb[0] === true && h.open.perSheetCb[1] === true && h.open.cut &&
+                h.revert.bySheet === false && h.revert.sheets === null && h.revert.cb === false &&
+                h.revert.perSheetCb[0] === false && h.revert.perSheetCb[1] === false && h.revert.row13 === "13" &&
+                h.revert.preset !== null && h.revert.preset.indexOf("*") === -1;
+        } catch (e) {
+            h.pass = false;
+            h.error = ascii(e.message + " (line " + e.line + ")");
+        } finally {
+            dlg.win.close();
+        }
+        return h;
     }
 
     function measure(lang, table) {
@@ -357,6 +599,9 @@
         r.prepareOnlyMs = timed(function () { BTE.Scope.prepare(d, "document", "rows"); });
         r.afterDocument = { rows: R.lbPrev.items.length, status: ascii(R.stStatus.text) };
 
+        // --- 1.1.0: (a)-(g), the dialog left as it came ----------------------
+        r.sheet = sheetChecks(dlg);
+
         // --- step list labels against the list -------------------------------
         labelW = 0;
         for (i = 0; i < R.lbSteps.items.length; i++) {
@@ -450,6 +695,16 @@
         };
         r.saveCallsAfterOk = out.saveCalls;
         if (res === null) { w.close(); }
+
+        // --- 1.1.0: (h), a second dialog --------------------------------------
+        r.reopen = openWithSheets();
+        r.checks = {
+            a: passed(r.sheet.a), b: passed(r.sheet.b), c: passed(r.sheet.c), d: passed(r.sheet.d) && passed(r.sheet.off),
+            e: passed(r.sheet.e), f: passed(r.sheet.f), g: passed(r.sheet.g), h: passed(r.reopen),
+            noStar: r.open.noStar, noClipped: r.clipped.length === 0,
+            size: r.window[0] === 1008 && r.window[1] === 768 && r.windowAfter[0] === 1008 && r.windowAfter[1] === 768,
+            holds: r.hold.typedThenOk.closed === false && r.hold.enterThenOk.closed === false && r.hold.laterOk !== null
+        };
         return r;
     }
 
@@ -473,8 +728,8 @@
             };
         }
 
-        d = app.documents.add(DocumentColorSpace.RGB, 12 * PITCH, 20 * PITCH);
-        out.buildDocMs = timed(function () { buildSheet(d.layers[0], 12, 20, 20 * PITCH); });
+        d = app.documents.add(DocumentColorSpace.RGB, DOC_W, DOC_H);
+        out.buildDocMs = timed(function () { buildSheets(d.layers[0], DOC_H); });
         d.selection = null;
         out.texts = d.textFrames.length;
         log("document built: " + out.texts + " texts");
