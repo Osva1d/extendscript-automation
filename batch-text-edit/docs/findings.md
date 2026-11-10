@@ -468,28 +468,56 @@ As before: assemble the runner from the probe's Usage header and run it with `to
 
 ## By-sheet probe (1.1.0)
 
-Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_scope.jsx` (parts `bysheet`, `bysheetclip`, `bysheetmasked`, `real`). It runs the real `BTE.Scope.prepare(doc, "document", "rows", bySheet)` on 20 sheets (aršíky) of 3 x 4 prefabs laid out 4 across and 5 down (240 prefabs, 480 texts), and on the user's three test files opened read-only (alerts off, PDF options saved and restored, closed unsaved, never saved). A sheet is the nearest group above an element's group.
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_scope.jsx` (parts `bysheet`, `bysheetclip`, `bysheetmasked`, `bysheetcliptexts`, `real`). It runs the real `BTE.Scope.prepare(doc, "document", "rows", bySheet)` on 20 sheets (aršíky) of 3 x 4 prefabs laid out 4 across and 5 down (240 prefabs, 480 texts), and on the user's three test files opened read-only (alerts off, PDF options saved and restored, closed unsaved, never saved). A sheet is the nearest group above an element's group. Each synthetic result carries an `expect` object of booleans computed in code and an overall `ok`; all four were `ok: true`.
 
 ### Synthetic sheets
 
-| part | structure | sheetCount on | first 13 sheet numbers | element 49 | prepare off / on (cold, warm) |
-|---|---|---|---|---|---|
-| bysheet | sheet group > prefab group | 20 (12 each) | 1 x12, 2 | sheet 5 | 728 / 395 ms (393 / 405) |
-| bysheetclip | the sheet group is a clip group | 20 (12 each) | 1 x12, 2 | sheet 5 | 759 / 427 ms (410 / 416) |
-| bysheetmasked | texts directly in a clip group, its sheet is the prefab group | 240 = elements | 1..13 | sheet 49 | 748 / 609 ms (488 / 647) |
+| part | structure | sheetCount on | first 13 sheet numbers | element 49 |
+|---|---|---|---|---|
+| bysheet | sheet group > prefab group > texts | 20 (12 each) | 1 x12, 2 | sheet 5 |
+| bysheetclip | the same, the sheet group is a clip group | 20 (12 each) | 1 x12, 2 | sheet 5 |
+| bysheetmasked | sheet group > sticker clip group > plain group > texts (spec 4.3) | 240 = elements | 1..13 | sheet 49 |
+| bysheetcliptexts | texts directly in the sticker's clip group | 240 = elements | 1..13 | sheet 49 |
 
-Option off: `sheets` is null and `sheetCount` 0. Element 4 without the option is element 13 with it (the 4th prefab of the first row lies in sheet 2); both runs give the same key set, in a different order; repeated runs give identical results.
+Option off: `sheets` is null and `sheetCount` 0. In bysheet and bysheetclip element 4 without the option is element 13 with it (the 4th prefab of the first row lies in sheet 2); the key set is the same, the order differs. In the masked structures every sheet holds one element and the key order is identical off and on. Repeated runs give identical results.
+
+### Time of prepare on 240 prefabs (ms, off / on)
+
+| part | cold (first call) | warm (second call) |
+|---|---|---|
+| bysheet | 870 / 485 | 487 / 489 |
+| bysheetclip | 864 / 472 | 481 / 518 |
+| bysheetmasked | 890 / 731 | 519 / 757 |
+| bysheetcliptexts | 903 / 708 | 563 / 743 |
+
+With ordinary 12-element sheets the option costs about nothing warm (489 against 487 ms). The cost shows with one-element sheets (every sticker its own sheet): warm 519 -> 757 ms and 563 -> 743 ms, about 0.2-0.24 s more, because every element then has its own sheet whose bounds are read.
 
 ### The user's files
 
-| file | elements | sheetCount | first 13 | keys off = on |
-|---|---|---|---|---|
-| Zund_Summa_Test_geoup.ai (sticker = group) | 240 | 0 | all 0 | same order |
-| Zund_Summa_Test_geoup arch.ai (stickers in groups of 12) | 240 | 20 (12 each) | 1 x12, 2 (element 49 in sheet 5) | same set, different order |
-| Zund_Summa_Test.ai (no groups) | 240 | 0 | all 0 | same order |
+| file | elements | sheetCount | first 13 | keys off vs on | prepare off / on cold | off / on warm |
+|---|---|---|---|---|---|---|
+| Zund_Summa_Test_geoup.ai (sticker = group) | 240 | 0 | all 0 | same order | 989 / 456 | 461 / 508 |
+| Zund_Summa_Test_geoup arch.ai (stickers in groups of 12) | 240 | 20 (12 each) | 1 x12, 2 (element 49 in sheet 5) | same set, different order | 882 / 512 | 493 / 475 |
+| Zund_Summa_Test.ai (no groups) | 240 | 0 | all 0 | same order | 2258 / 579 | 572 / 573 |
 
-Not checked geometrically: that sheet 1 of the arch file is the top-left one.
+All as spec 4.4 expects. Not checked geometrically: that sheet 1 of the arch file is the top-left one. The cold range of `prepare` on these files was 0.46-2.3 s; the first call on a freshly opened document is the slow one.
 
 ### Timing against 1.0
 
-On 2026-10-29: group 64 ms, sheets 71 ms. Today with the same probe: group 694 and 741 ms, sheets 693 ms, about 10x slower. The same probe with the modules from before the by-sheet commit (0fa634f^) gave 767 and 773 ms, so the difference is the machine or Illustrator today, not reading the sheet; `Element.build` alone takes 291-323 ms now (28 ms then). The by-sheet option costs nothing measurable: warm prepare with it on is not slower than off. Today's cold prepare on 240 prefabs is 0.7-1.0 s, over the 0.5 s target; re-measure on a fresh Illustrator before treating that as a code problem.
+On 2026-10-29 the same probe measured group 64 ms and sheets 71 ms; today it measures group 694 and 741 ms and sheets 693 ms, about 10x more. The same probe with the modules from before the by-sheet commit (0fa634f^) gave 767 and 773 ms, so the difference is not reading the sheet (Task 3). `Element.build` alone takes 291-323 ms now against 28 ms then. The numbers of 2026-10-29 look like the outlier: the dialog probe of 2026-10-30 already measured `Scope.prepare` at 1.7-2.1 s against 0.25-0.41 s in Tasks 9 and 10 ("a noisy machine; re-measure"), and `docs/manual-test.md` 9.1 expects 1.7-2.1 s of text collection when the dialog opens (that is an expectation taken from the probe; no manual-test measurement is recorded). Today's cold prepare on 240 prefabs is 0.7-1.0 s on the synthetic parts, over the 0.5 s of the task brief. The cause of the machine difference was not investigated; re-measure on a fresh Illustrator before treating it as a code problem.
+
+### Re-measuring
+
+From the worktree root, with 0 documents open:
+
+    tools/ai-eval.sh -e 'app.documents.length'     # must print 0
+    P=batch-text-edit
+    { echo 'var BTE = undefined; var BTE_PROBE_FRESH = true;'
+      echo 'var PART = "bysheet"; var PARTS_FIRST = false;'
+      # for part real: var REAL_FILES = ["/abs/one.ai", "/abs/two.ai"];
+      cat shared/lib/json2.js $P/src/lib/utils.js $P/src/order.js \
+          $P/src/element.js $P/src/scope.js $P/tests/probes/probe_scope.jsx
+    } > "$TMPDIR/probe_scope_run.jsx"
+    tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
+
+One part per run. The first run builds the 240 prefabs slowly (about 40 s once, then 0.4-2.5 s).
