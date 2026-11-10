@@ -263,17 +263,21 @@
         var to0 = num.fields.to.text;
         R.lbSteps.selection = 1;   // Číslovat {n}
 
-        // (a) Po aršících at the end of the Pořadí row, whole, off
+        // (a) Po aršících at the end of the Pořadí row, whole, off; the
+        // longest scope line (with aršíky and skipped texts) fits its line
         attempt(sh, "a", function () {
-            var cb = R.cbBySheet, a;
+            var cb = R.cbBySheet, a, sample;
             if (!cb) { return { pass: false, error: "no refs.cbBySheet" }; }
             a = { lastInOrderRow: lastChild(R.gOrder).type === "checkbox" && lastChild(R.gOrder).text === BTE.L.LBL_BY_SHEET,
                 text: ascii(cb.text), textW: textW(cb, cb.text), ctrlW: cb.size.width,
                 tip: cb.helpTip === BTE.L.TIP_BY_SHEET, value: cb.value, scopeLine: ascii(R.stScope.text) };
+            sample = BTE.UIModel.scopeLine({ elements: { length: 99999 }, textCount: 99999, skipped: { locked: 99999 },
+                sheets: [], sheetCount: 99999 });
+            a.scopeSample = { text: ascii(sample), textW: textW(R.stScope, sample), ctrlW: R.stScope.size.width };
             w.layout.layout(true);
             a.window = size(w);
             a.pass = a.lastInOrderRow && a.tip && a.value === false && a.textW + 18 <= a.ctrlW &&
-                a.window[0] === 1008 && a.window[1] === 768;
+                a.scopeSample.textW <= a.scopeSample.ctrlW && a.window[0] === 1008 && a.window[1] === 768;
             return a;
         });
         // (d), first half: v každém aršíku in the Znovu po row, grey while Po aršících is off

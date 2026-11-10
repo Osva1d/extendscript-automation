@@ -78,6 +78,18 @@ h.eq(j(res.steps[0].where), j(V("{kód}")), "auto: a concrete Kde stays");
 res = U.resolveAuto({ order: "cols", steps: [N(V("{x}"))] }, SHEET);
 h.eq(res.order, "cols", "auto: the order is kept");
 h.eq(j(res.steps[0].where), j(V("{x}")), "auto: a variable the texts lack is kept (nenalezeno)");
+// The steps above an auto step run with the sheets, as the preview runs
+// them: v každém aršíku with Do 1 numbers the first element of every sheet.
+var ONE = [["{n}"], ["{n}"], ["{n}"]];
+var perSheet = { order: "rows", bySheet: true, steps: [N(V("{n}"), { to: "1", perSheet: true }), N({ kind: "auto", text: "" })] };
+res = U.resolveAuto(perSheet, ONE, [1, 2, 3]);
+h.eq(j(res.steps[1].where), '{"kind":"first","text":""}', "auto: with the sheets the step above numbers every sheet, no {n} is left");
+res = U.resolveAuto(perSheet, ONE);
+h.eq(j(res.steps[1].where), j(V("{n}")), "auto: without them one series ends at Do 1 and {n} is left");
+h.eq(res.bySheet, true, "auto: Po aršících is kept");
+var threw = false;
+try { U.resolveAuto(perSheet, ONE, [1, 2]); } catch (e) { threw = /sheets has 2 entries/.test(e.message); }
+h.assert(threw, "auto: a sheets array of the wrong length throws (R5)");
 
 // ---- Task 11 carry: [Výchozí] shows no "*" right after the dialog opens ------
 function openAs(pData, state) {
