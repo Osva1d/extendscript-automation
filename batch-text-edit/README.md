@@ -28,9 +28,10 @@ a s kontrolou po něm.
 
 - **Řetěz kroků.** Kroky běží shora dolů, každý pracuje s výsledkem
   předchozího; krok jde vypnout, posunout nebo smazat.
-  - **Číslovat:** Od, Do (kontrola počtu), Krok, Formát `1, 2, 3` / `A, B, C`
+  - **Číslovat:** Od, Do (poslední číslo řady; prvky, na které číslo
+    nezbude, zůstanou beze změny), Krok, Formát `1, 2, 3` / `A, B, C`
     / `a, b, c`, Číslic (nuly zleva), Opakovat a Znovu po (např. řady
-    sedadel 1–20, 1–20).
+    sedadel 1–20, 1–20), řada znovu v každém aršíku.
   - **Nahradit:** proměnná, jiný text nebo regulární výraz; Rozlišovat velká
     a malá, Jen první shoda v textu.
   - **Velikost písmen:** VELKÁ, malá, Každé Slovo, První písmeno věty.
@@ -45,9 +46,11 @@ a s kontrolou po něm.
 - **Text bez závorek.** „První číslo v prvku“ přečísluje hotový blok,
   „Jiný text…“ a „Regulární výraz…“ najdou cokoli.
 - **Rozsah a pořadí.** Výběr, aktivní artboard nebo celý dokument; číslování
-  po řádcích nebo po sloupcích podle polohy na archu.
+  po řádcích nebo po sloupcích podle polohy na archu, volitelně **po
+  aršících** (číslování projde celý aršík, než přejde na další).
 - **Náhled.** Pro každý prvek Původní → Po vybraném kroku → Nový, dřív než se
-  cokoli zapíše.
+  cokoli zapíše. Když po posledním kroku zůstane v textu `{…}`, náhled
+  i souhrn to ohlásí; zápis to nezablokuje.
 - **Předvolby.** Uložené řetězy kroků (recepty): předvolba drží pořadí
   a kroky, ne Rozsah (ten se řídí výběrem). Dialog se otevře s posledním
   potvrzeným během; [Výchozí] je jeden krok Číslovat a smazat nejde.
@@ -66,9 +69,16 @@ a s kontrolou po něm.
 
 **Co je prvek.** Jedno číslo dostane vždy celý prvek: nejnižší skupina,
 ve které text leží (samolepka). Texty bez skupiny se spárují podle
-nejmenšího uzavřeného tvaru kolem nich (např. kruh samolepky). Skupiny nad
-prvkem (aršíky) pořadí neovlivní — kdo chce v každém aršíku souvislou řadu,
-spustí běh po aršících.
+nejmenšího uzavřeného tvaru kolem nich (např. kruh samolepky).
+
+**Po aršících.** Aršík je skupina, ve které přímo leží skupiny prvků:
+samolepku seskup se svými texty (Cmd+G), samolepky aršíku seskup znovu
+(Cmd+G); celý arch může, ale nemusí být seskupený. Se zaškrtnutým Po
+aršících se nejdřív seřadí aršíky, pak prvky v každém z nich (obojí podle
+Pořadí) a prvky mimo aršík přijdou na konec. Sloupec # v náhledu ukazuje
+aršík a pořadí (`3 · 25`). Číslování jde přes aršíky souvisle; zaškrtnuté
+„v každém aršíku“ u kroku Číslovat začne v každém aršíku znovu na Od
+a skončí na Do. Bez volby skupiny nad prvkem pořadí neovlivní.
 
 **Použít ukáže náhled, než zapíše.** Náhled se přepočítá po Enteru nebo po
 opuštění pole. Když klikneš na Použít hned po úpravě, první klik jen
@@ -82,8 +92,18 @@ nezapíše nic, co náhled neukázal.
 - **Krok má ⚠ „Nic nenašel“:** proměnná v textu není (ukazuje
   „(nenalezeno)“) — po prvním běhu už je nahrazená; použij „První číslo
   v prvku“ nebo „Jiný text…“.
-- **„Poslední číslo vyjde … v poli Do je …“:** počet vybraných prvků nesedí
-  na zadaný rozsah. Zkontroluj výběr; zápis to nezablokuje.
+- **„Poslední číslo vyjde … v poli Do je …“, „Chybí … prvků“:** prvků je
+  méně, než řada do Do potřebuje. Zkontroluj výběr; zápis to nezablokuje.
+- **„… prvků zůstane beze změny, řada končí na Do …“:** prvků je víc, než
+  řada do Do pokryje; ty za hranicí krok nezmění. U „První číslo v prvku“
+  si nechají staré číslo, takže na archu může vzniknout dvojí číslo.
+- **„… prvků má po posledním kroku dál {…}“:** v textu zůstala proměnná.
+  Když ji nahradí až další běh, je to v pořádku; jinak doplň krok.
+- **„Každý aršík má jen jeden prvek“:** jako aršík se chytila skupina
+  samolepky, typicky ořezová skupina s maskou, ve které leží skupina
+  s texty. Seskup texty se samolepkou, ne uvnitř masky.
+- **„… prvků neleží v aršíku, přijdou na konec“:** část prvků leží mimo
+  skupinu aršíku; seskup je do aršíku, nebo je očísluj zvlášť.
 - **„Prvek 12 má 2 shody {n}, dostanou stejné číslo“:** v jednom prvku je číslovaná proměnná víckrát
   (vstupenka a ústřižek dostanou stejné číslo), nebo se volné texty slily
   do jednoho prvku — seskup kopie.

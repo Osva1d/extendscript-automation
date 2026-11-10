@@ -12,8 +12,8 @@ Cmd+Z a skutečné soubory.
 
 ## 0. Příprava
 
-- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.0.0a-test.jsx`,
-  SHA-256 `8e40153fd8f959c615cb8e406e8fbe00cf90d26de5782a2f3b16b712ede6d12b`.
+- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.1.0a-test.jsx`,
+  SHA-256 `SHA_1_1_0A`.
 - Spouštět přes **Soubor › Skripty › Jiný skript…** (tak se skript bude
   spouštět i v provozu).
 - Testovat na **kopiích** tří souborů ze sondy 2026-10-29 (240 samolepek,
@@ -26,18 +26,21 @@ Cmd+Z a skutečné soubory.
   | `Zund_Summa_Test.ai` | bez skupin |
 
 - Nastavení a log leží v `~/Library/Application Support/batch-text-edit/`.
-  Před prvním testem přesunout `settings.json` z této složky do Koše: zbyl
-  po sondách a dialog by se otevřel s jejich nastavením (test 1.2 počítá
-  s prvním spuštěním).
+  Test 1.0 běží ještě se stávajícím `settings.json` z provozu 1.0.0; hned
+  po něm ho přesunout z této složky do Koše (test 1.2 počítá s prvním
+  spuštěním).
 - Log `bte.log` vzniká jen při zastaveném zápisu nebo neočekávané chybě.
 - Testy jdou **popořadě**; každý řádek říká, čím končí (Použít, Storno,
-  Cmd+Z). Sekce 1–4 a 6–8 běží na `…geoup.ai`, sekce 5 na zbylých dvou.
+  Cmd+Z). Sekce 1–4 a 6–8 běží na `…geoup.ai`, sekce 5 na zbylých dvou,
+  sekce 10 (novinky 1.1.0) na `…geoup arch.ai`.
 - Použít hned po psaní do pole může nejdřív jen přepočítat náhled a ukázat
   hlášku „Náhled se přepočítal…“ (pojistka proti zápisu neviděného
   náhledu); pak Použít znovu. To není chyba, kromě testu 6.3 se to nezapisuje.
-- **Brány vydání: 4.1, 4.2, 6.3, 6.4, 6.5.** README a CHANGELOG tvrdí, že
-  celý běh vrátí jedno Cmd+Z a že Použít nikdy nezapíše nic, co náhled
-  neukázal; ověří to jen tyto testy. Bez nich se 1.0.0 nevydá.
+- **Brány vydání: 4.1, 4.2, 6.3, 6.4, 6.5, 10.1, 10.2, 10.3.** README
+  a CHANGELOG tvrdí, že celý běh vrátí jedno Cmd+Z, že Použít nikdy
+  nezapíše nic, co náhled neukázal, že Do ukončí řadu a že Po aršících
+  a „v každém aršíku“ číslují aršík po aršíku; ověří to jen tyto testy. Bez
+  nich se 1.1.0 nevydá.
 
 Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 
@@ -47,7 +50,8 @@ Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
-| 1.1 | Otevřít `…geoup.ai`, nic nevybrat, spustit skript | Dialog „Batch Text Edit v1.0.0“, Rozsah **Celý dokument**, řádek „240 prvků, 480 textů“. Žádný useknutý text, okno se vejde na obrazovku. Patička „© 2025–2026 Ladislav Osvald · v1.0.0“ | |
+| 1.0 | Ještě se stávajícím `settings.json`: otevřít `…geoup.ai`, nic nevybrat, spustit skript; **Storno**. Pak `settings.json` do Koše | Dialog se otevře s posledním během z 1.0.0, bez hlášky o opraveném nastavení; v seznamu předvoleb hvězdička jen tehdy, když se pole od předvolby liší. Po aršících nezaškrtnuté | |
+| 1.1 | Otevřít `…geoup.ai`, nic nevybrat, spustit skript | Dialog „Batch Text Edit v1.1.0“, Rozsah **Celý dokument**, řádek „240 prvků, 480 textů“, v řádku Pořadí nezaškrtnuté **Po aršících**. Žádný useknutý text, okno se vejde na obrazovku. Patička „© 2025–2026 Ladislav Osvald · v1.1.0“ | |
 | 1.2 | Podívat se na předvolbu | „[Výchozí]“ **bez hvězdičky**, ↺ a Uložit šedé, Smazat šedé; jeden krok Číslovat, − u něj šedé | |
 | 1.3 | V editoru kroku rozbalit **Kde** | `{NORDIC CZ}   (240×)` a `{n}   (240×)`, pod čarou „První číslo v prvku“, „Jiný text…“, „Regulární výraz…“ | |
 | 1.4 | Najet myší na pole, seznamy, zaškrtávátka a tlačítka kroků a předvoleb | Každý má nápovědu (helpTip), nejvýš dvě věty. Storno a Použít ji nemají, stejně jako v ostatních nástrojích | |
@@ -84,7 +88,7 @@ Každý test začíná tlačítkem **↺** u předvoleb: vrátí kroky a pořad�
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
-| 5.1 | `…arch.ai`, nic nevybrat, spustit, ↺; **Použít**, prohlédnout, **Cmd+Z** | 240 prvků; čísla po řádcích přes celý arch (levý horní aršík 001, 002, 003, 013, 014, 015 …) — aršíky pořadí neovlivní | |
+| 5.1 | `…arch.ai`, nic nevybrat, spustit, ↺; **Použít**, prohlédnout, **Cmd+Z** | 240 prvků; čísla po řádcích přes celý arch (levý horní aršík 001, 002, 003, 013, 014, 015 …) — bez Po aršících aršíky pořadí neovlivní (volbu zkouší sekce 10) | |
 | 5.2 | Vybrat jeden aršík (12 samolepek), spustit, ↺; **Storno** | Rozsah **Výběr**, „12 prvků, 24 textů“, náhled 001–012 | |
 | 5.3 | `Zund_Summa_Test.ai` (bez skupin), nic nevybrat, spustit, ↺; **Storno** | 240 prvků, 480 textů, každý řádek náhledu „{NORDIC CZ} \| {n}“; žádné ⚠ „Prvek … má 2 shody …“ — kód a číslo jedné samolepky drží spolu (geometrie podle kruhu) | |
 | 5.4 | Tamtéž spustit znovu, ↺, Pořadí **Po sloupcích**; **Použít**, prohlédnout, **Cmd+Z** | Náhled se přepočítá; v dokumentu čísla tečou shora dolů po sloupcích | |
@@ -103,8 +107,8 @@ Na `…geoup.ai` v původním stavu (po 4.2). Na začátku **↺** (kroky a poř
 | 6.3 | Do pole Od napsat 5 a **bez Enteru** kliknout Použít; po chvilce **Použít** znovu; **Cmd+Z** | Po prvním kliku dialog zůstane, v hláškách „Náhled se přepočítal podle nové hodnoty. Zkontrolujte ho a potvrďte Použít znovu.“, náhled ukazuje 005. Druhé Použít zapíše 005–244 | |
 | 6.4 | Spustit znovu, Od 6 a **Enter**; pak **Enter** nebo Použít; **Cmd+Z** | První Enter jen přepočítá náhled (006), dialog se nezavře; další Enter / Použít zapíše 006–245 | |
 | 6.5 | Spustit znovu, vypnout krok 1 zaškrtávátkem v seznamu a **hned** Použít (případně ještě jednou); **Cmd+Z** | Platí jedno z dvou, **zapsat které**: (a) zapíše hned, (b) dialog zůstane s hláškou a zapíše až další Použít. V obou případech dokument odpovídá náhledu bez kroku 1: kód zůstane `{NORDIC CZ}`, čísla 006–245. ✗ jen tehdy, když se zapíše i vypnutý krok | |
-| 6.6 | Spustit znovu, **↺**. Do Od napsat „1O“ (písmeno O), pak vrátit 1 | Pole červené, ✗ ve stavovém řádku i na řádku kroku, Použít, Uložit a Uložit jako… šedé; po opravě vše zpět | |
-| 6.7 | Do 230, pak Do vymazat | Stavový řádek „⚠ Změní se 240 z 240 prvků.“, v hláškách dva řádky „⚠ Krok 2: Poslední číslo vyjde 240, v poli Do je 230.“ a „⚠ Krok 2: Prvků je o 10 víc.“; Použít zůstává aktivní | |
+| 6.6 | Spustit znovu, **↺**. Do Od napsat „1O“ (písmeno O) a **hned** kliknout Použít; pak vrátit 1 | Pole červené, ✗ ve stavovém řádku i na řádku kroku, Použít, Uložit a Uložit jako… šedé. Po kliku na šedé Použít **žádná** hláška „Náhled se přepočítal… potvrďte Použít znovu“. Po opravě vše zpět | |
+| 6.7 | Do 230, pak Do vymazat | Stavový řádek „⚠ Změní se 240 z 240 prvků.“; v hláškách „⚠ Krok 2: 10 prvků zůstane beze změny, řada končí na Do 230.“ a „⚠ 10 prvků má po posledním kroku dál {n}.“; náhled: řádky 231–240 „SNB CZ \| {n}“. Použít zůstává aktivní. Po vymazání Do obě hlášky zmizí | |
 | 6.8 | **+** → krok 3: Velikost písmen, Kde Celý text, Režim malá; **Použít**, prohlédnout, **Cmd+Z** | Náhled „snb cz \| 001“; v dokumentu písmo, velikost a barva beze změny | |
 
 ## 7. Zvláštní stavy
@@ -133,6 +137,23 @@ v dialogu ověřil test 6.6.
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
-| 9.1 | Otevření dialogu na 240 samolepkách | Do pár sekund (sonda: 2,6–2,8 s, z toho sběr textů 1,7–2,1 s) | |
-| 9.2 | Změna pole + Enter | Náhled do ~0,5 s (sonda: medián 0,3 s) | |
+| 9.1 | Otevření dialogu na 240 samolepkách | Do pár sekund (sonda 2026-11-10: sestavení dialogu 0,5–0,6 s, sběr textů na vašich souborech 0,5–2,3 s, nejdéle bez skupin) | |
+| 9.2 | Změna pole + Enter; zaškrtnout Po aršících | Náhled do ~0,5 s (sonda: medián 0,1 s; Po aršících 0,04 s) | |
 | 9.3 | Použít na 240 samolepkách | Zápis a souhrn do pár sekund | |
+
+## 10. Novinky 1.1.0 (brány 10.1–10.3)
+
+Na `…geoup arch.ai` (20 aršíků po 12 samolepkách, 3 × 4) v původním stavu.
+Každý test začíná **↺** (předvolba „Samolepky“: Nahradit `{NORDIC CZ}` →
+„SNB CZ“, Číslovat `{n}` Od 1, Číslic 3).
+
+| # | co udělat | co čekat | ✓/✗ |
+|---|---|---|---|
+| 10.1 | Nic nevybrat, spustit, ↺. Krok 2: **Do 100**; **Použít**, prohlédnout, **Cmd+Z** | Náhled: prvních 100 řádků 001–100, řádky 101–240 „SNB CZ \| {n}“. Hlášky „⚠ Krok 2: 140 prvků zůstane beze změny, řada končí na Do 100.“ a „⚠ 140 prvků má po posledním kroku dál {n}.“; Použít aktivní. V dokumentu 001–100 po řádcích přes arch, zbytek `{n}`; v Souhrnu v podrobnostech řádek o 140 prvcích s `{n}` | |
+| 10.2 | Spustit znovu, ↺, zaškrtnout **Po aršících**; **Použít**, prohlédnout, **Cmd+Z** | Řádek rozsahu „240 prvků, 480 textů, 20 aršíků“. Sloupec # „1 · 1“ … „1 · 12“, „2 · 13“ …, poslední „20 · 240“ **celý, neuseknutý**. V dokumentu levý horní aršík 001–012 po řádcích (001 002 003 / 004 005 006 …), aršík vpravo vedle něj 013–024, levý aršík druhé řady 049–060 | |
+| 10.3 | Spustit znovu (otevře se s Po aršících), ↺, zaškrtnout Po aršících; krok 2 zaškrtnout **v každém aršíku** a **Do 10**; **Použít**, prohlédnout, **Cmd+Z** | Náhled: v každém aršíku 001–010, poslední dvě samolepky aršíku „SNB CZ \| {n}“. Hlášky „⚠ Krok 2: 40 prvků zůstane beze změny, řada končí na Do 10.“ a „⚠ 40 prvků má po posledním kroku dál {n}.“. V dokumentu každý aršík 001–010 a dvě samolepky s `{n}` | |
+| 10.4 | Spustit znovu, ↺, zaškrtnout Po aršících, krok 2 „v každém aršíku“; pak Po aršících **odškrtnout**; **Storno** | „v každém aršíku“ zešedne (zaškrtnutí zůstane), hláška „⚠ Krok 2: v každém aršíku platí jen s Pořadím po aršících.“, číslování souvisle 001–240 | |
+| 10.5 | Na `…geoup.ai` (bez aršíků) spustit, ↺, zaškrtnout Po aršících; **Storno** | Hláška „⚠ Žádný prvek neleží v aršíku; pořadí je stejné jako bez volby.“, náhled 001–240 ve stejném pořadí jako bez volby | |
+| 10.6 | Na `…arch.ai`: ↺, zaškrtnout Po aršících a u kroku 2 „v každém aršíku“, **Uložit jako…** „Aršíky“; vybrat „Samolepky“, pak „Aršíky“; **Storno** | „Samolepky“: obě volby nezaškrtnuté; „Aršíky“: obě zaškrtnuté, bez hvězdičky | |
+
+Konec sekce: soubor v původním stavu (nebo zavřít bez uložení).

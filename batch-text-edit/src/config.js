@@ -8,7 +8,7 @@ var BTE = BTE || {};
 BTE.Config = {
     scriptName: "Batch Text Edit",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.0.0",
+    version: "1.1.0",
 
     // The shared BTE.UIState keeps its own copies of these two literals and
     // must stay in sync with them (see its header).

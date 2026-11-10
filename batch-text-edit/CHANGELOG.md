@@ -4,6 +4,38 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.1.0] — nevydáno
+
+### Přidáno
+
+- **Pořadí po aršících.** Aršík je skupina, ve které leží skupiny prvků.
+  Se zaškrtnutým Po aršících se číslování projde celý aršík, než přejde na
+  další; prvky mimo aršík přijdou na konec. Sloupec # v náhledu ukazuje
+  aršík a pořadí (`3 · 25`), řádek rozsahu počet aršíků.
+- **Číslovat: řada v každém aršíku.** Zaškrtnuté „v každém aršíku“ začne
+  v každém aršíku znovu na Od, i když mají aršíky různý počet prvků.
+- **Zbylé proměnné.** Když po posledním kroku zůstane v textu `{…}`, náhled
+  i Souhrn to ohlásí s počtem prvků. Použít zůstane aktivní.
+- Hlášky k aršíkům: žádný prvek v aršíku, každý aršík s jedním prvkem,
+  prvky mimo aršík.
+
+### Změněno
+
+- **Do je konec řady.** Prvek, jehož číslo by Do překročilo, zůstane
+  v kroku beze změny a náhled ohlásí, kolik jich je; nová řada (Znovu po,
+  další aršík) začne znovu na Od. Dřív Do jen kontrolovalo počet a krok
+  očísloval všechny prvky. Předvolby z 1.0.0 s vyplněným Do proto teď
+  zastaví na Do.
+- Od za hranicí Do je ✗ (krok by nic neočísloval).
+
+### Opraveno
+
+- Hláška po neočekávané chybě radila Cmd+Z, i když se nic nezapsalo; teď
+  řekne „Dokument nebyl změněn.“
+- Pokyn „potvrďte Použít znovu“ se už neukáže vedle šedého Použít.
+- Chyba v ovládání dialogu zašedí Použít a Uložit i tehdy, když se nepodaří
+  vykreslit stav, a hláška už neukáže „undefined“.
+
 ## [1.0.0] — 2026-11-03
 
 První vydání.
