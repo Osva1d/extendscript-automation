@@ -465,3 +465,31 @@ A refresh took a third of what it took on 2026-10-30 (190–670 ms), under the ~
 ### Re-measuring
 
 As before: assemble the runner from the probe's Usage header and run it with `tools/ai-eval.sh -t 600`, with 0 documents open; the probe builds and closes its own document (2.6 s to build it this time). The result's `cs.checks` and `en.checks` hold (a)–(h), `noStar`, `noClipped`, `size` and `holds`.
+
+## By-sheet probe (1.1.0)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_scope.jsx` (parts `bysheet`, `bysheetclip`, `bysheetmasked`, `real`). It runs the real `BTE.Scope.prepare(doc, "document", "rows", bySheet)` on 20 sheets (aršíky) of 3 x 4 prefabs laid out 4 across and 5 down (240 prefabs, 480 texts), and on the user's three test files opened read-only (alerts off, PDF options saved and restored, closed unsaved, never saved). A sheet is the nearest group above an element's group.
+
+### Synthetic sheets
+
+| part | structure | sheetCount on | first 13 sheet numbers | element 49 | prepare off / on (cold, warm) |
+|---|---|---|---|---|---|
+| bysheet | sheet group > prefab group | 20 (12 each) | 1 x12, 2 | sheet 5 | 728 / 395 ms (393 / 405) |
+| bysheetclip | the sheet group is a clip group | 20 (12 each) | 1 x12, 2 | sheet 5 | 759 / 427 ms (410 / 416) |
+| bysheetmasked | texts directly in a clip group, its sheet is the prefab group | 240 = elements | 1..13 | sheet 49 | 748 / 609 ms (488 / 647) |
+
+Option off: `sheets` is null and `sheetCount` 0. Element 4 without the option is element 13 with it (the 4th prefab of the first row lies in sheet 2); both runs give the same key set, in a different order; repeated runs give identical results.
+
+### The user's files
+
+| file | elements | sheetCount | first 13 | keys off = on |
+|---|---|---|---|---|
+| Zund_Summa_Test_geoup.ai (sticker = group) | 240 | 0 | all 0 | same order |
+| Zund_Summa_Test_geoup arch.ai (stickers in groups of 12) | 240 | 20 (12 each) | 1 x12, 2 (element 49 in sheet 5) | same set, different order |
+| Zund_Summa_Test.ai (no groups) | 240 | 0 | all 0 | same order |
+
+Not checked geometrically: that sheet 1 of the arch file is the top-left one.
+
+### Timing against 1.0
+
+On 2026-10-29: group 64 ms, sheets 71 ms. Today with the same probe: group 694 and 741 ms, sheets 693 ms, about 10x slower. The same probe with the modules from before the by-sheet commit (0fa634f^) gave 767 and 773 ms, so the difference is the machine or Illustrator today, not reading the sheet; `Element.build` alone takes 291-323 ms now (28 ms then). The by-sheet option costs nothing measurable: warm prepare with it on is not slower than off. Today's cold prepare on 240 prefabs is 0.7-1.0 s, over the 0.5 s target; re-measure on a fresh Illustrator before treating that as a code problem.
