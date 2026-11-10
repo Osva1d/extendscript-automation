@@ -420,3 +420,48 @@ After the fix round (`ca9e586`, 2026-11-03) part main took 228 ms in total; the 
 ### Log file (`BTE.Utils.log`)
 
 `File.writeln` ends lines with CR on macOS by default (measured 2026-11-03, Illustrator 30.8.2); with `f.lineFeed = "Unix"` a second real run wrote LF. Append mode (`open("a")`), UTF-8 Czech and creating `Folder.userData/batch-text-edit/` were confirmed in the same run. The e2e probe sends the log to its own temp file, so the user's `bte.log` is never written by a probe.
+
+## Dialog probe (1.1.0)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`) with `tests/probes/probe_dialog.jsx` 1.1.0. The probe document now holds the 240 prefabs in 20 aršíky of 3 × 4 (4 across, 5 down, 100 pt apart; a sheet group on the layer, prefab groups in it, the blocks of `test_scope.js`). The probe reports the checks (a)–(h) per language in `checks`; all are true in Czech and English. The host's default maximumSize was 1462 × 932 this time, so nothing was lifted (`"lifted": false`), and the plain layout gives the same 1008 × 768 px as the lifted one of 2026-10-30.
+
+### Size and texts
+
+| | CS | EN |
+|---|---|---|
+| window, at open and after every check | 1008 × 768 | 1008 × 768 |
+| Po aršících / By sheet (text / checkbox) | 63 / 81 px | 49 / 67 px |
+| v každém aršíku / in every sheet | 96 / 114 px | 81 / 99 px |
+| longest scope line (99999 prvků, textů, aršíků, přeskočené) / its line | 397 / 507 px | 396 / 515 px |
+| step list / editor | 515 × 150 / 419 × 187 | 484 × 150 / 450 × 187 |
+| texts wider than their control | none | none |
+
+- Po aršících is the last control of the Pořadí row. v každém aršíku is the last control of the Opakovat / Znovu po row and starts at x 305 (EN 339), where Krok starts in the first row; the editor grew by 1 px in Czech and not at all in English.
+- The # column holds "20 · 240" (50 px). It is 68 px now, 28 px taken from Původní (columns 68/272/300/300), so the window keeps its width; no separate Aršík column. Other samples: "99 · 999" 50 px, "– · 240" 41 px, "999 · 9999" 65 px. The 17 px kept beside the text is the spare the 1.0 column left around "240" (23 px in 40); a rendered cell cannot be measured headless.
+
+### Behaviour
+
+- Ticking Po aršících re-sorts without reading the document (39 ms): row 13 is "2 · 13", row 12 "1 · 12", and the scope line says "240 prvků, 480 textů, 20 aršíků". Unticking gives "13" again and the line without aršíky.
+- v každém aršíku is grey while Po aršících is off and live with it on. On, with Od 1, row 13's final column is "abc | 001" again (row 12 "abc | 012", row 240 "abc | 012").
+- Do 10 with v každém aršíku: "⚠ Krok 2: 40 prvků zůstane beze změny, řada končí na Do 10.", Použít stays on.
+- A handler that throws a plain string shows it: "✗ Dialog narazil na chybu (probe: a plain string). …", and Použít, Uložit and Uložit jako… are grey. When drawing the status fails as well, the three buttons are still grey (before M6 they stayed live and the message read "(undefined)").
+- "1O" typed in Od, then Použít: the dialog stays, Použít is grey, and the hold hint is not shown (M5); before, the hint asked to confirm a grey Použít.
+- Opened on a last run with Po aršících and v každém aršíku (Do 10): the checkbox is ticked, row 13 is "2 · 13", the after column "{kód} | 001", the cut line counts 40. ↺ to [Výchozí] turns both off and re-sorts, and the list shows "[Výchozí]" without "*".
+- Right after opening, [Výchozí] shows no "*": the dialog's values now carry `bySheet` like every loaded preset.
+
+### Times (ms, 240 elements, a chain of three steps; CS / EN)
+
+| what | CS | EN |
+|---|---|---|
+| build the dialog (prepare included) | 586 | 523 |
+| Po aršících on | 39 | 40 |
+| Od committed, 12 times | 67–149, median 83 | 71–154, median 90 |
+| refresh with unchanged values, 5 times | 66–84 | 71–94 |
+| change Pořadí | 59–67 | 60–61 |
+| Rozsah → Celý dokument (prepare alone) | 442 (406) | 489 (459) |
+
+A refresh took a third of what it took on 2026-10-30 (190–670 ms), under the ~200 ms of spec §6.2. `BTE.UI.LIVE_EVENT` stays `onChange`; that decision was not re-made here.
+
+### Re-measuring
+
+As before: assemble the runner from the probe's Usage header and run it with `tools/ai-eval.sh -t 600`, with 0 documents open; the probe builds and closes its own document (2.6 s to build it this time). The result's `cs.checks` and `en.checks` hold (a)–(h), `noStar`, `noClipped`, `size` and `holds`.
