@@ -145,7 +145,8 @@ v dialogu ověřil test 6.6.
 
 Na `…geoup arch.ai` (20 aršíků po 12 samolepkách, 3 × 4) v původním stavu.
 Předvolbu „Samolepky“ smazal test 8.4: nejdřív na tomto souboru spustit
-skript, sestavit kroky jako v 2.1 a **Uložit jako…** „Samolepky“;
+skript, vybrat „[Výchozí]“ (jeden krok Číslovat), sestavit kroky jako v 2.1
+a **Uložit jako…** „Samolepky“;
 **Storno**. Každý test pak začíná **↺** (předvolba „Samolepky“: Nahradit
 `{NORDIC CZ}` → „SNB CZ“, Číslovat `{n}` Od 1, Číslic 3).
 
