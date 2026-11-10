@@ -62,7 +62,7 @@ Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
 | 2.1 | Spustit znovu. Krok 1: Typ Nahradit, Najít `{NORDIC CZ}`, Nahradit „SNB CZ“. **+** → krok 2: Typ Číslovat, Kde `{n}`, Od 1, Číslic 3, Do prázdné | Náhled: řádek 1 „{NORDIC CZ} \| {n}“ → „SNB CZ \| 001“, poslední řádek „… 240“. Stavový řádek „✓ Změní se 240 z 240 prvků.“ | |
-| 2.2 | **Uložit jako…** „Samolepky“ | Předvolba „Samolepky“ v seznamu, bez hvězdičky (sekce 5–7 ji použijí) | |
+| 2.2 | **Uložit jako…** „Samolepky“ | Předvolba „Samolepky“ v seznamu, bez hvězdičky (sekce 5–7 ji použijí, sekce 10 ji vytvoří znovu) | |
 | 2.3 | Vybrat v seznamu krok 1 | Prostřední sloupec „Po vybraném kroku“ ukazuje stav po kroku 1 („SNB CZ \| {n}“) | |
 | 2.4 | **Použít** | Souhrn „Výsledek úprav“: Změněné prvky 240, Změněné texty 480, Neshoda po zápisu 0. V dokumentu 001 vlevo nahoře, čísla po řádcích do 240 vpravo dole | |
 | 2.5 | Prohlédnout několik samolepek zblízka | Písmo, velikost a barva kódu i čísla **beze změny**, logo a kruh nedotčené. **Nevracet** — sekce 3 pokračuje na zapsaném bloku | |
@@ -144,8 +144,10 @@ v dialogu ověřil test 6.6.
 ## 10. Novinky 1.1.0 (brány 10.1–10.3)
 
 Na `…geoup arch.ai` (20 aršíků po 12 samolepkách, 3 × 4) v původním stavu.
-Každý test začíná **↺** (předvolba „Samolepky“: Nahradit `{NORDIC CZ}` →
-„SNB CZ“, Číslovat `{n}` Od 1, Číslic 3).
+Předvolbu „Samolepky“ smazal test 8.4: nejdřív na tomto souboru spustit
+skript, sestavit kroky jako v 2.1 a **Uložit jako…** „Samolepky“;
+**Storno**. Každý test pak začíná **↺** (předvolba „Samolepky“: Nahradit
+`{NORDIC CZ}` → „SNB CZ“, Číslovat `{n}` Od 1, Číslic 3).
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|

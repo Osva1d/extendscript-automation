@@ -92,8 +92,9 @@ nezapíše nic, co náhled neukázal.
 - **Krok má ⚠ „Nic nenašel“:** proměnná v textu není (ukazuje
   „(nenalezeno)“) — po prvním běhu už je nahrazená; použij „První číslo
   v prvku“ nebo „Jiný text…“.
-- **„Poslední číslo vyjde … v poli Do je …“, „Chybí … prvků“:** prvků je
-  méně, než řada do Do potřebuje. Zkontroluj výběr; zápis to nezablokuje.
+- **„Poslední číslo vyjde … v poli Do je …“, „Chybí … prvků“:** řada
+  nedošla až k Do, typicky proto, že prvků je méně, než řada potřebuje.
+  Zkontroluj výběr; zápis to nezablokuje.
 - **„… prvků zůstane beze změny, řada končí na Do …“:** prvků je víc, než
   řada do Do pokryje; ty za hranicí krok nezmění. U „První číslo v prvku“
   si nechají staré číslo, takže na archu může vzniknout dvojí číslo.
