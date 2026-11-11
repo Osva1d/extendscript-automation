@@ -256,8 +256,11 @@ a přesouvá cesty čistě v řezové barvě.
   Vyrobit masku vrstvy ze skriptu nejde (změřeno).
 - [ ] **6a.5 Názvy (L13).** Řádek `Cut ` s mezerou v dokumentu s vrstvou Cut → žádná
   druhá vrstva Cut. Řádek `regmarks` → chyba o vyhrazené vrstvě, dokument beze změny.
-- [ ] **6a.6 Cmd+Z.** Běh ZUND s mapováním má dva kroky: značky, vrstvy a Spot 1,
-  pak artboard. Měřeno příkazem menu, klávesa neměřena.
+- [ ] **6a.6 Cmd+Z.** První běh ZUND s mapováním bez výběru má dva kroky: značky,
+  vrstvy a Spot 1, pak artboard (klávesou ověřeno 2026-11-11). Další běh v dokumentu,
+  kde značky už jsou a něco je vybrané, má kroky čtyři: nové značky a vrstvy (po něm
+  dokument chvíli nemá žádné značky), návrat starých značek, artboard a výběr, který
+  Dle grafiky ruší.
 - [ ] **6a.7 U stroje.** Bílé značky ve Spot 1 na tmavém materiálu: kamera je najde.
 - [ ] **6a.8 Výchozí řádek.** Dokument jen s přímou barvou Thru-cut, tlačítko Výchozí
   → řádek `Thru-cut ← Thru-cut`, vrstva i barva souhlasí.
