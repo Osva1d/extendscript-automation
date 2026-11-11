@@ -2144,6 +2144,7 @@ console.log("\n=== TEST 28: + Add leaves the layer name empty ===");
             // The first item can still be picked: nothing is selected, so it is a change.
             lists[1].selection = 0;
             seen.picked = names[1].text;
+            seen.okAfterPick = win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }).enabled;
         }]);
         assertEq(seen.rows, 2, "+ Add makes a second row");
         assertEq(seen.firstName, "Thru-cut", "the existing row keeps its name");
@@ -2152,6 +2153,7 @@ console.log("\n=== TEST 28: + Add leaves the layer name empty ===");
         assertEq(seen.ok, false, "Generate is grey until the new row has a name");
         assertEq(seen.status, "✗ " + ZSM.L.STATUS_LAYER_NAME, "the status line says the name is missing");
         assertEq(seen.picked, ZSM.Draw.getLayerNames()[0], "picking the first item of the list fills the name");
+        assertEq(seen.okAfterPick, true, "...and the live check runs again: Generate is live (seen grey in Illustrator)");
     } finally {
         SUI.options.fireOnChangeOnSelect = false;
     }

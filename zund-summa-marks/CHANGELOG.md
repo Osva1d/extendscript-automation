@@ -71,8 +71,9 @@ vrstva Graphics a opravy tichých chyb z
   pro `trim`.
 - **Nový řádek z „+ Přidat“ má prázdný název.** Dřív převzal první položku
   seznamu vrstev, obvykle vrstvu s grafikou, a kdo ho nepřepsal, poslal řezové
-  cesty do vrstvy s grafikou. Teď je název prázdný a červený a Generovat čeká,
-  dokud ho nenapíšete nebo nevyberete ze seznamu (i první položku).
+  cesty do vrstvy s grafikou. Teď je název prázdný, stavová řádka hlásí chybu
+  a Generovat čeká, dokud ho nenapíšete nebo nevyberete ze seznamu (i první
+  položku).
 - **Storno po přepnutí režimu nezapíše poslední běh (U12).** Po přepnutí ZUND
   ↔ SUMMA a uložení, uložení jako nebo smazání předvolby zapsal skript do
   souboru i hodnoty z dialogu, které nikdo neodeslal, a to i po Storno. Další

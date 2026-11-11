@@ -1357,10 +1357,13 @@ ZSM.UI = {
                 row._zsmWired = true;
                 row.etLayer.onChange   = function () { refreshModifiedIndicator(); liveValidateAll(); };
                 row.etLayer.onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
-                // ddLayer's onChange already updates etLayer; chain refresh after
+                // ddLayer's onChange already updates etLayer; chain refresh after.
+                // The name is written by code, which fires no onChanging, so the
+                // live check runs here: a name picked into an empty row would stay
+                // red and keep Generate grey otherwise.
                 var origDD = row.ddLayer.onChange;
                 row.ddLayer.onChange = (function (orig) {
-                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); liveValidateAll(); };
                 })(origDD);
                 row.ddColor.onChange = (function (rw) {
                     return function () {
