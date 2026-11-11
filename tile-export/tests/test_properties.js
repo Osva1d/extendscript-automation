@@ -26,11 +26,12 @@ function merge(base, over) {
     return r;
 }
 
-function build(n, widthMm, heightMm, overlapMm, mode, dir, carrier) {
+function build(n, widthMm, heightMm, overlapMm, mode, dir, carrier, unprintedMm) {
     var s = merge(D, {
         direction: dir, divideMode: "count", tileCount: n,
         overlap: overlapMm, overlapMode: mode,
         overlapCarrier: carrier || "first",
+        overlapUnprinted: unprintedMm || 0,
         addTop: 40, addBottom: 25, addLeft: 0, addRight: 40
     });
     var clean = [0, mm(heightMm), mm(widthMm), 0];
@@ -264,6 +265,21 @@ fc.assert(fc.property(arbWidth, function (j) {
         }
     }
     return t.length >= 2;
+}), { numRuns: 500 });
+console.log("  ok (500 runs)");
+
+console.log("\n=== Property 4: an unprinted part labels the carriers and moves nothing ===");
+fc.assert(fc.property(arbJob.filter(function (j) { return j.overlap >= 1; }), fc.integer({ min: 1, max: 40 }), function (j, p) {
+    var part = Math.min(p, j.overlap);
+    var a = build(j.n, j.width, j.height, j.overlap, "onesided", j.dir, j.carrier, part).tiles;
+    var b = build(j.n, j.width, j.height, j.overlap, "onesided", j.dir, j.carrier, 0).tiles;
+    var free = (j.carrier === "second") ? 0 : a.length - 1, i;
+    for (i = 0; i < a.length; i++) {
+        if (a[i].clean.join() !== b[i].clean.join() || a[i].expanded.join() !== b[i].expanded.join()) { return false; }
+        if (b[i].unprinted !== null) { return false; }
+        if ((i === free) !== (a[i].unprinted === null)) { return false; }
+    }
+    return true;
 }), { numRuns: 500 });
 console.log("  ok (500 runs)");
 

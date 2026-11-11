@@ -14,6 +14,7 @@ load("src/lib/utils.js");
 load("src/config.js");
 load("../shared/lib/cut_marks.js");
 global.buildCutMarks(TE);
+load("src/grid.js");
 load("src/export.js");
 load("src/check.js");
 
@@ -148,6 +149,29 @@ assert(seen === userL, "and the 1.0 lines layer too, past the check layer");
 dRun = { activeLayer: userL, layers: [checkL, lay("Layer 2"), userL] };
 TE.Check.removeAll(dRun);
 assert(seen === userL, "the user's own active layer stays");
+
+console.log("\n=== 1.3.0: the unprinted part on a check panel ===");
+var BARE = { index: 2, clean: [0, P(100), P(100), 0], expanded: [0, P(100), P(103.2), 0],
+             unprinted: { side: "right", width: P(3) } };
+var PLAIN = { index: 2, clean: BARE.clean, expanded: BARE.expanded };
+var gb = TE.Check.geometry(BARE, merge({ scaleN: 10 }), 1);
+assert(gb.page === BARE.expanded && gb.mask === BARE.expanded, "manual: the page and the mask stay the panel");
+close(gb.clip[2], P(100.2), "the artwork stops 2 mm (0.2 on the rulers) past the seam");
+var gzb = TE.Check.geometry(BARE, merge({ scaleN: 10, zundMode: true, addTop: 40 }), 1);
+var gzp = TE.Check.geometry(PLAIN, merge({ scaleN: 10, zundMode: true, addTop: 40 }), 1);
+assert(JSON.stringify(gzb.geo) === JSON.stringify(gzp.geo), "Zünd: the marks do not move");
+assert(JSON.stringify(gzb.page) === JSON.stringify(gzp.page), "nor the page");
+assert(JSON.stringify(gzb.cut) === JSON.stringify(gzp.cut), "nor the cut");
+close(gzb.clip[2], P(100.2), "only the artwork stops short");
+close(gzb.clip[0], gzb.mask[0], "the bleed stays on the left");
+close(gzb.clip[1], gzb.mask[1], "on the top");
+close(gzb.clip[3], gzb.mask[3], "and on the bottom");
+assert(gzp.clip === gzp.mask, "a panel without a strip clips to its mask");
+var shb = TE.Check.shiftTile(BARE, 10, 20);
+assert(shb.unprinted === BARE.unprinted, "moving a check panel keeps its strip");
+var zs = merge({ scaleN: 10, zundMode: true });
+var pa = TE.Export.pageSizeMm(BARE, zs, 1), pb = TE.Export.pageSizeMm(PLAIN, zs, 1);
+assert(pa[0] === pb[0] && pa[1] === pb[1], "{size} and the page ignore the strip");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

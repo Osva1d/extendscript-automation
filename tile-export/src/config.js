@@ -8,7 +8,7 @@ var TE = TE || {};
 TE.Config = {
     scriptName: "Tile Export",
     // KEEP IN SYNC with package.json "version" — build.sh enforces this.
-    version: "1.2.0",
+    version: "1.3.0",
 
     // Artboard name prefix. Marks generated panels so a second run can tell
     // them from the user's own clean-format artboard.
@@ -126,6 +126,12 @@ TE.Config = {
             // double-cut away. Absent from older presets, which merge onto these
             // defaults and so keep the behaviour they had.
             overlapCarrier: "first",    // "first" | "second"
+            // How much of a one-sided overlap the carrier leaves unprinted,
+            // counted from its outer edge (1.3.0): a welded banner, where ink
+            // weakens the weld and the carrier lies underneath. The rest of
+            // the overlap stays printed past the seam to cover a misfit, so
+            // 32 with 30 unprinted keeps 2 mm. 0 prints the whole overlap.
+            overlapUnprinted: 0,        // mm
 
             addTop:      0,             // mm, "přídavek"; 0 means "načisto"
             addBottom:   0,

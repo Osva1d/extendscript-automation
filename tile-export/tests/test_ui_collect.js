@@ -42,7 +42,8 @@ function refs(textOverrides) {
         rbExpMode: rb(2, 0), rbExpScale: rb(2, 0), etDPI: et(d.rasterDPI),
         cbLine: cb(true), etSpot: et(d.lineSpot), etLineW: et(d.lineWidth),
         ddPdf: { selection: null }, etOut: et(""), etPattern: et(d.namePattern),
-        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null
+        cbSkip: cb(true), cbOpen: cb(false), rbOutType: null,
+        etUnprinted: et(0)
     };
     var k;
     for (k in textOverrides) { if (textOverrides.hasOwnProperty(k)) { r[k].text = textOverrides[k]; } }
@@ -259,6 +260,35 @@ var rOpen = refs({});
 rOpen.cbOpen.value = true;
 eq(TE.UI.collect(rOpen).openOutput, true, "the option is collected");
 eq(TE.Config.getDefaults().openOutput, false, "and off unless asked for");
+console.log("\n=== 1.3.0: the unprinted part ===");
+eq(TE.UI.collect(refs({ etUnprinted: "30" })).overlapUnprinted, 30, "reads the field");
+eq(isNaN(TE.UI.collect(refs({ etUnprinted: "3O" })).overlapUnprinted), true, "3O is no number");
+
+console.log("\n=== 1.3.0: ask before the export overwrites files (audit U5) ===");
+eq(TE.L.format(TE.L.CONFIRM_OVERWRITE_FILES, TE.L.count("FILES", 1)), "V cílové složce už je: 1 soubor. Přepsat?", "one file");
+eq(TE.L.count("FILES", 3), "3 soubory", "three files");
+eq(TE.L.count("FILES", 5), "5 souborů", "five files");
+var ms = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
+eq(/if \(res\.action !== "export"\) \{ break; \}[\s\S]{0,1200}TE\.UiKit\.confirmOverwrite\(/.test(ms), true, "only the export asks");
+eq(/TE\.UiKit\.existingCount\(TE\.Export\.overwritePaths\(/.test(ms), true, "it counts what the run would overwrite");
+eq(ms.indexOf("TE.UiKit.confirmOverwrite(") !== -1 && ms.indexOf("TE.UiKit.confirmOverwrite(") < ms.indexOf("TE.Storage.save(res.wrapper)"),
+    true, "before anything is written");
+eq(/pData = res\.wrapper;/.test(ms) && /ctx\.drawingScale = s\.scaleN;/.test(ms), true,
+    "Ne: back to the dialog with what was set, the drawing scale too");
+// Review 2026-11-07: a Zünd job whose marks stop it must not ask about files
+// it never writes, and the stop leaves the settings and the document as they were.
+eq(ms.indexOf("TE.Validate.markConflict(") !== -1 && ms.indexOf("TE.Validate.markConflict(") < ms.indexOf("TE.UiKit.existingCount("),
+    true, "the mark check comes before the question");
+eq(ms.indexOf("TE.Validate.markConflict(") < ms.indexOf("TE.Storage.save(res.wrapper)"), true,
+    "and before the settings are saved");
+// Review 2026-11-07: the skip warning needs the part of the last confirmed
+// run, read once from the stored settings before the dialog loop.
+eq(/lastUnprinted:\s*TE\.Grid\.unprintedWidth\(/.test(ms), true, "ctx carries the last run's part");
+eq(ms.indexOf("lastUnprinted:") !== -1 && ms.indexOf("lastUnprinted:") < ms.indexOf("for (;;)"), true,
+    "read before the loop, so a declined run does not count");
+var bs = fs.readFileSync(path.join(__dirname, "..", "tools", "build.sh"), "utf8");
+eq(/"\.\.\/shared\/lib\/ui_kit\.js"/.test(bs) && /buildUiKit\(TE\);/.test(bs), true, "the build carries the kit");
+
 var mainRun = fs.readFileSync(path.join(__dirname, "..", "src", "main.js"), "utf8");
 eq(/if \(s\.openOutput\) \{\s*try \{ outFolder\.execute\(\); \}/.test(mainRun), true, "main.js opens the folder only when asked");
 
@@ -278,6 +308,14 @@ var saveSrc = ui.slice(ui.indexOf("btnSave.onClick = function"), ui.indexOf("btn
 eq(/activePreset === c\.PRESET_KEY_DEFAULT\) \{ btnSaveAs\.onClick\(\); return; \}/.test(saveSrc), true,
     "Save on [Default] hands over to Save As");
 eq(/btnSave\.enabled = modified && numbersOk;/.test(ui), true, "and is live on [Default] once something changed");
+
+console.log("\n=== 1.3.0: the unprinted part sits on the overlap row ===");
+// A row of its own made the dialog 1022 x 865 px (ui-probe, 2026-11-07), over
+// the ~850 px a laptop shows; the spec's fallback is the overlap row.
+eq(/addRow\(pEdges,\s*l\.LBL_UNPRINTED/.test(ui), false, "no row of its own");
+eq(/gOverlap\s*=\s*etOverlap\.parent;/.test(ui), true, "the overlap row is the field's row");
+eq(/gOverlap\.add\("statictext",\s*undefined,\s*l\.LBL_UNPRINTED\)/.test(ui), true, "its label joins that row");
+eq(/etUnprinted\s*=\s*gOverlap\.add\("edittext"/.test(ui), true, "and so does its field");
 
 console.log("\n--- " + pass + "/" + total + " passed, " + fail + " failed ---");
 process.exit(fail === 0 ? 0 : 1);

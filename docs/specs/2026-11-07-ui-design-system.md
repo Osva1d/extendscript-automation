@@ -413,7 +413,7 @@ Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
 |---|---|---|---|---|
 | 0 | `docs/family-ux-audit` do main | audit, tento návrh, `tools/ui-probe`, specimen | | vlákna ZSM a TE mají návrh číst ze svého worktree |
 | 1 | `feat/shared-ui-kit` | `shared/lib/ui_kit.js` podle §7 bez panelu předvoleb; sady barev podle jasu ve `FieldPaint` jako nová funkce, dnešní `COLORS` zůstane, dokud ho nástroje používají; společný dotaz před přepisem; Node testy; měření řádků v Illustratoru | U29, U14 | bez konzumenta se v žádném nástroji nic nezmění, jako sdílené moduly 2026-10-17 |
-| 2 | BRE 1.3.0 | dotaz před přepisem; živá kontrola místo série `alert`; stavový řádek a šedé Spustit; `Cílová složka:`, `Vzor pojmenování:`, `Kontrola souborů`; pamatovat Přeskočit; patička a tlačítka v jedné řadě | U5, U7, U13, U17, U23, U24 | ztráta dat je nejhorší nález; nejmenší okno bez předvoleb ověří první polovinu kitu (patička, stav, řádek cesty) |
+| 2 | BRE 1.3.0 | dotaz před přepisem; živá kontrola místo série `alert`; stavový řádek a šedé Spustit; `Cílová složka:`, `Vzor pojmenování:`, `Kontrola souborů`; pamatovat Přeskočit; patička a tlačítka v jedné řadě; navíc tři úpravy pod tabulkou | U5, U7, U13, U17, U23, U24 | ztráta dat je nejhorší nález; nejmenší okno bez předvoleb ověří první polovinu kitu (patička, stav, řádek cesty) |
 | 3 | GM 1.5.0 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne; stav nad tlačítky; `presetPanel` do kitu a z něj předvolby, číselné řádky z kitu; co skript našel běžným textem; tipy předvoleb | U1, U6, U15, U26 | denně používaný nástroj s poskakujícím Generovat; ověří druhou polovinu kitu (předvolby, číselné řádky, `stack`) |
 | 4 | ZSM 1.4.0 | dva sloupce, nejvýš 5 vrstev, okno bez přestavby, bez `Výchozí`, české termíny, výchozí fokus | U2, U3, U16, U18, U27; U12, pokud ho vlákno ZSM neopraví dřív | největší přestavba přijde, až je kit ověřený na dvou nástrojích |
 | 5 | TE 1.4.0 | jen napojení: předvolby, stav a patička z kitu, barvy; dotaz před přepisem; `Náhled`, `Způsob ořezu:`; `Po dokončení…` do panelu Soubory | U5, U13, U17, U24 | rozvržení TE je stálé, mění se málo |
@@ -422,6 +422,27 @@ Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
 V každém kroku navíc: tučné písmo pryč (U21), hlášky polí podle §6.3 (U25, U28) a úklid
 dokumentace toho nástroje, README a CHANGELOG (R8, U20, U30, U31). Rozestupy se mění jen
 tam, kde se okno staví z kitu (R5).
+
+Krok 2 má navíc tři úpravy BRE, které obsluha schválila 2026-11-07 po oponentuře
+externích návrhů pro BRE:
+
+- `Použít aktivní dokument` pod polem šablony, začátek na ose polí. Vyplní cestu otevřené
+  a uložené šablony `.ai`; u neuložené řekne stavový řádek, ať ji obsluha nejdřív uloží.
+  Pozice se dál počítají ze souboru na disku, protože z něj se staví každý arch [N].
+- Kontrola souborů a Souhrn řeknou stavbu šablony (počet pozic na kreslicích plátnech,
+  rozměr pozice v mm) a jestli šablona ukazuje strany 1 až n, každou jednou. Dnes to sonda
+  stran zjišťuje jen u neúplného archu, takže šablona se zdvojenou nebo chybějící stranou
+  u plných archů projde bez varování, což je riziko u číslovaných tiskovin
+  (`batch-relink-export/src/core.js:251`). Nesoulad je ⚠, ne blokace: šablona, která
+  na všech pozicích opakuje stranu 1, je platná [N].
+- Neúplný poslední arch dávku nezastaví oknem Kontrola souborů; Souhrn řekne, kolik pozic
+  odebral. Kratší soubor uprostřed dávky ji zastaví dál, protože bývá chybou dělení [N].
+
+Řádek s tlačítkem přidá k cílové velikosti BRE z §3 odhadem 30 px výšky; změří ho
+`tools/ui-probe`. Ve stejné oponentuře zamítnuto: dělení vícestránkového PDF uvnitř BRE,
+jedno velké okno se živou kontrolou zdrojů, montáž jednostránkových PDF na archy,
+pojmenované předvolby zakázek, volba ořezu PDF (relink drží ořez pozice, „`relink()`
+zachová stranu i ořez pozice“ [D]) a počet archů na tlačítku Spustit.
 
 Mimo plán vědomě: U4 (ochrana Enteru v BTE je zdůvodněná výjimka), U8 (šířka Souhrnu podle
 cesty je záměr z 2026-10-27), U9 (jen pokud v kroku 5 vyjde levně), U11 (fokus se na

@@ -56,6 +56,7 @@ MODULES=(
     "../shared/lib/field_paint.js"
     "../shared/lib/progress.js"
     "../shared/lib/summary.js"
+    "../shared/lib/ui_kit.js"
     "../shared/lib/registration.js"
     "../shared/lib/drawing_scale.js"
     "$SRC_DIR/config.js"
@@ -138,6 +139,9 @@ for m in "${MODULES[@]}"; do
     fi
     if [ "$m" = "../shared/lib/summary.js" ]; then
         echo "buildSummary(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+    fi
+    if [ "$m" = "../shared/lib/ui_kit.js" ]; then
+        echo "buildUiKit(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
     fi
     if [ "$m" = "../shared/lib/registration.js" ]; then
         echo "buildRegistration(TE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"

@@ -1,7 +1,8 @@
 // ------------------------------------------------------------------------
 // Module: UiKit (shared) — the parts the family's dialogs are built from
-// Part of: shared core (no consumer yet; batch-relink-export is the first,
-//          docs/specs/2026-11-07-ui-design-system.md §7 and §10)
+// Part of: shared core. tile-export 1.3.0 uses existingCount and
+//          confirmOverwrite only; batch-relink-export is the first to take
+//          the rest (docs/specs/2026-11-07-ui-design-system.md §7 and §10)
 //
 // Namespace-neutral factory: buildUiKit(NS) registers NS.UiKit on the
 // namespace object passed in. A tool's build cats this file and appends its
