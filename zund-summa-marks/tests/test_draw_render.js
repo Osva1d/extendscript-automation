@@ -58,6 +58,10 @@ ZSM.L = {
     ERR_MARKS_ORIENT: "marks orient %s %s",
     ERR_MARKS_OVERLAP: "marks overlap %s %s",
     ERR_MARKS_OUTSIDE: "marks outside %s",
+    WARN_COLOR_FALLBACK: "colorfallback %s",
+    WARN_CUT_UNMAPPED: "cutunmapped %s %s",
+    WARN_PATHS_UNREADABLE: "unreadable %s",
+    WARN_ROUTING_STOPPED: "routingstopped %s",
     format: function (template) {
         var args = [];
         for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
@@ -70,6 +74,9 @@ ZSM.Config = {
     layerGraphics: "Graphics",
     layerTrim:     "Trim",
     trimNote:      "ZSM trim line",
+    markSpot:      { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
+    cutMethods:    ["Cut", "Thru-cut", "Kiss-cut", "CutContour", "Score", "Crease", "Perforation",
+                    "V-cut", "Bevel-cut", "Route", "Engrave", "Draw", "Punch", "Drill"],
     summaXCenter: 10,    // mm: distance from graphic edge to Summa mark center (X)
     summaYVisual: 10,    // mm: gap from graphic edge to Summa mark outer edge (Y)
     redLineWidth: 1,
@@ -1666,6 +1673,408 @@ assertEq(ZSM.Draw.detectCutColor(), "Thru-cut", "detectCutColor still answers th
 setupDoc({ spots: [{ name: "Bílá" }], layers: [] });
 assertEq(JSON.stringify(ZSM.Draw.detectCutColors()), "[]", "no known cut spot: an empty list");
 assertEq(ZSM.Draw.detectCutColor(), ZSM.Draw.getRegistrationName(), "...and detectCutColor keeps its registration fallback");
+
+
+// =====================================================
+// TEST 1.3.0-A: the mapping offers cut and Zünd tool names, no print layers
+// =====================================================
+console.log("\n=== TEST 1.3.0-A: mapping suggestions hold no print or registration names ===");
+setupDoc({ layers: [{ name: "Art", items: [] }] });
+var namesA = ZSM.Draw.getLayerNames();
+["White", "Varnish", "Register"].forEach(function (n) {
+    assert(namesA.indexOf(n) < 0, "mapping suggestions leave out " + n);
+});
+["Cut", "Thru-cut", "Kiss-cut", "CutContour", "Score", "Crease", "Perforation", "V-cut", "Bevel-cut",
+    "Route", "Engrave", "Draw", "Punch", "Drill"].forEach(function (n) {
+    assert(namesA.indexOf(n) >= 0, "mapping suggestions keep " + n);
+});
+setupDoc({ layers: [{ name: "White", items: [] }, { name: "Art", items: [] }] });
+assert(ZSM.Draw.getLayerNames().indexOf("White") >= 0,
+    "a layer of that name in the document is still offered");
+
+
+// =====================================================
+// TEST 1.3.0-B: the cleanup takes every truly empty layer (user, 2026-11-06)
+// =====================================================
+// Also one that was empty before the run and a locked one. What is hidden, holds
+// a sublayer or is in the mapping stays.
+console.log("\n=== TEST 1.3.0-B: truly empty layers go ===");
+var docB = setupDoc({
+    layers: [
+        { name: "Prepared", items: [] },
+        { name: "Prepared locked", locked: true, items: [] },
+        { name: "Hidden", visible: false, items: [] },
+        { name: "Has sublayer", sublayers: [{ name: "Sub", items: [] }] },
+        { name: "Mapped empty", items: [] },
+        { name: "Cut source", items: [{ type: "path", spot: "CutSpot", bounds: [0, 50, 50, 0] }] },
+        { name: "Art", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sB = makeSettings({ layers: [{ name: "Cut", color: "CutSpot" }, { name: "Mapped empty", color: "NoSuchSpot" }] });
+ZSM.Draw.beginSession();
+ZSM.Draw.render(ZSM.Core.calculateAll(sB, ZSM.Draw.getBounds(sB)), sB);
+ZSM.Draw.endSession();
+assert(findLayer(docB, "Prepared") === null, "an empty layer the run did not touch goes");
+assert(findLayer(docB, "Prepared locked") === null, "a locked empty layer goes");
+assert(findLayer(docB, "Cut source") === null, "a layer the run emptied goes");
+assert(findLayer(docB, "Hidden") !== null, "a hidden empty layer stays");
+assert(findLayer(docB, "Has sublayer") !== null, "a layer with a sublayer stays");
+assert(findLayer(docB, "Mapped empty") !== null, "a mapped empty layer stays");
+assertEq(countItems(findLayer(docB, "Cut"), "PathItem"), 1, "the moved path is on the cut layer");
+
+
+// =====================================================
+// TEST 1.3.0-C: no second Graphics layer (audit V2)
+// =====================================================
+console.log("\n=== TEST 1.3.0-C: an existing Graphics layer is not doubled ===");
+var docC = setupDoc({
+    layers: [
+        { name: "Graphics", items: [{ type: "path", bounds: [0, 100, 100, 0] }] },
+        { name: "Background", items: [{ type: "path", bounds: [0, 100, 100, 0] }] }
+    ]
+});
+var sC = makeSettings();
+ZSM.Draw.render(ZSM.Core.calculateAll(sC, ZSM.Draw.getBounds(sC)), sC);
+var graphicsC = 0;
+for (var iC = 0; iC < docC._layers.length; iC++) { if (docC._layers[iC].name === "Graphics") graphicsC++; }
+assertEq(graphicsC, 1, "one Graphics layer after the run");
+assert(findLayer(docC, "Background") !== null, "the bottom layer keeps its name");
+
+
+// =====================================================
+// TEST 1.3.0-D: marks in Spot 1
+// =====================================================
+console.log("\n=== TEST 1.3.0-D: the mark spot is added when picked and missing ===");
+var artD = [{ name: "Art", items: [{ type: "path", bounds: [0, 300, 300, 0] }] }];
+function findSpot(doc, name) {
+    var found = [];
+    for (var i = 0; i < doc.spots.length; i++) { if (doc.spots[i].name === name) found.push(doc.spots[i]); }
+    return found;
+}
+function runD(s) {
+    var alerts = [], orig = global.alert;
+    global.alert = function (m) { alerts.push(String(m)); };
+    var drew = ZSM.Draw.render(ZSM.Core.calculateAll(s, ZSM.Draw.getBounds(s)), s);
+    global.alert = orig;
+    return { drew: drew, alerts: alerts.join("\n") };
+}
+
+// Missing and picked: added as a spot with the configured alternate.
+var docD = setupDoc({ layers: artD });
+var outD = runD(makeSettings({ markColor: "Spot 1" }));
+var spotsD = findSpot(docD, "Spot 1");
+assertEq(spotsD.length, 1, "Spot 1 added once");
+assertEq(spotsD[0].colorType, ColorModel.SPOT, "as a spot colour");
+assertEq(spotsD[0].color.typename, "CMYKColor", "with a CMYK alternate");
+assertEq(spotsD[0].color.cyan, 100, "cyan 100");
+assertEq(spotsD[0].color.magenta + spotsD[0].color.yellow + spotsD[0].color.black, 0, "and nothing else");
+var markD = findSublayer(findLayer(docD, "Regmarks"), "Zünd")._items[0];
+assertEq(markD.fillColor.typename, "SpotColor", "the marks are painted with it");
+assertEq(markD.fillColor.spot.name, "Spot 1", "by name");
+assertEq(markD.fillColor.tint, 100, "at full tint");
+assertEq(outD.alerts, "", "no warning: the operator picked it");
+
+// Second run: reused, nothing added.
+outD = runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(findSpot(docD, "Spot 1").length, 1, "a re-run adds no second Spot 1");
+
+// Present with the document's own alternate: left as it is.
+var ownD = { typename: "Spot", name: "Spot 1", colorType: "SPOT", color: { typename: "CMYKColor", cyan: 0, magenta: 100, yellow: 0, black: 0 } };
+var docD2 = setupDoc({ layers: artD, spots: [ownD],
+    swatches: [{ name: "Spot 1", color: { typename: "SpotColor", spot: ownD, tint: 100 } }] });
+runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(findSpot(docD2, "Spot 1").length, 1, "an existing Spot 1 is not doubled");
+assertEq(ownD.color.magenta, 100, "and keeps its own alternate");
+
+// Not picked: nothing added, whatever else is missing.
+var docD3 = setupDoc({ layers: artD });
+runD(makeSettings());
+assertEq(findSpot(docD3, "Spot 1").length, 0, "another mark colour adds nothing");
+var docD4 = setupDoc({ layers: artD });
+var outD4 = runD(makeSettings({ markColor: "Ghost" }));
+assertEq(docD4.spots.length, 0, "a missing colour of another name is still never added");
+assert(outD4.alerts.indexOf("colorfallback Ghost") >= 0, "and still warns about the fallback");
+
+// A refused run says the document was not changed: no spot either.
+var docD5 = setupDoc({ layers: artD });
+var sD5 = makeSettings({ markColor: "Spot 1" });
+var geoD5 = ZSM.Core.calculateAll(sD5, ZSM.Draw.getBounds(sD5));
+geoD5.marksZ[0].cx = NaN;
+ZSM.Draw.render(geoD5, sD5);
+assertEq(docD5.spots.length, 0, "a refused run adds no spot");
+
+// The spot cannot be added: the fallback warning says so, the marks still draw.
+var docD6 = setupDoc({ layers: artD });
+docD6.spots.add = function () { throw new Error("spots locked"); };
+var outD6 = runD(makeSettings({ markColor: "Spot 1" }));
+assertEq(outD6.drew, true, "a failed add does not stop the run");
+assert(outD6.alerts.indexOf("colorfallback Spot 1") >= 0, "and warns about the fallback");
+
+// The swatch tile previews it before it exists; a present one shows its own colour.
+eval(fs.readFileSync(path.join(__dirname, "..", "src", "ui.js"), "utf8"));
+setupDoc({ layers: artD });
+assertEq(JSON.stringify(ZSM.Draw.getSwatchRGBMap()["Spot 1"]), "[0,255,255]", "preview of the missing spot is cyan");
+setupDoc({ layers: artD, spots: [ownD] });
+assertEq(JSON.stringify(ZSM.Draw.getSwatchRGBMap()["Spot 1"]), "[255,0,255]", "a present spot previews its own alternate");
+
+// The list of mark colours: right after registration when missing, not doubled.
+assertEq(JSON.stringify(ZSM.UI.markColorNames(["[Reg]", "Cut"])), JSON.stringify(["[Reg]", "Spot 1", "Cut"]),
+    "the mark colour list offers a missing Spot 1 after registration");
+assertEq(JSON.stringify(ZSM.UI.markColorNames(["[Reg]", "Cut", "Spot 1"])), JSON.stringify(["[Reg]", "Cut", "Spot 1"]),
+    "a present Spot 1 stays where it is");
+
+
+// =====================================================
+// TEST 1.3.0-E (audit L1): a known cut colour without a mapping row
+// =====================================================
+console.log("\n=== TEST 1.3.0-E (L1): a cut colour without a row is reported ===");
+var artE = { type: "path", bounds: [0, 300, 300, 0] };
+function cutE(spot, l) {
+    return { type: "path", bounds: [l, 100, l + 50, 50], strokeSpot: spot, stroked: true, filled: false };
+}
+
+// Two paths and one compound in Kiss-cut, only CutContour has a row.
+var docE = setupDoc({ layers: [{ name: "Art", items: [
+    artE,
+    cutE("CutContour", 10),
+    cutE("Kiss-cut", 20),
+    cutE("Kiss-cut", 30),
+    { type: "compound", bounds: [40, 100, 90, 50], children: [cutE("Kiss-cut", 40), cutE("Kiss-cut", 50)] }
+] }] });
+var outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped Kiss-cut 3") >= 0,
+    "L1: the colour and its objects are named, a compound counts once (" + outE.alerts + ")");
+assertEq(countItems(findLayer(docE, "Cut"), "PathItem"), 1, "L1: the mapped colour still moves");
+assertEq(countItems(findLayer(docE, "Graphics"), "PathItem") + countItems(findLayer(docE, "Art"), "PathItem") >= 3, true,
+    "L1: the unmapped paths stay where they were");
+assert(outE.alerts.indexOf("cutunmapped CutContour") < 0, "L1: a colour with a row is not reported");
+
+// The name is matched in any case and reported as the document spells it.
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("KISS-CUT", 20)] }] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped KISS-CUT 1") >= 0, "L1: any case, the document's spelling");
+
+// A fill counts as well as a stroke.
+setupDoc({ layers: [{ name: "Art", items: [artE,
+    { type: "path", bounds: [20, 100, 70, 50], spot: "Thru-cut" }] }] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped Thru-cut 1") >= 0, "L1: a cut fill counts too");
+
+// A spot that is no cut method says nothing: white ink, a brand colour.
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Spot 1", 20), cutE("PANTONE 485 C", 30)] }] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped") < 0, "L1: other spots are not cut paths");
+
+// Already separated by hand: on a layer named after a method, or a mapped one.
+setupDoc({ layers: [
+    { name: "Kiss-cut", items: [cutE("Kiss-cut", 20)] },
+    { name: "Cut", items: [cutE("Thru-cut", 30)] },
+    { name: "Art", items: [artE] }
+] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped") < 0, "L1: paths already on a cut layer are not reported (" + outE.alerts + ")");
+
+// Marks and trim lines are the script's own, whatever their colour.
+setupDoc({ layers: [
+    { name: "Regmarks", sublayers: [{ name: "Summa", items: [cutE("Kiss-cut", 20)] }] },
+    { name: "Art", items: [artE] }
+] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped") < 0, "L1: marks are not cut paths");
+
+// No row at all, and a row that cannot route: the path is still reported.
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Kiss-cut", 20)] }] });
+outE = runD(makeSettings({ layers: [] }));
+assert(outE.alerts.indexOf("cutunmapped Kiss-cut 1") >= 0, "L1: no rows at all");
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Kiss-cut", 20)] }] });
+outE = runD(makeSettings({ layers: [{ name: "Cut", color: "[Registration]" }] }));
+assert(outE.alerts.indexOf("cutunmapped Kiss-cut 1") >= 0, "L1: a row that cannot route");
+
+// Marks only leaves the layers alone, so it has nothing to say about them.
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Kiss-cut", 20)] }] });
+outE = runD(makeSettings({ marksOnly: true, layers: [{ name: "Cut", color: "CutContour" }] }));
+assert(outE.alerts.indexOf("cutunmapped") < 0, "L1: marks only stays silent");
+
+
+// =====================================================
+// TEST 1.3.0-F (audit L2): two rows with one layer name
+// =====================================================
+console.log("\n=== TEST 1.3.0-F (L2): two rows onto one layer both route ===");
+var docF = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Thru-cut", 20), cutE("CutContour", 30)] }] });
+var layerMovesF = 0, origMoveF = Mock.MockLayer.prototype.move;
+Mock.MockLayer.prototype.move = function () { layerMovesF++; return origMoveF.apply(this, arguments); };
+var outF = runD(makeSettings({ layers: [{ name: "Cut", color: "Thru-cut" }, { name: "Cut", color: "CutContour" }] }));
+Mock.MockLayer.prototype.move = origMoveF;
+assertEq(countItems(findLayer(docF, "Cut"), "PathItem"), 2, "L2: both colours end in the one layer");
+assertEq(docF._layers.filter(function (l) { return l.name === "Cut"; }).length, 1, "L2: one layer, not two");
+assertEq(layerMovesF, 1, "L2: the layer is placed once, never moved onto itself");
+assert(outF.alerts.indexOf("missing color") < 0, "L2: neither row reports a missing colour (" + outF.alerts + ")");
+
+// A row that finds nothing still says so, and the other one still moves.
+var docF2 = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Thru-cut", 20)] }] });
+outF = runD(makeSettings({ layers: [{ name: "Cut", color: "Thru-cut" }, { name: "Cut", color: "Ghost" }] }));
+assertEq(countItems(findLayer(docF2, "Cut"), "PathItem"), 1, "L2: the row with paths moves them");
+assert(outF.alerts.indexOf("missing color Cut Ghost") >= 0, "L2: the empty row reports its own colour");
+
+
+// =====================================================
+// TEST 1.3.0-G (audit L3): one unreadable object must not end the routing
+// =====================================================
+console.log("\n=== TEST 1.3.0-G (L3): an unreadable object is counted, the rest moves ===");
+function breakPaint(item) {
+    item.stroked = true;
+    Object.defineProperty(item, "strokeColor", { get: function () { throw new Error("corrupt"); } });
+    return item;
+}
+
+// Standalone path first in the document, a good one after it.
+var docG = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Cut", 20), cutE("Cut", 30)] }] });
+breakPaint(docG._layers[0]._items[1]);
+var outG = runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assertEq(countItems(findLayer(docG, "Cut"), "PathItem"), 1, "L3: the path after the broken one still moves");
+assert(outG.alerts.indexOf("unreadable 1") >= 0, "L3: the broken one is reported (" + outG.alerts + ")");
+
+// Compound: its loop runs first and used to end the whole routing.
+var docG2 = setupDoc({ layers: [{ name: "Art", items: [
+    artE,
+    { type: "compound", bounds: [40, 100, 90, 50], children: [cutE("Cut", 40), cutE("Cut", 50)] },
+    { type: "compound", bounds: [40, 100, 90, 50], children: [cutE("Cut", 60), cutE("Cut", 70)] },
+    cutE("Cut", 80)
+] }] });
+breakPaint(docG2._layers[0]._items[1]._items[0]);
+outG = runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assertEq(countItems(findLayer(docG2, "Cut"), "CompoundPathItem"), 1, "L3: the next compound still moves");
+assertEq(findLayer(docG2, "Cut")._items.filter(function (i) { return i.typename === "PathItem"; }).length, 1,
+    "L3: and the standalone path");
+assert(outG.alerts.indexOf("unreadable 1") >= 0, "L3: a broken compound counts once, not again for its sub-path (" + outG.alerts + ")");
+
+// A broken fill counts the same as a broken stroke.
+var docG3 = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Cut", 20), cutE("Cut", 30)] }] });
+var brokenG3 = docG3._layers[0]._items[1];
+Object.defineProperty(brokenG3, "fillColor", { get: function () { throw new Error("corrupt"); } });
+brokenG3.filled = true;
+outG = runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assertEq(countItems(findLayer(docG3, "Cut"), "PathItem"), 1, "L3: a broken fill does not stop the rest");
+assert(outG.alerts.indexOf("unreadable 1") >= 0, "L3: a broken fill is reported");
+
+// The whole pass fails: said once, without the false "no path in that colour".
+var docG4 = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Cut", 20)] }] });
+Object.defineProperty(docG4, "compoundPathItems", { get: function () { throw new Error("collection gone"); } });
+outG = runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assertEq(outG.drew, true, "L3: the marks are still drawn");
+assert(outG.alerts.indexOf("routingstopped collection gone") >= 0, "L3: a stopped pass is reported (" + outG.alerts + ")");
+assert(outG.alerts.indexOf("missing color") < 0, "L3: and does not claim the colour is missing");
+
+// The clean document reports nothing new, and the public return stays per route.
+setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Cut", 20)] }] });
+var statsG = ZSM.Draw.movePaths([{ name: "Cut", color: "Cut", layer: ZSM.Draw.getLay("Cut") }]);
+assertEq(statsG.length, 1, "L3: movePaths still answers per route");
+assertEq(statsG[0].moved, 1, "L3: with the same counts");
+
+
+// =====================================================
+// TEST 1.3.0-H (audit L4 a): the run does not leave a script layer active
+// =====================================================
+console.log("\n=== TEST 1.3.0-H (L4a): the active layer ends on the artwork ===");
+function isTopLevel(doc, lay) {
+    return doc._layers.indexOf(lay) >= 0;
+}
+var docH = setupDoc({ layers: [{ name: "Art", items: [artE, cutE("Cut", 20)] }] });
+runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assertEq(docH.activeLayer.name, "Graphics", "L4: a Zünd run ends on the artwork layer");
+assert(isTopLevel(docH, docH.activeLayer), "L4: a top-level layer, never the marks sublayer");
+
+docH = setupDoc({ layers: [{ name: "Art", items: [artE] }] });
+runD(makeSettings({ mode: "SUMMA", drawRed: true }));
+assertEq(docH.activeLayer.name, "Graphics", "L4: a Summa run with trim lines too, not Trim");
+
+// Marks only: nothing is renamed, the bottom layer is the artwork all the same.
+docH = setupDoc({ layers: [{ name: "Spad", items: [artE] }, { name: "Podklad", items: [artE] }] });
+runD(makeSettings({ marksOnly: true }));
+assertEq(docH.activeLayer.name, "Podklad", "L4: marks only ends on the bottom layer");
+
+// A hidden bottom layer cannot take new work, the next one up does.
+docH = setupDoc({ layers: [
+    { name: "Art", items: [artE] },
+    { name: "Nahled", visible: false, items: [artE] }
+] });
+runD(makeSettings());
+assertEq(docH.activeLayer.name, "Art", "L4: a hidden layer is passed over");
+
+// Nothing but the script's layers: the top one, still never a sublayer.
+docH = setupDoc({ layers: [{ name: "Cut", items: [cutE("Cut", 20)] }] });
+runD(makeSettings({ layers: [{ name: "Cut", color: "Cut" }] }));
+assert(isTopLevel(docH, docH.activeLayer), "L4: only script and mapped layers: still top level");
+
+// A refused run changes nothing, the active layer included.
+docH = setupDoc({ layers: [{ name: "Art", items: [artE] }] });
+var sH = makeSettings();
+var geoH = ZSM.Core.calculateAll(sH, ZSM.Draw.getBounds(sH));
+geoH.marksZ[0].cx = NaN;
+var activeBeforeH = docH.activeLayer;
+ZSM.Draw.render(geoH, sH);
+assertEq(docH.activeLayer, activeBeforeH, "L4: a refused run leaves the active layer");
+
+
+// =====================================================
+// TEST 1.3.0-I (audit L13): reserved names in any case
+// =====================================================
+console.log("\n=== TEST 1.3.0-I (L13): reserved layer names ignore case ===");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "regmarks", color: "Cut" }] })), "regmarks",
+    "L13: regmarks is refused, named as typed");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "TRIM", color: "Cut" }] })), "TRIM",
+    "L13: TRIM is refused");
+assertEq(ZSM.Draw.reservedMappingName(makeSettings({ layers: [{ name: "Trimming", color: "Cut" }] })), null,
+    "L13: a longer name is free");
+
+
+// Illustrator finds "regmarks" under getByName("Regmarks") (measured), so the
+// script adopts such a layer. Everything that recognises its own layers has to
+// agree, or the marks it drew there are measured as artwork on the next run and
+// the artboard grows every time (measured on 1.3.0c: 374 -> 394 mm).
+console.log("\n=== TEST 1.3.0-J (L13): the script's layers in any case ===");
+function rectOf(doc) { return doc.artboards[0].artboardRect.join(","); }
+
+var docJ = setupDoc({ layers: [{ name: "regmarks" }, { name: "Art", items: [artE] }] });
+runD(makeSettings());
+var firstJ = rectOf(docJ);
+assert(findSublayer(findLayer(docJ, "regmarks"), "Zünd") !== null, "L13: marks go into the existing regmarks layer");
+runD(makeSettings());
+assertEq(rectOf(docJ), firstJ, "L13: the marks in regmarks are not measured as artwork");
+assertEq(docJ.activeLayer.name, "Graphics", "L13: regmarks is no artwork layer to end on");
+
+// The mode sublayer in another case is the script's own: replaced, not foreign.
+docJ = setupDoc({ layers: [{ name: "REGMARKS", sublayers: [{ name: "ZÜND", items: [{ type: "path", bounds: [-50, 350, -40, 340] }] }] },
+                           { name: "Art", items: [artE] }] });
+var outJ = runD(makeSettings());
+assert(findSublayer(findLayer(docJ, "REGMARKS"), "Zünd") !== null, "L13: the old sublayer goes, whatever its case");
+assertEq(findSublayer(findLayer(docJ, "REGMARKS"), "ZÜND"), null, "L13: no second sublayer beside it");
+assert(outJ.alerts.indexOf("regforeign") < 0, "L13: a sublayer in another case is not foreign");
+
+// The same for trim lines.
+docJ = setupDoc({ layers: [{ name: "Art", items: [artE] }, { name: "trim" }] });
+docJ._layers.reverse();
+runD(makeSettings({ mode: "SUMMA", drawRed: true }));
+firstJ = rectOf(docJ);
+runD(makeSettings({ mode: "SUMMA", drawRed: true }));
+assertEq(rectOf(docJ), firstJ, "L13: lines in a lower-case trim layer are not measured");
+
+// A path on a reserved layer in another case is never routed off it.
+docJ = setupDoc({ layers: [{ name: "REGMARKS", items: [cutE("Cut", 20)] }, { name: "Art", items: [artE] }] });
+ZSM.Draw.movePaths([{ name: "Cut", color: "Cut", layer: ZSM.Draw.getLay("Cut") }]);
+assertEq(countItems(findLayer(docJ, "Cut"), "PathItem"), 0, "L13: nothing leaves REGMARKS");
+
+// A row in another case means the layer the document has: placed once, kept when empty.
+var docJ2 = setupDoc({ layers: [{ name: "Cut" }, { name: "Art", items: [artE, cutE("Thru-cut", 20), cutE("Kiss-cut", 30)] }] });
+var movesJ = 0, origMoveJ = Mock.MockLayer.prototype.move;
+Mock.MockLayer.prototype.move = function () { movesJ++; return origMoveJ.apply(this, arguments); };
+runD(makeSettings({ layers: [{ name: "cut", color: "Thru-cut" }, { name: "Score", color: "Kiss-cut" }, { name: "CUT", color: "Ghost" }] }));
+Mock.MockLayer.prototype.move = origMoveJ;
+assertEq(countItems(findLayer(docJ2, "Cut"), "PathItem"), 1, "L13: a row in another case routes into the layer");
+assertEq(movesJ, 2, "L13: rows in another case place that layer once");
+var docJ3 = setupDoc({ layers: [{ name: "Cut" }, { name: "Art", items: [artE] }] });
+runD(makeSettings({ layers: [{ name: "cut", color: "Ghost" }] }));
+assert(findLayer(docJ3, "Cut") !== null, "L13: a mapped layer stays when empty, whatever the row's case");
 
 
 // =====================================================

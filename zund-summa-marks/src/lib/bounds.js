@@ -3,20 +3,19 @@
 // Part of: Illustrator Zund & Summa Marks
 //
 // Pure measurement responsibility — reads the document, never mutates it.
-// Encapsulates clipping-aware bounds calculation including layer-level
-// clipping heuristic for bracket-named layers (Illustrator's auto-named
-// <Clip Group> / <Group>) and stack-based traversal of clipped groups.
+// Encapsulates clipping-aware bounds calculation with stack-based traversal
+// of clipped groups.
 //
 // Public:
 //   ZSM.Bounds.get(s)                — main entry; returns [L,T,R,B] or null
-//   ZSM.Bounds.isArtifactLayer(l)    — bracket-named layer detection (also
-//                                       used by ZSM.Draw render code)
+//   ZSM.Bounds.isArtifactLayer(l)    — bracket-named layer detection (used by
+//                                       ZSM.Draw render code)
 //   ZSM.Bounds.isInsideClippedGroup  — ancestor check (also used by movePaths)
 //
 // Internal helpers (kept on the namespace for testability):
 //   _measureLayer, _getEffectiveBounds
 //
-// Depends on: ZSM.Config (layerRegmarks, layerGraphics)
+// Depends on: ZSM.Config (layerRegmarks, layerGraphics), ZSM.Utils (sameName)
 // ------------------------------------------------------------------------
 var ZSM = ZSM || {};
 
@@ -54,18 +53,20 @@ ZSM.Bounds = {
         var bRef = { found: false };
         var currentMode = (s && s.mode === "SUMMA") ? "Summa" : "Zünd";
 
-        // Per-layer skip rules for sublayer recursion
+        // Per-layer skip rules for sublayer recursion, names in lower case: the
+        // layer the run draws into may be "regmarks" (see ZSM.Utils.sameName), and
+        // measuring its marks as artwork would grow the artboard on every run.
         var regmarksSkip = {};
-        regmarksSkip[currentMode] = true;
+        regmarksSkip[currentMode.toLowerCase()] = true;
         // A Zünd run removes the Summa output (see ZSM.Draw.removeSummaOutput),
         // so it must not count as a boundary either. render() removes it only
         // after the new artboard has been accepted — nothing is deleted before
         // the run is known to succeed.
-        if (currentMode === "Zünd") regmarksSkip["Summa"] = true;
+        if (currentMode === "Zünd") regmarksSkip["summa"] = true;
         // Legacy: pre-v26.5.0 versions drew trim as a Graphics/Trim SUBLAYER —
         // keep skipping it so old documents don't inflate bounds either.
         var graphicsSkip = {};
-        graphicsSkip[ZSM.Config.layerTrim] = true;
+        graphicsSkip[ZSM.Config.layerTrim.toLowerCase()] = true;
 
         for (var li = 0; li < doc.layers.length; li++) {
             try {
@@ -73,8 +74,6 @@ ZSM.Bounds = {
                 // Bracket-named layers ARE measured (read-only) — only state
                 // mutation on them is dangerous and is guarded in
                 // beginSession()/render bottom-layer rename/movePaths.
-                // Reading geometricBounds is safe and lets the layer-clip
-                // heuristic in _measureLayer detect <Clip Group> wrappers.
 
                 var layName = layer.name;
 
@@ -82,9 +81,9 @@ ZSM.Bounds = {
                 // sit at the artboard edges — beyond the graphic — so measuring
                 // them would inflate bounds on every re-run (artboard grows each
                 // time = idempotence violation). Never measure it.
-                if (layName === ZSM.Config.layerTrim) continue;
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerTrim)) continue;
 
-                if (layName === ZSM.Config.layerRegmarks) {
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerRegmarks)) {
                     // Regmarks is OUR output layer. Skip its direct items
                     // (legacy/migrated marks would inflate bounds onto themselves).
                     // Recurse only into the OTHER mode's sublayer — those marks
@@ -94,7 +93,7 @@ ZSM.Bounds = {
                     for (var rsi = 0; rsi < regSubs.length; rsi++) {
                         try {
                             var rsub = regSubs[rsi];
-                            if (regmarksSkip[rsub.name]) continue;  // skip current mode
+                            if (regmarksSkip[rsub.name.toLowerCase()]) continue;  // skip current mode
                             this._measureLayer(rsub, b, bRef, null);
                         } catch (rse) {}
                     }
@@ -102,7 +101,7 @@ ZSM.Bounds = {
                 }
 
                 var skipNames = null;
-                if (layName === ZSM.Config.layerGraphics) skipNames = graphicsSkip;
+                if (ZSM.Utils.sameName(layName, ZSM.Config.layerGraphics)) skipNames = graphicsSkip;
 
                 this._measureLayer(layer, b, bRef, skipNames);
             } catch (le) {
@@ -122,19 +121,17 @@ ZSM.Bounds = {
      * inside groups/compound paths, which are accounted for by their
      * parent group via `_getEffectiveBounds()`.
      *
-     * Layer-level clipping handling: a Layer/sublayer with a bracket-
-     * prefixed name (auto-generated by Illustrator: <Clip Group>, <Group>,
-     * <Compound Path>) is by convention layer-clipped — its top-most
-     * pageItem is the clip mask and the rest is the clipped content. The
-     * DOM does not expose Layer-level `clipped` (only GroupItem has that),
-     * so we infer it from the bracket name and measure ONLY the top-most
-     * direct child. Otherwise the unclipped content would inflate bounds
-     * far beyond the visible clipped area.
+     * A layer's name says nothing about masks. A rule from 2026-05 measured only
+     * the first object of a layer named "<…" or "(…", taking it for a clipped
+     * one; nothing ever showed that, and a customer's "(podklad)" lost everything
+     * past its first object, so marks could land on the artwork. A layer that
+     * really is clipped now costs media (marks further out), never marks over
+     * artwork. Clipped GROUPS still measure their mask (_getEffectiveBounds).
      *
      * @param {Layer}  layer     - Layer to measure.
      * @param {Array}  b         - Bounds accumulator [L, T, R, B].
      * @param {Object} bRef      - {found: bool} flag updated on first hit.
-     * @param {Object} skipNames - Map of sublayer names to skip (or null).
+     * @param {Object} skipNames - Map of lower-case sublayer names to skip (or null).
      * @private
      */
     _measureLayer: function (layer, b, bRef, skipNames) {
@@ -150,31 +147,7 @@ ZSM.Bounds = {
 
             var items = layer.pageItems;
 
-            // Layer-level clipping heuristic: bracket-named layer = clipped.
-            // Measure ONLY the top-most direct child (the assumed clip mask).
-            // This matches what's visually inside the clipped area and
-            // prevents the inner artwork's full unclipped bounds from
-            // inflating the measurement.
-            if (this.isArtifactLayer(layer)) {
-                for (var li = 0; li < items.length; li++) {
-                    try {
-                        var top = items[li];
-                        var direct = false;
-                        try { direct = (top.parent === layer); } catch (pe) { continue; }
-                        if (!direct) continue;
-
-                        var tnT = top.typename;
-                        if (tnT === "PluginItem" || tnT === "NonNativeItem") continue;
-                        if ((tnT === "PathItem" || tnT === "CompoundPathItem") && top.guides) continue;
-
-                        addBounds(this._getEffectiveBounds(top));
-                        break; // measured the clip mask — done
-                    } catch (ie1) {}
-                }
-                return;
-            }
-
-            // Normal layer: measure all top-level direct children.
+            // Measure all top-level direct children.
             for (var i = 0; i < items.length; i++) {
                 try {
                     var item = items[i];
@@ -191,13 +164,12 @@ ZSM.Bounds = {
                 } catch (ie) {}
             }
 
-            // Recurse into sublayers (incl. bracket-named ones — they get
-            // their own layer-clip heuristic in the recursive call above).
+            // Recurse into sublayers.
             var subs = layer.layers;
             for (var sli = 0; sli < subs.length; sli++) {
                 try {
                     var sub = subs[sli];
-                    if (skipNames && skipNames[sub.name]) continue;
+                    if (skipNames && skipNames[sub.name.toLowerCase()]) continue;
                     this._measureLayer(sub, b, bRef, skipNames);
                 } catch (se) {}
             }
@@ -207,10 +179,9 @@ ZSM.Bounds = {
     /**
      * Detects "artifact" layers — those auto-generated by Illustrator with
      * bracket-prefixed names (<Clip Group>, <Group>, <Compound Path>) or
-     * paren-prefixed names. Used by:
-     *   - bounds: layer-clip heuristic (measure only top child)
-     *   - draw render: skip during state mutation (rename/move) to avoid
-     *     breaking Illustrator's auto-management of these wrappers
+     * paren-prefixed names. Used by draw render: skip during state mutation
+     * (rename/move) to avoid breaking Illustrator's auto-management of these
+     * wrappers. Measuring them is safe and treats them like any other layer.
      *
      * @param {Layer} layer - Layer to test.
      * @returns {boolean}

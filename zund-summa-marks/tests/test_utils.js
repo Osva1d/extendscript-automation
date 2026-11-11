@@ -361,6 +361,13 @@ assert(ZSM.Utils.getEffectiveSF({ scaleN: 1 })  === 10,  "Large Canvas (SF=10) �
 assert(ZSM.Utils.getEffectiveSF({ scaleN: 10 }) === 100, "Large Canvas (SF=10) × scaleN=10 → 100");
 
 
+console.log("\n=== TEST L13: sameName follows getByName (measured) ===");
+assert(ZSM.Utils.sameName("regmarks", "Regmarks"), "sameName: case does not count");
+assert(ZSM.Utils.sameName("ZÜND", "Zünd"), "sameName: nor on an accented letter");
+assert(!ZSM.Utils.sameName("Cut ", "Cut"), "sameName: a space does");
+assert(!ZSM.Utils.sameName("Zund", "Zünd"), "sameName: and so does the accent itself");
+
+
 // =====================================================
 // SUMMARY
 // =====================================================

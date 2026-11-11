@@ -92,9 +92,11 @@
     function wrapCollection(arr, opts) {
         opts = opts || {};
         var coll = arr.slice();   // snapshot — production reads length once at iteration start
+        // Case-insensitive, spaces count, the first match wins (layers, spots and
+        // swatches measured, docs/extendscript-engine-facts.md "getByName").
         coll.getByName = function (name) {
             for (var i = 0; i < arr.length; i++) {
-                if (arr[i].name === name) return arr[i];
+                if (String(arr[i].name).toLowerCase() === String(name).toLowerCase()) return arr[i];
             }
             throw new Error("Not found: " + name);
         };
@@ -452,19 +454,25 @@
         this.artboards.getActiveArtboardIndex = function () { return 0; };
 
         // Spots / swatches
+        // Registration as Illustrator reports it: a SpotColor whose spot has
+        // colorType REGISTRATION (measured) — production finds it by type.
+        var swatchList = [{ name: "[None]" }, { name: "[Registration]", color: { typename: "SpotColor",
+            spot: { name: "[Registration]", colorType: "REGISTRATION" }, tint: 100 } }]
+            .concat(spec.swatches || []);
         this.spots = wrapCollection(spec.spots || [], {
             add: function () {
                 var s = { typename: "Spot", name: "", color: {}, colorType: null };
                 self.spots.push(s);
+                // A new spot is a swatch of the same name.
+                swatchList.push({
+                    get name() { return s.name; },
+                    color: { typename: "SpotColor", spot: s, tint: 100 }
+                });
                 return s;
             }
         });
         this.swatches = wrapCollection(
-            // Registration as Illustrator reports it: a SpotColor whose spot has
-            // colorType REGISTRATION (measured) — production finds it by type.
-            [{ name: "[None]" }, { name: "[Registration]", color: { typename: "SpotColor",
-                spot: { name: "[Registration]", colorType: "REGISTRATION" }, tint: 100 } }]
-                .concat(spec.swatches || []),
+            swatchList,
             {
                 add: function () { var s = {}; self.swatches.push(s); return s; }
             }

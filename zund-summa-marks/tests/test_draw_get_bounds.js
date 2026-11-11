@@ -7,7 +7,7 @@
  *   - getBounds() return value for various document structures
  *   - _measureLayer() recursion + skip rules
  *   - _getEffectiveBounds() clip group handling
- *   - Layer-clip heuristic for bracket-named sublayers
+ *   - Bracket-named layers measured like any other (no name heuristic)
  *
  * NOT covered: C++ crashes, app.redraw timing, real ScriptUI behavior,
  *              undo state, file I/O.
@@ -239,58 +239,61 @@ assertClose(b[1], 80, 0.01, "Non-clipped group: T=80 (union)");
 
 
 // =====================================================
-// TEST 9: Bracket-named sublayer → layer-clip heuristic
+// TEST 9 (audit L5): a name says nothing about masks
 // =====================================================
-console.log("\n=== TEST 9: Bracket sublayer measures only pageItems[0] ===");
-// Layer-clipped sublayer: top item is the clip mask, rest is unclipped content.
-// Heuristic: measure only the first direct child.
+// A rule from 2026-05 took a layer named "<…" or "(…" for a clipped one and
+// measured only its first object. Nothing ever showed such a layer is clipped;
+// a customer's "(podklad)" lost everything past its first object, and the marks
+// could land on the artwork. Now every object counts: a layer that really is
+// clipped costs media (marks further out), never marks over artwork.
+console.log("\n=== TEST 9 (L5): bracket and paren layers measure every object ===");
+var namesL5 = ["<Clip Group>", "<Group>", "(Isolation Mode)", "(podklad zákazníka)"];
+for (var nl5 = 0; nl5 < namesL5.length; nl5++) {
+    // As a sublayer.
+    b = runWith({
+        layers: [{
+            name: "Layer 1",
+            sublayers: [{
+                name: namesL5[nl5],
+                items: [
+                    { type: "path", bounds: [10, 90, 90, 10] },
+                    { type: "path", bounds: [-200, 500, 500, -200] }
+                ]
+            }]
+        }]
+    }, defaultSettings);
+    assertClose(b[0], -200, 0.01, namesL5[nl5] + " sublayer: L counts the second object");
+    assertClose(b[2], 500, 0.01, namesL5[nl5] + " sublayer: R counts the second object");
+
+    // As a top-level layer, with its sublayers (they used to be skipped).
+    b = runWith({
+        layers: [{
+            name: namesL5[nl5],
+            items: [
+                { type: "path", bounds: [10, 90, 90, 10] },
+                { type: "path", bounds: [0, 300, 100, 0] }
+            ],
+            sublayers: [{ name: "inner", items: [{ type: "path", bounds: [0, 100, 423, 0] }] }]
+        }]
+    }, defaultSettings);
+    assertClose(b[1], 300, 0.01, namesL5[nl5] + " top level: T counts the second object");
+    assertClose(b[2], 423, 0.01, namesL5[nl5] + " top level: R counts its sublayer");
+}
+
+// The real mask is still honoured: a clipped group measures its clip path.
 b = runWith({
     layers: [{
-        name: "Layer 1",
-        sublayers: [{
-            name: "<Clip Group>",
-            items: [
-                // pageItems[0] = assumed clip mask
+        name: "<Clip Group>",
+        items: [{
+            type: "group", clipped: true,
+            children: [
                 { type: "path", bounds: [10, 90, 90, 10] },
-                // pageItems[1+] = content that would inflate without heuristic
                 { type: "path", bounds: [-200, 500, 500, -200] }
             ]
         }]
     }]
 }, defaultSettings);
-assertClose(b[0], 10, 0.01, "Bracket sublayer: L=10 (only first item measured)");
-assertClose(b[2], 90, 0.01, "Bracket sublayer: R=90");
-assertClose(b[1], 90, 0.01, "Bracket sublayer: T=90");
-assertClose(b[3], 10, 0.01, "Bracket sublayer: B=10");
-
-// Variants of bracket prefix
-b = runWith({
-    layers: [{
-        name: "Layer 1",
-        sublayers: [{
-            name: "<Group>",
-            items: [
-                { type: "path", bounds: [5, 95, 95, 5] },
-                { type: "path", bounds: [-300, 600, 600, -300] }
-            ]
-        }]
-    }]
-}, defaultSettings);
-assertClose(b[2], 95, 0.01, "<Group> variant: same heuristic applied");
-
-b = runWith({
-    layers: [{
-        name: "Layer 1",
-        sublayers: [{
-            name: "(Isolation Mode)",
-            items: [
-                { type: "path", bounds: [1, 99, 99, 1] },
-                { type: "path", bounds: [-500, 800, 800, -500] }
-            ]
-        }]
-    }]
-}, defaultSettings);
-assertClose(b[2], 99, 0.01, "(Paren) sublayer: heuristic applied (artifact detection)");
+assertClose(b[2], 90, 0.01, "a clipped group inside such a layer still measures its mask");
 
 
 // =====================================================

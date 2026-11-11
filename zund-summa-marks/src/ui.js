@@ -126,7 +126,10 @@ ZSM.UI = {
      *        artboard, artwork}
      *        drawingScale = the scale field's start value (number; NaN for a
      *        typo carried through a mode switch, shown as an empty field);
-     *        artboard, artwork = {w, h} in document mm or null (see show())
+     *        artboard, artwork = {w, h} in document mm or null (see show());
+     *        _switchSettings = what a mode switch carried over (set by
+     *        requestModeSwitch, read here first); _lastBounds = the closed
+     *        dialog's position
      * @returns {Object|null}
      */
     buildDialog: function (mode, pData, docData) {
@@ -145,8 +148,10 @@ ZSM.UI = {
             pData.presets[c.PRESET_KEY_DEFAULT].mode = mode;
         }
 
-        // Resolve initial values: [Last Settings] → active preset → defaults
-        var sData = pData.presets["[Last Settings]"]
+        // Resolve initial values: what a mode switch carried over → [Last
+        // Settings] → active preset → defaults
+        var sData = docData._switchSettings
+                 || pData.presets["[Last Settings]"]
                  || pData.presets[pData.activePreset]
                  || c.getDefaults();
 
@@ -366,7 +371,7 @@ ZSM.UI = {
         }
 
         // Shared: mark color
-        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, docData.swatches, l.TIP_MARK_COLOR, docData.swatchRGB);
+        var rColor = self.addColorRow(pGeo, l.MARK_COLOR, sData.markColor, self.markColorNames(docData.swatches), l.TIP_MARK_COLOR, docData.swatchRGB);
 
         // =================================================================
         // Panel: Feed (SUMMA only — not created for ZUND)
@@ -418,7 +423,42 @@ ZSM.UI = {
         layContainer.spacing       = 6;
 
         var layRows    = [];
-        var MAX_LAYERS = 8;
+        // Five rows at most (UI spec 2026-11-07 §3): in 1.2.0 SUMMA with eight
+        // rows asked for a 959 px dialog in a 932 px window, and Generate sat
+        // below the window's edge. Each row adds 37 px.
+        var MAX_LAYERS = 5;
+
+        /**
+         * The mapping rows a settings object shows: its own, or the factory row
+         * for this document, at most MAX_LAYERS of them, in order. A longer
+         * mapping (presets and last runs from 1.2.0 hold up to eight rows) stays
+         * as it is in pData and on disk. Nothing here writes it; only Save puts
+         * the shown rows into the preset.
+         * @param {Object} obj - Settings object.
+         * @returns {Array} Row definitions {name, color}.
+         */
+        function shownLayers(obj) {
+            var all = (obj && obj.layers && obj.layers.length > 0)
+                ? obj.layers
+                : ZSM.UI.defaultsForDocument(docData).layers;
+            return all.slice(0, MAX_LAYERS);
+        }
+
+        /**
+         * Tells the operator which mapping rows were not loaded, if any. Called
+         * once per load (setUIValues), so a preset picked again says it again.
+         * @param {Object} obj - Settings object that was loaded.
+         */
+        function warnRowsNotLoaded(obj) {
+            if (!obj || !obj.layers || obj.layers.length <= MAX_LAYERS) return;
+            var names = [];
+            for (var d = MAX_LAYERS; d < obj.layers.length; d++) {
+                var row = obj.layers[d] || {};
+                names.push(String(row.name || "").replace(/^\s+|\s+$/g, "") || String(row.color || ""));
+            }
+            ZSM.Utils.warn(ZSM.L.format(l.WARN_ROWS_NOT_LOADED,
+                obj.layers.length, MAX_LAYERS, names.join(", ")));
+        }
 
         function updateRemoveButtons() {
             var canRemove = layRows.length > 1;
@@ -459,7 +499,13 @@ ZSM.UI = {
                 // raw layer name into the edittext, not the display marker.
                 if (ddLayer.selection) etLayer.text = ZSM.UI.ddlValue(ddLayer);
             };
-            ZSM.UI.selectDDL(ddLayer, def.name || "");
+            // A row without a name (+ Add) selects no item. Illustrator fires
+            // onChange on a programmatic selection, so selecting the first item
+            // copied the first layer of the list, usually the artwork layer,
+            // into the name, and the row sent its cut paths there (measured
+            // 2026-11-11). Empty, the name stays red until the operator types
+            // or picks one; with nothing selected, the first item can be picked too.
+            if (def.name) ZSM.UI.selectDDL(ddLayer, def.name);
 
             var swColor = ZSM.UI.makeSwatch(grp);
             var ddColor = grp.add("dropdownlist", undefined, docData.swatches);
@@ -490,10 +536,9 @@ ZSM.UI = {
             return { grp: grp, ddColor: ddColor, swColor: swColor, etLayer: etLayer, ddLayer: ddLayer, btnRemove: btnRemove };
         }
 
-        // Populate initial layer rows
-        var initLayers = (sData.layers && sData.layers.length > 0)
-            ? sData.layers
-            : [{ name: "Cut", color: docData.detectedColor }];
+        // Populate initial layer rows. Rows past MAX_LAYERS are reported by
+        // setUIValues, which loads the same settings again before show().
+        var initLayers = shownLayers(sData);
 
         for (var i = 0; i < initLayers.length; i++) {
             layRows.push(buildLayerRow(initLayers[i]));
@@ -592,6 +637,17 @@ ZSM.UI = {
         }
 
         /**
+         * A mapping row's layer name without surrounding spaces. getByName does not
+         * find "Cut " and Illustrator drops the trailing space when naming, so the
+         * row added a second layer "Cut"; a leading space stayed in the name (measured).
+         * @param {Object} row - A row of layRows.
+         * @returns {string}
+         */
+        function rowLayerName(row) {
+            return String(row.etLayer.text || "").replace(/^\s+|\s+$/g, "");
+        }
+
+        /**
          * Normalise a colour read from a dropdown back to the canonical
          * "[Registration]" token. selectDDL's registration alias selects the
          * document's LOCALIZED registration swatch (e.g. CS "[Registrace]"), so
@@ -623,7 +679,7 @@ ZSM.UI = {
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var cSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
-                layers.push({ name: layRows[i].etLayer.text || "", color: cSel });
+                layers.push({ name: rowLayerName(layRows[i]), color: cSel });
             }
             var markColorSel = canonColor(ZSM.UI.ddlValue(rColor.ddl)) || "[Registration]";
 
@@ -699,9 +755,7 @@ ZSM.UI = {
             }
             layRows = [];
 
-            var newLayers = (obj.layers && obj.layers.length > 0)
-                ? obj.layers
-                : [{ name: "Cut", color: docData.detectedColor }];
+            var newLayers = shownLayers(obj);
             for (var i = 0; i < newLayers.length; i++) {
                 layRows.push(buildLayerRow(newLayers[i]));
             }
@@ -741,6 +795,8 @@ ZSM.UI = {
             // switch even though the freshly-loaded values are valid (the dialog
             // looked permanently broken). No-op during the initial build (guarded).
             liveValidateAll();
+
+            warnRowsNotLoaded(obj);
         }
 
         // =================================================================
@@ -961,14 +1017,17 @@ ZSM.UI = {
         function requestModeSwitch(newMode, preset) {
             if (newMode === mode) return;
 
-            // Snapshot current UI state into [Last Settings] so nothing is lost
-            // — or the preset being loaded, as a copy: [Last Settings] must
-            // never alias a named preset.
-            pData.presets["[Last Settings]"] = preset
+            // Carry the current UI state, or a copy of the preset being loaded,
+            // to the dialog that opens next. It stays in memory: [Last Settings]
+            // is written by Generate only. Written there, it reached the file
+            // with a Save, Save As or Delete in the next dialog, even after
+            // Cancel, and the next run opened with values nobody confirmed
+            // (audit U12).
+            docData._switchSettings = preset
                 ? JSON.parse(JSON.stringify(preset))
                 : getUIValues(otherModeBase);
-            // Tag the snapshot with the TARGET mode so the next dialog opens correctly
-            pData.presets["[Last Settings]"].mode = newMode;
+            // Tag it with the TARGET mode so the next dialog opens correctly
+            docData._switchSettings.mode = newMode;
 
             // Preserve window position across mode switch
             docData._lastBounds = w.bounds;
@@ -1000,7 +1059,7 @@ ZSM.UI = {
             var layers = [];
             for (var i = 0; i < layRows.length; i++) {
                 var colorSel = canonColor(ZSM.UI.ddlValue(layRows[i].ddColor)) || "[Registration]";
-                layers.push({ name: layRows[i].etLayer.text || "", color: colorSel });
+                layers.push({ name: rowLayerName(layRows[i]), color: colorSel });
             }
 
             // Every row carries a colour (defaults to [Registration]); a row with
@@ -1078,8 +1137,8 @@ ZSM.UI = {
         // 1. Populate preset dropdown
         updatePresetList();
 
-        // 2. Load initial values
-        var initPreset = pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
+        // 2. Load initial values (the same order as sData above)
+        var initPreset = docData._switchSettings || pData.presets["[Last Settings]"] || pData.presets[pData.activePreset];
         if (initPreset) setUIValues(initPreset);
 
         // 3. Sync dropdown selection to activePreset
@@ -1298,10 +1357,13 @@ ZSM.UI = {
                 row._zsmWired = true;
                 row.etLayer.onChange   = function () { refreshModifiedIndicator(); liveValidateAll(); };
                 row.etLayer.onChanging = function () { refreshModifiedIndicator(); liveValidateAll(); };
-                // ddLayer's onChange already updates etLayer; chain refresh after
+                // ddLayer's onChange already updates etLayer; chain refresh after.
+                // The name is written by code, which fires no onChanging, so the
+                // live check runs here: a name picked into an empty row would stay
+                // red and keep Generate grey otherwise.
                 var origDD = row.ddLayer.onChange;
                 row.ddLayer.onChange = (function (orig) {
-                    return function () { if (orig) orig(); refreshModifiedIndicator(); };
+                    return function () { if (orig) orig(); refreshModifiedIndicator(); liveValidateAll(); };
                 })(origDD);
                 row.ddColor.onChange = (function (rw) {
                     return function () {
@@ -1356,10 +1418,12 @@ ZSM.UI = {
 
     /**
      * Factory settings for the open document: ZSM.Config.getDefaults() with
-     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found.
-     * With no cut colour in the document detectCutColor falls back to the
-     * (localized) registration swatch, and the row keeps the canonical
-     * "[Registration]" token that presets store.
+     * the mapping row set to the cut colour ZSM.Draw.detectCutColor() found, and
+     * named after it: layer and colour stay in step, whatever the cutter or the
+     * RIP reads (user, 2026-11-07). With no cut colour in the document
+     * detectCutColor falls back to the (localized) registration swatch, and the
+     * row keeps its factory name and the canonical "[Registration]" token that
+     * presets store.
      * @param {Object} docData - {detectedColor, ...} from show().
      * @returns {Object} Settings object.
      */
@@ -1369,6 +1433,7 @@ ZSM.UI = {
         var reg = (ZSM.Draw && ZSM.Draw.getRegistrationName)
             ? ZSM.Draw.getRegistrationName() : "[Registration]";
         if (col && col !== reg && col !== "[Registration]" && d.layers && d.layers.length > 0) {
+            d.layers[0].name = col;
             d.layers[0].color = col;
         }
         return d;
@@ -1589,6 +1654,23 @@ ZSM.UI = {
         var refresh = function () { if (sw) self.setSwatch(sw, self.ddlValue(ddl), rgbMap); };
         refresh();
         return { ddl: ddl, group: g, sw: sw, refresh: refresh };
+    },
+
+    /**
+     * The colours the marks can take: the document's, and the mark spot even
+     * when the document lacks it (the run adds it, ZSM.Draw.ensureMarkSpot).
+     * The cut colours stay the document's own: a colour that is not there
+     * matches no path.
+     * @param {Array} swatchNames - List from ZSM.Draw.getSwatchNames(),
+     *     registration first.
+     * @returns {Array} The list for the mark colour dropdown.
+     */
+    markColorNames: function (swatchNames) {
+        var spot = ZSM.Config.markSpot.name;
+        for (var i = 0; i < swatchNames.length; i++) {
+            if (swatchNames[i] === spot) return swatchNames;
+        }
+        return [swatchNames[0], spot].concat(swatchNames.slice(1));
     },
 
     /**

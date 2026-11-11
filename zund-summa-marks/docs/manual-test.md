@@ -210,10 +210,11 @@ a přesouvá cesty čistě v řezové barvě.
   Uživatelské rozhraní › Jas): červená je čitelná, šedý nález vypadá jako
   zašedlý text, ne jinak.
 - [ ] **6.9 Dialog na displeji 13".** ZUND i SUMMA, česky i anglicky: dialog je
-  vidět celý i s tlačítky Storno a Generovat (bez záhlaví okna měří ZUND 720
-  px, SUMMA 756 px, šířka 465 px; změřeno). S osmi řádky mapování měří 923 a
-  932 px a na 13" displeji se nemusí vejít — stejně jako v 1.1.0; zapište, od
-  kolika řádků se tlačítka schovají.
+  vidět celý i s tlačítky Storno a Generovat (bez záhlaví okna měří s jedním
+  řádkem mapování ZUND 720 px, SUMMA 756 px, šířka 465 px; změřeno). Od 1.3.0
+  dialog dovolí nejvýš 5 řádků: ZUND 836 px, SUMMA 872 px, po „+ Přidat“ o
+  10 px víc (změřeno 2026-11-07). Na displeji do 900 px výšky se SUMMA s pěti
+  řádky nemusí vejít; zapište, jestli jsou tlačítka vidět.
 - [ ] **6.10 Hlášky (J5, J6).** Bez otevřeného dokumentu → „Před spuštěním
   skriptu otevřete dokument.“ Prázdný dokument, Dle grafiky → „CHYBA:
   V dokumentu není žádná grafika… Dokument nebyl změněn.“ a počátek pravítek,
@@ -230,6 +231,63 @@ a přesouvá cesty čistě v řezové barvě.
   a běh skončí „UPOZORNĚNÍ: Vrstva „Regmarks“ obsahuje i objekty, které
   nevytvořil skript (objektů: N)…“ (N bez obsahu podvrstev). Dřív je skript
   smazal. PDF zavřete bez uložení.
+
+---
+
+## 6a. Nové v 1.3.0 — Spot 1 a vrstvy
+
+> Logiku hlídají Node testy (`tests/test_draw_render.js`, TEST 1.3.0-A až J).
+> Běhy ZUND a SUMMA s řádky L1, L2 a L13, závorkovou vrstvou (L5), aktivní vrstvou
+> (L4), Spot 1 v CMYK i RGB a kroky Zpět ověřil 2026-11-07 harness bez zobrazení
+> dialogu na buildech 1.3.0c a d v Illustratoru 30.8.2. Selhání po objektech (L3) ručně
+> vyvolat neumíme: testuje ho jen Node. Tady je, co harness nevidí.
+>
+> **Kolo 2026-11-11 (vydání 1.3.0):** 6a.1–6a.6, 6a.8 a 6a.10 prošly v živém dialogu
+> na buildu 1.3.0g (spouštěno přes `tools/ai-eval.sh`, ne z menu), 6a.11 a 6a.12 ručně,
+> 6a.13 na 1.3.0i. **Otevřené:** 6a.7 (zkouška u stroje) a 6a.9 (dotaz na obsluhu);
+> 1.3.0 vyšla bez nich z rozhodnutí uživatele, chování 1.3.0 na nich nezávisí.
+
+- [ ] **6a.1 Spot 1 v dialogu.** Dokument bez Spot 1 → seznam Barva značek nabízí
+  Spot 1 hned za registrační, dlaždice je azurová. Generovat → panel Vzorník ukáže
+  přímou barvu Spot 1, zástupnou Cyan a žádné upozornění na náhradní barvu.
+- [ ] **6a.2 Upozornění čtete poprvé (L1).** Řádek jen pro CutContour, cesty i v
+  Kiss-cut → upozornění se dá pochopit bez vysvětlování. Přidejte řádek, Generovat
+  → přesun proběhne a upozornění zmizí.
+- [ ] **6a.3 Ruční práce po běhu (L4).** Po běhu ZUND i SUMMA s ořezovými linkami je
+  v panelu Vrstvy zvýrazněná vrstva s grafikou. Nakreslete obdélník nástrojem
+  a něco vložte přes Cmd+V → obojí je v Graphics a další běh to obejme.
+- [ ] **6a.4 Maska vrstvy (L5).** V panelu Vrstvy vytvořte ořezovou masku vrstvy
+  a vrstvu pojmenujte `(maska)` → značky obejmou i obsah skrytý maskou, ne jen masku.
+  Vyrobit masku vrstvy ze skriptu nejde (změřeno).
+- [ ] **6a.5 Názvy (L13).** Řádek `Cut ` s mezerou v dokumentu s vrstvou Cut → žádná
+  druhá vrstva Cut. Řádek `regmarks` → chyba o vyhrazené vrstvě, dokument beze změny.
+- [ ] **6a.6 Cmd+Z.** První běh ZUND s mapováním bez výběru má dva kroky: značky,
+  vrstvy a Spot 1, pak artboard (klávesou ověřeno 2026-11-11). Další běh v dokumentu,
+  kde značky už jsou a něco je vybrané, má kroky čtyři: nové značky a vrstvy (po něm
+  dokument chvíli nemá žádné značky), návrat starých značek, artboard a výběr, který
+  Dle grafiky ruší.
+- [ ] **6a.7 U stroje.** Bílé značky ve Spot 1 na tmavém materiálu: kamera je najde.
+- [ ] **6a.8 Výchozí řádek.** Dokument jen s přímou barvou Thru-cut, tlačítko Výchozí
+  → řádek `Thru-cut ← Thru-cut`, vrstva i barva souhlasí.
+- [ ] **6a.9 Zjistit u obsluhy.** Čte Cut Center název vrstvy, nebo barvu? Ukáže skrytou
+  grafiku z ořezového PDF uloženého s vrstvami Acrobatu (v souboru zůstává, změřeno)?
+- [ ] **6a.10 Fokus po otevření.** Hned po otevření dialogu, bez kliknutí, napište
+  číslo. ZUND se zdrojem Dle grafiky: padne do pole Mezera od grafiky. ZUND se zdrojem
+  Dle artboardu a SUMMA: padne do pole Mezera od okraje. Zapište, kam padlo, nebo
+  že nikam. Kód fokus nastavuje, jestli platí na obrazovce, neověřeno.
+- [ ] **6a.11 Pět řádků.** Přidávejte řádky mapování v režimu SUMMA: po pátém
+  „+ Přidat“ zešedne a Storno i Generovat jsou pořád vidět (SUMMA s pěti řádky
+  měří 882 px, změřeno). Upozornění na nenačtené řádky (předvolba s víc než pěti
+  řádky) změřila sonda 2026-11-07; vaše předvolby mají nejvýš dva řádky.
+- [ ] **6a.12 Storno po přepnutí režimu (U12).** ZUND, změňte Max. rozteč značek na
+  450, přepněte na SUMMA, Uložit jako… „U12“, Storno. Spusťte skript znovu:
+  dialog se otevře v režimu a s hodnotami posledního Generovat (ne SUMMA s 450).
+  Předvolba „U12“ v nabídce je a má 450. Ověřeno testem v Node, živý dialog ne.
+- [ ] **6a.13 Nový řádek bez názvu.** „+ Přidat“ → nový řádek má prázdný název,
+  stavová řádka hlásí chybu a Generovat je šedé. Výběr první položky ze seznamu
+  vrstev název vyplní, chyba zmizí a Generovat ožije (pokud řádek nemá stejnou barvu
+  jako jiný). Dřív se řádek jmenoval jako první vrstva dokumentu (zjištěno při
+  ručním testu 2026-11-11).
 
 ---
 

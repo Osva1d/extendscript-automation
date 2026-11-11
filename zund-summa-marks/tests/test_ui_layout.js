@@ -84,6 +84,8 @@ ZSM.L = {
     STATUS_INVALID: "fix", STATUS_LAYER_NAME: "name",
     STATUS_RANGE: "%s range %s–%s", STATUS_RANGE_MULTI: "%s out of range",
     STATUS_DUP_COLOR: "dup %s",
+    WARN_PREFIX: "WARNING: ",
+    WARN_ROWS_NOT_LOADED: "rows: %s, at most %s, not loaded: %s",
     // The status line at rest (spec 1.2.0 §7), Czech: the tests read the spec's text back.
     STATUS_FOUND_ARTBOARD: "artboard %s × %s mm", STATUS_FOUND_ARTWORK: "grafika %s × %s mm",
     STATUS_MARKS_ONLY: "pouze značky",
@@ -96,6 +98,8 @@ ZSM.L = {
 };
 ZSM.Config = {
     layerRegmarks: "Regmarks", layerGraphics: "Graphics", layerTrim: "Trim", PRESET_KEY_DEFAULT: "[Default]",
+    markSpot: { name: "Spot 1", cyan: 100, magenta: 0, yellow: 0, black: 0 },
+    cutMethods: ["Cut", "Thru-cut", "Kiss-cut", "CutContour"],
     summaXCenter: 10, summaYVisual: 10, redLineWidth: 1, debug: false,
     zundSize: 5, summaSize: 3,
     ui: { title: "Zünd & Summa Marks v26.4.0" },
@@ -586,6 +590,14 @@ function runDialogs(pData, steps) {
     try { ZSM.UI.show(pData); } finally { delete SUI.MockWindow.prototype.show; }
     return shown;
 }
+// The settings a mode switch carried to the next dialog. They stay in memory,
+// in the docData show() hands to buildDialog (audit U12), so the helper records it.
+function carriedBy(fn) {
+    var seen = null, orig = ZSM.UI.buildDialog;
+    ZSM.UI.buildDialog = function (mode, p, docData) { seen = docData; return orig.apply(this, arguments); };
+    try { fn(); } finally { ZSM.UI.buildDialog = orig; }
+    return seen ? seen._switchSettings : undefined;
+}
 function k5PresetDD(win) {
     return win.findOne(function (c) {
         return c.type === "dropdownlist" && c.parent && c.parent.parent &&
@@ -619,7 +631,8 @@ function bannerPresets() {
 // (a) ZUND dialog, pick the SUMMA preset → the dialog reopens as SUMMA with its values
 var pK5 = { activePreset: "[Default]", presets: bannerPresets() };
 var closeCode = null, afterSwitch = {};
-var shownK5 = runDialogs(pK5, [
+var shownK5;
+var carryK5 = carriedBy(function () { shownK5 = runDialogs(pK5, [
     function (win) { win.close = function (c) { closeCode = c; }; pick(win, "Banner"); },
     function (win) {
         afterSwitch.summaOn = radioOn(win, ZSM.L.MODE_SUMMA);
@@ -627,7 +640,7 @@ var shownK5 = runDialogs(pK5, [
         afterSwitch.size    = fieldText(win, ZSM.L.MARK_SIZE_S);
         afterSwitch.preset  = k5PresetDD(win).selection ? k5PresetDD(win).selection.text : null;
     }
-]);
+]); });
 assertEq(closeCode, 2, "picking a SUMMA preset closes the ZUND dialog as a mode switch");
 assertEq(shownK5.length, 2, "the dialog is shown again");
 assertEq(afterSwitch.summaOn, true, "the new dialog is SUMMA");
@@ -635,8 +648,9 @@ assertEq(afterSwitch.feedTop, "123", "the new dialog shows the preset's feed");
 assertEq(afterSwitch.size, "4", "the new dialog shows the preset's Summa size");
 assertEq(afterSwitch.preset, "Banner", "the preset is active and unmodified (no asterisk)");
 assertEq(pK5.activePreset, "Banner", "activePreset = the picked preset");
-assert(pK5.presets["[Last Settings]"] !== pK5.presets["Banner"],
-    "[Last Settings] is a copy, not the named preset itself");
+assert(carryK5 && carryK5 !== pK5.presets["Banner"],
+    "what the switch carries is a copy, not the named preset itself");
+assertEq(pK5.presets["[Last Settings]"], undefined, "the switch writes no [Last Settings] (U12)");
 assertEq(pK5.presets["Banner"].feedTop, 123, "the named preset is unchanged");
 
 // (b) same-mode preset: values load in place, no second dialog
@@ -709,6 +723,47 @@ runDialogs(pA2b, [function () {}]);
 assertEq(pA2b.presets["[Default]"].layers[0].color, "[Registration]",
     "no cut colour in the document: the factory row keeps [Registration]");
 ZSM.Draw.detectCutColor = origDetectA2;
+
+// The row is named after the colour: layer and colour stay in step, whatever
+// the cutter or the RIP reads (user, 2026-11-07).
+console.log("\n=== TEST 18b: the factory row is named after the colour it found ===");
+var origDetect18b = ZSM.Draw.detectCutColor;
+ZSM.Draw.detectCutColor = function () { return "Thru-cut"; };
+var p18b = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } };
+var nameField18b = null, resetField18b = null, emptyField18b = null;
+runDialogs(p18b, [function (win) {
+    nameField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+    win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_RESET; }).onClick();
+    resetField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+}]);
+assertEq(p18b.presets["[Default]"].layers[0].name, "Thru-cut", "[Default]: the layer takes the colour's name");
+assertEq(p18b.presets["[Default]"].layers[0].color, "Thru-cut", "[Default]: and keeps the colour");
+assert(nameField18b !== null, "the dialog shows the name in the row");
+assert(resetField18b !== null, "the Defaults button gives the same row");
+
+// A preset without rows (hand-edited) falls back to the same row.
+var mine18b = ZSM.Config.getDefaults();
+mine18b.layers = [];
+var pEmpty18b = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mine18b } };
+runDialogs(pEmpty18b, [function (win) {
+    emptyField18b = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+}]);
+assert(emptyField18b !== null, "a preset without rows falls back to the same row");
+
+// Nothing found: the factory name stays, there is no colour to name it after.
+ZSM.Draw.detectCutColor = function () { return "[Registration]"; };
+var pNone18b = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults() } };
+runDialogs(pNone18b, [function () {}]);
+assertEq(pNone18b.presets["[Default]"].layers[0].name, "Cut", "no cut colour: the factory name stays");
+assertEq(pNone18b.presets["[Default]"].layers[0].color, "[Registration]", "no cut colour: registration stays");
+ZSM.Draw.detectCutColor = origDetect18b;
+
+// A preset the user saved keeps its own row.
+var saved18b = ZSM.Config.getDefaults();
+saved18b.layers = [{ name: "Cut", color: "Thru-cut" }];
+var pSaved18b = { activePreset: "Saved", presets: { "[Default]": ZSM.Config.getDefaults(), "Saved": saved18b } };
+runDialogs(pSaved18b, [function () {}]);
+assertEq(pSaved18b.presets["Saved"].layers[0].name, "Cut", "a saved preset keeps its own name");
 
 var pA2c = { activePreset: "Mine", presets: { "[Default]": ZSM.Config.getDefaults(), "Mine": mineA2 } };
 var a2c = {};
@@ -850,11 +905,11 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         "a checkbox refresh over '1O5': Save, Save As and Generate stay grey");
 
     // --- Direct reads: the typo is NaN, not a prefix; the mode-switch snapshot does not store 1 ---
-    // getUIValues() is the dialog's own; it is seen through [Last Settings], which
-    // the switch writes from it, and through the dialog that opens from that.
+    // getUIValues() is the dialog's own; it is seen through what the switch
+    // carries, which is made from it, and through the dialog that opens from that.
     var pSw = mineData({});
     var swSecond = {};
-    runDialogs(pSw, [
+    var snap = carriedBy(function () { runDialogs(pSw, [
         function (win) {
             var f = fieldCtl(win, ZSM.L.GAP_ZO);
             f.text = "1O5"; f.onChanging();
@@ -866,11 +921,10 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
             swSecond.red = isErrPen(f.graphics.foregroundColor);
             swSecond.gates = gatesOf(win);
         }
-    ]);
-    var snap = pSw.presets["[Last Settings]"];
+    ]); });
     assert(snap && typeof snap.gapOuter === "number" && isNaN(snap.gapOuter),
-        "mode switch with '1O5': [Last Settings].gapOuter is NaN (got " + (snap && snap.gapOuter) + ")");
-    assert(snap && snap.gapOuter !== 1, "mode switch with '1O5': [Last Settings] does not store 1");
+        "mode switch with '1O5': the carried gapOuter is NaN (got " + (snap && snap.gapOuter) + ")");
+    assert(snap && snap.gapOuter !== 1, "mode switch with '1O5': the switch does not carry 1");
     assertEq(swSecond.text, "", "the dialog opened after the switch shows an empty field for it");
     assertEq(swSecond.red, true, "...painted red");
     assert(swSecond.gates.ok === false && swSecond.gates.save === false && swSecond.gates.saveAs === false,
@@ -943,20 +997,21 @@ console.log("\n=== TEST 20 (spec 6.1-6.3): numbers, field paint, Save gate ===")
         assertEq(savedMine.maxDist, 450, "greyed typo: ...and the valid edit made before");
 
         var pGrey2 = mineData({ gapInner: 7 });
-        runDialogs(pGrey2, [function (win) { fixedWithTypo(win); clickRadio(win, ZSM.L.MODE_SUMMA); }, function () {}]);
-        var greySnap = pGrey2.presets["[Last Settings]"];
+        var greySnap = carriedBy(function () {
+            runDialogs(pGrey2, [function (win) { fixedWithTypo(win); clickRadio(win, ZSM.L.MODE_SUMMA); }, function () {}]);
+        });
         assertEq(greySnap.gapInner, 7, "greyed typo: the mode-switch snapshot carries the preset's gapInner (got " + greySnap.gapInner + ")");
 
         // A valid edit made before the switch is not kept either: the greyed field carries the previous run's value.
         var pGrey3 = mineData({ gapInner: 7 });
-        runDialogs(pGrey3, [function (win) {
+        var grey3 = carriedBy(function () { runDialogs(pGrey3, [function (win) {
             var gap = fieldCtl(win, ZSM.L.GAP_GZ);
             gap.text = "9"; gap.onChanging();
             var rbF = win.findOne(function (c) { return c.type === "radiobutton" && c.text === ZSM.L.SRC_FIXED; });
             rbF.value = true; rbF.onClick();
             clickRadio(win, ZSM.L.MODE_SUMMA);
-        }, function () {}]);
-        assertEq(pGrey3.presets["[Last Settings]"].gapInner, 7, "greyed field: an earlier valid edit (9) is not saved either, the preset's 7 stays");
+        }, function () {}]); });
+        assertEq(grey3.gapInner, 7, "greyed field: an earlier valid edit (9) is not saved either, the preset's 7 stays");
     } finally {
         ZSM.Storage = origStorage;
         if (origStorage === undefined) delete ZSM.Storage;
@@ -1822,6 +1877,285 @@ console.log("\n=== TEST 25 (spec 1.2.0 §17): no cut colour in the status line =
         assertEq(ft(10), "ZUND · artboard 15,600 × 30,500 mm · 1:10", "en: the same");
     } finally {
         ZSM.L = origL;
+    }
+})();
+
+
+// =====================================================
+// TEST (audit L13): a layer name goes out without its surrounding spaces
+// =====================================================
+// getByName does not find "Cut " and Illustrator drops the trailing space when
+// naming, so the row added a second "Cut"; a leading space stayed in the name.
+console.log("\n=== TEST L13: mapping names are trimmed on Generate and on Save ===");
+// A named preset: show() rebuilds [Default] from the code on every open.
+function namedPresetL13(layers) {
+    var d = ZSM.Config.getDefaults();
+    d.layers = layers;
+    return { activePreset: "L13", presets: { "[Default]": ZSM.Config.getDefaults(), "L13": d } };
+}
+var pL13 = namedPresetL13([{ name: "  Thru-cut ", color: "Cut" }, { name: "\tCut\t", color: "Kiss-cut" }]);
+runDialogs(pL13, [function (win) { clickGenerate(win); }]);
+var lastL13 = pL13.presets["[Last Settings]"].layers;
+assertEq(lastL13[0].name, "Thru-cut", "L13: the run gets the name without its spaces");
+assertEq(lastL13[1].name, "Cut", "L13: tabs go too");
+
+// A trailing space alone changes nothing worth saving.
+var saveEnabledL13 = null;
+runDialogs(namedPresetL13([{ name: "Thru-cut", color: "Cut" }]), [function (win) {
+    var fieldL13 = win.findOne(function (c) { return c.type === "edittext" && c.text === "Thru-cut"; });
+    fieldL13.text = "Thru-cut  ";
+    fieldL13.onChanging();
+    saveEnabledL13 = win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).enabled;
+}]);
+assertEq(saveEnabledL13, false, "L13: a trailing space alone leaves Save grey");
+
+
+// =====================================================
+// TEST 26 (UI spec 2026-11-07 §3): five mapping rows at most
+// =====================================================
+// In 1.2.0 SUMMA with eight rows asked for a 959 px dialog in a 932 px window.
+// A preset or last run with more rows shows the first five, says which rows
+// were not loaded, and stays as it is until the operator saves it.
+console.log("\n=== TEST 26: five mapping rows at most ===");
+(function () {
+    var EIGHT = [
+        { name: "Thru-cut", color: "Thru-cut" }, { name: "Kiss-cut", color: "Kiss-cut" },
+        { name: "Cut", color: "Cut" }, { name: "Reg", color: "[Registration]" },
+        { name: "Score", color: "Score" }, { name: "Crease", color: "Crease" },
+        { name: "", color: "Perf" }, { name: "V-cut", color: "V-cut" }
+    ];
+    function rowsOf(n) { return JSON.parse(JSON.stringify(EIGHT.slice(0, n))); }
+    function presetData(n, last) {
+        var d = ZSM.Config.getDefaults();
+        d.layers = rowsOf(n);
+        var p = { activePreset: "Long", presets: { "[Default]": ZSM.Config.getDefaults(), "Long": d } };
+        if (last) p.presets["[Last Settings]"] = last;
+        return p;
+    }
+    function removeButtons(win) {
+        return win.find(function (c) { return c.type === "button" && c.text === "−"; });
+    }
+    function addButton(win) {
+        return win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_ADD_LAYER; });
+    }
+    function withAlerts(fn) {
+        var seen = [], o = global.alert;
+        global.alert = function (m) { seen.push(String(m)); };
+        try { fn(); } finally { global.alert = o; }
+        return seen;
+    }
+
+    // (a) an eight-row preset: five rows, one warning naming the other three
+    var pA = presetData(8), seenA = {};
+    var alertsA = withAlerts(function () {
+        runDialogs(pA, [function (win) {
+            seenA.rows = removeButtons(win).length;
+            seenA.add = addButton(win).enabled;
+            var dd = k5PresetDD(win);
+            seenA.preset = dd.selection ? dd.selection.text : null;
+            seenA.save = win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).enabled;
+            clickGenerate(win);
+        }]);
+    });
+    assertEq(seenA.rows, 5, "eight-row preset: five rows shown");
+    assertEq(seenA.add, false, "eight-row preset: + Add is grey");
+    assertEq(alertsA.length, 1, "eight-row preset: one warning");
+    assertEq(alertsA[0], "WARNING: rows: 8, at most 5, not loaded: Crease, Perf, V-cut",
+        "the warning counts the rows and names the ones not loaded (a row without a name by its colour)");
+    assertEq(seenA.preset, "Long *", "the preset shows as modified: what the dialog holds differs from it");
+    assertEq(seenA.save, true, "Save is there for the operator who wants the five rows kept");
+    assertEq(pA.presets["Long"].layers.length, 8, "a run leaves the preset's eight rows alone");
+    assertEq(pA.presets["[Last Settings]"].layers.length, 5, "the run uses the five rows shown");
+
+    // (b) Save puts the five rows into the preset: the operator's decision
+    var pB = presetData(8);
+    var origStorage = ZSM.Storage;
+    ZSM.Storage = { save: function () { return true; } };
+    try {
+        withAlerts(function () {
+            runDialogs(pB, [function (win) {
+                win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_SAVE; }).onClick();
+            }]);
+        });
+    } finally {
+        ZSM.Storage = origStorage;
+        if (origStorage === undefined) delete ZSM.Storage;
+    }
+    assertEq(pB.presets["Long"].layers.length, 5, "Save keeps the five rows shown");
+
+    // (c) a last run with eight rows: one warning, not one per build step
+    var last = ZSM.Config.getDefaults();
+    last.layers = rowsOf(8);
+    var alertsC = withAlerts(function () { runDialogs(presetData(2, last), [function () {}]); });
+    assertEq(alertsC.length, 1, "eight-row last run: one warning at open");
+
+    // (d) five rows: no warning, + Add grey; four rows: + Add gives the fifth, then greys
+    var alertsD = withAlerts(function () {
+        runDialogs(presetData(5), [function (win) {
+            assertEq(addButton(win).enabled, false, "five rows: + Add is grey");
+        }]);
+    });
+    assertEq(alertsD.length, 0, "five rows: no warning");
+    runDialogs(presetData(4), [function (win) {
+        assertEq(addButton(win).enabled, true, "four rows: + Add is live");
+        addButton(win).onClick();
+        assertEq(removeButtons(win).length, 5, "four rows: + Add makes five");
+        assertEq(addButton(win).enabled, false, "then + Add is grey");
+        addButton(win).onClick();
+        assertEq(removeButtons(win).length, 5, "a click on the grey + Add adds nothing");
+    }]);
+
+    // (e) an eight-row SUMMA preset picked in the ZUND dialog: one warning, in the SUMMA dialog
+    var summaLong = ZSM.Config.getDefaults();
+    summaLong.mode = "SUMMA";
+    summaLong.layers = rowsOf(8);
+    var pE = { activePreset: "[Default]", presets: { "[Default]": ZSM.Config.getDefaults(), "Long S": summaLong } };
+    var rowsE = null, shownE = null;
+    var alertsE = withAlerts(function () {
+        shownE = runDialogs(pE, [
+            function (win) { win.close = function () {}; pick(win, "Long S"); },
+            function (win) { rowsE = removeButtons(win).length; }
+        ]);
+    });
+    assertEq(shownE.length, 2, "picked SUMMA preset: the dialog reopens");
+    assertEq(rowsE, 5, "picked SUMMA preset: five rows in the SUMMA dialog");
+    assertEq(alertsE.length, 1, "picked SUMMA preset: one warning");
+    assertEq(pE.presets["Long S"].layers.length, 8, "the picked preset keeps its eight rows");
+})();
+
+
+// =====================================================
+// TEST 27 (audit U12): Cancel leaves no unconfirmed run behind
+// =====================================================
+// A mode switch wrote its snapshot into [Last Settings]. Save, Save As or
+// Delete in the next dialog put the whole wrapper on disk, Cancel did not undo
+// it, and the next run opened with values and a mode nobody confirmed.
+console.log("\n=== TEST 27 (audit U12): Cancel after a mode switch writes no run ===");
+(function () {
+    function fieldOfU12(win, label) {
+        var lbl = win.findOne(function (c) { return c.type === "statictext" && c.text === label; });
+        return lbl.parent.findOne(function (c) { return c.type === "edittext"; });
+    }
+    function btn(win, text) {
+        return win.findOne(function (c) { return c.type === "button" && c.text === text; });
+    }
+    // ZUND, an edit nobody confirms (max dist 450), then SUMMA: `inSumma` acts there, then Cancel.
+    function switchThenCancel(inSumma) {
+        var lastRun = ZSM.Config.getDefaults();          // the last confirmed run: ZUND, 500
+        // A SUMMA preset: picked in the SUMMA dialog it loads in place, no second switch.
+        var old = ZSM.Config.getDefaults(); old.mode = "SUMMA"; old.gapOuter = 3;
+        var pData = { activePreset: "[Default]",
+            presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": lastRun, "Old": old } };
+        var written = [], o = { storage: ZSM.Storage, prompt: global.prompt, confirm: global.confirm };
+        ZSM.Storage = { save: function (d) { written.push(JSON.parse(JSON.stringify(d))); return true; } };
+        global.prompt = function () { return "New"; };
+        global.confirm = function () { return true; };
+        var result;
+        try {
+            var shown = [];
+            SUI.MockWindow.prototype.show = function () {
+                shown.push(this);
+                if (shown.length === 1) {
+                    this.close = function () {};
+                    var f = fieldOfU12(this, ZSM.L.MAX_DIST); f.text = "450"; f.onChanging();
+                    clickRadio(this, ZSM.L.MODE_SUMMA);
+                } else if (shown.length === 2) {
+                    inSumma(this);
+                }
+                return 0;                                     // Cancel
+            };
+            try { result = ZSM.UI.show(pData); } finally { delete SUI.MockWindow.prototype.show; }
+        } finally {
+            ZSM.Storage = o.storage; global.prompt = o.prompt; global.confirm = o.confirm;
+            if (o.storage === undefined) delete ZSM.Storage;
+        }
+        return { result: result, written: written, pData: pData };
+    }
+
+    var sa = switchThenCancel(function (win) { btn(win, ZSM.L.BTN_SAVE_AS).onClick(); });
+    assertEq(sa.result, null, "Save As, then Cancel: show() returns null");
+    assertEq(sa.written.length, 1, "Save As writes the file once");
+    var diskLast = sa.written[0].presets["[Last Settings]"];
+    assertEq(diskLast.mode, "ZUND", "Save As, then Cancel: the file keeps the confirmed run's mode");
+    assertEq(diskLast.maxDist, 500, "Save As, then Cancel: the file keeps the confirmed run's max dist, not the unconfirmed 450");
+    assertEq(sa.written[0].presets["New"].maxDist, 450, "the new preset holds what the dialog showed when it was saved");
+    assertEq(sa.written[0].presets["New"].mode, "SUMMA", "...in the mode it was saved in");
+
+    var next = {};
+    SUI.MockWindow.prototype.show = function () {
+        next.zund = radioOn(this, ZSM.L.MODE_ZUND);
+        next.maxDist = fieldText(this, ZSM.L.MAX_DIST);
+        return 0;
+    };
+    try { ZSM.UI.show(sa.written[0]); } finally { delete SUI.MockWindow.prototype.show; }
+    assertEq(next.zund, true, "the next opening starts in the confirmed run's mode");
+    assertEq(next.maxDist, "500", "the next opening shows the confirmed run's max dist");
+
+    var del = switchThenCancel(function (win) { pick(win, "Old"); btn(win, ZSM.L.BTN_DEL).onClick(); });
+    assertEq(del.written.length >= 1, true, "Delete writes the file");
+    var delLast = del.written[del.written.length - 1].presets["[Last Settings]"];
+    assertEq(delLast.mode + " " + delLast.maxDist, "ZUND 500", "Delete, then Cancel: the file keeps the confirmed run");
+    assertEq(del.written[del.written.length - 1].presets["Old"], undefined, "...and the preset is gone");
+
+    // The switch still carries the edit into the next dialog, and Generate there is the run.
+    var gen = {};
+    var pGen = { activePreset: "[Default]",
+        presets: { "[Default]": ZSM.Config.getDefaults(), "[Last Settings]": ZSM.Config.getDefaults() } };
+    runDialogs(pGen, [
+        function (win) {
+            win.close = function () {};
+            var f = fieldOfU12(win, ZSM.L.MAX_DIST); f.text = "450"; f.onChanging();
+            clickRadio(win, ZSM.L.MODE_SUMMA);
+        },
+        function (win) { gen.maxDist = fieldText(win, ZSM.L.MAX_DIST); clickGenerate(win); }
+    ]);
+    assertEq(gen.maxDist, "450", "the SUMMA dialog after the switch shows the edit");
+    assertEq(pGen.presets["[Last Settings]"].mode + " " + pGen.presets["[Last Settings]"].maxDist, "SUMMA 450",
+        "Generate after the switch: [Last Settings] is that run");
+})();
+
+
+// =====================================================
+// TEST 28: a row from + Add starts without a layer name
+// =====================================================
+// Illustrator fires onChange when code sets a dropdown's selection (engine-facts,
+// 2026-10-17). The new row selected the first layer of the list, its onChange
+// copied that name into the row, and the row sent its cut paths into the
+// artwork layer (manual test 2026-11-11). The mock fires it too while this runs.
+console.log("\n=== TEST 28: + Add leaves the layer name empty ===");
+(function () {
+    SUI.options.fireOnChangeOnSelect = true;
+    try {
+        var seen = {};
+        // Thru-cut, so the new row's colour (the detected Cut) is no duplicate.
+        runDialogs(namedPresetL13([{ name: "Thru-cut", color: "Thru-cut" }]), [function (win) {
+            win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_ADD_LAYER; }).onClick();
+            // A mapping row's name field and layer list share a stack group.
+            function inStack(c) { return c.parent && c.parent.orientation === "stack"; }
+            var names = win.find(function (c) { return c.type === "edittext" && inStack(c); });
+            var lists = win.find(function (c) { return c.type === "dropdownlist" && inStack(c); });
+            seen.rows = names.length;
+            seen.firstName = names[0].text;
+            seen.newName = names[1].text;
+            seen.newSelection = lists[1].selection;
+            seen.ok = win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }).enabled;
+            var st = win.findOne(function (c) { return c.type === "statictext" && c.visible !== false && /^✗/.test(c.text || ""); });
+            seen.status = st ? st.text : null;
+            // The first item can still be picked: nothing is selected, so it is a change.
+            lists[1].selection = 0;
+            seen.picked = names[1].text;
+            seen.okAfterPick = win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }).enabled;
+        }]);
+        assertEq(seen.rows, 2, "+ Add makes a second row");
+        assertEq(seen.firstName, "Thru-cut", "the existing row keeps its name");
+        assertEq(seen.newName, "", "the new row's name is empty, not the first layer of the list");
+        assertEq(seen.newSelection, null, "the new row's layer list selects nothing");
+        assertEq(seen.ok, false, "Generate is grey until the new row has a name");
+        assertEq(seen.status, "✗ " + ZSM.L.STATUS_LAYER_NAME, "the status line says the name is missing");
+        assertEq(seen.picked, ZSM.Draw.getLayerNames()[0], "picking the first item of the list fills the name");
+        assertEq(seen.okAfterPick, true, "...and the live check runs again: Generate is live (seen grey in Illustrator)");
+    } finally {
+        SUI.options.fireOnChangeOnSelect = false;
     }
 })();
 

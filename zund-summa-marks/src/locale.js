@@ -38,8 +38,12 @@ ZSM.L = (function () {
             ERR_MARKS_FAILED:    "Part of the output could not be drawn (marks, OPOS bar or trim lines; objects: %s) — the output is incomplete. Make sure the Regmarks and Trim layers are neither locked nor hidden, then run the script again.",
             WARN_MIXED_PAINT:    "Objects in the cut colour '%s' that also carry printable paint (a fill or stroke in another colour): %s. They were NOT moved to the cut layer — split each into a cut path and the printable shape.",
             WARN_PATHS_SKIPPED:  "Layer '%s': some paths in '%s' were left in place — inside a clipping mask: %s, on a locked or hidden layer: %s. The cutter will not cut them until they are moved by hand.",
+            WARN_CUT_UNMAPPED:   "The colour '%s' has no row in the mapping (objects: %s). They stayed in their layer and did not reach a cut layer. Add a row for this colour and run the script again.",
+            WARN_PATHS_UNREADABLE: "Objects that could not be read: %s. They stayed in place; a cut path among them did not reach its cut layer. Check them by hand.",
+            WARN_ROUTING_STOPPED: "Moving paths to the cut layers stopped on an error: %s. Some paths stayed where they were. Check the cut layers, or undo the changes (Cmd+Z) and run the script again.",
             WARN_REG_ROUTING:    "Layer '%s': the registration colour cannot identify cut paths (it prints on every separation), so the row was skipped. Pick the cut spot colour in the layer table.",
             WARN_TRIM_FOREIGN:   "The 'Trim' layer also holds objects the script did not create — they were kept. The script only refreshes its own trim lines there; use a differently named layer for your own content.",
+            WARN_ROWS_NOT_LOADED: "The layer mapping has more rows than the dialog shows (rows: %s, at most %s). Not loaded: %s. The run will not use them. The saved preset stays as it is until you save it yourself.",
             WARN_REGMARKS_FOREIGN: "The 'Regmarks' layer also holds objects the script did not create (objects: %s) — they were kept. The script only redraws its own sublayers 'Zünd' and 'Summa', so older marks or another tool's output stay beside the new marks; check them before cutting, and use a differently named layer for your own content.",
             ERR_RESERVED_LAYER:  "The layer '%s' cannot be used in the mapping — it belongs to the script (marks and trim lines), which rewrites its content. Pick another name in the layer table. The document was not changed.",
             ERR_ARTBOARD_TOO_LARGE: "The artboard would be %s × %s mm, which Illustrator does not allow. Reduce the artwork or the gaps, or prepare the document at a scale. The document was not changed.",
@@ -103,7 +107,7 @@ ZSM.L = (function () {
             ORIENT_DIST:    "Orientation mark offset:",
             TIP_ORIENT_DIST: "Gap between the edges of the marks, from the corner mark to the orientation mark.",
             MARK_COLOR:   "Mark color:",
-            TIP_MARK_COLOR: "Spot color for marks. The registration color prints on all separations.",
+            TIP_MARK_COLOR: "Spot color for marks. The registration color prints on all separations. Spot 1 (white on dark media) is added to the document when missing, with the alternate color Cyan.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Top feed:",
@@ -172,8 +176,12 @@ ZSM.L = (function () {
             ERR_MARKS_FAILED:    "Část výstupu se nepodařilo vykreslit (značky, OPOS pruh nebo ořezové linky; počet objektů: %s) — výstup není úplný. Zkontrolujte, že vrstvy Regmarks a Trim nejsou zamčené ani skryté, a spusťte skript znovu.",
             WARN_MIXED_PAINT:    "Objekty v řezové barvě „%s“, které mají i tiskovou výplň nebo tah v jiné barvě: %s. Do řezové vrstvy NEBYLY přesunuty — rozdělte každý na řezovou cestu a tiskový tvar.",
             WARN_PATHS_SKIPPED:  "Vrstva „%s“: některé cesty v barvě „%s“ zůstaly na místě — v ořezové masce: %s, v zamčené nebo skryté vrstvě: %s. Stroj je nevyřízne, dokud je ručně nepřesunete.",
+            WARN_CUT_UNMAPPED:   "Barva „%s“ nemá řádek v mapování (objektů: %s). Zůstaly ve své vrstvě a do řezové vrstvy se nedostaly. Přidejte řádek pro tuto barvu a spusťte skript znovu.",
+            WARN_PATHS_UNREADABLE: "Objekty, které se nepodařilo přečíst: %s. Zůstaly na místě; řezová cesta mezi nimi se do řezové vrstvy nedostala. Zkontrolujte je ručně.",
+            WARN_ROUTING_STOPPED: "Přesun cest do řezových vrstev se zastavil kvůli chybě: %s. Část cest zůstala na původním místě. Zkontrolujte řezové vrstvy, případně změny vraťte (Cmd+Z) a spusťte skript znovu.",
             WARN_REG_ROUTING:    "Vrstva „%s“: registrační barvou nejde rozpoznat řezové cesty (tiskne se na všech separacích), řádek byl přeskočen. V tabulce vrstev vyberte přímou barvu řezu.",
             WARN_TRIM_FOREIGN:   "Vrstva „Trim“ obsahuje i objekty, které nevytvořil skript — zůstaly zachované. Skript v ní obnovuje jen své ořezové linky; pro vlastní obsah použijte vrstvu s jiným názvem.",
+            WARN_ROWS_NOT_LOADED: "Mapování vrstev má víc řádků, než dialog ukáže (řádků: %s, nejvýš %s). Nenačetly se: %s. Spuštění je nepoužije. Uložená předvolba zůstane beze změny, dokud ji sami neuložíte.",
             WARN_REGMARKS_FOREIGN: "Vrstva „Regmarks“ obsahuje i objekty, které nevytvořil skript (objektů: %s) — zůstaly zachované. Skript v ní obnovuje jen své podvrstvy „Zünd“ a „Summa“, takže starší značky nebo výstup jiného nástroje zůstávají vedle nových značek; před řezáním je zkontrolujte a pro vlastní obsah použijte vrstvu s jiným názvem.",
             ERR_RESERVED_LAYER:  "Vrstvu „%s“ nejde použít v mapování — patří skriptu (značky a ořezové linky) a skript její obsah přepisuje. V tabulce vrstev zvolte jiný název. Dokument nebyl změněn.",
             ERR_ARTBOARD_TOO_LARGE: "Artboard by měl %s × %s mm, a to Illustrator nedovolí. Zmenšete grafiku nebo mezery, případně dokument připravte v měřítku. Dokument nebyl změněn.",
@@ -235,7 +243,7 @@ ZSM.L = (function () {
             ORIENT_DIST:    "Odsazení orientační značky:",
             TIP_ORIENT_DIST: "Mezera mezi okraji značek, od rohové značky k orientační značce.",
             MARK_COLOR:   "Barva značek:",
-            TIP_MARK_COLOR: "Přímá barva značek. Registrační barva se tiskne na všech separacích.",
+            TIP_MARK_COLOR: "Přímá barva značek. Registrační barva se tiskne na všech separacích. Spot 1 (bílá na tmavý materiál) se založí, když v dokumentu chybí, se zástupnou barvou Cyan.",
 
             // --- UI: Feed ---
             FEED_TOP:  "Horní výjezd (Top):",

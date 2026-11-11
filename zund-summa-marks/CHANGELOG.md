@@ -4,6 +4,83 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.3.0] — 2026-11-11
+
+Bílé značky na tmavý materiál, užší nabídka vrstev v mapování, žádná druhá
+vrstva Graphics a opravy tichých chyb z
+[auditu vrstev](../docs/reports/2026-11-06-audit-vrstev-zund-summa-marks.md)
+(kódy L v závorkách).
+
+### Přidáno
+
+- **Značky ve Spot 1.** Seznam Barva značek nabízí Spot 1 vždy, hned za
+  registrační barvou. Když v dokumentu chybí, Generovat ji založí se zástupnou
+  barvou Cyan; zamítnutý běh (kolize značek, příliš velký artboard) dokument
+  nezmění ani tady. Existující Spot 1 zůstane, jak je. Přímá barva jiného jména
+  se dál nezakládá.
+- **Upozornění na řezovou barvu bez řádku (L1).** Když v dokumentu leží cesta
+  v barvě řezné metody (Thru-cut, Kiss-cut, CutContour a další) a tato barva nemá
+  řádek v mapování, běh skončí upozorněním s barvou a počtem objektů. Dřív cesta
+  tiše zůstala v tiskové vrstvě. Cesty, které už leží v řezové vrstvě, se
+  nehlásí; režim Pouze značky mlčí.
+- **Upozornění na nečitelné objekty (L3).** Objekt, který skript nedokáže přečíst,
+  zůstane na místě a běh ho spočítá a ohlásí.
+
+### Změněno
+
+- **Nejvýš 5 řádků mapování.** Dialog SUMMA s osmi řádky chtěl 959 px, okno
+  má na displeji 982 px nejvýš 932, a Generovat leželo pod jeho okrajem. S pěti
+  řádky měří SUMMA 872 px, ZUND 836 px. Předvolba nebo poslední běh s víc
+  řádky ukáže prvních pět a upozorní, které řádky se nenačetly. Uložená
+  předvolba zůstane, jak je, dokud ji neuložíte.
+- **Nabídka vrstev v mapování** má jen řezné a nástrojové názvy Zündu: ubyly
+  White, Varnish a Register. Vrstva tohoto jména, kterou dokument má, se nabídne
+  dál a název jde dopsat ručně.
+- **Výchozí řádek mapování se jmenuje podle barvy.** `[Výchozí]` v dokumentu
+  s přímou barvou Thru-cut nabídne `Thru-cut ← Thru-cut`, dřív `Cut ← Thru-cut`,
+  takže název vrstvy a barva souhlasí. Bez řezové barvy v dokumentu zůstává řádek
+  Cut a uložené předvolby se nemění.
+- **Dvě barvy do jedné vrstvy (L2).** Dva řádky se stejným názvem vrstvy
+  (`Cut ← Thru-cut`, `Cut ← CutContour`) teď přesunou obě barvy do té vrstvy.
+  Dřív se druhý řádek tiše zahodil i s řezem.
+- **Aktivní vrstva po běhu (L4).** Běh skončí ve vrstvě s grafikou. Dřív zůstala
+  po běhu ZUND aktivní podvrstva značek a co jste do ní pak nakreslili nebo
+  vložili, další běh bez hlášky smazal. Když do podvrstvy značek přepnete ručně,
+  další běh její obsah smaže dál.
+- **Vrstvy se závorkou v názvu (L5).** Vrstva, jejíž jméno začíná `(` nebo `<`, se
+  měří jako každá jiná. Dřív se v ní měřil jen první objekt, takže značky nemusely
+  grafiku obejmout. Pokud taková vrstva má opravdu masku vrstvy, značky teď
+  obejmou i obsah skrytý maskou: spotřebuje se víc materiálu, ale značky neleží
+  přes grafiku. Maskované skupiny se měří podle masky jako dosud.
+- **Názvy v mapování (L13).** Mezery kolem názvu vrstvy se při odeslání dialogu
+  odstraní. Řádek `Cut ` v dokumentu s vrstvou Cut dřív založil druhou vrstvu Cut
+  a ` Cut` vrstvu s mezerou v názvu. Vrstvy Regmarks a Trim jsou v mapování
+  odmítnuté v jakékoli velikosti písmen. Řádek `cut` znamená vrstvu `Cut`, kterou
+  dokument má, a oba řádky se chovají jako jeden název.
+
+### Opraveno
+
+- **Druhá vrstva Graphics.** Když dokument vrstvu Graphics už měl jinde než
+  dole, běh pojmenoval Graphics i spodní vrstvu. Teď ji nechá pod jejím jménem.
+- **Jeden nečitelný objekt zastavil přesun (L3).** Všechny cesty za ním tiše
+  zůstaly na místě. Teď se přesunou a selhání celého přesunu běh ohlásí.
+- **Artboard rostl s vrstvou `regmarks` (L13).** Illustrator v názvech vrstev velikost
+  písmen nerozlišuje, takže skript vrstvu `regmarks` přijal za svou a kreslil do
+  ní, ale měřil ji jako grafiku. Každý další běh artboard zvětšil (změřeno: z 374
+  na 394 mm). Skript teď své vrstvy pozná v jakékoli velikosti písmen, totéž platí
+  pro `trim`.
+- **Nový řádek z „+ Přidat“ má prázdný název.** Dřív převzal první položku
+  seznamu vrstev, obvykle vrstvu s grafikou, a kdo ho nepřepsal, poslal řezové
+  cesty do vrstvy s grafikou. Teď je název prázdný, stavová řádka hlásí chybu
+  a Generovat čeká, dokud ho nenapíšete nebo nevyberete ze seznamu (i první
+  položku).
+- **Storno po přepnutí režimu nezapíše poslední běh (U12).** Po přepnutí ZUND
+  ↔ SUMMA a uložení, uložení jako nebo smazání předvolby zapsal skript do
+  souboru i hodnoty z dialogu, které nikdo neodeslal, a to i po Storno. Další
+  spuštění pak otevřelo dialog v tom režimu a s těmi hodnotami. Teď si poslední
+  běh pamatuje jen Generovat; zadané hodnoty se přes přepnutí režimu přenesou
+  dál jako dřív.
+
 ## [1.2.0] — 2026-10-28
 
 Čistý tah, měřítko kresby z dokumentu a jazyk společný všem nástrojům
