@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Zünd & Summa Marks. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [1.3.0] — 2026-11-05
+## [1.3.0] — 2026-11-11
 
 Bílé značky na tmavý materiál, užší nabídka vrstev v mapování, žádná druhá
 vrstva Graphics a opravy tichých chyb z
