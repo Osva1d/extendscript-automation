@@ -137,6 +137,11 @@
     };
 
     // ===== Specialized controls =====
+    // Illustrator fires a dropdown's onChange when code sets its selection
+    // (measured, engine-facts). The mock does not by default; a test that
+    // depends on it turns this on and back off.
+    var options = { fireOnChangeOnSelect: false };
+
     function MockDropDownList(parent, opts) {
         MockControl.call(this, "dropdownlist", parent, opts);
         this.items = [];        // ListItem array
@@ -149,9 +154,11 @@
             configurable: true, enumerable: true,
             get: function () { return _sel; },
             set: function (v) {
+                var prev = _sel;
                 if (v === null || v === undefined) { _sel = null; }
                 else if (typeof v === "number") { _sel = self.items[v] || null; }
                 else { _sel = v; }
+                if (options.fireOnChangeOnSelect && _sel !== prev && typeof self.onChange === "function") self.onChange();
             }
         });
         this.add = function (kind, label) {
@@ -309,6 +316,7 @@
         uninstall: uninstall,
         lastWindow: getLastWindow,
         MockWindow: MockWindow,
-        MockControl: MockControl
+        MockControl: MockControl,
+        options: options
     };
 })();

@@ -2116,6 +2116,49 @@ console.log("\n=== TEST 27 (audit U12): Cancel after a mode switch writes no run
 
 
 // =====================================================
+// TEST 28: a row from + Add starts without a layer name
+// =====================================================
+// Illustrator fires onChange when code sets a dropdown's selection (engine-facts,
+// 2026-10-17). The new row selected the first layer of the list, its onChange
+// copied that name into the row, and the row sent its cut paths into the
+// artwork layer (manual test 2026-11-11). The mock fires it too while this runs.
+console.log("\n=== TEST 28: + Add leaves the layer name empty ===");
+(function () {
+    SUI.options.fireOnChangeOnSelect = true;
+    try {
+        var seen = {};
+        // Thru-cut, so the new row's colour (the detected Cut) is no duplicate.
+        runDialogs(namedPresetL13([{ name: "Thru-cut", color: "Thru-cut" }]), [function (win) {
+            win.findOne(function (c) { return c.type === "button" && c.text === ZSM.L.BTN_ADD_LAYER; }).onClick();
+            // A mapping row's name field and layer list share a stack group.
+            function inStack(c) { return c.parent && c.parent.orientation === "stack"; }
+            var names = win.find(function (c) { return c.type === "edittext" && inStack(c); });
+            var lists = win.find(function (c) { return c.type === "dropdownlist" && inStack(c); });
+            seen.rows = names.length;
+            seen.firstName = names[0].text;
+            seen.newName = names[1].text;
+            seen.newSelection = lists[1].selection;
+            seen.ok = win.findOne(function (c) { return c.type === "button" && c.name === "ok"; }).enabled;
+            var st = win.findOne(function (c) { return c.type === "statictext" && c.visible !== false && /^✗/.test(c.text || ""); });
+            seen.status = st ? st.text : null;
+            // The first item can still be picked: nothing is selected, so it is a change.
+            lists[1].selection = 0;
+            seen.picked = names[1].text;
+        }]);
+        assertEq(seen.rows, 2, "+ Add makes a second row");
+        assertEq(seen.firstName, "Thru-cut", "the existing row keeps its name");
+        assertEq(seen.newName, "", "the new row's name is empty, not the first layer of the list");
+        assertEq(seen.newSelection, null, "the new row's layer list selects nothing");
+        assertEq(seen.ok, false, "Generate is grey until the new row has a name");
+        assertEq(seen.status, "✗ " + ZSM.L.STATUS_LAYER_NAME, "the status line says the name is missing");
+        assertEq(seen.picked, ZSM.Draw.getLayerNames()[0], "picking the first item of the list fills the name");
+    } finally {
+        SUI.options.fireOnChangeOnSelect = false;
+    }
+})();
+
+
+// =====================================================
 // TEARDOWN
 // =====================================================
 SUI.uninstall();

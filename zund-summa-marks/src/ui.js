@@ -499,7 +499,13 @@ ZSM.UI = {
                 // raw layer name into the edittext, not the display marker.
                 if (ddLayer.selection) etLayer.text = ZSM.UI.ddlValue(ddLayer);
             };
-            ZSM.UI.selectDDL(ddLayer, def.name || "");
+            // A row without a name (+ Add) selects no item. Illustrator fires
+            // onChange on a programmatic selection, so selecting the first item
+            // copied the first layer of the list, usually the artwork layer,
+            // into the name, and the row sent its cut paths there (measured
+            // 2026-11-11). Empty, the name stays red until the operator types
+            // or picks one; with nothing selected, the first item can be picked too.
+            if (def.name) ZSM.UI.selectDDL(ddLayer, def.name);
 
             var swColor = ZSM.UI.makeSwatch(grp);
             var ddColor = grp.add("dropdownlist", undefined, docData.swatches);

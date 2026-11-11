@@ -278,6 +278,10 @@ a přesouvá cesty čistě v řezové barvě.
   450, přepněte na SUMMA, Uložit jako… „U12“, Storno. Spusťte skript znovu:
   dialog se otevře v režimu a s hodnotami posledního Generovat (ne SUMMA s 450).
   Předvolba „U12“ v nabídce je a má 450. Ověřeno testem v Node, živý dialog ne.
+- [ ] **6a.13 Nový řádek bez názvu.** „+ Přidat“ → nový řádek má prázdný červený
+  název, stavová řádka říká, že chybí název vrstvy, a Generovat je šedé. Výběr první
+  položky ze seznamu vrstev název vyplní. Dřív se řádek jmenoval jako první vrstva
+  dokumentu (zjištěno při ručním testu 2026-11-11).
 
 ---
 
