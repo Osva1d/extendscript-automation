@@ -241,6 +241,11 @@ a přesouvá cesty čistě v řezové barvě.
 > (L4), Spot 1 v CMYK i RGB a kroky Zpět ověřil 2026-11-07 harness bez zobrazení
 > dialogu na buildech 1.3.0c a d v Illustratoru 30.8.2. Selhání po objektech (L3) ručně
 > vyvolat neumíme: testuje ho jen Node. Tady je, co harness nevidí.
+>
+> **Kolo 2026-11-11 (vydání 1.3.0):** 6a.1–6a.6, 6a.8 a 6a.10 prošly v živém dialogu
+> na buildu 1.3.0g (spouštěno přes `tools/ai-eval.sh`, ne z menu), 6a.11 a 6a.12 ručně,
+> 6a.13 na 1.3.0i. **Otevřené:** 6a.7 (zkouška u stroje) a 6a.9 (dotaz na obsluhu);
+> 1.3.0 vyšla bez nich z rozhodnutí uživatele, chování 1.3.0 na nich nezávisí.
 
 - [ ] **6a.1 Spot 1 v dialogu.** Dokument bez Spot 1 → seznam Barva značek nabízí
   Spot 1 hned za registrační, dlaždice je azurová. Generovat → panel Vzorník ukáže
