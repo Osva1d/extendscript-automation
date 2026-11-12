@@ -40,6 +40,21 @@ for (i = 0; i < 2; i++) {
     }
 }
 
+// --- no dead keys: every key is read from src/*.js ---
+var fs = require("fs"), path = require("path");
+var srcDir = path.join(__dirname, "..", "src"), srcText = "";
+fs.readdirSync(srcDir).forEach(function (f) {
+    if (/\.js$/.test(f) && f !== "locale.js") srcText += fs.readFileSync(path.join(srcDir, f), "utf8") + "\n";
+});
+var exempt = { format: 1, count: 1, DEC_SEP: 1 };
+function used(key) {
+    if (exempt[key]) return true;
+    if (new RegExp("\\." + key + "\\b").test(srcText)) return true;
+    var m = key.match(/^(.*)_[125]$/);
+    return !!(m && srcText.indexOf("\"" + m[1] + "\"") !== -1);
+}
+for (k in cs.table) assert(used(k), "dead locale key " + k);
+
 assert(csL.count("PDF_READY", 1) === "Ve zdrojové složce je 1 PDF.", "PDF_READY 1");
 assert(csL.count("PDF_READY", 3) === "Ve zdrojové složce jsou 3 PDF.", "PDF_READY 3");
 assert(csL.count("POSITIONS", 5) === "5 pozic", "POSITIONS 5");

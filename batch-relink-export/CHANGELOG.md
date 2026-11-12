@@ -4,6 +4,70 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
+## [1.3.0] — 2026-11-12
+
+Okno nástroje se staví ze sdíleného kitu řady (`shared/lib/ui_kit.js`) a
+kontroluje vstup za pochodu, místo aby při Spustit ukázalo jedno chybové okno
+za druhým. Navazuje na [návrh](../docs/specs/2026-11-12-batch-relink-export-1.3.0-design.md)
+a audit UX/UI řady. Výrobní logika (relink, odebírání pozic navíc, ověření
+relinku, blokace souboru s více stranami než pozic, přeskakování hotových
+výstupů) zůstává.
+
+### Přidáno
+
+- **Živá kontrola dialogu.** Stavový řádek pod poli říká první chybu (✗)
+  nebo upozornění (⚠) a připojí „Další chyby: N."; pole s chybou má červený
+  text a Spustit je šedé, dokud nějaká chyba platí. Když je vše v pořádku,
+  řádek řekne, kolik PDF dávka zpracuje. Zdrojová složka se vypisuje jen při
+  změně cesty nebo výběru tlačítkem Vybrat…; Spustit ji pro jistotu vypíše
+  ještě jednou. Neexistující cílová složka už není dotaz, jen upozornění
+  — běh ji vytvoří.
+- **Použít aktivní dokument** pod polem šablony. Uložený dokument `.ai`
+  vyplní pole; nikdy neuložený dokument nebo dokument jiného typu pole
+  nezmění a stavový řádek řekne proč. Bez otevřeného dokumentu je tlačítko
+  šedé.
+- **Dotaz před přepisem.** Když v cílové složce už jsou výstupy, které by
+  běh zapsal, zeptá se „V cílové složce už je: N souborů. Přepsat?" — Ano
+  přepíše, Ne vrátí dialog beze změny. Co nechá být „Přeskočit hotové
+  výstupy", se nepočítá.
+- **Stavba a mapa stran šablony.** Každý běh šablonu prozkoumá: počet pozic,
+  jejich rozložení na kreslicích plátnech, formát strany a to, které strany
+  PDF pozice ukazují (dřív jen u neúplného archu). Kontrola souborů i Souhrn
+  mají řádek „Šablona: …" a nesoulad mapy (strana dvakrát, nějaká chybí) je
+  upozornění před během. Šablona otevřená v Illustratoru se nikdy neměří na
+  místě, ani se nezavírá: měří se dočasná kopie.
+- **Pamatuje se i „Přeskočit hotové výstupy".** Zapisuje se po Spustit jako
+  zbytek nastavení; výchozí stav zůstává vypnutý.
+
+### Změněno
+
+- **Kontrola souborů** (dřív Náhled zpracování) se ukáže jen tehdy, když něco
+  chce pohled: soubor s méně stranami uprostřed dávky, soubor s více stranami
+  než pozic, nečitelný počet stran nebo mapa stran šablony, která není
+  v pořádku. Neúplný poslední arch, který má skoro každá zakázka, ji sám
+  nevyvolá a dávku nezastaví. Verdikt je stavový řádek sady bez tučného písma.
+- **Popisky podle jazyka řady:** „Zdrojová složka:" (dřív „Zdroj (PDF):"),
+  „Cílová složka:" (dřív „Výstup:"), „Vzor pojmenování:" (dřív „Vzor:")
+  a „Příklad názvu:" (dřív „Náhled názvu:"). Panely se jmenují „Soubory"
+  a „Pojmenování a formát", bez čísel; panel „Možnosti" zanikl a obě
+  zaškrtávátka jdou pod cílovou složku do panelu Soubory.
+- **Okno je 498 × 479 px** (dřív 460 × 478): přibyl řádek s tlačítkem
+  a stavový řádek, ubyl jeden panel. Rozestupy a okraje jsou nativní, patička
+  a tlačítka stojí v jedné řadě.
+- **Výchozí fokus** má pole Zdrojová složka, protože jediné se mění
+  s každou zakázkou.
+- **Hlášky podle sady.** Chyby polí se nehlásí oknem, ale stavovým řádkem;
+  oknem zůstává jen to, co běh zastaví až po dialogu: šablonu nejde otevřít,
+  šablona nemá pozice a neočekávaná chyba. Texty stavového řádku jsou
+  zkrácené, aby se vešly i s „Další chyby: N.".
+- Do repa přibyly Node testy čistých funkcí (`npm test`, `npm run verify`).
+
+### Opraveno
+
+- **Šablona se zdvojenou nebo chybějící stranou už neprojde plným archem
+  beze slova.** Sonda stran dřív běžela jen u neúplného archu; teď ji vidí
+  Kontrola souborů před během.
+
 ## [1.2.0] — 2026-10-28
 
 Rodinný jazyk sady: BRE přebírá kánon `extendscript-ui-standards` §12, který
