@@ -36,8 +36,8 @@ BRE.UI = {
      * @returns {number} -1 when the folder does not exist, else the PDF count.
      */
     countPdfs: function (path) {
-        var folder = new Folder(path);
-        // new Folder(path of an existing file) may hand back a File.
+        // Function form: new Folder(file path) is a Folder that exists (measured).
+        var folder = Folder(path);
         if (!(folder instanceof Folder) || !folder.exists) return -1;
         return BRE.UI.listPdfs(folder).length;
     },
@@ -53,8 +53,9 @@ BRE.UI = {
         var tpl = new File(t.template);
         var tplExists = tpl.exists;
         var open = tplExists ? BRE.Core.findOpenDocument(tpl) : null;
-        var src = new Folder(t.source);
-        var out = new Folder(t.output);
+        // Function form: new Folder(file path) is a Folder that exists (measured).
+        var src = Folder(t.source);
+        var out = Folder(t.output);
         return {
             templateExists: tplExists,
             templateIsAi: /\.ai$/i.test(tpl.name || t.template),

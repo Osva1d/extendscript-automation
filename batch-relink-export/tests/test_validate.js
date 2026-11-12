@@ -96,20 +96,20 @@ var got = [], i;
 for (i = 0; i < list.length; i++) got.push(list[i].name);
 eq(got.join(","), "a.PDF,part_2.pdf,part_10.pdf", "listPdfs: filter + natural sort");
 
+// Measured in Illustrator: new Folder(file path) is a Folder that exists
+// (getFiles() empty); the function form Folder(path) returns a File there.
+var FILE_PATHS = { "/a/file.txt": true };
 global.Folder = function (p) {
+    if (!(this instanceof global.Folder)) {
+        return FILE_PATHS[p] ? { fsName: p, exists: true, name: p } : new global.Folder(p);
+    }
     this.fsName = p; this.exists = p !== "/missing";
-    this.getFiles = mkFolder(["a.pdf", "b.pdf", "c.txt"]).getFiles;
+    this.getFiles = FILE_PATHS[p] ? function () { return []; } : mkFolder(["a.pdf", "b.pdf", "c.txt"]).getFiles;
 };
 eq(BRE.UI.countPdfs("/missing"), -1, "countPdfs: missing folder");
 eq(BRE.UI.countPdfs("/ok"), 2, "countPdfs: counts pdfs");
 
-// a path naming an existing FILE: Folder() hands back a File-like object
-var RealFolder = global.Folder;
-global.Folder = function (p) {
-    if (p === "/a/file.txt") return { fsName: p, exists: true };
-    return new RealFolder(p);
-};
-global.Folder.prototype = RealFolder.prototype;
+// a path naming an existing FILE is not a folder
 var threw = false, cnt;
 try { cnt = BRE.UI.countPdfs("/a/file.txt"); } catch (e) { threw = true; }
 eq(threw, false, "countPdfs: file path does not throw");

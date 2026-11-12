@@ -43,6 +43,7 @@ global.File = function (p) {
     this.modified = FS.files[p];
 };
 global.Folder = function (p) {
+    if (!(this instanceof global.Folder)) { return FS.files.hasOwnProperty(p) ? new global.File(p) : new global.Folder(p); }
     this.fsName = p;
     this.exists = FS.folders.hasOwnProperty(p);
     this.create = function () {
