@@ -64,7 +64,6 @@ BRE.L = (function () {
             ERR_SOURCE_EMPTY:   "Choose the source folder.",
             ERR_OUTPUT_EMPTY:   "Choose the output folder.",
             ERR_SOURCE:         "The source folder does not exist.",
-            ERR_OUTPUT_ASK:     "Output folder does not exist. Create it?",
             ERR_OUTPUT_FAIL:    "The output folder could not be created. Check the path and your permission to write there.",
             ERR_OUTPUT_IS_SOURCE: "The output folder is the source folder. The next run would read the outputs as sources — choose another.",
             ERR_PRESET:         "Choose a PDF preset.",
@@ -86,11 +85,8 @@ BRE.L = (function () {
             ERR_WRITE_SETTINGS: "The settings could not be saved — next time the dialog opens without them.",
             WARN_TEMPLATE_OPEN: "The template is already open with unsaved changes. Processing closes it without saving and discards those changes. Continue?",
 
-            // --- UI: Title & Panels ---
-            TITLE:              "Batch Relink Export",
-            PANEL_INPUT:        "1 · Input files",
+            // --- UI: Panels ---
             PANEL_CONFIG:       "Naming and format",
-            PANEL_OPTIONS:      "Options",
 
             // --- UI: Labels (short — narrow label column, full text in helpTip) ---
             LBL_TEMPLATE:       "Template (.ai):",
@@ -230,7 +226,6 @@ BRE.L = (function () {
             ERR_SOURCE_EMPTY:   "Vyberte zdrojovou složku.",
             ERR_OUTPUT_EMPTY:   "Vyberte cílovou složku.",
             ERR_SOURCE:         "Zdrojová složka neexistuje.",
-            ERR_OUTPUT_ASK:     "Cílová složka neexistuje. Vytvořit?",
             ERR_OUTPUT_FAIL:    "Cílovou složku se nepodařilo vytvořit. Zkontrolujte cestu a právo do ní zapisovat.",
             ERR_OUTPUT_IS_SOURCE: "Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdroje — vyberte jinou.",
             ERR_PRESET:         "Vyberte PDF preset.",
@@ -252,11 +247,8 @@ BRE.L = (function () {
             ERR_WRITE_SETTINGS: "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj.",
             WARN_TEMPLATE_OPEN: "Šablona je již otevřená s neuloženými změnami. Zpracování ji zavře bez uložení a změny zahodí. Pokračovat?",
 
-            // --- UI: Nadpis a panely ---
-            TITLE:              "Dávkové zpracování PDF",
-            PANEL_INPUT:        "1 · Vstupní soubory",
+            // --- UI: Panely ---
             PANEL_CONFIG:       "Pojmenování a formát",
-            PANEL_OPTIONS:      "Možnosti",
 
             // --- UI: Popisky (krátké — úzký sloupec, plný text v helpTipu) ---
             LBL_TEMPLATE:       "Šablona (.ai):",
