@@ -142,8 +142,8 @@ BRE.UI = {
     /**
      * Reads the active document for Použít aktivní dokument.
      * @returns {{state: string, path: string}} state "none" (no document),
-     *     "never" (never saved, so no file), "notAi" (its file is not .ai)
-     *     or "ok"; path is the document's file when it has one, else "".
+     *     "never" (never saved: no file on disk), "notAi" (its file is not
+     *     .ai) or "ok"; path is the document's file when it has one, else "".
      */
     activeDocInfo: function () {
         try {
@@ -152,16 +152,20 @@ BRE.UI = {
             BRE.Core._log("UI.activeDocInfo: " + e.message);
             return { state: "none", path: "" };
         }
-        var path;
+        var f;
         try {
-            path = app.activeDocument.fullName.fsName;
+            f = app.activeDocument.fullName;
         } catch (e2) {
-            // Not an error: a document that was never saved has no file,
-            // and its fullName throws (handling-adobe-files §4).
+            // A document that was never saved may have no file at all, and
+            // its fullName throws (handling-adobe-files §4).
+            BRE.Core._log("UI.activeDocInfo: no file: " + e2.message);
             return { state: "never", path: "" };
         }
-        if (!path) return { state: "never", path: "" };
-        return { state: /\.ai$/i.test(path) ? "ok" : "notAi", path: path };
+        // Or it hands back a File that is not on disk ("Untitled-1"); which
+        // of the two Illustrator does is not measured, so both mean never
+        // saved, and only a file that exists goes on to the .ai test.
+        if (!f || !f.exists) return { state: "never", path: "" };
+        return { state: /\.ai$/i.test(f.fsName) ? "ok" : "notAi", path: f.fsName };
     },
 
     /**

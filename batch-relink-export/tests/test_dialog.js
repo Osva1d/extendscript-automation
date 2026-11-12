@@ -97,13 +97,24 @@ function saved(over) {
     for (var k in over) { if (over.hasOwnProperty(k)) { s[k] = over[k]; } }
     return s;
 }
+// Records each close: its code and what result() held at that moment.
+// The shared mock's close() only sets closed, so the wrapper lives here.
+function recordClose(d) {
+    var orig = d.w.close;
+    d.closes = [];
+    d.w.close = function (v) {
+        d.closes.push({ code: v, result: d.result() });
+        return orig.apply(this, arguments);
+    };
+    return d;
+}
 function fresh(over, doc) {
     resetFs();
     countCalls = 0;
     asked = [];
     answer = true;
     DOC = doc || { state: "none", path: "" };
-    return BRE.UI.buildMain(saved(over || {}));
+    return recordClose(BRE.UI.buildMain(saved(over || {})));
 }
 function type(field, text) { field.text = text; field.onChanging(); }
 function walk(c, fn) {
@@ -321,14 +332,34 @@ eq(realInfo().state, "none", "no document: none");
 global.app.documents = { length: 1 };
 global.app.activeDocument = {};
 Object.defineProperty(global.app.activeDocument, "fullName", { get: function () { throw new Error("no file"); } });
+var logged = [], realLog = BRE.Core._log;
+BRE.Core._log = function (m) { logged.push(m); };
 eq(realInfo().state, "never", "fullName throws: never");
-global.app.activeDocument = { fullName: { fsName: "" } };
-eq(realInfo().state, "never", "fullName without a path: never");
-global.app.activeDocument = { fullName: { fsName: "/x/leták.pdf" } };
-eq(realInfo().state, "notAi", "a PDF: notAi");
-global.app.activeDocument = { fullName: { fsName: "/x/Vizitky.AI" } };
+eq(logged.length === 1 && /activeDocInfo: no file: no file/.test(logged[0]), true, "fullName throws: logged, not silent");
+BRE.Core._log = realLog;
+// Illustrator may hand back a File that is not on disk instead of throwing.
+var untitled = { fsName: "/Users/x/Bez názvu-1", name: "Bez názvu-1", exists: false };
+global.app.activeDocument = { fullName: untitled };
 var info = realInfo();
+eq(info.state + "|" + info.path, "never|", "a File not on disk (Bez názvu-1): never, no path");
+global.app.activeDocument = { fullName: { fsName: "", exists: false } };
+eq(realInfo().state, "never", "fullName without a path: never");
+global.app.activeDocument = { fullName: { fsName: "/x/leták.pdf", exists: true } };
+eq(realInfo().state, "notAi", "a PDF: notAi");
+global.app.activeDocument = { fullName: { fsName: "/x/Vizitky.AI", exists: true } };
+info = realInfo();
 eq(info.state + " " + info.path, "ok /x/Vizitky.AI", "an .AI file in any case: ok with its path");
+// The click, through the real function, on a never-saved document that
+// returns a File.
+global.app.activeDocument = { fullName: untitled };
+BRE.UI.activeDocInfo = realInfo;
+d = fresh({ template: "/t/old.ai" });
+BRE.UI.activeDocInfo = function () { return DOC; };
+eq(d.activeBtn.enabled, true, "Bez názvu-1: the button is live");
+d.activeBtn.onClick();
+eq(d.template.text, "/t/old.ai", "Bez názvu-1: the template field is unchanged");
+eq(d.status.text, "✗ Aktivní dokument ještě není uložený. Uložte ho jako .ai a zkuste to znovu.",
+    "Bez názvu-1: says it was never saved, not that it is no .ai");
 global.app.PDFPresetsList = ["[P1]", "[P2]"];
 eq(realPresets().join(","), "[P1],[P2]", "pdfPresets: the app's list");
 Object.defineProperty(global.app, "PDFPresetsList", { get: function () { throw new Error("no list"); } });
@@ -346,6 +377,7 @@ eq(asked.length, 1, "asked once");
 eq(asked.length && asked[0][0], "V cílové složce už je: 2 soubory. Přepsat?", "the question with the count");
 eq(asked.length && asked[0][1], false, "Ano is the default");
 eq(d.w.closed, false, "declined: the dialog stays open");
+eq(d.closes.length, 0, "declined: close() was not called");
 eq(d.result(), null, "declined: no result");
 eq(d.source.text + "|" + d.output.text + "|" + d.pattern.text, "/src|/out|{n}_{template}_{source}", "declined: every field as it was");
 eq(d.runBtn.enabled, true, "declined: Spustit stays live");
@@ -358,8 +390,11 @@ d.runBtn.onClick();
 eq(asked.length, 2, "asked again");
 eq(asked[1][0], "V cílové složce už je: 2 soubory. Přepsat?", "skip on, older outputs: still counted");
 eq(d.w.closed, true, "accepted: the dialog closes");
+eq(d.closes.length, 1, "accepted: closed once");
+eq(d.closes.length && d.closes[0].code, 1, "accepted: closed with 1, so show() reads it as Run");
 var r = d.result();
 assert(r !== null, "accepted: a result");
+assert(d.closes.length === 1 && d.closes[0].result === r, "result() is the config already when the dialog closes");
 if (r) {
     eq(r.skipExisting, true, "skipExisting mirrors the checkbox");
     eq(r.openAfter, false, "openAfter mirrors the checkbox");
@@ -401,6 +436,7 @@ eq(d.status.text, "⚠ Cílová složka neexistuje, běh ji vytvoří.", "warnin
 d.runBtn.onClick();
 eq(FS.created.join(","), "/new", "the folder was created");
 eq(d.w.closed, true, "closes");
+eq(d.closes.length && d.closes[0].code, 1, "closes with 1");
 eq(d.result() && d.result().outputFolder.fsName, "/new", "result has the new folder");
 
 d = fresh({ output: "/new" });
@@ -408,6 +444,7 @@ type(d.source, "/src");
 FS.canCreate = false;
 d.runBtn.onClick();
 eq(d.w.closed, false, "create failed: the dialog stays open");
+eq(d.closes.length, 0, "create failed: close() was not called");
 eq(d.result(), null, "create failed: no result");
 eq(d.status.text, "✗ Cílovou složku se nepodařilo vytvořit. Zkontrolujte cestu a právo do ní zapisovat.", "create failed: says why");
 
