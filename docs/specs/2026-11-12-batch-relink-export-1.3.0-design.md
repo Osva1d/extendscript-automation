@@ -81,8 +81,12 @@ Batch Relink Export v1.3.0
 - Výchozí fokus má pole `Zdrojová složka:`, protože jediné se mění s každou zakázkou
   a cesta zkopírovaná ve Finderu se tam hned vloží (DS §5.3) [O].
 
-Odhad velikosti: asi 490 × 500 px. Proti 460 × 478 dnes přibude řádek s tlačítkem
-a stavový řádek a ubude jeden panel. Rozhodne měření `tools/ui-probe`.
+Změřeno 2026-11-12 (`tools/ui-probe`, Illustrator 30.8.2, CS): **498 × 479 px** ve všech
+šesti stavech (otevření, prázdné, platné, upozornění, chyba, po `Použít aktivní dokument`),
+Spustit pořád na y 437–464, žádný popisek užší než text, fokus v poli zdroje [M]. Proti
+460 × 478 v 1.2.0 přibyl řádek s tlačítkem a stavový řádek a ubyl jeden panel. Stavový
+řádek má 468 px; hlášky z §3.3 jsou zkrácené tak, aby se do něj vešly i s
+`Další chyby: N.`, delší by se usekly.
 
 ### 3.2 Popisky a texty
 
@@ -119,7 +123,9 @@ nic nespustí [D].
 Bez chyby a upozornění řekne stavový řádek, kolik PDF dávka zpracuje:
 `✓ Ve zdrojové složce je 12 PDF.` PDF se počítají stejně jako dnes při
 spuštění: soubory `*.pdf` v kořeni složky bez skrytých a `._` souborů. Výpis složky
-proběhne jen při změně zdrojové cesty, ne při psaní do jiných polí.
+proběhne jen při změně zdrojové cesty nebo při výběru tlačítkem `Vybrat…` (i stejné
+složky, kam mezitím přibyla PDF), ne při psaní do jiných polí. Spustit složku vypíše
+ještě jednou, aby běh vycházel ze stavu v okamžiku kliknutí.
 
 Kontrolu počítá čistá funkce `BRE.UI.validate(stav)`, která dostane texty polí a zjištěná
 fakta (existuje, je `.ai`, počet PDF, preset chybí, šablona otevřená a neuložená)

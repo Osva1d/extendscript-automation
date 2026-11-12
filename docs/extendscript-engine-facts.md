@@ -1798,6 +1798,25 @@ stejných pixelech).
   High Quality Print (druhý) a Press Quality (poslední); EN instalace neměřena.
 
 
+
+### Soubory, složky a neuložený dokument (naměřeno 2026-11-12, AI 30.8.2)
+
+Sonda `batch-relink-export/tests/probes/inspect_template.jsx` a `tools/ai-eval.sh`,
+vlastní dokumenty, Illustrator bez otevřených dokumentů.
+
+- **`fullName` nikdy neuloženého dokumentu nevyhodí.** Vrátí `File` s `fsName`
+  `/Bez názvu -1` a `exists === false`. Neuložený dokument se pozná podle `exists`,
+  ne podle výjimky (skill handling-adobe-files to dřív popisoval jako výjimku).
+- **`new Folder(cesta k souboru)` je `Folder`, který existuje.** `instanceof Folder`
+  je `true`, `exists` `true` a `getFiles()` vrátí prázdné pole bez chyby. Funkční tvar
+  bez `new`, `Folder(cesta k souboru)`, vrátí `File`; `File(cesta ke složce)` vrátí
+  `Folder`. Složku od souboru proto rozliší `Folder(cesta) instanceof Folder`.
+- `fsName` odstraní koncové lomítko: `new Folder("/a/b/").fsName` je `/a/b`.
+- `doc.placedItems` vrací naposledy umístěnou pozici první (pořadí vrstvení).
+- Otevření dočasné kopie šablony (`app.open` na jiný soubor) a její zavření bez
+  uložení nechá aktivním dokument, který byl aktivní předtím, a otevřený originál
+  nezmění, i když má neuložené změny.
+
 ---
 
 ## Kódování zdroje a živé kolekce (naměřeno 2026-09-27, AI 30.8.2)
