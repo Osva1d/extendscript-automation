@@ -37,7 +37,8 @@ BRE.UI = {
      */
     countPdfs: function (path) {
         var folder = new Folder(path);
-        if (!folder.exists) return -1;
+        // new Folder(path of an existing file) may hand back a File.
+        if (!(folder instanceof Folder) || !folder.exists) return -1;
         return BRE.UI.listPdfs(folder).length;
     },
 
@@ -58,9 +59,9 @@ BRE.UI = {
             templateExists: tplExists,
             templateIsAi: /\.ai$/i.test(tpl.name || t.template),
             templateOpenUnsaved: !!open && open.saved === false,
-            sourceExists: src.exists,
+            sourceExists: src instanceof Folder && src.exists,
             pdfCount: pdfCount,
-            outputExists: out.exists,
+            outputExists: out instanceof Folder && out.exists,
             sameFolder: String(src.fsName).toLowerCase() === String(out.fsName).toLowerCase()
         };
     },

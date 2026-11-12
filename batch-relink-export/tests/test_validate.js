@@ -103,6 +103,18 @@ global.Folder = function (p) {
 eq(BRE.UI.countPdfs("/missing"), -1, "countPdfs: missing folder");
 eq(BRE.UI.countPdfs("/ok"), 2, "countPdfs: counts pdfs");
 
+// a path naming an existing FILE: Folder() hands back a File-like object
+var RealFolder = global.Folder;
+global.Folder = function (p) {
+    if (p === "/a/file.txt") return { fsName: p, exists: true };
+    return new RealFolder(p);
+};
+global.Folder.prototype = RealFolder.prototype;
+var threw = false, cnt;
+try { cnt = BRE.UI.countPdfs("/a/file.txt"); } catch (e) { threw = true; }
+eq(threw, false, "countPdfs: file path does not throw");
+eq(cnt, -1, "countPdfs: file path is not a folder");
+
 global.app.documents = { length: 1, 0: { fullName: { fsName: "/t/a.ai" }, saved: false } };
 global.File = function (p) { this.fsName = p; this.name = p; this.exists = p !== "/t/none.ai"; };
 var f = BRE.UI.facts({ template: "/t/a.ai", source: "/S", output: "/s" }, 7);
@@ -118,6 +130,13 @@ eq(f.templateOpenUnsaved, false, "facts: not open");
 eq(f.sourceExists, false, "facts: source missing");
 eq(f.outputExists, true, "facts: output exists");
 eq(f.sameFolder, false, "facts: different folders");
+
+f = BRE.UI.facts({ template: "/t/a.ai", source: "/a/file.txt", output: "/a/file.txt" }, -1);
+eq(f.sourceExists, false, "facts: file as source is not a folder");
+eq(f.outputExists, false, "facts: file as output is not a folder");
+s = good(); s.source = "/a/file.txt"; s.f = f; s.f.templateExists = true; s.f.templateIsAi = true;
+r = BRE.UI.validate(s);
+eq(r.errors[0].text, "Zdrojová složka neexistuje.", "validate: file as source");
 
 console.log("validate: " + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);
