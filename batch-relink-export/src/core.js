@@ -221,7 +221,11 @@ BRE.Core = {
                 pageMap: this.describePageMap(pages, n)
             };
         } finally {
-            if (doc) doc.close(SaveOptions.DONOTSAVECHANGES);
+            try {
+                if (doc) doc.close(SaveOptions.DONOTSAVECHANGES);
+            } catch (ce) {
+                BRE.Core._log("inspectTemplate: closing the copy failed: " + ce.message);
+            }
             if (copy) copy.remove();
         }
     },
@@ -670,12 +674,12 @@ BRE.Core = {
     },
 
     /**
-     * Full paths of the outputs a run would create (and so may overwrite),
-     * leaving out those the skip rule protects when skipExisting is on.
+     * Full paths of every output the run writes, leaving out those the
+     * skip rule protects when skipExisting is on (the caller counts which
+     * of them already exist).
      * @param {Object} config - {namingPattern, pdfFiles, templateName,
      *   templateFile, outputFolder, skipExisting}.
-     * @returns {string[]} Output paths that exist and would be overwritten
-     *   or created.
+     * @returns {string[]} Output paths the run writes.
      */
     overwriteCandidates: function (config) {
         var paths = [];
