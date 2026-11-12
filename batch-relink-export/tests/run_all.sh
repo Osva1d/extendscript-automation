@@ -14,6 +14,7 @@ SUITES=(
     "test_storage.js"
     "test_core.js"
     "test_inspect.js"
+    "test_validate.js"
 )
 
 PASSED=0

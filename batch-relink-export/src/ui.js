@@ -7,6 +7,111 @@ var BRE = BRE || {};
 
 BRE.UI = {
 
+    /**
+     * Lists the source PDFs of a run: files only, no dotfiles (macOS
+     * AppleDouble "._x.pdf" siblings on FAT/exFAT drives), "*.pdf" in any
+     * case, not recursive, in natural order (part_2 before part_10).
+     * @param {Folder} folder - The source folder.
+     * @returns {Array} The PDF File objects, sorted.
+     */
+    listPdfs: function (folder) {
+        var files = folder.getFiles(function (f) {
+            if (!(f instanceof File)) return false;
+            var nm = f.displayName || decodeURI(f.name);
+            if (nm.charAt(0) === ".") return false;
+            return /\.pdf$/i.test(nm);
+        });
+        files.sort(function (a, b) {
+            return BRE.Core.naturalCompare(
+                a.displayName || decodeURI(a.name),
+                b.displayName || decodeURI(b.name)
+            );
+        });
+        return files;
+    },
+
+    /**
+     * Counts the PDFs in a folder given by path.
+     * @param {string} path - Folder path.
+     * @returns {number} -1 when the folder does not exist, else the PDF count.
+     */
+    countPdfs: function (path) {
+        var folder = new Folder(path);
+        if (!folder.exists) return -1;
+        return BRE.UI.listPdfs(folder).length;
+    },
+
+    /**
+     * Reads the facts the live check needs from File/Folder and the open
+     * documents. Does not list the source folder: the caller passes the count.
+     * @param {{template: string, source: string, output: string}} t - Field texts.
+     * @param {number} pdfCount - PDFs in the source folder (-1 = unknown).
+     * @returns {Object} Facts for validate().
+     */
+    facts: function (t, pdfCount) {
+        var tpl = new File(t.template);
+        var tplExists = tpl.exists;
+        var open = tplExists ? BRE.Core.findOpenDocument(tpl) : null;
+        var src = new Folder(t.source);
+        var out = new Folder(t.output);
+        return {
+            templateExists: tplExists,
+            templateIsAi: /\.ai$/i.test(tpl.name || t.template),
+            templateOpenUnsaved: !!open && open.saved === false,
+            sourceExists: src.exists,
+            pdfCount: pdfCount,
+            outputExists: out.exists,
+            sameFolder: String(src.fsName).toLowerCase() === String(out.fsName).toLowerCase()
+        };
+    },
+
+    /**
+     * The dialog's live check as a pure function (spec 3.3). Per field the
+     * first matching rule wins; fields run in reading order.
+     * @param {Object} s - {template, source, output, pattern, preset: {value, missing}, f}.
+     * @returns {{errors: Array, warnings: Array, kind: string, text: string}}
+     */
+    validate: function (s) {
+        var l = BRE.L, f = s.f, errors = [], warnings = [];
+        function blank(v) { return /^\s*$/.test(v); }
+        function err(field, text) { errors.push({ field: field, text: text }); }
+        function warn(field, text) { warnings.push({ field: field, text: text }); }
+
+        if (blank(s.template)) err("template", l.ERR_TEMPLATE_EMPTY);
+        else if (!f.templateExists || !f.templateIsAi) err("template", l.ERR_TEMPLATE);
+        else if (f.templateOpenUnsaved) warn("template", l.WARN_TEMPLATE_UNSAVED);
+
+        if (blank(s.source)) err("source", l.ERR_SOURCE_EMPTY);
+        else if (!f.sourceExists) err("source", l.ERR_SOURCE);
+        else if (f.pdfCount === 0) err("source", l.ERR_NO_PDF);
+
+        if (blank(s.output)) err("output", l.ERR_OUTPUT_EMPTY);
+        else if (!blank(s.source) && f.sameFolder) err("output", l.ERR_OUTPUT_IS_SOURCE);
+        else if (!f.outputExists) warn("output", l.WARN_OUTPUT_NEW);
+
+        if (s.pattern.indexOf(BRE.Config.placeholders.N) === -1) {
+            err("pattern", l.ERR_NAMING_PATTERN);
+        }
+
+        if (s.preset.value === "") err("preset", l.ERR_PRESET);
+        else if (s.preset.missing) err("preset", l.format(l.ERR_PDF_PRESET_MISSING, s.preset.value));
+
+        var kind = "OK", text;
+        if (errors.length > 0) {
+            kind = "ERR";
+            text = errors[0].text;
+            if (errors.length > 1) {
+                text += " " + l.format(l.STATUS_MORE_ERRORS, errors.length - 1);
+            }
+        } else if (warnings.length > 0) {
+            kind = "WARN";
+            text = warnings[0].text;
+        } else {
+            text = l.count("PDF_READY", f.pdfCount);
+        }
+        return { errors: errors, warnings: warnings, kind: kind, text: text };
+    },
+
     // The dialogs' layout values in one place (extendscript-ui-standards
     // §4.1). Each one departs from ScriptUI's native sizing and says why.
     M: {
@@ -289,15 +394,7 @@ BRE.UI = {
                 return;
             }
 
-            var pdfFiles = sourceFolder.getFiles(function (f) {
-                if (!(f instanceof File)) return false;
-                var nm = f.displayName || decodeURI(f.name);
-                // Skip macOS AppleDouble files (._name) and other hidden/system
-                // dotfiles — on FAT/exFAT flash drives "._x.pdf" siblings appear
-                // and would otherwise be processed as real PDFs.
-                if (nm.charAt(0) === ".") return false;
-                return /\.pdf$/i.test(nm);
-            });
+            var pdfFiles = BRE.UI.listPdfs(sourceFolder);
             if (pdfFiles.length === 0) {
                 alert(l.ERR_NO_PDF);
                 return;
@@ -310,15 +407,6 @@ BRE.UI = {
                     return;
                 }
             }
-
-            // Sort PDF files in natural (numeric-aware) order so sheet numbering
-            // is predictable: part_2 before part_10, not lexical 1,10,11,2…
-            pdfFiles.sort(function (a, b) {
-                return BRE.Core.naturalCompare(
-                    a.displayName || decodeURI(a.name),
-                    b.displayName || decodeURI(b.name)
-                );
-            });
 
             result = {
                 templateFile: templateFile,
