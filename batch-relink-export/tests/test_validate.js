@@ -40,25 +40,25 @@ check(function (s) { s.template = "  "; }, "template", "Vyberte šablonu.");
 check(function (s) { s.f.templateExists = false; }, "template", "Šablona se nenašla nebo nemá příponu .ai.");
 check(function (s) { s.f.templateIsAi = false; }, "template", "Šablona se nenašla nebo nemá příponu .ai.");
 check(function (s) { s.f.templateOpenUnsaved = true; }, "template",
-    "Šablona je otevřená s neuloženými změnami. Běh ji zavře a použije verzi na disku.", "WARN");
+    "Šablona má neuložené změny, běh použije verzi na disku.", "WARN");
 check(function (s) { s.source = ""; }, "source", "Vyberte zdrojovou složku.");
 check(function (s) { s.f.sourceExists = false; }, "source", "Zdrojová složka neexistuje.");
 check(function (s) { s.f.pdfCount = 0; }, "source", "Ve zdrojové složce nejsou žádné PDF.");
 check(function (s) { s.output = ""; }, "output", "Vyberte cílovou složku.");
 check(function (s) { s.f.sameFolder = true; }, "output",
-    "Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdroje — vyberte jinou.");
+    "Cílová složka je stejná jako zdrojová, vyberte jinou.");
 check(function (s) { s.f.outputExists = false; }, "output", "Cílová složka neexistuje, běh ji vytvoří.", "WARN");
 check(function (s) { s.pattern = "abc"; }, "pattern",
-    "Vzor pojmenování musí obsahovat {n}, jinak by se výstupy přepisovaly.");
+    "Vzor musí obsahovat {n}, jinak se výstupy přepíšou.");
 check(function (s) { s.preset = { value: "", missing: false }; }, "preset", "Vyberte PDF preset.");
 check(function (s) { s.preset = { value: "Old", missing: true }; }, "preset",
-    "PDF preset „Old“ v tomto Illustratoru není. Vyberte jiný.");
+    "PDF preset „Old“ v Illustratoru není, vyberte jiný.");
 
 // warnings only
 var s = good(); s.f.templateOpenUnsaved = true; s.f.outputExists = false;
 var r = BRE.UI.validate(s);
 eq(r.kind, "WARN", "unsaved + new output: kind");
-eq(r.text, "Šablona je otevřená s neuloženými změnami. Běh ji zavře a použije verzi na disku.", "unsaved + new output: first warning");
+eq(r.text, "Šablona má neuložené změny, běh použije verzi na disku.", "unsaved + new output: first warning");
 eq(r.warnings.length, 2, "two warnings");
 
 // first error in reading order + count of the rest
@@ -77,7 +77,7 @@ eq(r.errors[0].field, "source", "blank source + sameFolder: source");
 s = good(); s.f.outputExists = false; s.pattern = "x";
 r = BRE.UI.validate(s);
 eq(r.kind, "ERR", "error + warning: kind");
-eq(r.text, "Vzor pojmenování musí obsahovat {n}, jinak by se výstupy přepisovaly.", "error + warning: text");
+eq(r.text, "Vzor musí obsahovat {n}, jinak se výstupy přepíšou.", "error + warning: text");
 
 // listPdfs / countPdfs / facts
 global.File = function (p) { this.name = p; this.displayName = p; this.fsName = "/x/" + p; this.exists = true; };

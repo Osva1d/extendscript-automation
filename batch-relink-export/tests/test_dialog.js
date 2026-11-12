@@ -272,7 +272,7 @@ eq(d.runBtn.enabled, true, "a warning keeps Spustit live");
 type(d.pattern, "x");
 eq(d.runBtn.enabled, false, "a pattern without {n} greys Spustit");
 assert(isRed(d.pattern), "the pattern is painted red");
-eq(d.status.text, "✗ Vzor pojmenování musí obsahovat {n}, jinak by se výstupy přepisovaly.", "pattern error");
+eq(d.status.text, "✗ Vzor musí obsahovat {n}, jinak se výstupy přepíšou.", "pattern error");
 type(d.pattern, "{n}");
 assert(!isRed(d.pattern), "a fixed pattern gets its colour back");
 type(d.source, "/src ");
@@ -312,7 +312,7 @@ d = fresh({ template: "/t/old.ai" }, { state: "never", path: "" });
 eq(d.activeBtn.enabled, true, "a document is open: the button is live");
 d.activeBtn.onClick();
 eq(d.template.text, "/t/old.ai", "never saved: the template field is unchanged");
-eq(d.status.text, "✗ Aktivní dokument ještě není uložený. Uložte ho jako .ai a zkuste to znovu.", "never saved: says why");
+eq(d.status.text, "✗ Aktivní dokument není uložený. Uložte ho jako .ai.", "never saved: says why");
 d = fresh({ template: "/t/old.ai" }, { state: "notAi", path: "/x/leták.pdf" });
 d.activeBtn.onClick();
 eq(d.template.text, "/t/old.ai", "not .ai: the template field is unchanged");
@@ -359,7 +359,7 @@ BRE.UI.activeDocInfo = function () { return DOC; };
 eq(d.activeBtn.enabled, true, "Bez názvu-1: the button is live");
 d.activeBtn.onClick();
 eq(d.template.text, "/t/old.ai", "Bez názvu-1: the template field is unchanged");
-eq(d.status.text, "✗ Aktivní dokument ještě není uložený. Uložte ho jako .ai a zkuste to znovu.",
+eq(d.status.text, "✗ Aktivní dokument není uložený. Uložte ho jako .ai.",
     "Bez názvu-1: says it was never saved, not that it is no .ai");
 global.app.PDFPresetsList = ["[P1]", "[P2]"];
 eq(realPresets().join(","), "[P1],[P2]", "pdfPresets: the app's list");
@@ -447,7 +447,7 @@ d.runBtn.onClick();
 eq(d.w.closed, false, "create failed: the dialog stays open");
 eq(d.closes.length, 0, "create failed: close() was not called");
 eq(d.result(), null, "create failed: no result");
-eq(d.status.text, "✗ Cílovou složku se nepodařilo vytvořit. Zkontrolujte cestu a právo do ní zapisovat.", "create failed: says why");
+eq(d.status.text, "✗ Cílovou složku nejde vytvořit. Zkontrolujte cestu.", "create failed: says why");
 
 console.log("\n=== run: the check runs again at the click ===");
 d = fresh({});
