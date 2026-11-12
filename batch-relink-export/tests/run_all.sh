@@ -13,6 +13,7 @@ SUITES=(
     "test_locale.js"
     "test_storage.js"
     "test_core.js"
+    "test_inspect.js"
 )
 
 PASSED=0

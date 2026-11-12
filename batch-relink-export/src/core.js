@@ -177,28 +177,51 @@ BRE.Core = {
     },
 
     /**
-     * Counts the positions of the template as saved on disk — the state every
-     * sheet is built from. A template open with unsaved changes would give
-     * its in-memory count (app.open() returns that instance), so the count
-     * then comes from a temporary copy of the file; the user's open document
-     * is not touched.
+     * Reports the template's layout and page map, as saved on disk — the state
+     * every sheet is built from. The page map needs the probe, which relinks
+     * the positions, so a template that is open in Illustrator is never
+     * measured in place: a temporary copy is opened and removed again, and the
+     * user's document (saved or not) is not touched.
      * @param {File} file - The template file.
      * @param {Document|null} openDoc - The template if it is already open.
-     * @returns {number} Position count of the saved template.
+     * @returns {{positions: number, perArtboard: Object, sizes: number[][], pages: number[]|null, map: Object}}
      */
-    countSavedPositions: function (file, openDoc) {
-        if (openDoc && openDoc.saved !== false) return this.getPositions(openDoc).length;
+    inspectTemplate: function (file, openDoc) {
         var src = file, copy = null;
         if (openDoc) {
             copy = new File(Folder.temp.fsName + "/bre-template-" + new Date().getTime() + ".ai");
             if (!file.copy(copy.fsName)) throw new Error("cannot copy the template to " + copy.fsName);
             src = copy;
         }
-        var doc = app.open(src);
+        var doc = null;
         try {
-            return this.getPositions(doc).length;
+            doc = app.open(src);
+            var positions = this.getPositions(doc);
+            var n = positions.length;
+            if (n === 0) {
+                return { positions: 0, perArtboard: this.positionsPerArtboard([], []), sizes: [], pages: null, map: this.describePageMap([], 0) };
+            }
+            var centers = [], sizes = [], rects = [], i, gb;
+            for (i = 0; i < n; i++) {
+                sizes.push(this._pageSize(positions[i]));
+                try {
+                    gb = positions[i].geometricBounds;
+                    centers.push([(gb[0] + gb[2]) / 2, (gb[1] + gb[3]) / 2]);
+                } catch (e) {
+                    this._log("inspectTemplate: bounds " + e.message);
+                }
+            }
+            for (i = 0; i < doc.artboards.length; i++) rects.push(doc.artboards[i].artboardRect);
+            var pages = this._readPositionPages(positions);
+            return {
+                positions: n,
+                perArtboard: this.positionsPerArtboard(centers, rects),
+                sizes: this.distinctSizes(sizes),
+                pages: pages,
+                map: this.describePageMap(pages, n)
+            };
         } finally {
-            doc.close(SaveOptions.DONOTSAVECHANGES);
+            if (doc) doc.close(SaveOptions.DONOTSAVECHANGES);
             if (copy) copy.remove();
         }
     },
@@ -319,7 +342,26 @@ BRE.Core = {
      * @returns {number[]|null} Page per position, or null.
      */
     _positionPages: function (positions) {
-        var n = positions.length, pages = [], seen = [], i, k, size;
+        var pages = this._readPositionPages(positions);
+        if (!pages) return null;
+        var n = positions.length, seen = [], i, k;
+        for (i = 0; i < n; i++) {
+            k = pages[i];
+            if (k < 1 || k > n || seen[k]) return null;
+            seen[k] = true;
+        }
+        return pages;
+    },
+
+    /**
+     * Relinks every position to the page probe and reads which page each one
+     * shows — the raw map, with no check that it is 1..n.
+     * @param {PlacedItem[]} positions - The template's positions.
+     * @returns {number[]|null} Page per position, or null if the probe cannot
+     *   be written, a size is unreadable or a relink fails.
+     */
+    _readPositionPages: function (positions) {
+        var n = positions.length, pages = [], i, size;
         var probe = this._probe(n);
         if (!probe) return null;
         try {
@@ -327,13 +369,10 @@ BRE.Core = {
                 positions[i].relink(probe);
                 size = this._pageSize(positions[i]);
                 if (!size) return null;
-                k = BRE.Pdf.pageFromWidth(size[0]);
-                if (k < 1 || k > n || seen[k]) return null;
-                seen[k] = true;
-                pages.push(k);
+                pages.push(BRE.Pdf.pageFromWidth(size[0]));
             }
         } catch (e) {
-            this._log("_positionPages: " + e.message);
+            this._log("_readPositionPages: " + e.message);
             return null;
         }
         return pages;

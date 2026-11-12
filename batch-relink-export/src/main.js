@@ -19,15 +19,16 @@
             } catch (e) {}
         }
 
-        // Count the template's positions for the preview — as saved on disk,
-        // which is what every sheet is built from. An open template is not
-        // closed here: that would discard the user's unsaved work even if
-        // they then cancel at the preview. (Processing later closes it, which
+        // Inspect the template for the preview — as saved on disk, which is
+        // what every sheet is built from. An open template is measured on a
+        // temporary copy and is not closed here: that would discard the
+        // user's unsaved work even if they then cancel at the preview. (Processing later closes it, which
         // is what the warning above is about.)
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
         try {
-            slotCount = BRE.Core.countSavedPositions(config.templateFile, openTpl);
+            var info = BRE.Core.inspectTemplate(config.templateFile, openTpl);
+            slotCount = info.positions;
         } catch (e) {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
             alert(BRE.L.format(BRE.L.ERR_TEMPLATE_OPEN, e.message));
