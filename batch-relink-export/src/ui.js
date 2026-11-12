@@ -409,21 +409,82 @@ BRE.UI = {
     },
 
     // ---------------------------------------------------------------------
-    // Dry-run preview
+    // Kontrola souborů — the template, its page map and the source files
     // ---------------------------------------------------------------------
 
     /**
-     * Shows a preview of what the script will do before processing begins.
-     * Renders the pre-flight scan report (per-file page count vs. positions)
-     * and disables Continue when no file can be processed safely.
+     * The template line: name, positions and artboards, page size(s).
+     * @param {string} name - Template name.
+     * @param {Object} info - Result of BRE.Core.inspectTemplate().
+     * @returns {string}
+     */
+    templateLine: function (name, info) {
+        var l = BRE.L;
+        var counts = info.perArtboard.counts;
+        var k = counts.length;
+        var spread = l.count("POSITIONS", info.positions) + " " + l.count("ON_ARTBOARDS", k);
+        if (k > 1) { spread += " (" + counts.join(" + ") + ")"; }
+        if (info.perArtboard.outside > 0) {
+            spread += ", " + l.format(l.OUTSIDE_ARTBOARDS, String(info.perArtboard.outside));
+        }
+        var sizes = [];
+        for (var i = 0; i < info.sizes.length; i++) {
+            sizes.push(l.format(l.SIZE_MM, BRE.Core._mm(info.sizes[i][0]), BRE.Core._mm(info.sizes[i][1])));
+        }
+        var size = sizes.length === 1
+            ? l.format(l.PAGE_SIZE, sizes[0])
+            : l.format(l.PAGE_SIZES, sizes.join(", "));
+        return l.format(l.TEMPLATE_LINE, name, spread, size);
+    },
+
+    /**
+     * The page map as a status: OK, or WARN with what is wrong.
+     * @param {Object} map - info.map from BRE.Core.describePageMap().
+     * @param {number} n - Number of positions.
+     * @returns {{kind: string, text: string}}
+     */
+    pageMapStatus: function (map, n) {
+        var l = BRE.L;
+        if (map.ok) { return { kind: "OK", text: l.format(l.MAP_OK, String(n)) }; }
+        if (map.unknown) { return { kind: "WARN", text: l.MAP_UNKNOWN }; }
+        var parts = [], i;
+        for (i = 0; i < map.duplicates.length; i++) {
+            parts.push(l.format(l.MAP_DUP, String(map.duplicates[i].page), String(map.duplicates[i].times)));
+        }
+        if (map.missing.length > 0) { parts.push(l.format(l.MAP_MISSING, map.missing.join(", "))); }
+        if (map.beyond.length > 0) { parts.push(l.format(l.MAP_BEYOND, String(n), map.beyond.join(", "))); }
+        return { kind: "WARN", text: l.format(l.MAP_BAD, String(n), parts.join(", ")) };
+    },
+
+    /**
+     * The verdict's kind: ERR when nothing can be processed, WARN on any
+     * deviation (a count other than ok, or a bad page map), else OK.
+     * @param {Object} scan - Result of BRE.Core.scanSources().
+     * @param {boolean} mapOk - info.map.ok.
+     * @returns {string} "ERR", "WARN" or "OK".
+     */
+    checkKind: function (scan, mapOk) {
+        if (scan.processable === 0) { return "ERR"; }
+        var c = scan.counts;
+        if (c.partial > 0 || c.under > 0 || c.over > 0 || c.unreadable > 0 || !mapOk) { return "WARN"; }
+        return "OK";
+    },
+
+    /**
+     * Shows the check before processing begins: verdict, template, page map,
+     * source count with an example name, the page counts per file. Disables
+     * Continue when no file can be processed safely.
      * @param {Object} config - Validated config from show().
-     * @param {number} slotCount - Number of PlacedItems in the template.
+     * @param {Object} info - Result of BRE.Core.inspectTemplate().
      * @param {Object} scan - Result of BRE.Core.scanSources().
      * @returns {boolean} True if user confirms, false if cancelled.
      */
-    showPreview: function (config, slotCount, scan) {
+    showCheck: function (config, info, scan) {
         var l = BRE.L;
         var M = BRE.UI.M;
+        var slotCount = info.positions;
+        // eslint-disable-next-line no-restricted-properties -- info.map is the page map (inspectTemplate), not Array.map
+        var pageMap = info.map;
 
         var sampleName = BRE.Core.buildOutputName(
             config.namingPattern, 0, config.pdfFiles.length,
@@ -431,35 +492,35 @@ BRE.UI = {
             BRE.Core.stripExtension(config.pdfFiles[0].displayName || decodeURI(config.pdfFiles[0].name))
         );
 
-        var dlg = new Window("dialog", l.PREVIEW_TITLE);
+        var dlg = new Window("dialog", l.CHECK_TITLE);
         dlg.orientation = "column";
         dlg.alignChildren = ["fill", "top"];
         dlg.margins = M.PREVIEW_MARGINS;
         dlg.spacing = M.PREVIEW_SPACING;
 
-        // One-line verdict (bold): processable / total / with a warning / blocked.
-        // Processable includes the short and unreadable sheets, so they are
-        // counted apart — "OK" for them read as if nothing needed a look.
+        // Verdict: processable / total / with a warning / blocked. Processable
+        // includes the short and unreadable sheets, so they are counted apart.
         var total = config.pdfFiles.length;
-        var verdictST = dlg.add("statictext", undefined, l.format(l.PREVIEW_VERDICT,
+        var verdictLine = BRE.UiKit.statusLine(dlg);
+        BRE.UiKit.setStatus(verdictLine, BRE.UI.checkKind(scan, pageMap.ok), l.format(l.CHECK_VERDICT,
             String(scan.processable), l.count("VERDICT_OF", total),
             String(scan.processable - scan.counts.ok), String(total - scan.processable)));
-        verdictST.preferredSize.width = M.PREVIEW_W;
-        try {
-            var vf = verdictST.graphics.font;
-            verdictST.graphics.font = ScriptUI.newFont(vf.name, "Bold", vf.size);
-        } catch (vfe) {}
 
-        var infoText = l.format(l.PREVIEW_TEMPLATE, config.templateName, String(slotCount))
-            + "\n" + l.format(l.PREVIEW_SOURCE, String(config.pdfFiles.length))
-            + "\n" + l.format(l.PREVIEW_SAMPLE, sampleName);
+        var tplST = dlg.add("statictext", undefined, BRE.UI.templateLine(config.templateName, info),
+            { multiline: true });
+        tplST.preferredSize.width = M.PREVIEW_W;
 
-        var infoST = dlg.add("statictext", undefined, infoText, { multiline: true });
-        infoST.preferredSize.width = M.PREVIEW_W;
+        var mapStatus = BRE.UI.pageMapStatus(pageMap, slotCount);
+        var mapLine = BRE.UiKit.statusLine(dlg);
+        BRE.UiKit.setStatus(mapLine, mapStatus.kind, mapStatus.text);
 
-        // --- Pre-flight scan summary: header + one status-dot row per count ---
+        var srcST = dlg.add("statictext", undefined,
+            l.format(l.CHECK_SOURCES, String(total), sampleName), { truncate: "middle" });
+        srcST.alignment = ["fill", "top"];
+
+        // --- Pre-flight scan summary: header + one status row per count ---
         var c = scan.counts;
-        var headerST = dlg.add("statictext", undefined, l.format(l.SCAN_HEADER, String(slotCount)));
+        var headerST = dlg.add("statictext", undefined, l.count("SCAN_HEADER", slotCount));
         headerST.preferredSize.width = M.PREVIEW_W;
 
         var rowsGrp = dlg.add("group");
@@ -468,16 +529,13 @@ BRE.UI = {
         rowsGrp.spacing = M.ROWS_SPACING;
         rowsGrp.margins = M.ROWS_MARGINS;
 
-        // The family's status symbols and colours (extendscript-ui-standards
-        // §12.6): ✓ OK, ⚠ processed with a warning, ✗ blocked.
-        var SYMBOLS = { OK: "\u2713", WARN: "\u26a0", ERR: "\u2717" };
         function addCountRow(n, str, kind, force) {
             if (!force && n === 0) return;
             var g = rowsGrp.add("group");
             g.alignChildren = ["left", "center"];
             g.spacing = M.ROW_SPACING;
-            var sym = g.add("statictext", undefined, SYMBOLS[kind]);
-            BRE.FieldPaint.text(sym, kind);
+            var sym = g.add("statictext", undefined, BRE.UiKit.SYMBOL[kind]);
+            BRE.FieldPaint.status(sym, kind);
             g.add("statictext", undefined, l.format(str, String(n)));
         }
         addCountRow(c.ok, l.SCAN_OK, "OK", true);
@@ -486,8 +544,9 @@ BRE.UI = {
         addCountRow(c.unreadable, l.SCAN_UNREADABLE, "WARN", false);
         addCountRow(c.over, l.SCAN_OVER, "ERR", false);
 
-        // --- Per-file anomaly details (everything except "ok") ---
+        // --- Details: the short-sheet note, then every file except "ok" ---
         var details = [];
+        if (!pageMap.ok && c.partial + c.under > 0) { details.push(l.CHECK_MAP_MANUAL); }
         for (var i = 0; i < scan.items.length; i++) {
             var it = scan.items[i];
             if (it.status === "over") {
@@ -551,9 +610,17 @@ BRE.UI = {
      * the cancellation note and never "all OK".
      * @param {Object} results - { success, errors, skipped, blocked, removed,
      *        manual, cancelled, total, log }
+     * @param {Object} info - Result of BRE.Core.inspectTemplate().
+     * @param {Object} config - Validated config (templateName).
      */
-    showSummary: function (results) {
+    showSummary: function (results, info, config) {
         var l = BRE.L;
+        // eslint-disable-next-line no-restricted-properties -- info.map is the page map (inspectTemplate), not Array.map
+        var pageMap = info.map;
+        var details = results.log;
+        if (!pageMap.ok) {
+            details = [BRE.UI.pageMapStatus(pageMap, info.positions).text].concat(results.log);
+        }
         var note = null;
         if (results.cancelled) {
             var completed = results.success + results.errors + results.skipped + results.blocked;
@@ -561,6 +628,7 @@ BRE.UI = {
         }
         BRE.Summary.show({
             title: l.LOG_TITLE,
+            intro: BRE.UI.templateLine(config.templateName, info),
             pairs: [
                 { label: l.LOG_SUCCESS, value: results.success, always: true },
                 { label: l.LOG_ERRORS, value: results.errors, alert: true, always: true },
@@ -570,7 +638,7 @@ BRE.UI = {
                 { label: l.LOG_MANUAL_LABEL, value: results.manual }
             ],
             note: note,
-            details: results.log,
+            details: details,
             detailsTitle: l.LOG_DETAILS,
             allOk: l.LOG_ALL_OK,
             close: l.BTN_CLOSE

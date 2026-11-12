@@ -16,6 +16,7 @@ SUITES=(
     "test_inspect.js"
     "test_validate.js"
     "test_dialog.js"
+    "test_check.js"
 )
 
 PASSED=0

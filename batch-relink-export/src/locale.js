@@ -98,7 +98,6 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} index · {template} template · {source} source",
             SAMPLE_TEMPLATE:    "template",
             SAMPLE_SOURCE:      "source",
-            PREVIEW_VERDICT:    "%s %s can be processed (%s with a warning) · %s blocked",
             VERDICT_OF_1:       "of %s sheet",
             VERDICT_OF_2:       "of %s sheets",
             VERDICT_OF_5:       "of %s sheets",
@@ -132,13 +131,8 @@ BRE.L = (function () {
             BROWSE_OUTPUT:      "Choose the output folder:",
 
             // --- Preview ---
-            PREVIEW_TITLE:      "Processing Preview",
-            PREVIEW_TEMPLATE:   "Template: %s (%s positions)",
-            PREVIEW_SOURCE:     "Source PDFs: %s files",
-            PREVIEW_SAMPLE:     "Sample output: %s",
 
             // --- Pre-flight scan ---
-            SCAN_HEADER:        "Source file check (pages vs. %s positions):",
             SCAN_OK:            "OK (full sheet): %s",
             SCAN_PARTIAL:       "Partial last sheet: %s",
             SCAN_UNDER:         "Fewer pages mid-batch: %s",
@@ -260,7 +254,6 @@ BRE.L = (function () {
             NAMING_LEGEND:      "{n} pořadí · {template} šablona · {source} zdroj",
             SAMPLE_TEMPLATE:    "sablona",
             SAMPLE_SOURCE:      "zdroj",
-            PREVIEW_VERDICT:    "%s %s lze zpracovat (%s s upozorněním) · %s blokováno",
             VERDICT_OF_1:       "z %s archu",
             VERDICT_OF_2:       "z %s archů",
             VERDICT_OF_5:       "z %s archů",
@@ -294,13 +287,8 @@ BRE.L = (function () {
             BROWSE_OUTPUT:      "Vyberte cílovou složku:",
 
             // --- Náhled ---
-            PREVIEW_TITLE:      "Náhled zpracování",
-            PREVIEW_TEMPLATE:   "Šablona: %s · pozic: %s",
-            PREVIEW_SOURCE:     "Zdrojových PDF: %s",
-            PREVIEW_SAMPLE:     "Vzor výstupu: %s",
 
             // --- Pre-flight sken ---
-            SCAN_HEADER:        "Kontrola zdrojových souborů — počet stran proti počtu pozic (%s):",
             SCAN_OK:            "V pořádku (plný arch): %s",
             SCAN_PARTIAL:       "Neúplný poslední arch: %s",
             SCAN_UNDER:         "Méně stran uprostřed dávky: %s",
