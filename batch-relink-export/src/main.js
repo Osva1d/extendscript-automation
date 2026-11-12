@@ -260,6 +260,9 @@
         try { app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS; } catch (x) {}
         alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line || "?")));
     } finally {
+        // Idempotent: the probe is also written by the inspection, which
+        // runs before the processing loop (and survives a cancelled check).
+        BRE.Core.removeProbe();
         BRE.Core.restorePdfPrefs(pdfPrefs);
     }
 })(BRE);
