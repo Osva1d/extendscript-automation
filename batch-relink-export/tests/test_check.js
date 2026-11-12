@@ -96,7 +96,9 @@ eq(t[1], BRE.UI.templateLine("vizitky", badInfo), "template line second");
 assert(t[2].indexOf("⚠ Pozice neukazují") === 0, "page map line third: " + t[2]);
 assert(t[3].indexOf("Zdrojových PDF: 12 · Příklad názvu: ") === 0, "sources line: " + t[3]);
 eq(t[4], "Počet stran proti 8 pozicím:", "header");
-eq(detailsOf(r.w).text.split("\n")[0], BRE.L.CHECK_MAP_MANUAL, "check details: bad map with a short sheet");
+var dl = detailsOf(r.w).text.split("\n");
+eq(dl[0], BRE.UI.pageMapStatus(badInfo.pageMap, 8).text, "check details: map explanation first");
+eq(dl[1], BRE.L.CHECK_MAP_MANUAL, "check details: bad map with a short sheet");
 
 r = run(info([4, 4], 0, one), scan, 12);
 assert(detailsOf(r.w).text.indexOf(BRE.L.CHECK_MAP_MANUAL) === -1, "ok map: no manual note");

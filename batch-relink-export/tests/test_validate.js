@@ -16,7 +16,7 @@ function good() {
         template: "/t/a.ai", source: "/s", output: "/o", pattern: "{n}_x",
         preset: { value: "Press", missing: false },
         f: { templateExists: true, templateIsAi: true, templateOpenUnsaved: false,
-             sourceExists: true, pdfCount: 12, outputExists: true, sameFolder: false }
+             sourceExists: true, pdfCount: 12, outputExists: true, outputIsFile: false, sameFolder: false }
     };
 }
 function check(mut, field, text, kind) {
@@ -46,6 +46,10 @@ check(function (s) { s.f.sourceExists = false; }, "source", "Zdrojová složka n
 check(function (s) { s.f.pdfCount = 0; }, "source", "Ve zdrojové složce nejsou žádné PDF.");
 check(function (s) { s.output = ""; }, "output", "Vyberte cílovou složku.");
 check(function (s) { s.f.sameFolder = true; }, "output",
+    "Cílová složka je stejná jako zdrojová, vyberte jinou.");
+check(function (s) { s.f.outputIsFile = true; s.f.outputExists = false; }, "output",
+    "Cílovou složku nejde vytvořit. Zkontrolujte cestu.");
+check(function (s) { s.f.outputIsFile = true; s.f.sameFolder = true; }, "output",
     "Cílová složka je stejná jako zdrojová, vyberte jinou.");
 check(function (s) { s.f.outputExists = false; }, "output", "Cílová složka neexistuje, běh ji vytvoří.", "WARN");
 check(function (s) { s.pattern = "abc"; }, "pattern",
@@ -101,7 +105,7 @@ eq(got.join(","), "a.PDF,part_2.pdf,part_10.pdf", "listPdfs: filter + natural so
 var FILE_PATHS = { "/a/file.txt": true };
 global.Folder = function (p) {
     if (!(this instanceof global.Folder)) {
-        return FILE_PATHS[p] ? { fsName: p, exists: true, name: p } : new global.Folder(p);
+        return FILE_PATHS[p] ? new global.File(p) : new global.Folder(p);
     }
     this.fsName = p; this.exists = p !== "/missing";
     this.getFiles = FILE_PATHS[p] ? function () { return []; } : mkFolder(["a.pdf", "b.pdf", "c.txt"]).getFiles;
@@ -134,6 +138,8 @@ eq(f.sameFolder, false, "facts: different folders");
 f = BRE.UI.facts({ template: "/t/a.ai", source: "/a/file.txt", output: "/a/file.txt" }, -1);
 eq(f.sourceExists, false, "facts: file as source is not a folder");
 eq(f.outputExists, false, "facts: file as output is not a folder");
+eq(f.outputIsFile, true, "facts: file as output is flagged");
+eq(BRE.UI.facts({ template: "/t/a.ai", source: "/S", output: "/o" }, 1).outputIsFile, false, "facts: folder output is not a file");
 s = good(); s.source = "/a/file.txt"; s.f = f; s.f.templateExists = true; s.f.templateIsAi = true;
 r = BRE.UI.validate(s);
 eq(r.errors[0].text, "Zdrojová složka neexistuje.", "validate: file as source");

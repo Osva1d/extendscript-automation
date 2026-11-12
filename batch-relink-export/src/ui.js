@@ -63,6 +63,7 @@ BRE.UI = {
             sourceExists: src instanceof Folder && src.exists,
             pdfCount: pdfCount,
             outputExists: out instanceof Folder && out.exists,
+            outputIsFile: out instanceof File && out.exists,
             sameFolder: String(src.fsName).toLowerCase() === String(out.fsName).toLowerCase()
         };
     },
@@ -89,6 +90,7 @@ BRE.UI = {
 
         if (blank(s.output)) err("output", l.ERR_OUTPUT_EMPTY);
         else if (!blank(s.source) && f.sameFolder) err("output", l.ERR_OUTPUT_IS_SOURCE);
+        else if (f.outputIsFile) err("output", l.ERR_OUTPUT_FAIL);
         else if (!f.outputExists) warn("output", l.WARN_OUTPUT_NEW);
 
         if (s.pattern.indexOf(BRE.Config.placeholders.N) === -1) {
@@ -121,7 +123,7 @@ BRE.UI = {
     M: {
         // Buttons closer together than native 10.
         BUTTON_SPACING: 8,
-        // Preview: one width for its lines — the bold verdict, the info block
+        // Preview: one width for its lines — the verdict line, the info block
         // (explicit lines, so its height follows the text) and the header —
         // so they line up; the details box scrolls past its size.
         PREVIEW_W: 500,
@@ -157,14 +159,14 @@ BRE.UI = {
         try {
             f = app.activeDocument.fullName;
         } catch (e2) {
-            // A document that was never saved may have no file at all, and
-            // its fullName throws (handling-adobe-files §4).
+            // Guard only: measured 2026-11-12, fullName of a never-saved
+            // document does not throw (see below).
             BRE.Core._log("UI.activeDocInfo: no file: " + e2.message);
             return { state: "never", path: "" };
         }
-        // Or it hands back a File that is not on disk ("Untitled-1"); which
-        // of the two Illustrator does is not measured, so both mean never
-        // saved, and only a file that exists goes on to the .ai test.
+        // Measured 2026-11-12: it returns a File that is not on disk
+        // ('/Bez názvu -1'), so a missing file means never saved, and only
+        // a file that exists goes on to the .ai test.
         if (!f || !f.exists) return { state: "never", path: "" };
         return { state: /\.ai$/i.test(f.fsName) ? "ok" : "notAi", path: f.fsName };
     },
@@ -546,6 +548,7 @@ BRE.UI = {
 
         // --- Details: the short-sheet note, then every file except "ok" ---
         var details = [];
+        if (!pageMap.ok) { details.push(mapStatus.text); }
         if (!pageMap.ok && c.partial + c.under > 0) { details.push(l.CHECK_MAP_MANUAL); }
         for (var i = 0; i < scan.items.length; i++) {
             var it = scan.items[i];
