@@ -1,7 +1,7 @@
 # Batch Relink & Export — ruční testy
 
-Co se musí vyzkoušet rukou před vydáním a po větší změně. BRE nemá
-automatické sady; opravy z code review 2026-09-27
+Co se musí vyzkoušet rukou před vydáním a po větší změně. BRE má
+Node testy čistých funkcí (`npm test`), ale dialog, Illustrator a běh pokrývají jen ruční body; opravy z code review 2026-09-27
 ([report](../../docs/reports/2026-09-27-code-review-batch-relink-export.md))
 se ověřily během sestaveného skriptu v Illustratoru 30.8.2 přes
 `tools/ai-eval.sh`, s dialogy procházenými bez zobrazení (pole vyplnil
@@ -68,7 +68,7 @@ soubor kratší) a prázdnou cílovou složku.
   i v Kontrole souborů → v cílové složce nic nepřibude a otevřené dokumenty zůstanou.
 - [ ] **1.6 Živá kontrola, šedé Spustit (A3, A4).** Vyplň cesty a do vzoru
   pojmenování napiš text bez `{n}` → hned po napsání stavový řádek „✗ Vzor
-  pojmenování musí obsahovat {n}…", pole vzoru červené, Spustit šedé; dialog
+  musí obsahovat {n}, jinak se výstupy přepíšou.", pole vzoru červené, Spustit šedé; dialog
   se nezavírá a ostatní pole zůstávají. Prázdná pole hlásí jednu chybu za druhou
   v pořadí čtení (šablona, zdrojová složka, cílová složka…) a ke každé další
   chybě se připojí „Další chyby: N." Oprav vzor → Spustit se odemkne a řádek
@@ -83,10 +83,11 @@ soubor kratší) a prázdnou cílovou složku.
   spuštění). Okno má stejnou šířku jako při prvním spuštění — dlouhá cesta se
   do pole nevejde celá.
 - [ ] **1.8 Chybějící preset (§12.3).** V `settings.json` přepiš `preset` na
-  název, který Illustrator nemá, a spusť skript → seznam ukáže „název  (chybí)";
-  Spustit → „PDF preset „…" v tomto Illustratoru není…" a dialog zůstane
-  otevřený. Po výběru jiného presetu dávka proběhne. Při prázdném zdroji
-  ukáže stavový řádek nejdřív chybu zdroje a „Další chyby: 1.", Spustit je šedé.
+  název, který Illustrator nemá, a spusť skript → seznam ukáže „název  (chybí)"
+  a Spustit je šedé hned po otevření. Stavový řádek říká „✗ PDF preset „…“
+  v Illustratoru není, vyberte jiný." Při prázdném zdroji řekne nejdřív chybu
+  zdroje a připojí „Další chyby: 1." Po výběru jiného presetu (a vyplněném
+  zdroji) se Spustit odemkne a dávka proběhne.
 - [ ] **1.9 Výzvy výběru (T8).** Vybrat… u Šablony, Zdrojové a Cílové složky → okno
   výběru říká „Vyberte šablonu (.ai):", „Vyberte zdrojovou složku s PDF:"
   a „Vyberte cílovou složku:". Jestli macOS výzvu v okně výběru ukáže,
@@ -137,8 +138,9 @@ soubor kratší) a prázdnou cílovou složku.
 - [ ] **2.4 Zamčené vrstvy (B7).** Šablona se zamčenou vrstvou i podvrstvou
   s pozicemi se zpracuje; šablona na disku se nezmění.
 - [ ] **2.5 Otevřená neuložená šablona (B5).** Šablonu otevři, přidej pozici,
-  neukládej a spusť skript → dotaz na zahození změn. Po Ano náhled počítá
-  pozice uložené šablony; Storno v Kontrole souborů nechá dokument otevřený
+  neukládej a spusť skript → dotaz na zahození změn. Po Ano běh prozkoumá
+  uloženou šablonu (otevřenou měří na dočasné kopii) a Kontrolu souborů ukáže
+  jen tehdy, když něco chce pohled; Storno v Kontrole souborů nechá dokument otevřený
   i se změnou. Otevřená uložená i neuložená šablona se přitom nikdy neměří na
   místě: dokument obsluhy zůstane otevřený a beze změny.
 - [ ] **2.6 Jiný formát zdroje (B1).** Zdroj jiného rozměru nebo PDF se
