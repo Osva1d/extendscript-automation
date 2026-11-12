@@ -35,7 +35,7 @@ výstupů) zůstává.
   PDF pozice ukazují (dřív jen u neúplného archu). Kontrola souborů i Souhrn
   mají řádek „Šablona: …" a nesoulad mapy (strana dvakrát, nějaká chybí) je
   upozornění před během. Šablona otevřená v Illustratoru se nikdy neměří na
-  místě, ani se nezavírá: měří se dočasná kopie.
+  místě, ani se kvůli měření nezavírá: měří se dočasná kopie.
 - **Pamatuje se i „Přeskočit hotové výstupy".** Zapisuje se po Spustit jako
   zbytek nastavení; výchozí stav zůstává vypnutý.
 

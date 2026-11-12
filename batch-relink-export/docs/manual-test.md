@@ -128,7 +128,7 @@ soubor kratší) a prázdnou cílovou složku.
   změny s hláškou „Pozice navíc se neodebraly automaticky…".
 - [ ] **2.2a Špatná mapa stran šablony.** Šablona, která ukazuje stranu 1 na
   dvou pozicích (a jedna strana chybí) → Kontrola souborů se ukáže i u plných
-  archů, řádek „⚠ Pozice neukazují strany 1–N každou jednou: strana 1 dvakrát,
+  archů, řádek „⚠ Pozice neukazují strany 1–N každou jednou: strana 1 je na 2 pozicích;
   chybí …", řádek „Šablona: … · N pozic na … kreslicích plátnech · strana … mm".
   Souhrn nese ten řádek „Šablona:" na začátku. Se špatnou mapou a neúplným
   posledním archem Kontrola ukáže navíc řádek, že pozice navíc se neodeberou a arch
@@ -236,7 +236,7 @@ Hlášky verze 1.3.0 (česky). Chyby polí ukazuje stavový řádek hlavního di
 | ručně upravený soubor s nastavením (číslo místo cesty) | špatná hodnota výchozí, ostatní z minula, bez hlášky |
 | zapamatovaný preset, který Illustrator nemá | v seznamu „název  (chybí)", stavový řádek „✗ PDF preset „…“ v Illustratoru není, vyberte jiný.", Spustit šedé; po výběru jiného presetu dávka proběhne a uloží se nový |
 | poškozený soubor s nastavením | výchozí hodnoty, bez hlášky; běh soubor přepíše platným |
-| nastavení nejde zapsat | „CHYBA: Nastavení se nepodařilo uložit — příště se dialog otevře bez něj. Běh pokračuje." a dávka proběhne |
+| nastavení nejde zapsat | „Nastavení se nepodařilo uložit — příště se dialog otevře bez něj. Běh pokračuje." a dávka proběhne |
 | předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v Kontrole souborů, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
 
 **Známé, vědomě neopravené** (minor z review): v detailu chyby zůstává
