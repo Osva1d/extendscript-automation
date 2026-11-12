@@ -116,8 +116,7 @@
                 // An older one belongs to another job with the same name, or
                 // the source or template changed since; it is made again.
                 if (config.skipExisting && outputFile.exists) {
-                    if (outputFile.modified > currentFile.modified &&
-                            outputFile.modified > config.templateFile.modified) {
+                    if (BRE.Core.isFinished(outputFile, currentFile, config.templateFile)) {
                         results.skipped++;
                         results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
                         continue;

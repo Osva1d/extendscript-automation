@@ -12,6 +12,7 @@ cd "$SCRIPT_DIR"
 SUITES=(
     "test_locale.js"
     "test_storage.js"
+    "test_core.js"
 )
 
 PASSED=0

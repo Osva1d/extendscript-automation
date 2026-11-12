@@ -619,6 +619,127 @@ BRE.Core = {
     },
 
     /**
+     * True when an output already exists and is newer than both its source
+     * and the template (the skip rule: such an output counts as done).
+     * @param {Object} out - File-like {exists, modified}.
+     * @param {Object} src - File-like source.
+     * @param {Object} tpl - File-like template.
+     * @returns {boolean}
+     */
+    isFinished: function (out, src, tpl) {
+        return !!out.exists && out.modified > src.modified && out.modified > tpl.modified;
+    },
+
+    /**
+     * Full paths of the outputs a run would create (and so may overwrite),
+     * leaving out those the skip rule protects when skipExisting is on.
+     * @param {Object} config - {namingPattern, pdfFiles, templateName,
+     *   templateFile, outputFolder, skipExisting}.
+     * @returns {string[]} Output paths that exist and would be overwritten
+     *   or created.
+     */
+    overwriteCandidates: function (config) {
+        var paths = [];
+        for (var i = 0; i < config.pdfFiles.length; i++) {
+            var sf = config.pdfFiles[i];
+            var sname = sf.displayName || decodeURI(sf.name);
+            var name = BRE.Core.buildOutputName(
+                config.namingPattern, i, config.pdfFiles.length,
+                config.templateName, BRE.Core.stripExtension(sname));
+            var path = config.outputFolder.fsName + "/" + name;
+            if (config.skipExisting &&
+                    BRE.Core.isFinished(new File(path), sf, config.templateFile)) {
+                continue;
+            }
+            paths.push(path);
+        }
+        return paths;
+    },
+
+    /**
+     * Whether the file check window must open before a run.
+     * @param {Object} scan - {under, over, unreadable, ...} counts.
+     * @param {boolean} mapOk - The template's page map is a permutation.
+     * @returns {boolean}
+     */
+    needsCheck: function (scan, mapOk) {
+        return (scan.under + scan.over + scan.unreadable) > 0 || !mapOk;
+    },
+
+    // ---------------------------------------------------------------------
+    // Template inspection
+    // ---------------------------------------------------------------------
+
+    /**
+     * Compares the template's page numbers (one per position) with 1..n.
+     * @param {number[]|null} pages - Page number per position, null if unknown.
+     * @param {number} n - Number of positions.
+     * @returns {{ok: boolean, unknown: boolean,
+     *   duplicates: Array<{page: number, times: number}>,
+     *   missing: number[], beyond: number[]}}
+     */
+    describePageMap: function (pages, n) {
+        var r = { ok: false, unknown: false, duplicates: [], missing: [], beyond: [] };
+        if (!pages) { r.unknown = true; return r; }
+        var seen = {}, i;
+        for (i = 0; i < pages.length; i++) {
+            seen[pages[i]] = (seen[pages[i]] || 0) + 1;
+            if (pages[i] > n || pages[i] < 1) r.beyond.push(pages[i]);
+        }
+        for (i = 1; i <= n; i++) {
+            if (!seen[i]) r.missing.push(i);
+            else if (seen[i] > 1) r.duplicates.push({ page: i, times: seen[i] });
+        }
+        r.ok = pages.length === n && r.duplicates.length === 0 &&
+            r.missing.length === 0 && r.beyond.length === 0;
+        return r;
+    },
+
+    /**
+     * Counts position centres per artboard (first matching rect wins).
+     * @param {number[][]} centers - [[x, y]] (y up).
+     * @param {number[][]} rects - artboardRects [left, top, right, bottom].
+     * @returns {{counts: number[], outside: number}}
+     */
+    positionsPerArtboard: function (centers, rects) {
+        var counts = [], outside = 0, i, j;
+        for (j = 0; j < rects.length; j++) counts.push(0);
+        for (i = 0; i < centers.length; i++) {
+            var x = centers[i][0], y = centers[i][1], hit = false;
+            for (j = 0; j < rects.length; j++) {
+                var r = rects[j];
+                if (x >= r[0] && x <= r[2] && y >= r[3] && y <= r[1]) {
+                    counts[j]++; hit = true; break;
+                }
+            }
+            if (!hit) outside++;
+        }
+        return { counts: counts, outside: outside };
+    },
+
+    /**
+     * Distinct [w, h] sizes in pt (first kept; equal within 0.1 mm); null skipped.
+     * @param {Array<number[]|null>} sizes
+     * @returns {number[][]}
+     */
+    distinctSizes: function (sizes) {
+        var tol = 0.1 * 72 / 25.4;    // 0.1 mm, as in verifyRelink
+        var out = [];
+        for (var i = 0; i < sizes.length; i++) {
+            var s = sizes[i];
+            if (!s) continue;
+            var dup = false;
+            for (var j = 0; j < out.length; j++) {
+                if (Math.abs(out[j][0] - s[0]) <= tol && Math.abs(out[j][1] - s[1]) <= tol) {
+                    dup = true; break;
+                }
+            }
+            if (!dup) out.push(s);
+        }
+        return out;
+    },
+
+    /**
      * Strips file extension from a filename.
      * @param {string} filename - Filename with extension.
      * @returns {string} Filename without extension.
