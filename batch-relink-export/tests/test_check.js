@@ -30,7 +30,7 @@ function info(counts, outside, sizes, map) {
     var n = 0, i;
     for (i = 0; i < counts.length; i++) { n += counts[i]; }
     return { positions: n, perArtboard: { counts: counts, outside: outside },
-             sizes: sizes, map: map || { ok: true } };
+             sizes: sizes, pageMap: map || { ok: true } };
 }
 var one = [[PT.w, PT.h]];
 

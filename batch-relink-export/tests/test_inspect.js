@@ -62,7 +62,7 @@ var tpl = new File("/t/tpl.ai");
 var info = BRE.Core.inspectTemplate(tpl, null);
 assert(info.positions === 8, "closed: 8 positions");
 assert(same(info.perArtboard.counts, [4, 4]), "closed: 4 + 4");
-assert(info.map.ok === true, "closed: map ok");
+assert(info.pageMap.ok === true, "closed: map ok");
 assert(info.sizes.length === 1, "closed: one size");
 assert(same(info.pages, [1, 2, 3, 4, 5, 6, 7, 8]), "closed: pages");
 assert(doc.closed === "no", "closed: closed without saving");
@@ -74,7 +74,7 @@ doc = makeDoc([1, 1, 1, 4, 5, 6, 7, 8]);
 mockOpen(doc);
 info = BRE.Core.inspectTemplate(tpl, null);
 assert(info.positions === 8, "duplicate: still 8 positions");
-assert(!info.map.ok && info.map.duplicates.length > 0 && same(info.map.missing, [2, 3]), "duplicate: reported");
+assert(!info.pageMap.ok && info.pageMap.duplicates.length > 0 && same(info.pageMap.missing, [2, 3]), "duplicate: reported");
 assert(info.pages !== null, "duplicate: raw pages kept");
 
 // _positionPages keeps today's strict contract

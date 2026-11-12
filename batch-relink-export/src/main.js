@@ -50,8 +50,7 @@
         // Fewer dialogs: only show the check when there is something to
         // review (anomalies, blocked files or a bad page map). A fully clean
         // batch proceeds straight to processing after the user clicked Run.
-        // eslint-disable-next-line no-restricted-properties -- info.map is the page map (inspectTemplate), not Array.map
-        var mapOk = info.map.ok;
+        var mapOk = info.pageMap.ok;
         if (BRE.Core.needsCheck(scan.counts, mapOk) && !BRE.UI.showCheck(config, info, scan)) return;
 
         // Every sheet must build from the template's saved on-disk state. If

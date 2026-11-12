@@ -184,7 +184,7 @@ BRE.Core = {
      * user's document (saved or not) is not touched.
      * @param {File} file - The template file.
      * @param {Document|null} openDoc - The template if it is already open.
-     * @returns {{positions: number, perArtboard: Object, sizes: number[][], pages: number[]|null, map: Object}}
+     * @returns {{positions: number, perArtboard: Object, sizes: number[][], pages: number[]|null, pageMap: Object}}
      */
     inspectTemplate: function (file, openDoc) {
         var src = file, copy = null;
@@ -199,7 +199,7 @@ BRE.Core = {
             var positions = this.getPositions(doc);
             var n = positions.length;
             if (n === 0) {
-                return { positions: 0, perArtboard: this.positionsPerArtboard([], []), sizes: [], pages: null, map: this.describePageMap([], 0) };
+                return { positions: 0, perArtboard: this.positionsPerArtboard([], []), sizes: [], pages: null, pageMap: this.describePageMap([], 0) };
             }
             var centers = [], sizes = [], rects = [], i, gb;
             for (i = 0; i < n; i++) {
@@ -218,7 +218,7 @@ BRE.Core = {
                 perArtboard: this.positionsPerArtboard(centers, rects),
                 sizes: this.distinctSizes(sizes),
                 pages: pages,
-                map: this.describePageMap(pages, n)
+                pageMap: this.describePageMap(pages, n)
             };
         } finally {
             if (doc) doc.close(SaveOptions.DONOTSAVECHANGES);
@@ -697,12 +697,12 @@ BRE.Core = {
 
     /**
      * Whether the file check window must open before a run.
-     * @param {Object} scan - {under, over, unreadable, ...} counts.
+     * @param {Object} counts - scan.counts: {ok, partial, under, over, unreadable}.
      * @param {boolean} mapOk - The template's page map is a permutation.
      * @returns {boolean}
      */
-    needsCheck: function (scan, mapOk) {
-        return (scan.under + scan.over + scan.unreadable) > 0 || !mapOk;
+    needsCheck: function (counts, mapOk) {
+        return (counts.under + counts.over + counts.unreadable) > 0 || !mapOk;
     },
 
     // ---------------------------------------------------------------------

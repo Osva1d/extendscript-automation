@@ -439,7 +439,7 @@ BRE.UI = {
 
     /**
      * The page map as a status: OK, or WARN with what is wrong.
-     * @param {Object} map - info.map from BRE.Core.describePageMap().
+     * @param {Object} map - info.pageMap from BRE.Core.describePageMap().
      * @param {number} n - Number of positions.
      * @returns {{kind: string, text: string}}
      */
@@ -460,7 +460,7 @@ BRE.UI = {
      * The verdict's kind: ERR when nothing can be processed, WARN on any
      * deviation (a count other than ok, or a bad page map), else OK.
      * @param {Object} scan - Result of BRE.Core.scanSources().
-     * @param {boolean} mapOk - info.map.ok.
+     * @param {boolean} mapOk - info.pageMap.ok.
      * @returns {string} "ERR", "WARN" or "OK".
      */
     checkKind: function (scan, mapOk) {
@@ -483,8 +483,7 @@ BRE.UI = {
         var l = BRE.L;
         var M = BRE.UI.M;
         var slotCount = info.positions;
-        // eslint-disable-next-line no-restricted-properties -- info.map is the page map (inspectTemplate), not Array.map
-        var pageMap = info.map;
+        var pageMap = info.pageMap;
 
         var sampleName = BRE.Core.buildOutputName(
             config.namingPattern, 0, config.pdfFiles.length,
@@ -615,8 +614,7 @@ BRE.UI = {
      */
     showSummary: function (results, info, config) {
         var l = BRE.L;
-        // eslint-disable-next-line no-restricted-properties -- info.map is the page map (inspectTemplate), not Array.map
-        var pageMap = info.map;
+        var pageMap = info.pageMap;
         var details = results.log;
         if (!pageMap.ok) {
             details = [BRE.UI.pageMapStatus(pageMap, info.positions).text].concat(results.log);
