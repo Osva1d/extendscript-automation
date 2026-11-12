@@ -4,7 +4,7 @@ Nástroj: `batch-relink-export`, namespace `BRE`.
 Navazuje na [design systém řady](2026-11-07-ui-design-system.md) (dál jen „DS“), jeho
 plán fáze 3 v §10, krok 2, a na [audit UX/UI](../reports/2026-11-07-audit-ux-ui-rady-nastroju.md).
 
-Datum: 2026-11-12 · Stav: **návrh ke schválení**
+Datum: 2026-11-12 · Stav: **schváleno** (uživatel, 2026-11-12; rozhodnutí v §9)
 
 Značky důkazu podle DS: [M] změřeno, [D] `docs/extendscript-engine-facts.md`, [R] běží
 v uvedeném nástroji, [N] návrh, [O] čeká na obsluhu.
@@ -74,7 +74,7 @@ Batch Relink Export v1.3.0
 - `Použít aktivní dokument` stojí na ose polí, v řádku s prázdným popiskem, jako
   zaškrtávátko v `checkRow`.
 - Panel `Možnosti` zaniká. Obě zaškrtávátka se týkají cílové složky, proto jdou pod ni
-  do panelu `Soubory` (TE je v kroku 5 přesune tamtéž, DS §10). **Otázka 1.**
+  do panelu `Soubory` (TE je v kroku 5 přesune tamtéž, DS §10).
 - Rozestupy a okraje jsou nativní (DS §2.4); vlastní `M.DIALOG_*`, `M.PANEL_*`
   a `M.BUTTON_SPACING` zmizí.
 - Příklad názvu je obyčejný text, bez tučného písma; dlouhý název se zkrátí uprostřed.
@@ -91,7 +91,7 @@ a stavový řádek a ubude jeden panel. Rozhodne měření `tools/ui-probe`.
 | `1 · Vstupní soubory` | `Soubory` | bez čísel (U23); panel drží i cílovou složku |
 | `2 · Pojmenování a formát` | `Pojmenování a formát` | bez čísel |
 | `Možnosti` | zaniká | zaškrtávátka jdou do `Soubory` |
-| `Zdroj (PDF):` | `Zdrojová složka:` | dvojice s `Cílová složka:`; hlášky už říkají „zdrojovou složku“. **Otázka 3.** |
+| `Zdroj (PDF):` | `Zdrojová složka:` | dvojice s `Cílová složka:`; hlášky už říkají „zdrojovou složku“ |
 | `Výstup:` | `Cílová složka:` | DS §6.1, U24 |
 | `Vzor:` | `Vzor pojmenování:` | DS §6.1 |
 | `Náhled názvu:` | `Příklad názvu:` | DS §6.1, U17 |
@@ -112,12 +112,12 @@ nic nespustí [D].
 |---|---|---|
 | šablona | `Vyberte šablonu.` · `Šablona se nenašla nebo nemá příponu .ai.` | `Šablona je otevřená s neuloženými změnami. Běh ji zavře a použije verzi na disku.` |
 | zdrojová složka | `Vyberte zdrojovou složku.` · `Zdrojová složka neexistuje.` · `Ve zdrojové složce nejsou žádné PDF.` | |
-| cílová složka | `Vyberte cílovou složku.` · `Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdroje — vyberte jinou.` | `Cílová složka neexistuje, běh ji vytvoří.` **Otázka 2.** |
+| cílová složka | `Vyberte cílovou složku.` · `Cílová složka je stejná jako zdrojová. Další běh by výstupy načetl jako zdroje — vyberte jinou.` | `Cílová složka neexistuje, běh ji vytvoří.` |
 | vzor | `Vzor pojmenování musí obsahovat {n}, jinak by se výstupy přepisovaly.` | |
 | preset | `Vyberte PDF preset.` · `PDF preset „%s“ v tomto Illustratoru není. Vyberte jiný.` | |
 
 Bez chyby a upozornění řekne stavový řádek, kolik PDF dávka zpracuje:
-`✓ Ve zdrojové složce je 12 PDF.` **Otázka 4.** PDF se počítají stejně jako dnes při
+`✓ Ve zdrojové složce je 12 PDF.` PDF se počítají stejně jako dnes při
 spuštění: soubory `*.pdf` v kořeni složky bez skrytých a `._` souborů. Výpis složky
 proběhne jen při změně zdrojové cesty, ne při psaní do jiných polí.
 
@@ -190,7 +190,8 @@ uložení a kopie se smaže.
 | sondu nešlo napsat nebo přečíst | ⚠ | `Strany pozic se nepodařilo zjistit.` |
 
 Nesoulad je upozornění, ne blokace. Šablona, která na všech pozicích opakuje stranu 1,
-je platná. **Otázka 5.**
+je platná. Step and repeat se v provozu nepoužívá (§9), takže nesoulad bude skoro
+vždy chyba šablony.
 
 ### 4.3 Kdy se ukáže Kontrola souborů
 
@@ -309,23 +310,15 @@ Podle „Hotovo je krok, když“ v DS §10:
    čtením kódu, co měřením a co okem obsluhy.
 5. Vydání podle `releasing-a-tool`.
 
-## 9. Otevřené otázky
+## 9. Rozhodnutí obsluhy (2026-11-12)
 
-1. **Zaškrtávátka pod cílovou složku a panel `Možnosti` zrušit?** Doporučuji ano. Obě
-   volby se týkají cílové složky, okno ušetří jeden panel a vyrovná výšku nového řádku
-   s tlačítkem. Stejně je v kroku 5 uspořádá TE.
-2. **Neexistující cílová složka: upozornění místo dotazu?** Doporučuji ano. Dnes se
-   po Spustit ptá `Cílová složka neexistuje. Vytvořit?`. Vytvoření složky nic nezničí
-   (DS §1, zásada 6) a překlep v cestě odhalí žlutý řádek ještě před Spustit.
-3. **`Zdroj (PDF):` → `Zdrojová složka:`?** Doporučuji ano: dvojice s `Cílová složka:`
-   a hlášky už to slovo používají. Plán to výslovně neschválil.
-4. **Stavový řádek v pořádku s počtem PDF?** Doporučuji ano: špatně vybranou složku
-   prozradí počet dřív, než běh začne.
-5. **Opakuje se v provozu jedna strana na víc pozicích (step and repeat)?** Pokud ano, BRE
-   s takovou šablonou dnes neumí počítat: soubory s jednou stranou označí jako kratší
-   a každý arch pošle k ruční úpravě. V 1.3.0 to Kontrola aspoň řekne předem (⚠ mapy).
-   Počítat strany na arch z mapy místo z počtu pozic by byla změna výrobní logiky,
-   proto mimo tento krok. Pokud se to v provozu nedělá, otázka odpadá.
+1. Zaškrtávátka jdou pod cílovou složku, panel `Možnosti` zaniká.
+2. Neexistující cílová složka je upozornění ve stavovém řádku, ne dotaz; běh ji vytvoří.
+   Dnešní `Cílová složka neexistuje. Vytvořit?` odchází.
+3. `Zdroj (PDF):` → `Zdrojová složka:`.
+4. Stavový řádek v pořádku říká počet PDF.
+5. Step and repeat (víc pozic se stejnou stranou) se v provozu nepoužívá. Strany na arch
+   se dál počítají podle počtu pozic.
 
 ## 10. Mimo rozsah
 
