@@ -4,8 +4,8 @@
 // Depends on: BRE.Config (defaultNamingPattern, debug), JSON (json2.js)
 //
 // Reads and writes `Folder.userData/batch-relink-export/settings.json`.
-// Pure I/O; no DOM, no UI. The source folder changes with every job and
-// "Skip existing" is a per-run decision, so neither is remembered. The design
+// Pure I/O; no DOM, no UI. The source folder changes with every job, so it is
+// not remembered; "Skip finished outputs" is (stored as `skip`). The design
 // rationale for settings files lives in docs/persistence.md.
 // ------------------------------------------------------------------------
 var BRE = BRE || {};
@@ -13,7 +13,7 @@ var BRE = BRE || {};
 BRE.Storage = {
     /**
      * The settings the dialog opens with when nothing is remembered.
-     * @returns {Object} { template, output, pattern, preset, openAfter }
+     * @returns {Object} { template, output, pattern, preset, openAfter, skip }
      */
     defaults: function () {
         return {
@@ -21,7 +21,8 @@ BRE.Storage = {
             output: "",
             pattern: BRE.Config.defaultNamingPattern,
             preset: "",
-            openAfter: true
+            openAfter: true,
+            skip: false
         };
     },
 
@@ -39,7 +40,7 @@ BRE.Storage = {
      * Loads the remembered settings. Each stored value replaces its default
      * only when it has the default's type, so a missing, unreadable or
      * hand-edited file still yields a complete, usable set.
-     * @returns {Object} { template, output, pattern, preset, openAfter }
+     * @returns {Object} { template, output, pattern, preset, openAfter, skip }
      */
     load: function () {
         var out = this.defaults();
@@ -83,7 +84,8 @@ BRE.Storage = {
             output: config.outputFolder.fsName,
             pattern: config.namingPattern,
             preset: config.preset,
-            openAfter: config.openAfter
+            openAfter: config.openAfter,
+            skip: config.skipExisting
         };
         try {
             var f = this.getFile();

@@ -6,6 +6,8 @@
   "author": "Ladislav Osvald",
   "license": "MIT",
   "scripts": {
-    "build": "bash tools/build.sh"
+    "build": "bash tools/build.sh",
+    "test": "bash tests/run_all.sh",
+    "verify": "npm run build && npm test"
   }
 }
