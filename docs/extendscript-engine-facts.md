@@ -1799,7 +1799,7 @@ stejných pixelech).
 
 
 
-### Soubory, složky a neuložený dokument (naměřeno 2026-11-12, AI 30.8.2)
+### Soubory, složky a neuložený dokument (naměřeno 2026-11-12 a 2026-11-15, AI 31.0.0)
 
 Sonda `batch-relink-export/tests/probes/inspect_template.jsx` a `tools/ai-eval.sh`,
 vlastní dokumenty, Illustrator bez otevřených dokumentů.

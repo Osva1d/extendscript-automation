@@ -81,7 +81,7 @@ Batch Relink Export v1.3.0
 - Výchozí fokus má pole `Zdrojová složka:`, protože jediné se mění s každou zakázkou
   a cesta zkopírovaná ve Finderu se tam hned vloží (DS §5.3) [O].
 
-Změřeno 2026-11-12 (`tools/ui-probe`, Illustrator 30.8.2, CS): **498 × 479 px** ve všech
+Změřeno 2026-11-12 (`tools/ui-probe`, Illustrator 31.0.0, CS): **498 × 479 px** ve všech
 šesti stavech (otevření, prázdné, platné, upozornění, chyba, po `Použít aktivní dokument`),
 Spustit pořád na y 437–464, žádný popisek užší než text, fokus v poli zdroje [M]. Proti
 460 × 478 v 1.2.0 přibyl řádek s tlačítkem a stavový řádek a ubyl jeden panel. Stavový

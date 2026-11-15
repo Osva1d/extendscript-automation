@@ -3,7 +3,7 @@
  * BRE.Core.samePath — one path in two Unicode forms. Illustrator reports a
  * placed file's and a document's path decomposed (NFD); Folder.getFiles and
  * typed text keep the name as stored, often composed (NFC). Measured
- * 2026-11-15, AI 30.8.2. Strings are built with fromCharCode so no editor
+ * 2026-11-15, AI 31.0.0. Strings are built with fromCharCode so no editor
  * can normalize the test data.
  */
 var T = require("./lib/load.js");

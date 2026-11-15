@@ -958,7 +958,7 @@ BRE.Core = {
      * Whether two paths name the same file. A path with diacritics comes in
      * two forms: Illustrator reports a placed file's and a document's path
      * decomposed (NFD), Folder.getFiles and typed text keep the name as it is
-     * stored, often composed (NFC) — measured 2026-11-15, AI 30.8.2. Compared
+     * stored, often composed (NFC) — measured 2026-11-15, AI 31.0.0. Compared
      * as plain strings, the two forms of one file differ.
      * @param {string} a - A path.
      * @param {string} b - Another path.
