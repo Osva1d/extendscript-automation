@@ -5,7 +5,7 @@ Navazuje na [návrh 1.0](2026-10-29-batch-text-edit-design.md)
 a [návrh 1.1.0](2026-11-05-batch-text-edit-1.1.0-design.md); co tu není,
 platí podle nich.
 
-Datum: 2026-11-15 · Stav: **návrh** (čeká na schválení)
+Datum: 2026-11-15 · Stav: **schváleno** (uživatel, 2026-11-15, včetně posunu Do a navázání napříč dokumenty)
 
 Rozsah vybral uživatel 2026-11-15 ze seznamu kandidátů (odložené body §12
 návrhu 1.0, §9 návrhu 1.1.0 a rešerše): tři funkce a drobnosti z finálního
@@ -41,7 +41,7 @@ review 1.1.0. Ostatní kandidáti čekají na zakázku (§9).
 | 28 | Dvojí číslo se hledá jen mezi prvky, které krok nechal za Do, a hodnotami, které krok zapsal. Je to ⚠, Použít zůstane | uživatel 2026-11-15 (omezení na rozsah běhu); hranice **moje volba** |
 | 29 | Náhled dostane volbu Ukázat: Všechny · Změněné · K prověření, každá s počtem prvků. Neukládá se | uživatel 2026-11-15 (filtr); třetí volba a počty **moje volba** |
 | 30 | Hláška WARN_TO_CUT zůstane; počet očíslovaných prvků řekne Souhrn (§3.5) | **moje volba**, uzavírá drobnost 1 z review 1.1.0 |
-| 31 | Krok 6 plánu řady (napojení na sdílený UI kit) bude BTE 1.3.0 | **moje volba** (doporučeno 2026-11-15), potvrdí se se schválením návrhu |
+| 31 | Krok 6 plánu řady (napojení na sdílený UI kit) bude BTE 1.3.0 | **moje volba**, schváleno s návrhem 2026-11-15 |
 
 ## 3. Navázat
 
