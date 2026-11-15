@@ -4,7 +4,7 @@ Všechny podstatné změny skriptu Batch Relink & Export. Formát vychází z
 [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verzování dle
 [SemVer](https://semver.org/lang/cs/).
 
-## [1.3.0] — 2026-11-12
+## [1.3.0] — 2026-11-15
 
 Okno nástroje se staví ze sdíleného kitu řady (`shared/lib/ui_kit.js`) a
 kontroluje vstup za pochodu, místo aby při Spustit ukázalo jedno chybové okno
