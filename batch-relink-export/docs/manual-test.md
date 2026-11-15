@@ -7,7 +7,7 @@ se ověřily během sestaveného skriptu v Illustratoru 30.8.2 přes
 `tools/ai-eval.sh`, s dialogy procházenými bez zobrazení (pole vyplnil
 skript), a na reálné zakázce (12 pozic, oboustranný arch, 4 zdroje). Tady
 zůstává, co tak ověřit nešlo: dialog okem a myší, běh z menu, zastavení
-klávesou Esc, PDF z dalších programů, anglický Illustrator a tisk.
+klávesou Control, PDF z dalších programů, anglický Illustrator a tisk.
 
 **Brána pro vydání jsou sekce 1–4.** Sekce 6 je rychlá kontrola hlášek. Co
 prošlo, zaškrtni; co ne, nahlas podle sekce 7. Na konci vyplň záznam a před
@@ -179,10 +179,12 @@ soubor kratší) a prázdnou cílovou složku.
 
 - [ ] **3.1 Menu.** Všechno v sekci 2 poběží přes Soubor › Skripty (ověřování
   běželo přes AppleScript).
-- [ ] **3.2 Zastavení klávesou Esc.** Dávka o deseti a více souborech, během
-  zpracování podrž Esc zhruba sekundu → paleta napíše „Zastavuji — rozpracovaný
+- [ ] **3.2 Zastavení klávesou Control.** Dávka o deseti a více souborech, během
+  zpracování podrž Control (^) zhruba sekundu → paleta napíše „Zastavuji — rozpracovaný
   soubor se dokončí…", soubor doběhne a souhrn napíše „Zrušeno uživatelem po
-  zpracování…". Zkus Esc podržet i ve chvíli, kdy se ukládá PDF: jestli
+  zpracování…". Paleta radí „Dávku zastavíte podržením klávesy Control (^).".
+  Esc v Illustratoru 2027 dávku nezastaví, když je Illustrator vpředu
+  (naměřeno 2026-11-15, engine-facts). Zkus Control podržet i ve chvíli, kdy se ukládá PDF: jestli
   Illustrator samotné ukládání nepřeruší (a nenechá ve výstupní složce
   rozepsaný soubor), ověřené není — výstup posledního souboru otevři v Acrobatu.
 
@@ -235,7 +237,7 @@ Hlášky verze 1.3.0 (česky). Chyby polí ukazuje stavový řádek hlavního di
 | dávka o jednom souboru s upozorněním | verdikt Kontroly „Zpracovat jde 1 z 1 archu, 1 s upozorněním. Blokováno: 0." |
 | neočekávaná chyba mimo zpracování archu | „Skript se zastavil kvůli neočekávané chybě: … (řádek N). Pošlete tuto hlášku správci skriptu." |
 | Vybrat… u šablony, zdroje a výstupu | výzvy „Vyberte šablonu (.ai):", „Vyberte zdrojovou složku s PDF:", „Vyberte cílovou složku:" |
-| dávka zastavená Esc po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
+| dávka zastavená Control po 1 ze 3 souborů | „Zrušeno uživatelem po zpracování 1 z 3 souborů.", bez „Vše proběhlo bez chyb." |
 | druhé spuštění | šablona, výstup (i s diakritikou v cestě), vzor, preset a „Otevřít složku" z minula, zdroj prázdný; výstup s uloženým `[PDF/X-4:2008]` je PDF 1.6 s PDF/X |
 | zapamatované dlouhé cesty (72 i 133 znaků) | okno 498 × 479 px jako bez nastavení — pole se nenatahují podle textu |
 | aktivní dokument nikdy neuložený / jiného typu | stavový řádek „✗ Aktivní dokument není uložený. Uložte ho jako .ai." / „✗ Aktivní dokument není šablona .ai.", pole šablony beze změny |
@@ -243,7 +245,7 @@ Hlášky verze 1.3.0 (česky). Chyby polí ukazuje stavový řádek hlavního di
 | zapamatovaný preset, který Illustrator nemá | v seznamu „název  (chybí)", stavový řádek „✗ PDF preset „…“ v Illustratoru není, vyberte jiný.", Spustit šedé; po výběru jiného presetu dávka proběhne a uloží se nový |
 | poškozený soubor s nastavením | výchozí hodnoty, bez hlášky; běh soubor přepíše platným |
 | nastavení nejde zapsat | „Nastavení se nepodařilo uložit — příště se dialog otevře bez něj. Běh pokračuje." a dávka proběhne |
-| předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v Kontrole souborů, po chybě i po zastavení Esc zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
+| předvolba importu PDF strana 2 / MediaBox před během | po dávce, po Stornu v Kontrole souborů, po chybě i po zastavení dávky zůstane 2 / MediaBox (dřív strana a ořez poslední pozice šablony) |
 
 **Známé, vědomě neopravené** (minor z review): v detailu chyby zůstává
 anglická hláška Illustratoru (T5). Titulek okna nese anglický název nástroje

@@ -149,7 +149,7 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Processing files…",
             PROGRESS_INIT:      "Preparing…",
             PROGRESS_FILE:      "Processing: %s (%s of %s)",
-            PROGRESS_STOP_HINT: "To stop the batch, hold down Esc.",
+            PROGRESS_STOP_HINT: "To stop the batch, hold down Control (^).",
             PROGRESS_STOPPING:  "Stopping — the file in progress will be finished…",
 
             // --- Log ---
@@ -305,7 +305,7 @@ BRE.L = (function () {
             PROGRESS_TITLE:     "Zpracování souborů…",
             PROGRESS_INIT:      "Připravuji…",
             PROGRESS_FILE:      "Zpracovávám: %s (%s z %s)",
-            PROGRESS_STOP_HINT: "Dávku zastavíte podržením klávesy Esc.",
+            PROGRESS_STOP_HINT: "Dávku zastavíte podržením klávesy Control (^).",
             PROGRESS_STOPPING:  "Zastavuji — rozpracovaný soubor se dokončí…",
 
             // --- Log ---

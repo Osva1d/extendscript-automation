@@ -75,6 +75,12 @@ výstupů) zůstává.
   v jednom tvaru — v ověření relinku, v počtu pozic navíc, při hledání
   otevřené šablony i u kontroly, že cílová složka není zdrojová. Soubory
   rozdělené v Acrobatu se to netýkalo.
+- **Dávku zastaví podržení klávesy Control (^).** Illustrator 2027 (31.0)
+  skriptu nepojmenuje klávesu drženou, když je sám vpředu, takže podržený Esc
+  dávku nezastavil (změřeno 2026-11-15; Esc ho skript pozná, jen když je vpředu
+  jiná aplikace). Control Illustrator hlásí spolehlivě. Esc zůstává tam, kde ho
+  Illustrator pojmenuje; paleta průběhu teď radí Control. Okno průběhu je
+  společné s Tile Exportem, takže zastavení klávesou Control funguje i tam.
 
 ## [1.2.0] — 2026-10-28
 
