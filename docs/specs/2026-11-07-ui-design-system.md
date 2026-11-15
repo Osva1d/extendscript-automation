@@ -195,7 +195,7 @@ Všechny jsou nativní ScriptUI. Sdílená implementace je návrh do §7.
 | **Stavový řádek** | jeden, přes celou šířku nad patičkou | symbol a barva §2.3, `truncate` | jediné místo s důvodem šedého tlačítka |
 | **Potvrzovací dialog** | nativní `confirm`: tlačítka `Ne` a `Ano`, výchozí `Ano` [V] | Enter [O] | otázka, na kterou `Ano` znamená akci, §5.5 |
 | **Chybová hláška** | nativní `alert`, §6.3 | | ne na chybu v poli |
-| **Průběh** | `NS.Progress` [R] | zastavení podržením Esc [D] | |
+| **Průběh** | `NS.Progress` [R] | zastavení podržením Control, nebo Esc, kde ho Illustrator pojmenuje [M: 2026-11-15, Illustrator 2027 Esc s Illustratorem vpředu nehlásí] | |
 | **Souhrn** | `NS.Summary` [R] | jen tlačítko `Zavřít`; okno s jediným tlačítkem zavře Esc i Enter [V] | |
 
 ---
@@ -210,7 +210,8 @@ a znamená „teď neplatí“; je přednostní před skrytím.
 ### 5.2 Klávesnice
 
 - Enter spustí primární akci, šedá je nespustí [D].
-- Esc zavře dialog jako Storno; běžící dávku zastaví podržením [D].
+- Esc zavře dialog jako Storno. Běžící dávku zastaví podržení Control; Esc jen tam, kde ho
+  Illustrator skriptu pojmenuje — v Illustratoru 2027 s ním vpředu ne [M: 2026-11-15].
 - Tab jde pořadím vytvoření, takže kód staví prvky v pořadí čtení: levý sloupec, pravý
   sloupec, tlačítka. Zastaví se i na seznamu, záložky přeskočí a mezi panely chce jedno
   stisknutí navíc [V]. Jiné pořadí ScriptUI nastavit neumí, proto na Tabu žádné pravidlo

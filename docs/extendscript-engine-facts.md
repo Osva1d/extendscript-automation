@@ -1798,6 +1798,34 @@ stejných pixelech).
   High Quality Print (druhý) a Press Quality (poslední); EN instalace neměřena.
 
 
+
+### Soubory, složky a neuložený dokument (naměřeno 2026-11-12 a 2026-11-15, AI 31.0.0)
+
+Sonda `batch-relink-export/tests/probes/inspect_template.jsx` a `tools/ai-eval.sh`,
+vlastní dokumenty, Illustrator bez otevřených dokumentů.
+
+- **`fullName` nikdy neuloženého dokumentu nevyhodí.** Vrátí `File` s `fsName`
+  `/Bez názvu -1` a `exists === false`. Neuložený dokument se pozná podle `exists`,
+  ne podle výjimky (skill handling-adobe-files to dřív popisoval jako výjimku).
+- **`new Folder(cesta k souboru)` je `Folder`, který existuje.** `instanceof Folder`
+  je `true`, `exists` `true` a `getFiles()` vrátí prázdné pole bez chyby. Funkční tvar
+  bez `new`, `Folder(cesta k souboru)`, vrátí `File`; `File(cesta ke složce)` vrátí
+  `Folder`. Složku od souboru proto rozliší `Folder(cesta) instanceof Folder`.
+- `fsName` odstraní koncové lomítko: `new Folder("/a/b/").fsName` je `/a/b`.
+- `doc.placedItems` vrací naposledy umístěnou pozici první (pořadí vrstvení).
+- **Cesty z Illustratoru jsou rozložené (NFD), cesty ze `Folder.getFiles`
+  ne vždy** (naměřeno 2026-11-15). `PlacedItem.file.fsName` po umístění i po
+  `relink()` a `Document.fullName.fsName` vracejí název s diakritikou vždy
+  v NFD („C“ + háček). `Folder.getFiles()` a text napsaný do pole vracejí tvar
+  uložený na disku; soubor pojmenovaný v Terminálu nebo převzatý z Windows ho
+  má složený (NFC). Porovnání `===` dvou cest k témuž souboru pak vyjde
+  `false`. `app.open()` na NFC cestu už otevřeného dokumentu otevře **druhou
+  kopii** místo vrácení otevřené instance. Soubory rozdělené v Acrobatu jsou
+  v NFD.
+- Otevření dočasné kopie šablony (`app.open` na jiný soubor) a její zavření bez
+  uložení nechá aktivním dokument, který byl aktivní předtím, a otevřený originál
+  nezmění, i když má neuložené změny.
+
 ---
 
 ## Kódování zdroje a živé kolekce (naměřeno 2026-09-27, AI 30.8.2)
@@ -1899,6 +1927,36 @@ dokud zpracování běží synchronně v jednom skriptu.
 (`keyName === "Escape"`) i Shift (`shiftKey`). Zastavení dávky se dá postavit na
 podržené klávese kontrolované mezi kroky (batch-relink-export to tak dělá).
 Jestli Esc stisknutý během `saveAs` přeruší i samotné ukládání, neměřeno.
+
+### Illustrator 2027: `keyName` drženou klávesu nepojmenuje (naměřeno 2026-11-15, AI 31.0.0, macOS 27.2)
+
+Zastavení dávky podrženým Esc (výš, měřeno v AI 30.8.2) v Illustratoru 31.0.0 na
+macOS 27.2 nefunguje. Čtyři sondy spuštěné uživatelem přes Soubor › Skripty, paleta
+jako v `shared/lib/progress.js`, čtení po 100 ms se `w.update()` a `$.sleep(100)`:
+
+| co obsluha držela | `keyboardState.keyName` | modifikátory |
+|---|---|---|
+| nic | `"A"` (řetězec, kód 65), pokaždé | vše `false` |
+| Esc, Return, Backspace, šipky, mezerník | `undefined`, pokaždé (30 z 30) | vše `false` |
+| Shift / Option / Control | `"A"` | `shiftKey` / `altKey` / `ctrlKey` `true` (30 z 30) |
+
+- Stejné s českým rozložením i s ABC — rozložení klávesnice příčinou není.
+- Že je dole běžná klávesa, skript pozná (`undefined` místo `"A"`), ale ne kterou.
+  `"A"` v klidu odpovídá kódu klávesy 0 na Macu (klávesa A). Vypadá to na rozbitý
+  převod kódu klávesy na jméno; jestli v Illustratoru 2027, nebo v macOS 27.2,
+  rozlišit nešlo (Illustrator 2026 byl odinstalovaný, macOS 27.2 přišel 2026-10-29,
+  Illustrator 2027 2026-11-07).
+- Posluchač `keydown` na paletě během běhu skriptu nedostal ani jednu událost
+  (15 kláves). Krátký stisk ani dvojstisk zachytit nejde, jen stav klávesy
+  v okamžiku čtení.
+- Po `app.open()` dokumentu je `palette.active` `false`; čtení stavu to neovlivnilo.
+- **Záleží na tom, která aplikace je vpředu** (tři běhy sondy
+  `sonda-esc-overeni.jsx`, 2026-11-15). Když je vpředu jiná aplikace a obsluha
+  drží Esc v ní, `keyName` je správně `"Escape"` (59 z 60, 60 z 60). Když je
+  vpředu Illustrator, drženou klávesu nepojmenuje. V klidu s otevíraným
+  dokumentem dal jednou `"A"` (24 z 24) a jednou `undefined` (24 z 24) —
+  `undefined` tedy neznamená spolehlivě „klávesa dole“ a jako náhradu Esc ho
+  použít nejde. Control je čitelný i z jiné aplikace (`ctrlKey` 58 z 60).
 
 ## Text: zápis, zámky, přetečení, výběr (naměřeno 2026-10-28 a 2026-10-29, AI 30.8.2)
 

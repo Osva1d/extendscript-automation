@@ -1,5 +1,5 @@
 // ------------------------------------------------------------------------
-// Module: Progress (shared) — a progress palette that stops on held Esc
+// Module: Progress (shared) — a progress palette that stops on held Control or Esc
 // Part of: shared core (consumed by tile-export and batch-relink-export;
 //          extendscript-ui-standards §12.5)
 //
@@ -13,8 +13,13 @@
 // texts come in as an argument, so each tool keeps its own locale keys.
 // Illustrator dispatches no clicks to a palette button while the script
 // runs, however the loop redraws or waits, but the keyboard state can be
-// read (both measured in BRE, AI 30.8.2): the run stops on held Esc, after
-// the item in progress.
+// read (both measured in BRE, AI 30.8.2): the run stops on a held key, after
+// the item in progress. Illustrator 2027 (31.0.0, macOS 27.2) no longer names
+// a key held while it is in front — keyName reads undefined, and undefined
+// also with no key held — so held Esc stops the run there only from another
+// app; held Control is read either way (docs/extendscript-engine-facts.md,
+// measured 2026-11-15). The run stops on Control, or on Esc where it is named
+// ("Escape" on macOS, "Esc" reported on Windows).
 // ------------------------------------------------------------------------
 function buildProgress(NS) {
     NS.Progress = {
@@ -62,12 +67,13 @@ function buildProgress(NS) {
 
             var cancelled = false;
 
-            // Latches a stop request while Esc is held. The run acts on it
-            // between items, so the item in progress is finished.
+            // Latches a stop request while Control or Esc is held. The run
+            // acts on it between items, so the item in progress is finished.
             function poll() {
                 if (cancelled) { return; }
                 try {
-                    if (ScriptUI.environment.keyboardState.keyName === "Escape") {
+                    var k = ScriptUI.environment.keyboardState;
+                    if (k.ctrlKey === true || k.keyName === "Escape" || k.keyName === "Esc") {
                         cancelled = true;
                         stopHint.text = texts.stopping;
                         dlg.update();

@@ -1,11 +1,13 @@
 {
   "name": "batch-relink-export",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Batch PDF relinking and export for Illustrator templates",
   "author": "Ladislav Osvald",
   "license": "MIT",
   "scripts": {
-    "build": "bash tools/build.sh"
+    "build": "bash tools/build.sh",
+    "test": "bash tests/run_all.sh",
+    "verify": "npm run build && npm test"
   }
 }

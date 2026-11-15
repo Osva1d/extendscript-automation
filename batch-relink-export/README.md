@@ -8,7 +8,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Namespace:** `BRE`
 - **Build:** `npm run build` (`tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx`
 - **Min. verze AI:** CC 2018 (v22)
-- **Verze:** 1.2.0
+- **Verze:** 1.3.0
 
 ## Instalace
 
@@ -23,7 +23,7 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 2. Podle potřeby ořízni clipping maskou, přidej řezací značky a další prvky archu.
 3. Ulož šablonu.
 4. Rozděl zdrojové PDF na soubory po N stranách (N = počet pozic v šabloně), typicky v Acrobatu.
-5. Spusť skript, vyplň dialog, potvrď náhled (u bezchybné dávky se přeskočí), hotovo.
+5. Spusť skript a vyplň dialog; stavový řádek pod ním hlídá vstup za pochodu a Spustit se odemkne, až je všechno v pořádku. Kontrolu souborů potvrď, pokud se ukáže (u běžné dávky se přeskočí), hotovo.
 
 > **Tip:** Neúplný arch skript vyčistí sám (viz [Neúplný arch](#neúplný-arch)). Kdo chce plné archy, doplní zdrojové PDF prázdnými stranami na násobek N.
 
@@ -36,16 +36,19 @@ Automatizace tiskové přípravy v Adobe Illustrator — hromadné relinkování
 - **Neúplný arch** — pozice, pro které zdroj nemá stranu, skript z archu odebere (viz [Neúplný arch](#neúplný-arch)).
 - **Předvídatelné číslování** — zdroje řazeny přirozeně (`part_2` před `part_10`).
 - **Pojmenování výstupů** přes vzor s placeholdery (viz níže).
-- **Náhled** před zpracováním (přeskočí se, když je dávka bez anomálií).
-- **Zastavení dávky** podržením klávesy Esc — rozpracovaný soubor se dokončí, souhrn uvede, kolik souborů se zpracovalo.
+- **Živá kontrola dialogu** — stavový řádek pod poli říká první chybu (✗) nebo upozornění (⚠) a připojí „Další chyby: N." Pole s chybou mají červený text a Spustit je šedé, dokud nějaká chyba platí. Když je všechno v pořádku, řádek řekne, kolik PDF dávka zpracuje. Zdrojová složka se vypisuje jen při změně cesty nebo výběru tlačítkem Vybrat…, ne při psaní do jiných polí.
+- **Použít aktivní dokument** — tlačítko pod polem šablony vyplní cestu dokumentu otevřeného v Illustratoru. Bez otevřeného dokumentu je šedé; dokument, který ještě nebyl uložený, nebo není .ai, pole nezmění a stavový řádek řekne proč. Má-li dokument neuložené změny, upozorní stavový řádek, že běh použije verzi na disku.
+- **Dotaz před přepisem** — když v cílové složce už jsou výstupy, které by běh přepsal, zeptá se „V cílové složce už je: N souborů. Přepsat?" (Ano přepíše, Ne vrátí dialog beze změny). Výstupy, které nechá být „Přeskočit hotové výstupy", se nepočítají.
+- **Kontrola souborů** před zpracováním — ukáže se jen tehdy, když něco chce pohled: soubor s méně stranami uprostřed dávky, soubor s více stranami než pozic (blokovaný), nečitelný počet stran nebo mapa stran šablony, která není v pořádku. Neúplný poslední arch, který má skoro každá zakázka, ji sám nevyvolá a dávku nezastaví. Kontrola ukazuje stavbu šablony (pozice, kreslicí plátna, formát strany) a mapu stran: které strany PDF šablona ukazuje. Nesoulad (strana dvakrát, nějaká chybí) je upozornění, ne blokace.
+- **Zastavení dávky** podržením klávesy Control (^) — rozpracovaný soubor se dokončí, souhrn uvede, kolik souborů se zpracovalo. Esc zastaví dávku jen tam, kde ho Illustrator skriptu ohlásí: Illustrator 2027 podrženou klávesu nepojmenuje, když je sám vpředu (naměřeno 2026-11-15).
 - **Přeskočit hotové výstupy** — přeskočí archy, jejichž výstup už existuje a je novější než zdroj i šablona (pokračování přerušené dávky). Starší výstup — třeba jiné zakázky se stejnou šablonou — se vytvoří znovu.
-- **Zapamatované nastavení** — dialog se otevře s poslední šablonou, cílovou složkou, vzorem pojmenování, PDF presetem a volbou „Po dokončení otevřít cílovou složku". Zdrojová složka se mění se zakázkou a „Přeskočit hotové výstupy" je rozhodnutí pro jeden běh, proto se nepamatují. Soubor: `~/Library/Application Support/batch-relink-export/settings.json`; bez něj se dialog otevře s výchozími hodnotami.
+- **Zapamatované nastavení** — dialog se otevře s poslední šablonou, cílovou složkou, vzorem pojmenování, PDF presetem a volbami „Přeskočit hotové výstupy" a „Po dokončení otevřít cílovou složku". Zdrojová složka se mění se zakázkou, proto se nepamatuje. Nastavení se ukládá po Spustit. Soubor: `~/Library/Application Support/batch-relink-export/settings.json`; bez něj se dialog otevře s výchozími hodnotami.
 - Ignoruje macOS systémové soubory (`._*`, tečkové) ve zdrojové složce.
 - Lokalizace **cs/en** (auto-detekce dle Illustratoru).
 
 ## Vzor pojmenování
 
-Pole „Vzor:" (vzor pojmenování) v dialogu podporuje placeholdery (musí obsahovat aspoň `{n}`):
+Pole „Vzor pojmenování:" v dialogu podporuje placeholdery (musí obsahovat aspoň `{n}`):
 
 | Placeholder | Význam |
 |---|---|
@@ -61,7 +64,7 @@ Když má zdrojové PDF méně stran než šablona pozic, ukázaly by pozice pro
 
 Stránku pozice Illustrator skriptu neprozradí (`PlacedItem` nemá žádnou vlastnost se stranou). Skript ji zjistí tak, že pozice na chvíli přelinkuje na dočasné pomocné PDF, v němž má každá strana jinou šířku, a pak je přelinkuje na zdroj.
 
-Automaticky se odebírá jen tehdy, když šablona ukazuje strany 1 až N každou právě jednou. Jinak (například stejná strana na dvou pozicích) skript arch vyexportuje beze změny a v souhrnu napíše, kolik pozic navíc je třeba před tiskem odstranit ručně.
+Automaticky se odebírá jen tehdy, když šablona ukazuje strany 1 až N každou právě jednou. Jinak (například stejná strana na dvou pozicích) skript arch vyexportuje beze změny a v souhrnu napíše, kolik pozic navíc je třeba před tiskem odstranit ručně. Od 1.3.0 mapu stran zjišťuje sonda při každém běhu, ne jen u neúplného archu, a nesoulad ukáže Kontrola souborů ještě před během.
 
 ## Vývoj
 
@@ -72,11 +75,12 @@ src/
 ├── storage.js  # BRE.Storage — zapamatované nastavení dialogu
 ├── pdf.js      # BRE.Pdf — počet stran PDF, pomocné PDF pro zjištění strany pozice
 ├── core.js     # BRE.Core — session mgmt, relink, verifikace, sken, pojmenování
-├── ui.js       # BRE.UI — dialog, náhled, napojení sdíleného průběhu a souhrnu; blok metrik BRE.UI.M
+├── ui.js       # BRE.UI — hlavní dialog ze sdíleného kitu s živou kontrolou, Kontrola souborů, napojení sdíleného průběhu a souhrnu
 └── main.js    # Entry point — smyčka zpracování
 ```
 
-- Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`; jako první vloží sdílený JSON polyfill `../shared/lib/json2.js`).
+- Build: `npm run build` (= `bash tools/build.sh`) → `dist/illustrator-batch-relink-export.jsx` (přidá UTF-8 BOM + `#target illustrator`; jako první vloží sdílený JSON polyfill `../shared/lib/json2.js`, dále sdílené moduly `field_paint.js`, `ui_kit.js`, `progress.js` a `summary.js`).
+- Testy: `npm test` (Node, čisté funkce — živá kontrola dialogu, Kontrola souborů, mapa stran šablony, uložené nastavení, lokalizace); `npm run verify` = build + test.
 - Verze je v `package.json`; `tools/build.sh` ji ověřuje proti `src/config.js` (parity guard).
 - **Ruční testy** před vydáním: [`docs/manual-test.md`](docs/manual-test.md).
 - **Diagnostika:** nastav `BRE.Config.debug = true` (v `src/config.js`, příp. přímo v sestaveném `.jsx`) → do cílové složky se zapíše `_bre-diagnostika.txt` s popisem každé pozice (vrstva, clip-group, propojený soubor) před i po relinku. Pro hledání chyb; ve výchozím stavu vypnuto, bez UI.

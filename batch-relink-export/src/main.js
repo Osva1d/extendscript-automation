@@ -8,7 +8,7 @@
 
         // Remember this setup for the next dialog. A failure costs only that
         // convenience, so the batch goes on.
-        if (!BRE.Storage.save(config)) alert(BRE.L.ERR_WRITE_SETTINGS);
+        if (!BRE.Storage.save(config)) alert(BRE.L.ERR_WRITE_SETTINGS + " " + BRE.L.RUN_CONTINUES);
 
         // If the template is already open with unsaved changes, processing
         // would close it without saving and discard the user's work. Warn first.
@@ -19,24 +19,26 @@
             } catch (e) {}
         }
 
-        // Count the template's positions for the preview — as saved on disk,
-        // which is what every sheet is built from. An open template is not
-        // closed here: that would discard the user's unsaved work even if
-        // they then cancel at the preview. (Processing later closes it, which
+        // Inspect the template for the preview — as saved on disk, which is
+        // what every sheet is built from. An open template is measured on a
+        // temporary copy and is not closed here: that would discard the
+        // user's unsaved work even if they then cancel at the preview. (Processing later closes it, which
         // is what the warning above is about.)
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
         var slotCount = 0;
+        var info;
         try {
-            slotCount = BRE.Core.countSavedPositions(config.templateFile, openTpl);
+            info = BRE.Core.inspectTemplate(config.templateFile, openTpl);
+            slotCount = info.positions;
         } catch (e) {
             app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
-            alert(BRE.L.format(BRE.L.ERR_TEMPLATE_OPEN, e.message));
+            alert(BRE.L.ERROR_PREFIX + BRE.L.format(BRE.L.ERR_TEMPLATE_OPEN, e.message));
             return;
         }
         app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS;
 
         if (slotCount === 0) {
-            alert(BRE.L.ERR_NO_LINKS);
+            alert(BRE.L.ERROR_PREFIX + BRE.L.ERR_NO_LINKS);
             return;
         }
 
@@ -45,12 +47,11 @@
         // any destructive work; over-page files are hard-blocked in the loop.
         var scan = BRE.Core.scanSources(config.pdfFiles, slotCount);
 
-        // Fewer dialogs: only show the preview when there is something to
-        // review (anomalies or blocked files). A fully clean batch — every
-        // file has exactly the right page count — proceeds straight to
-        // processing after the user clicked Run.
-        var clean = (scan.counts.ok === config.pdfFiles.length);
-        if (!clean && !BRE.UI.showPreview(config, slotCount, scan)) return;
+        // Fewer dialogs: only show the check when there is something to
+        // review (anomalies, blocked files or a bad page map). A fully clean
+        // batch proceeds straight to processing after the user clicked Run.
+        var mapOk = info.pageMap.ok;
+        if (BRE.Core.needsCheck(scan.counts, mapOk) && !BRE.UI.showCheck(config, info, scan)) return;
 
         // Every sheet must build from the template's saved on-disk state. If
         // the user still has it open, app.open() would return that in-memory
@@ -116,8 +117,7 @@
                 // An older one belongs to another job with the same name, or
                 // the source or template changed since; it is made again.
                 if (config.skipExisting && outputFile.exists) {
-                    if (outputFile.modified > currentFile.modified &&
-                            outputFile.modified > config.templateFile.modified) {
+                    if (BRE.Core.isFinished(outputFile, currentFile, config.templateFile)) {
                         results.skipped++;
                         results.log.push(sourceFileName + ": " + BRE.L.SKIP_MSG);
                         continue;
@@ -250,7 +250,7 @@
         }
 
         // Summary
-        BRE.UI.showSummary(results);
+        BRE.UI.showSummary(results, info, config);
 
         if (config.openAfter && results.success > 0) {
             try { config.outputFolder.execute(); } catch (oe) {}
@@ -260,6 +260,9 @@
         try { app.userInteractionLevel = UserInteractionLevel.DISPLAYALERTS; } catch (x) {}
         alert(BRE.L.format(BRE.L.ERR_CRITICAL, e.message, String(e.line || "?")));
     } finally {
+        // Idempotent: the probe is also written by the inspection, which
+        // runs before the processing loop (and survives a cancelled check).
+        BRE.Core.removeProbe();
         BRE.Core.restorePdfPrefs(pdfPrefs);
     }
 })(BRE);

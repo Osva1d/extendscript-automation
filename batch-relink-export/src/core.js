@@ -177,28 +177,55 @@ BRE.Core = {
     },
 
     /**
-     * Counts the positions of the template as saved on disk — the state every
-     * sheet is built from. A template open with unsaved changes would give
-     * its in-memory count (app.open() returns that instance), so the count
-     * then comes from a temporary copy of the file; the user's open document
-     * is not touched.
+     * Reports the template's layout and page map, as saved on disk — the state
+     * every sheet is built from. The page map needs the probe, which relinks
+     * the positions, so a template that is open in Illustrator is never
+     * measured in place: a temporary copy is opened and removed again, and the
+     * user's document (saved or not) is not touched.
      * @param {File} file - The template file.
      * @param {Document|null} openDoc - The template if it is already open.
-     * @returns {number} Position count of the saved template.
+     * @returns {{positions: number, perArtboard: Object, sizes: number[][], pages: number[]|null, pageMap: Object}}
      */
-    countSavedPositions: function (file, openDoc) {
-        if (openDoc && openDoc.saved !== false) return this.getPositions(openDoc).length;
+    inspectTemplate: function (file, openDoc) {
         var src = file, copy = null;
         if (openDoc) {
             copy = new File(Folder.temp.fsName + "/bre-template-" + new Date().getTime() + ".ai");
             if (!file.copy(copy.fsName)) throw new Error("cannot copy the template to " + copy.fsName);
             src = copy;
         }
-        var doc = app.open(src);
+        var doc = null;
         try {
-            return this.getPositions(doc).length;
+            doc = app.open(src);
+            var positions = this.getPositions(doc);
+            var n = positions.length;
+            if (n === 0) {
+                return { positions: 0, perArtboard: this.positionsPerArtboard([], []), sizes: [], pages: null, pageMap: this.describePageMap([], 0) };
+            }
+            var centers = [], sizes = [], rects = [], i, gb;
+            for (i = 0; i < n; i++) {
+                sizes.push(this._pageSize(positions[i]));
+                try {
+                    gb = positions[i].geometricBounds;
+                    centers.push([(gb[0] + gb[2]) / 2, (gb[1] + gb[3]) / 2]);
+                } catch (e) {
+                    this._log("inspectTemplate: bounds " + e.message);
+                }
+            }
+            for (i = 0; i < doc.artboards.length; i++) rects.push(doc.artboards[i].artboardRect);
+            var pages = this._readPositionPages(positions);
+            return {
+                positions: n,
+                perArtboard: this.positionsPerArtboard(centers, rects),
+                sizes: this.distinctSizes(sizes),
+                pages: pages,
+                pageMap: this.describePageMap(pages, n)
+            };
         } finally {
-            doc.close(SaveOptions.DONOTSAVECHANGES);
+            try {
+                if (doc) doc.close(SaveOptions.DONOTSAVECHANGES);
+            } catch (ce) {
+                BRE.Core._log("inspectTemplate: closing the copy failed: " + ce.message);
+            }
             if (copy) copy.remove();
         }
     },
@@ -319,7 +346,26 @@ BRE.Core = {
      * @returns {number[]|null} Page per position, or null.
      */
     _positionPages: function (positions) {
-        var n = positions.length, pages = [], seen = [], i, k, size;
+        var pages = this._readPositionPages(positions);
+        if (!pages) return null;
+        var n = positions.length, seen = [], i, k;
+        for (i = 0; i < n; i++) {
+            k = pages[i];
+            if (k < 1 || k > n || seen[k]) return null;
+            seen[k] = true;
+        }
+        return pages;
+    },
+
+    /**
+     * Relinks every position to the page probe and reads which page each one
+     * shows — the raw map, with no check that it is 1..n.
+     * @param {PlacedItem[]} positions - The template's positions.
+     * @returns {number[]|null} Page per position, or null if the probe cannot
+     *   be written, a size is unreadable or a relink fails.
+     */
+    _readPositionPages: function (positions) {
+        var n = positions.length, pages = [], i, size;
         var probe = this._probe(n);
         if (!probe) return null;
         try {
@@ -327,13 +373,10 @@ BRE.Core = {
                 positions[i].relink(probe);
                 size = this._pageSize(positions[i]);
                 if (!size) return null;
-                k = BRE.Pdf.pageFromWidth(size[0]);
-                if (k < 1 || k > n || seen[k]) return null;
-                seen[k] = true;
-                pages.push(k);
+                pages.push(BRE.Pdf.pageFromWidth(size[0]));
             }
         } catch (e) {
-            this._log("_positionPages: " + e.message);
+            this._log("_readPositionPages: " + e.message);
             return null;
         }
         return pages;
@@ -384,7 +427,7 @@ BRE.Core = {
         var items = doc.placedItems;
         for (var i = 0; i < items.length; i++) {
             try {
-                if (!this._isHidden(items[i]) && items[i].file.fsName === targetPdf.fsName) n++;
+                if (!this._isHidden(items[i]) && this.samePath(items[i].file.fsName, targetPdf.fsName)) n++;
             } catch (e) {}
         }
         return n;
@@ -489,7 +532,7 @@ BRE.Core = {
             var rec = relinkedItems[i];
             try {
                 var actualPath = rec.item.file.fsName;
-                if (actualPath !== expectedPath) {
+                if (!this.samePath(actualPath, expectedPath)) {
                     errors.push(
                         BRE.L.format(BRE.L.ERR_RELINK_VERIFY, rec.label, expectedPath, actualPath)
                     );
@@ -619,6 +662,127 @@ BRE.Core = {
     },
 
     /**
+     * True when an output already exists and is newer than both its source
+     * and the template (the skip rule: such an output counts as done).
+     * @param {Object} out - File-like {exists, modified}.
+     * @param {Object} src - File-like source.
+     * @param {Object} tpl - File-like template.
+     * @returns {boolean}
+     */
+    isFinished: function (out, src, tpl) {
+        return !!out.exists && out.modified > src.modified && out.modified > tpl.modified;
+    },
+
+    /**
+     * Full paths of every output the run writes, leaving out those the
+     * skip rule protects when skipExisting is on (the caller counts which
+     * of them already exist).
+     * @param {Object} config - {namingPattern, pdfFiles, templateName,
+     *   templateFile, outputFolder, skipExisting}.
+     * @returns {string[]} Output paths the run writes.
+     */
+    overwriteCandidates: function (config) {
+        var paths = [];
+        for (var i = 0; i < config.pdfFiles.length; i++) {
+            var sf = config.pdfFiles[i];
+            var sname = sf.displayName || decodeURI(sf.name);
+            var name = BRE.Core.buildOutputName(
+                config.namingPattern, i, config.pdfFiles.length,
+                config.templateName, BRE.Core.stripExtension(sname));
+            var path = config.outputFolder.fsName + "/" + name;
+            if (config.skipExisting &&
+                    BRE.Core.isFinished(new File(path), sf, config.templateFile)) {
+                continue;
+            }
+            paths.push(path);
+        }
+        return paths;
+    },
+
+    /**
+     * Whether the file check window must open before a run.
+     * @param {Object} counts - scan.counts: {ok, partial, under, over, unreadable}.
+     * @param {boolean} mapOk - The template's page map is a permutation.
+     * @returns {boolean}
+     */
+    needsCheck: function (counts, mapOk) {
+        return (counts.under + counts.over + counts.unreadable) > 0 || !mapOk;
+    },
+
+    // ---------------------------------------------------------------------
+    // Template inspection
+    // ---------------------------------------------------------------------
+
+    /**
+     * Compares the template's page numbers (one per position) with 1..n.
+     * @param {number[]|null} pages - Page number per position, null if unknown.
+     * @param {number} n - Number of positions.
+     * @returns {{ok: boolean, unknown: boolean,
+     *   duplicates: Array<{page: number, times: number}>,
+     *   missing: number[], beyond: number[]}}
+     */
+    describePageMap: function (pages, n) {
+        var r = { ok: false, unknown: false, duplicates: [], missing: [], beyond: [] };
+        if (!pages) { r.unknown = true; return r; }
+        var seen = {}, i;
+        for (i = 0; i < pages.length; i++) {
+            seen[pages[i]] = (seen[pages[i]] || 0) + 1;
+            if (pages[i] > n || pages[i] < 1) r.beyond.push(pages[i]);
+        }
+        for (i = 1; i <= n; i++) {
+            if (!seen[i]) r.missing.push(i);
+            else if (seen[i] > 1) r.duplicates.push({ page: i, times: seen[i] });
+        }
+        r.ok = pages.length === n && r.duplicates.length === 0 &&
+            r.missing.length === 0 && r.beyond.length === 0;
+        return r;
+    },
+
+    /**
+     * Counts position centres per artboard (first matching rect wins).
+     * @param {number[][]} centers - [[x, y]] (y up).
+     * @param {number[][]} rects - artboardRects [left, top, right, bottom].
+     * @returns {{counts: number[], outside: number}}
+     */
+    positionsPerArtboard: function (centers, rects) {
+        var counts = [], outside = 0, i, j;
+        for (j = 0; j < rects.length; j++) counts.push(0);
+        for (i = 0; i < centers.length; i++) {
+            var x = centers[i][0], y = centers[i][1], hit = false;
+            for (j = 0; j < rects.length; j++) {
+                var r = rects[j];
+                if (x >= r[0] && x <= r[2] && y >= r[3] && y <= r[1]) {
+                    counts[j]++; hit = true; break;
+                }
+            }
+            if (!hit) outside++;
+        }
+        return { counts: counts, outside: outside };
+    },
+
+    /**
+     * Distinct [w, h] sizes in pt (first kept; equal within 0.1 mm); null skipped.
+     * @param {Array<number[]|null>} sizes
+     * @returns {number[][]}
+     */
+    distinctSizes: function (sizes) {
+        var tol = 0.1 * 72 / 25.4;    // 0.1 mm, as in verifyRelink
+        var out = [];
+        for (var i = 0; i < sizes.length; i++) {
+            var s = sizes[i];
+            if (!s) continue;
+            var dup = false;
+            for (var j = 0; j < out.length; j++) {
+                if (Math.abs(out[j][0] - s[0]) <= tol && Math.abs(out[j][1] - s[1]) <= tol) {
+                    dup = true; break;
+                }
+            }
+            if (!dup) out.push(s);
+        }
+        return out;
+    },
+
+    /**
      * Strips file extension from a filename.
      * @param {string} filename - Filename with extension.
      * @returns {string} Filename without extension.
@@ -675,7 +839,7 @@ BRE.Core = {
             for (var i = 0; i < app.documents.length; i++) {
                 var d = app.documents[i];
                 try {
-                    if (d.fullName && d.fullName.fsName === file.fsName) return d;
+                    if (d.fullName && BRE.Core.samePath(d.fullName.fsName, file.fsName)) return d;
                 } catch (e) {}
             }
         } catch (e) {}
@@ -729,6 +893,82 @@ BRE.Core = {
         } catch (e) {
             this._log("appendLog failed: " + e.message);
         }
+    },
+
+    // ---------------------------------------------------------------------
+    // Paths in two Unicode forms
+    // ---------------------------------------------------------------------
+
+    // Canonical decomposition of every precomposed letter of Latin-1
+    // Supplement and Latin Extended-A: triples of the letter, its ASCII base
+    // and its combining mark (generated from Unicode NFD, checked against it
+    // by tests/test_paths.js).
+        _NFD_TABLE: "\u00C0A\u0300\u00C1A\u0301\u00C2A\u0302\u00C3A\u0303\u00C4A\u0308" +
+            "\u00C5A\u030A\u00C7C\u0327\u00C8E\u0300\u00C9E\u0301\u00CAE\u0302" +
+            "\u00CBE\u0308\u00CCI\u0300\u00CDI\u0301\u00CEI\u0302\u00CFI\u0308" +
+            "\u00D1N\u0303\u00D2O\u0300\u00D3O\u0301\u00D4O\u0302\u00D5O\u0303" +
+            "\u00D6O\u0308\u00D9U\u0300\u00DAU\u0301\u00DBU\u0302\u00DCU\u0308" +
+            "\u00DDY\u0301\u00E0a\u0300\u00E1a\u0301\u00E2a\u0302\u00E3a\u0303" +
+            "\u00E4a\u0308\u00E5a\u030A\u00E7c\u0327\u00E8e\u0300\u00E9e\u0301" +
+            "\u00EAe\u0302\u00EBe\u0308\u00ECi\u0300\u00EDi\u0301\u00EEi\u0302" +
+            "\u00EFi\u0308\u00F1n\u0303\u00F2o\u0300\u00F3o\u0301\u00F4o\u0302" +
+            "\u00F5o\u0303\u00F6o\u0308\u00F9u\u0300\u00FAu\u0301\u00FBu\u0302" +
+            "\u00FCu\u0308\u00FDy\u0301\u00FFy\u0308\u0100A\u0304\u0101a\u0304" +
+            "\u0102A\u0306\u0103a\u0306\u0104A\u0328\u0105a\u0328\u0106C\u0301" +
+            "\u0107c\u0301\u0108C\u0302\u0109c\u0302\u010AC\u0307\u010Bc\u0307" +
+            "\u010CC\u030C\u010Dc\u030C\u010ED\u030C\u010Fd\u030C\u0112E\u0304" +
+            "\u0113e\u0304\u0114E\u0306\u0115e\u0306\u0116E\u0307\u0117e\u0307" +
+            "\u0118E\u0328\u0119e\u0328\u011AE\u030C\u011Be\u030C\u011CG\u0302" +
+            "\u011Dg\u0302\u011EG\u0306\u011Fg\u0306\u0120G\u0307\u0121g\u0307" +
+            "\u0122G\u0327\u0123g\u0327\u0124H\u0302\u0125h\u0302\u0128I\u0303" +
+            "\u0129i\u0303\u012AI\u0304\u012Bi\u0304\u012CI\u0306\u012Di\u0306" +
+            "\u012EI\u0328\u012Fi\u0328\u0130I\u0307\u0134J\u0302\u0135j\u0302" +
+            "\u0136K\u0327\u0137k\u0327\u0139L\u0301\u013Al\u0301\u013BL\u0327" +
+            "\u013Cl\u0327\u013DL\u030C\u013El\u030C\u0143N\u0301\u0144n\u0301" +
+            "\u0145N\u0327\u0146n\u0327\u0147N\u030C\u0148n\u030C\u014CO\u0304" +
+            "\u014Do\u0304\u014EO\u0306\u014Fo\u0306\u0150O\u030B\u0151o\u030B" +
+            "\u0154R\u0301\u0155r\u0301\u0156R\u0327\u0157r\u0327\u0158R\u030C" +
+            "\u0159r\u030C\u015AS\u0301\u015Bs\u0301\u015CS\u0302\u015Ds\u0302" +
+            "\u015ES\u0327\u015Fs\u0327\u0160S\u030C\u0161s\u030C\u0162T\u0327" +
+            "\u0163t\u0327\u0164T\u030C\u0165t\u030C\u0168U\u0303\u0169u\u0303" +
+            "\u016AU\u0304\u016Bu\u0304\u016CU\u0306\u016Du\u0306\u016EU\u030A" +
+            "\u016Fu\u030A\u0170U\u030B\u0171u\u030B\u0172U\u0328\u0173u\u0328" +
+            "\u0174W\u0302\u0175w\u0302\u0176Y\u0302\u0177y\u0302\u0178Y\u0308" +
+            "\u0179Z\u0301\u017Az\u0301\u017BZ\u0307\u017Cz\u0307\u017DZ\u030C" +
+            "\u017Ez\u030C",
+
+    /**
+     * A string in the decomposed form (NFD) for the letters of _NFD_TABLE;
+     * every other character stays as it is. ES3 has no String.normalize.
+     * @param {string} s - Any string, typically a path.
+     * @returns {string} The string with those letters decomposed.
+     */
+    _nfd: function (s) {
+        var t = this._NFD_TABLE, out = "", i, c, k;
+        s = String(s);
+        for (i = 0; i < s.length; i++) {
+            c = s.charAt(i);
+            k = (c >= "\u00C0" && c <= "\u017F") ? t.indexOf(c) : -1;
+            out += (k >= 0 && k % 3 === 0) ? t.substr(k + 1, 2) : c;
+        }
+        return out;
+    },
+
+    /**
+     * Whether two paths name the same file. A path with diacritics comes in
+     * two forms: Illustrator reports a placed file's and a document's path
+     * decomposed (NFD), Folder.getFiles and typed text keep the name as it is
+     * stored, often composed (NFC) — measured 2026-11-15, AI 31.0.0. Compared
+     * as plain strings, the two forms of one file differ.
+     * @param {string} a - A path.
+     * @param {string} b - Another path.
+     * @param {boolean} [ignoreCase] - Compare without regard to case.
+     * @returns {boolean} True when both name the same file.
+     */
+    samePath: function (a, b, ignoreCase) {
+        var x = this._nfd(a), y = this._nfd(b);
+        if (ignoreCase) { x = x.toLowerCase(); y = y.toLowerCase(); }
+        return x === y;
     },
 
     // ---------------------------------------------------------------------

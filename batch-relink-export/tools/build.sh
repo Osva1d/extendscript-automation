@@ -10,9 +10,10 @@
 #
 # Module load order (dependencies must come first):
 #   json2.js -> locale.js -> config.js -> storage.js -> field_paint.js
-#   -> progress.js -> summary.js -> pdf.js -> core.js -> ui.js -> main.js
-#   (field_paint.js, progress.js and summary.js are shared factories, bound
-#   to BRE right after they load)
+#   -> ui_kit.js -> progress.js -> summary.js -> pdf.js -> core.js -> ui.js
+#   -> main.js
+#   (field_paint.js, ui_kit.js, progress.js and summary.js are shared
+#   factories, bound to BRE right after they load)
 # ===========================================================================
 
 set -euo pipefail
@@ -82,6 +83,8 @@ cat "$SRC_DIR/config.js"  >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "$SRC_DIR/storage.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "../shared/lib/field_paint.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 echo "buildFieldPaint(BRE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+cat "../shared/lib/ui_kit.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
+echo "buildUiKit(BRE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "../shared/lib/progress.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 echo "buildProgress(BRE);" >> "$OUTPUT" && echo "" >> "$OUTPUT"
 cat "../shared/lib/summary.js" >> "$OUTPUT" && echo "" >> "$OUTPUT"
