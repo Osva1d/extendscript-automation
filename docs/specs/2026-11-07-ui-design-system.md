@@ -418,7 +418,7 @@ Pravidla průběhu podle rozhodnutí Q3 a Q6 z auditu:
 | 3 | GM 1.5.0 | Hrany a Cesta v `stack`, zrcadlený řádek zešedne; stav nad tlačítky; `presetPanel` do kitu a z něj předvolby, číselné řádky z kitu; co skript našel běžným textem; tipy předvoleb | U1, U6, U15, U26 | denně používaný nástroj s poskakujícím Generovat; ověří druhou polovinu kitu (předvolby, číselné řádky, `stack`) |
 | 4 | ZSM 1.4.0 | dva sloupce, nejvýš 5 vrstev, okno bez přestavby, bez `Výchozí`, české termíny, výchozí fokus | U2, U3, U16, U18, U27; U12, pokud ho vlákno ZSM neopraví dřív | největší přestavba přijde, až je kit ověřený na dvou nástrojích |
 | 5 | TE 1.4.0 | jen napojení: předvolby, stav a patička z kitu, barvy; dotaz před přepisem; `Náhled`, `Způsob ořezu:`; `Po dokončení…` do panelu Soubory | U5, U13, U17, U24 | rozvržení TE je stálé, mění se málo |
-| 6 | BTE 1.2.0 | jen napojení: předvolby, stav nad tlačítky, patička, barvy; ochrana Enteru zůstává | U6, U14 | totéž |
+| 6 | BTE 1.3.0 | jen napojení: předvolby, stav nad tlačítky, patička, barvy; ochrana Enteru zůstává | U6, U14 | totéž |
 
 V každém kroku navíc: tučné písmo pryč (U21), hlášky polí podle §6.3 (U25, U28) a úklid
 dokumentace toho nástroje, README a CHANGELOG (R8, U20, U30, U31). Rozestupy se mění jen
