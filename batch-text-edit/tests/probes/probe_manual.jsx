@@ -2,7 +2,7 @@
 // Script:      probe_manual.jsx
 // Version:     1.0.0
 // Author:      Ladislav Osvald
-// Updated:     2026-11-10
+// Updated:     2026-11-15
 // Description: The manual test (docs/manual-test.md) driven by a probe, for
 //              every step that needs no human eye. Opens a COPY of one of
 //              the user's three test files, builds the real dialog
@@ -26,7 +26,7 @@
 //              closed unsaved (part run1 saves its written copy to WORK_DIR
 //              for part run2). At most one write per part.
 //              Parts: dialog (1.0-1.5, 9.1), run1 (2.1-2.5), run2 (3.1-3.3),
-//              presets (8.1-8.4), controls (6.2, 6.6-6.8), tick (6.5 logic),
+//              presets (8.1-8.4), controls (6.2, 6.6-6.8), tick (6.5 logic, Aktivní),
 //              locked (7.2), arch51 (5.2, 5.1), nogroups (5.3, 5.4),
 //              artboard (5.5), a101, a102, a103 (10.1-10.3), a104 (10.4,
 //              10.6), a105 (10.5).
@@ -750,8 +750,9 @@ function probeManual(STUB) {
         check("6.8 format", function () { return unchanged(snap); });
     }
 
-    // 6.5 as logic only: step 1's tick cleared in the list without any event
-    // (the worst case), then Použít.
+    // 6.5 as logic only: step 1 off through Aktivní, then Použít at once.
+    // Aktivní refreshes the preview itself, so Použít applies on the first
+    // click (outcome a of the manual test); the step's line says "(vypnutý)".
     function partTick() {
         var r, firstClick = {};
         useSettings(settingsPath);
@@ -764,17 +765,20 @@ function probeManual(STUB) {
             selectStep(dlg, 1);
             commit(R.ed.number.fields.from, "6");
             $.sleep(U.HOLD_MS + 150);
-            R.lbSteps.items[0].checked = false;   // no event fires
+            selectStep(dlg, 0);
+            tick(R.cbActive, false);
+            firstClick = { label1: ascii(stepLabels(dlg)[0]), preview: ascii(rows(dlg)[0][3]), active0: dlg.state.steps[0].active };
             R.btnOk.onClick();
-            firstClick = { closed: dlg.result() !== null, hint: has(msgs(dlg), L.HOLD_HINT), active0: dlg.state.steps[0].active,
-                preview: ascii(rows(dlg)[0][3]) };
-            apply(dlg);
+            firstClick.closed = dlg.result() !== null;
+            firstClick.hint = has(msgs(dlg), L.HOLD_HINT);
         });
         check("6.5 logic", function () {
             var cmp = compare(contentsIn(reading(snap.nIdx, snap.pos, "rows", 40)), (function () { var a = [], i; for (i = 6; i <= 245; i++) { a.push(fmt3(i)); } return a; })());
             var codes = contentsIn(snap.cIdx);
             return { firstClick: firstClick, numbers: cmp, codesKept: allEqual(codes, "{NORDIC CZ}"),
-                pass: firstClick.closed === false && firstClick.hint === true && firstClick.active0 === false && cmp.wrong === 0 && allEqual(codes, "{NORDIC CZ}") };
+                pass: firstClick.closed === true && firstClick.hint === false && firstClick.active0 === false &&
+                    firstClick.label1 === ascii("1  Nahradit {NORDIC CZ} " + SYM.ARROW + " SNB CZ  " + L.STEP_OFF) &&
+                    firstClick.preview === "{NORDIC CZ} | 006" && cmp.wrong === 0 && allEqual(codes, "{NORDIC CZ}") };
         });
     }
 

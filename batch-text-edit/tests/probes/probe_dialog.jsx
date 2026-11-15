@@ -2,7 +2,7 @@
 // Script:      probe_dialog.jsx
 // Version:     1.1.0
 // Author:      Ladislav Osvald
-// Updated:     2026-11-10
+// Updated:     2026-11-15
 // Description: Dialog probe for Batch Text Edit (Task 12, 1.1.0 Task 6).
 //              Builds its own document with 240 prefabs in 20 aršíky of
 //              3 x 4 (groups of "{kód}" over "{n}" inside sheet groups, the
@@ -493,7 +493,7 @@
             kind: S.kind, presetItems: presetItems,
             selected: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null,
             revertEnabled: R.btnRevert.enabled, saveEnabled: R.btnSave.enabled,
-            step1: ascii(R.lbSteps.items[0].text), step1Checked: R.lbSteps.items[0].checked,
+            step1: ascii(R.lbSteps.items[0].text),
             scopeLine: ascii(R.stScope.text), status: ascii(R.stStatus.text),
             previewRows: R.lbPrev.items.length, okEnabled: R.btnOk.enabled
         };
@@ -565,7 +565,6 @@
             rowVisible: five(function (q) { R.ed.number.row.visible = (q % 2 === 0); }),
             digitsEnabled: five(function (q) { R.ed.number.fields.digits.enabled = (q % 2 === 0); }),
             stepItemText: five(function (q) { R.lbSteps.items[0].text = "s" + q; }),
-            stepItemChecked: five(function (q) { R.lbSteps.items[0].checked = (q % 2 === 0); }),
             presetItemText: five(function (q) { R.ddPreset.items[0].text = "p" + q; }),
             ddSelectionRead: five(function () { var x = R.ed.number.dd.selection; }),
             revertEnabled: five(function (q) { R.btnRevert.enabled = (q % 2 === 0); })
@@ -651,16 +650,18 @@
         R.ed.replace.dd.selection = 0;   // back to {kód}: the chain can apply again
         R.lbSteps.selection = 1;
         r.hold = { okBefore: R.btnOk.enabled };
-        // A tick that arrives without any event: Použít settles it first,
-        // shows that preview with the hint and does not apply (I1, R28).
-        R.lbSteps.items[0].checked = false;
-        R.btnOk.onClick();
-        r.tick = { closed: dlg.result() !== null, active0: S.steps[0].active, cbActive: R.cbActive.value,
-            label1: ascii(R.lbSteps.items[0].text), row1New: ascii(R.lbPrev.items[0].subItems[2].text),
-            hint: ascii(msgLines(R.etMsgs)[0]) };
-        R.lbSteps.items[0].checked = true;
-        R.btnOk.onClick();
-        r.tick.back = { closed: dlg.result() !== null, active0: S.steps[0].active, row1New: ascii(R.lbPrev.items[0].subItems[2].text) };
+        // Step 1 off through Aktivní (the step list has no ticks):
+        // its line says "(vypnutý)" and the preview follows at once.
+        R.lbSteps.selection = 0;
+        R.cbActive.value = false;
+        R.cbActive.onClick();
+        r.tick = { active0: S.steps[0].active, label1: ascii(R.lbSteps.items[0].text),
+            row1New: ascii(R.lbPrev.items[0].subItems[2].text) };
+        R.cbActive.value = true;
+        R.cbActive.onClick();
+        r.tick.back = { active0: S.steps[0].active, label1: ascii(R.lbSteps.items[0].text),
+            row1New: ascii(R.lbPrev.items[0].subItems[2].text) };
+        R.lbSteps.selection = 1;
         R.ed.number.fields.from.text = "5";
         commit(R.ed.number.fields.from);
         r.tick.hintGone = ascii(msgLines(R.etMsgs)[0]);

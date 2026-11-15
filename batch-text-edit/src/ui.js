@@ -705,30 +705,21 @@ BTE.UI = {
 
         function selected() { return st.steps[st.sel]; }
 
-        /** Ticks clicked in the step list into the steps; true when one changed. */
-        function syncChecks() {
-            var changed = false;
-            var n = lbSteps.items.length;
-            var j, v;
-            for (j = 0; j < st.steps.length && j < n; j++) {
-                v = lbSteps.items[j].checked;
-                if (v !== undefined && (v === true) !== st.steps[j].active) {
-                    st.steps[j].active = (v === true);
-                    changed = true;
-                }
-            }
-            return changed;
-        }
-
-        /** Rebuilds the step list from the steps; the marks come with refresh(). */
+        /**
+         * Rebuilds the step list from the steps; the marks come with refresh().
+         * The list has no ticks: an inactive step says so in its text
+         * (Model.stepLabel) and Aktivní switches it. Illustrator 2027 drew a
+         * tick grey, would not toggle it on a click and showed it only after
+         * the mouse moved; a greyed item cannot be selected (manual test
+         * 2026-11-15).
+         */
         function renderStepList() {
-            var j, it;
+            var j;
             st.busy = true;
             try {
                 lbSteps.removeAll();
                 for (j = 0; j < st.steps.length; j++) {
-                    it = lbSteps.add("item", Model.stepLabel(st.steps[j], null, j));
-                    it.checked = st.steps[j].active === true;
+                    lbSteps.add("item", Model.stepLabel(st.steps[j], null, j));
                 }
                 lbSteps.selection = st.sel;
             } finally {
@@ -745,7 +736,6 @@ BTE.UI = {
                     it = lbSteps.items[j];
                     text = Model.stepLabel(st.steps[j], st.run ? st.run.info[j] : null, j);
                     if (it.text !== text) { it.text = text; }
-                    if ((it.checked === true) !== st.steps[j].active) { it.checked = st.steps[j].active; }
                 }
             } finally {
                 st.busy = false;
@@ -947,7 +937,6 @@ BTE.UI = {
         function refresh() {
             var err = null;
             var j;
-            if (syncChecks()) { cbActive.value = selected().active === true; }
             st.shownValues = current();
             st.holdHint = false;
             st.run = null;
@@ -1069,13 +1058,12 @@ BTE.UI = {
 
         /**
          * Brings the preview up to what the dialog holds before anything uses
-         * the values: a tick clicked in the step list without an event, an
-         * edit no refresh has seen yet. Použít, Uložit and Uložit jako… call
-         * it first, so they never act on values the preview did not show.
+         * the values: an edit no refresh has seen yet. Použít, Uložit and
+         * Uložit jako… call it first, so they never act on values the preview
+         * did not show.
          * @returns {boolean} True when it had to refresh.
          */
         function settle() {
-            if (syncChecks()) { cbActive.value = selected().active === true; }
             if (previewCurrent()) { return false; }
             refresh();
             return true;
@@ -1170,7 +1158,6 @@ BTE.UI = {
             if (st.busy || !ddType.selection) { return; }
             type = U.TYPES[ddType.selection.index];
             if (type === selected().type) { return; }
-            syncChecks();
             vars = st.run ? st.run.info[st.sel].vars : [];
             st.steps[st.sel] = U.convertStep(selected(), type, vars);
             showEditor();
@@ -1178,14 +1165,6 @@ BTE.UI = {
         });
         cbActive.onClick = guard(function () {
             selected().active = cbActive.value === true;
-            // The list's tick follows at once, or refresh() would read the
-            // old tick back as a click.
-            st.busy = true;
-            try {
-                lbSteps.items[st.sel].checked = selected().active;
-            } finally {
-                st.busy = false;
-            }
             refresh();
         });
 
@@ -1202,25 +1181,10 @@ BTE.UI = {
                 }
                 return;
             }
-            syncChecks();
             st.sel = lbSteps.selection.index;
             showEditor();
             refresh();
         });
-        // A click on a tick may not change the selection; whether it fires
-        // onChange is unmeasured (spec 6.1, manual test), so mouseup checks,
-        // and settle() catches a tick that came without any event.
-        try {
-            lbSteps.addEventListener("mouseup", guard(function () {
-                if (!st.busy && syncChecks()) {
-                    cbActive.value = selected().active === true;
-                    refresh();
-                }
-            }));
-        } catch (listenErr) {
-            U.log("step list mouseup: " + listenErr.message);
-        }
-
         function replaceChain(res) {
             st.steps = res.steps;
             st.sel = res.selected;
@@ -1231,21 +1195,17 @@ BTE.UI = {
         btnAdd.onClick = guard(function () {
             var type = U.TYPES[ddAddType.selection ? ddAddType.selection.index : 0];
             var s = BTE.Storage.newStep(type);
-            syncChecks();
             s.where = Model.defaultWhere(type, U.varsAfter(st.run, st.sel));
             replaceChain(U.insertStep(st.steps, st.sel, s));
         });
         btnRemove.onClick = guard(function () {
             if (st.steps.length <= 1) { return; }
-            syncChecks();
             replaceChain(U.removeStep(st.steps, st.sel));
         });
         btnUp.onClick = guard(function () {
-            syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, -1));
         });
         btnDown.onClick = guard(function () {
-            syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, 1));
         });
 
@@ -1360,8 +1320,8 @@ BTE.UI = {
         /**
          * Applies only a preview that has been on screen (spec 2, anti-goals).
          * Held back, it shows the new preview with a hint and the next Použít
-         * applies: when settle() had to refresh (an edit or a tick no refresh
-         * had seen), or when a text field refreshed it just now (Enter in the
+         * applies: when settle() had to refresh (an edit no refresh had
+         * seen), or when a text field refreshed it just now (Enter in the
          * field, or this click committed it; HOLD_MS). The hint asks to
          * confirm Použít again, so it shows only when Použít is on after the
          * refresh (1.1.0 spec 6, M5). The run handed back is the one the

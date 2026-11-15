@@ -269,7 +269,9 @@ while ((hm = hre.exec(code)) !== null) {
 }
 h.eq(unguarded.join(", "), "", "every onClick / onChange / onChanging goes through guard()");
 h.eq(/kindClick\(kind\) \{ return guard\(/.test(code) && /orderClick\(order\) \{ return guard\(/.test(code), true, "the radio factories return guarded handlers");
-h.eq(/addEventListener\("mouseup", guard\(/.test(code), true, "the mouseup listener is guarded");
+var listeners = code.match(/addEventListener\("[a-z]+", [A-Za-z]+/g) || [], unguardedListeners = [], li;
+for (li = 0; li < listeners.length; li++) { if (!/, guard$/.test(listeners[li])) { unguardedListeners.push(listeners[li]); } }
+h.eq(unguardedListeners.join(", "), "", "every addEventListener handler goes through guard()");
 var handlers = code.match(/\.(onClick|onChange|onChanging)\s*=/g) || [];
 h.eq(handlers.length >= 20, true, "the scan saw " + handlers.length + " handler assignments");
 

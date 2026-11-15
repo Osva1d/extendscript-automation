@@ -146,8 +146,9 @@ var lab = U.stepLabel(R(V(longName), { replace: "x" }), errInfo, 0);
 h.eq(lab.length < 50, true, "a long name is shortened (length " + lab.length + ")");
 h.eq(lab.substring(lab.length - 3), "  ✗", "the symbol survives the shortening");
 var off = R(V("{kód}"), { replace: "ABC", active: false });
-h.eq(U.stepLabel(off, errInfo, 0), "1  Nahradit {kód} → ABC", "an inactive step shows no symbol, even with a stale error");
-h.eq(U.stepLabel(off, undefined, 0), "1  Nahradit {kód} → ABC", "no info is fine");
+h.eq(U.stepLabel(off, errInfo, 0), "1  Nahradit {kód} → ABC  (vypnutý)", "an inactive step says so instead of a symbol, even with a stale error");
+h.eq(U.stepLabel(off, undefined, 0), "1  Nahradit {kód} → ABC  (vypnutý)", "no info is fine");
+h.eq(U.stepLabel(off, warnInfo, 1), "2  Nahradit {kód} → ABC  (vypnutý)", "a stale warning is not shown either");
 threw = false;
 try { U.stepLabel({ type: "x", where: {} }, okInfo, 0); } catch (e3) { threw = true; }
 h.eq(threw, true, "stepLabel throws on an unknown type");
@@ -442,6 +443,7 @@ enS = UE.status(BTE_EN.Steps.run([["{n}"]], enSteps), enSteps);
 h.eq(enS.messages[0], "✗ Step 1: The field \"From\" must be a whole number.", "en: label resolved");
 h.eq(UE.whereItems(N(V("{n}")), []).items[0].label, "{n}  (not found)", "en: not found");
 h.eq(UE.stepLabel(N(V("{n}")), undefined, 1), "2  Number {n} from 1", "en: step label");
+h.eq(UE.stepLabel(N(V("{n}"), { active: false }), undefined, 1), "2  Number {n} from 1  (off)", "en: an inactive step");
 
 // ======================= leftover variables and sheets (1.1.0) ================
 function j(a) { return JSON.stringify(a); }

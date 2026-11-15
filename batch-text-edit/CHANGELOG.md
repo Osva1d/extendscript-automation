@@ -27,6 +27,9 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
   očísloval všechny prvky. Předvolby z 1.0.0 s vyplněným Do proto teď
   zastaví na Do.
 - Od za hranicí Do je ✗ (krok by nic neočísloval).
+- Seznam kroků nemá zaškrtávátka: vypnutý krok nese na konci řádku
+  „(vypnutý)“ a zapíná se přepínačem Aktivní. Illustrator 2027 je kreslil
+  šedě, kliknutí je nepřeplo a ukázal je až po pohybu myši.
 
 ### Opraveno
 

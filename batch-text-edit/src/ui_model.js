@@ -223,8 +223,8 @@ BTE.UIModel = {
     /**
      * The line a step has in the step list: position, type, Kde and the
      * main value, and ✗ or ⚠ at the end when the step is on and has an error
-     * or a warning. An inactive step shows no sign: it is skipped, so it
-     * has nothing to report.
+     * or a warning. An inactive step ends with "(vypnutý)" instead: it is
+     * skipped, so it has nothing to report.
      * @param {Object} step - A step.
      * @param {?Object} info - Its StepInfo from BTE.Steps.run, or nothing.
      * @param {number} index - The step's position in the chain, from zero.
@@ -247,7 +247,10 @@ BTE.UIModel = {
             tail = where + " " + sym.ARROW + " " + U.modeName(step.mode);
         }
 
-        mark = "";
+        // An inactive step says so in its text: the list shows no tick
+        // (Illustrator 2027 drew it grey, unclickable and only after the
+        // mouse moved, 2026-11-15), and a stale symbol would mislead.
+        mark = step.active ? "" : "  " + L.STEP_OFF;
         if (step.active && info) {
             if (info.error) {
                 mark = "  " + sym.ERR;

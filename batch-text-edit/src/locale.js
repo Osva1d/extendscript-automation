@@ -51,6 +51,7 @@ BTE.L = (function () {
             STEP_CASE:           "Change case",
             STEP_FROM:           "from",
             STEP_EMPTY:          "(empty)",
+            STEP_OFF:            "(off)",
             MODE_UPPER:          "UPPERCASE",
             MODE_LOWER:          "lowercase",
             MODE_TITLE:          "Title Case",
@@ -130,7 +131,7 @@ BTE.L = (function () {
             ERR_SCOPE_READ:      "The texts of the range could not be read (%s). The document was not changed.",
             // Dialog: steps and the step editor
             PANEL_STEPS:         "Steps",
-            TIP_STEP_LIST:       "The steps run top to bottom, each on the result of the one before; a step that is off (Active in the editor) is skipped and stays in the chain. A ✗ or ⚠ at the end of a line marks an error or a warning of the step.",
+            TIP_STEP_LIST:       "The steps run top to bottom, each on the result of the one before; a step that is off (Active in the editor) is skipped and stays in the chain. A ✗ or ⚠ at the end of a line marks an error or a warning of the step, \"(off)\" a step that is off.",
             TIP_ADD_TYPE:        "The type of the step the + button adds.",
             BTN_ADD:             "+",
             BTN_REMOVE:          "−",
@@ -278,6 +279,7 @@ BTE.L = (function () {
             STEP_CASE:           "Velikost písmen",
             STEP_FROM:           "od",
             STEP_EMPTY:          "(prázdné)",
+            STEP_OFF:            "(vypnutý)",
             MODE_UPPER:          "VELKÁ",
             MODE_LOWER:          "malá",
             MODE_TITLE:          "Každé Slovo",
@@ -357,7 +359,7 @@ BTE.L = (function () {
             ERR_SCOPE_READ:      "Texty rozsahu se nepodařilo přečíst (%s). Dokument nebyl změněn.",
             // Dialog: kroky a editor kroku
             PANEL_STEPS:         "Kroky",
-            TIP_STEP_LIST:       "Kroky běží shora dolů, každý s výsledkem předchozího; vypnutý krok (Aktivní v editoru) se přeskočí a zůstane v řetězu. ✗ a ⚠ na konci řádku značí chybu a upozornění kroku.",
+            TIP_STEP_LIST:       "Kroky běží shora dolů, každý s výsledkem předchozího; vypnutý krok (Aktivní v editoru) se přeskočí a zůstane v řetězu. ✗ a ⚠ na konci řádku značí chybu a upozornění kroku, „(vypnutý)“ vypnutý krok.",
             TIP_ADD_TYPE:        "Typ kroku, který přidá tlačítko +.",
             BTN_ADD:             "+",
             BTN_REMOVE:          "−",
