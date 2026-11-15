@@ -97,7 +97,8 @@ From our longer probes (reads every 100 ms):
 no key, Illustrator in front:  "A" 30/30 (in one run with a document open: undefined 24/24)
 Esc held, Illustrator in front: undefined 30/30 (Czech and ABC layouts alike)
 Esc held, Finder/Notes in front: "Escape" 59/60 and 60/60
-Shift/Option/Control held:      shiftKey/altKey/ctrlKey true 30/30, keyName "A"
+Shift / Option held:            shiftKey / altKey true 30/30, keyName "A"
+Control held:                   ctrlKey true 18/30 (late start) and 58/60 from another app
 ```
 
 **Impact**
