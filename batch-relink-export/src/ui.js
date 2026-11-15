@@ -64,7 +64,7 @@ BRE.UI = {
             pdfCount: pdfCount,
             outputExists: out instanceof Folder && out.exists,
             outputIsFile: out instanceof File && out.exists,
-            sameFolder: String(src.fsName).toLowerCase() === String(out.fsName).toLowerCase()
+            sameFolder: BRE.Core.samePath(src.fsName, out.fsName, true)
         };
     },
 

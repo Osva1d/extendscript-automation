@@ -427,7 +427,7 @@ BRE.Core = {
         var items = doc.placedItems;
         for (var i = 0; i < items.length; i++) {
             try {
-                if (!this._isHidden(items[i]) && items[i].file.fsName === targetPdf.fsName) n++;
+                if (!this._isHidden(items[i]) && this.samePath(items[i].file.fsName, targetPdf.fsName)) n++;
             } catch (e) {}
         }
         return n;
@@ -532,7 +532,7 @@ BRE.Core = {
             var rec = relinkedItems[i];
             try {
                 var actualPath = rec.item.file.fsName;
-                if (actualPath !== expectedPath) {
+                if (!this.samePath(actualPath, expectedPath)) {
                     errors.push(
                         BRE.L.format(BRE.L.ERR_RELINK_VERIFY, rec.label, expectedPath, actualPath)
                     );
@@ -839,7 +839,7 @@ BRE.Core = {
             for (var i = 0; i < app.documents.length; i++) {
                 var d = app.documents[i];
                 try {
-                    if (d.fullName && d.fullName.fsName === file.fsName) return d;
+                    if (d.fullName && BRE.Core.samePath(d.fullName.fsName, file.fsName)) return d;
                 } catch (e) {}
             }
         } catch (e) {}
@@ -893,6 +893,82 @@ BRE.Core = {
         } catch (e) {
             this._log("appendLog failed: " + e.message);
         }
+    },
+
+    // ---------------------------------------------------------------------
+    // Paths in two Unicode forms
+    // ---------------------------------------------------------------------
+
+    // Canonical decomposition of every precomposed letter of Latin-1
+    // Supplement and Latin Extended-A: triples of the letter, its ASCII base
+    // and its combining mark (generated from Unicode NFD, checked against it
+    // by tests/test_paths.js).
+        _NFD_TABLE: "\u00C0A\u0300\u00C1A\u0301\u00C2A\u0302\u00C3A\u0303\u00C4A\u0308" +
+            "\u00C5A\u030A\u00C7C\u0327\u00C8E\u0300\u00C9E\u0301\u00CAE\u0302" +
+            "\u00CBE\u0308\u00CCI\u0300\u00CDI\u0301\u00CEI\u0302\u00CFI\u0308" +
+            "\u00D1N\u0303\u00D2O\u0300\u00D3O\u0301\u00D4O\u0302\u00D5O\u0303" +
+            "\u00D6O\u0308\u00D9U\u0300\u00DAU\u0301\u00DBU\u0302\u00DCU\u0308" +
+            "\u00DDY\u0301\u00E0a\u0300\u00E1a\u0301\u00E2a\u0302\u00E3a\u0303" +
+            "\u00E4a\u0308\u00E5a\u030A\u00E7c\u0327\u00E8e\u0300\u00E9e\u0301" +
+            "\u00EAe\u0302\u00EBe\u0308\u00ECi\u0300\u00EDi\u0301\u00EEi\u0302" +
+            "\u00EFi\u0308\u00F1n\u0303\u00F2o\u0300\u00F3o\u0301\u00F4o\u0302" +
+            "\u00F5o\u0303\u00F6o\u0308\u00F9u\u0300\u00FAu\u0301\u00FBu\u0302" +
+            "\u00FCu\u0308\u00FDy\u0301\u00FFy\u0308\u0100A\u0304\u0101a\u0304" +
+            "\u0102A\u0306\u0103a\u0306\u0104A\u0328\u0105a\u0328\u0106C\u0301" +
+            "\u0107c\u0301\u0108C\u0302\u0109c\u0302\u010AC\u0307\u010Bc\u0307" +
+            "\u010CC\u030C\u010Dc\u030C\u010ED\u030C\u010Fd\u030C\u0112E\u0304" +
+            "\u0113e\u0304\u0114E\u0306\u0115e\u0306\u0116E\u0307\u0117e\u0307" +
+            "\u0118E\u0328\u0119e\u0328\u011AE\u030C\u011Be\u030C\u011CG\u0302" +
+            "\u011Dg\u0302\u011EG\u0306\u011Fg\u0306\u0120G\u0307\u0121g\u0307" +
+            "\u0122G\u0327\u0123g\u0327\u0124H\u0302\u0125h\u0302\u0128I\u0303" +
+            "\u0129i\u0303\u012AI\u0304\u012Bi\u0304\u012CI\u0306\u012Di\u0306" +
+            "\u012EI\u0328\u012Fi\u0328\u0130I\u0307\u0134J\u0302\u0135j\u0302" +
+            "\u0136K\u0327\u0137k\u0327\u0139L\u0301\u013Al\u0301\u013BL\u0327" +
+            "\u013Cl\u0327\u013DL\u030C\u013El\u030C\u0143N\u0301\u0144n\u0301" +
+            "\u0145N\u0327\u0146n\u0327\u0147N\u030C\u0148n\u030C\u014CO\u0304" +
+            "\u014Do\u0304\u014EO\u0306\u014Fo\u0306\u0150O\u030B\u0151o\u030B" +
+            "\u0154R\u0301\u0155r\u0301\u0156R\u0327\u0157r\u0327\u0158R\u030C" +
+            "\u0159r\u030C\u015AS\u0301\u015Bs\u0301\u015CS\u0302\u015Ds\u0302" +
+            "\u015ES\u0327\u015Fs\u0327\u0160S\u030C\u0161s\u030C\u0162T\u0327" +
+            "\u0163t\u0327\u0164T\u030C\u0165t\u030C\u0168U\u0303\u0169u\u0303" +
+            "\u016AU\u0304\u016Bu\u0304\u016CU\u0306\u016Du\u0306\u016EU\u030A" +
+            "\u016Fu\u030A\u0170U\u030B\u0171u\u030B\u0172U\u0328\u0173u\u0328" +
+            "\u0174W\u0302\u0175w\u0302\u0176Y\u0302\u0177y\u0302\u0178Y\u0308" +
+            "\u0179Z\u0301\u017Az\u0301\u017BZ\u0307\u017Cz\u0307\u017DZ\u030C" +
+            "\u017Ez\u030C",
+
+    /**
+     * A string in the decomposed form (NFD) for the letters of _NFD_TABLE;
+     * every other character stays as it is. ES3 has no String.normalize.
+     * @param {string} s - Any string, typically a path.
+     * @returns {string} The string with those letters decomposed.
+     */
+    _nfd: function (s) {
+        var t = this._NFD_TABLE, out = "", i, c, k;
+        s = String(s);
+        for (i = 0; i < s.length; i++) {
+            c = s.charAt(i);
+            k = (c >= "\u00C0" && c <= "\u017F") ? t.indexOf(c) : -1;
+            out += (k >= 0 && k % 3 === 0) ? t.substr(k + 1, 2) : c;
+        }
+        return out;
+    },
+
+    /**
+     * Whether two paths name the same file. A path with diacritics comes in
+     * two forms: Illustrator reports a placed file's and a document's path
+     * decomposed (NFD), Folder.getFiles and typed text keep the name as it is
+     * stored, often composed (NFC) — measured 2026-11-15, AI 30.8.2. Compared
+     * as plain strings, the two forms of one file differ.
+     * @param {string} a - A path.
+     * @param {string} b - Another path.
+     * @param {boolean} [ignoreCase] - Compare without regard to case.
+     * @returns {boolean} True when both name the same file.
+     */
+    samePath: function (a, b, ignoreCase) {
+        var x = this._nfd(a), y = this._nfd(b);
+        if (ignoreCase) { x = x.toLowerCase(); y = y.toLowerCase(); }
+        return x === y;
     },
 
     // ---------------------------------------------------------------------

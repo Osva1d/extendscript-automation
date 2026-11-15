@@ -12,6 +12,7 @@ cd "$SCRIPT_DIR"
 SUITES=(
     "test_locale.js"
     "test_storage.js"
+    "test_paths.js"
     "test_core.js"
     "test_inspect.js"
     "test_validate.js"
