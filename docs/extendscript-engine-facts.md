@@ -1928,6 +1928,29 @@ dokud zpracování běží synchronně v jednom skriptu.
 podržené klávese kontrolované mezi kroky (batch-relink-export to tak dělá).
 Jestli Esc stisknutý během `saveAs` přeruší i samotné ukládání, neměřeno.
 
+### Illustrator 2027: `keyName` drženou klávesu nepojmenuje (naměřeno 2026-11-15, AI 31.0.0, macOS 27.2)
+
+Zastavení dávky podrženým Esc (výš, měřeno v AI 30.8.2) v Illustratoru 31.0.0 na
+macOS 27.2 nefunguje. Čtyři sondy spuštěné uživatelem přes Soubor › Skripty, paleta
+jako v `shared/lib/progress.js`, čtení po 100 ms se `w.update()` a `$.sleep(100)`:
+
+| co obsluha držela | `keyboardState.keyName` | modifikátory |
+|---|---|---|
+| nic | `"A"` (řetězec, kód 65), pokaždé | vše `false` |
+| Esc, Return, Backspace, šipky, mezerník | `undefined`, pokaždé (30 z 30) | vše `false` |
+| Shift / Option / Control | `"A"` | `shiftKey` / `altKey` / `ctrlKey` `true` (30 z 30) |
+
+- Stejné s českým rozložením i s ABC — rozložení klávesnice příčinou není.
+- Že je dole běžná klávesa, skript pozná (`undefined` místo `"A"`), ale ne kterou.
+  `"A"` v klidu odpovídá kódu klávesy 0 na Macu (klávesa A). Vypadá to na rozbitý
+  převod kódu klávesy na jméno; jestli v Illustratoru 2027, nebo v macOS 27.2,
+  rozlišit nešlo (Illustrator 2026 byl odinstalovaný, macOS 27.2 přišel 2026-10-29,
+  Illustrator 2027 2026-11-07).
+- Posluchač `keydown` na paletě během běhu skriptu nedostal ani jednu událost
+  (15 kláves). Krátký stisk ani dvojstisk zachytit nejde, jen stav klávesy
+  v okamžiku čtení.
+- Po `app.open()` dokumentu je `palette.active` `false`; čtení stavu to neovlivnilo.
+
 ## Text: zápis, zámky, přetečení, výběr (naměřeno 2026-10-28 a 2026-10-29, AI 30.8.2)
 
 Zdroj: rešerše [`reports/2026-10-28-text-chain-research.md`](reports/2026-10-28-text-chain-research.md) (sondy P1 až P6, 2026-10-28) a sonda `batch-text-edit/tests/probes/probe_dom.jsx` (Batch Text Edit, Task 8, 2026-10-29). Vše přes `tools/ai-eval.sh` ve vlastních dokumentech, **běh přes Soubor › Skripty neměřen**. „Znovu 2026-10-29“ znamená přeměřeno sondou Task 8.
