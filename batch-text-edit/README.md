@@ -15,7 +15,7 @@ a s kontrolou po něm.
 ## Požadavky
 
 - Adobe Illustrator na macOS; chování, na kterém nástroj stojí, je naměřené
-  v Illustratoru 30.8.2. Starší verze a Windows neověřeny.
+  v Illustratoru 30.8.2 a 2027 (31.0.0). Starší verze a Windows neověřeny.
 
 ## Instalace
 
