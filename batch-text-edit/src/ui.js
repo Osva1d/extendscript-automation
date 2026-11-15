@@ -440,6 +440,10 @@ BTE.UI = {
         var w = new Window("dialog", C.scriptName + " v" + C.version);
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
+        // On screen from onShow on: Illustrator 2027 reports w.visible false
+        // for the shown dialog (measured 2026-11-15), see repaint().
+        var onScreen = false;
+        w.onShow = function () { onScreen = true; };
 
         // --- Presets and Rozsah ----------------------------------------------
         // Side by side: each is two or three short rows, and stacked they
@@ -982,13 +986,18 @@ BTE.UI = {
          * Puts what refresh() drew on the screen now. In Illustrator 2027 a
          * click on a checkbox (Aktivní, Po aršících) changed the dialog only
          * on the next event, a click elsewhere or a switch of application;
-         * Enter in a field and a button did not have it (manual test
-         * 2026-11-15). Nothing to do before the window is shown.
+         * Enter in a field and a button did not have it. Of six ways tried
+         * one at a time, a new layout of the window, hiding and showing the
+         * preview panel and switching the preview off and on brought the
+         * change on screen at once; w.update(), focus on the step list and
+         * selecting its row again did not (manual test 2026-11-15). The
+         * layout is the one of them that covers the whole window. Nothing to
+         * do before the window is shown.
          */
         function repaint() {
-            if (!w.visible) { return; }
+            if (!onScreen) { return; }
             try {
-                w.update();
+                w.layout.layout(true);
             } catch (e) {
                 U.log("repaint: " + e.message);
             }
