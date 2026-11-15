@@ -975,6 +975,23 @@ BTE.UI = {
             btnUp.enabled = st.sel > 0;
             btnDown.enabled = st.sel < st.steps.length - 1;
             refreshPresetIndicator();
+            repaint();
+        }
+
+        /**
+         * Puts what refresh() drew on the screen now. In Illustrator 2027 a
+         * click on a checkbox (Aktivní, Po aršících) changed the dialog only
+         * on the next event, a click elsewhere or a switch of application;
+         * Enter in a field and a button did not have it (manual test
+         * 2026-11-15). Nothing to do before the window is shown.
+         */
+        function repaint() {
+            if (!w.visible) { return; }
+            try {
+                w.update();
+            } catch (e) {
+                U.log("repaint: " + e.message);
+            }
         }
 
         /**
