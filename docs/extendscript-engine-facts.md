@@ -1950,6 +1950,13 @@ jako v `shared/lib/progress.js`, čtení po 100 ms se `w.update()` a `$.sleep(10
   (15 kláves). Krátký stisk ani dvojstisk zachytit nejde, jen stav klávesy
   v okamžiku čtení.
 - Po `app.open()` dokumentu je `palette.active` `false`; čtení stavu to neovlivnilo.
+- **Záleží na tom, která aplikace je vpředu** (tři běhy sondy
+  `sonda-esc-overeni.jsx`, 2026-11-15). Když je vpředu jiná aplikace a obsluha
+  drží Esc v ní, `keyName` je správně `"Escape"` (59 z 60, 60 z 60). Když je
+  vpředu Illustrator, drženou klávesu nepojmenuje. V klidu s otevíraným
+  dokumentem dal jednou `"A"` (24 z 24) a jednou `undefined` (24 z 24) —
+  `undefined` tedy neznamená spolehlivě „klávesa dole“ a jako náhradu Esc ho
+  použít nejde. Control je čitelný i z jiné aplikace (`ctrlKey` 58 z 60).
 
 ## Text: zápis, zámky, přetečení, výběr (naměřeno 2026-10-28 a 2026-10-29, AI 30.8.2)
 
