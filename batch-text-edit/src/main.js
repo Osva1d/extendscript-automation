@@ -12,6 +12,10 @@ var BTE = BTE || {};
     // and in the log file, never in a dialog. The user reads `message`.
     var log = BTE.Utils.log;
 
+    // True once apply() has returned: from then on the document is written
+    // and the boundary's message must say so. Before that nothing touched it.
+    var changed = false;
+
     try {
         if (app.documents.length === 0) { alert(L.ERR_NO_DOC); return; }
 
@@ -26,11 +30,15 @@ var BTE = BTE || {};
         // Undo steps (spec 7.3).
         try {
             BTE.Write.apply(prepared.tfs, run.info, run.states);
+            changed = true;
         } catch (writeErr) {
             // Only a write that stopped halfway carries `written`; apply()
             // throws anything else (a broken edit list) before it touches
             // the document, and that goes to the boundary below.
             if (typeof writeErr.written !== "number") { throw writeErr; }
+            // Part of the document is written: a failure of the log or the
+            // summary below must not claim it is unchanged.
+            changed = true;
             log(String(writeErr.detail));
             BTE.Summary.show(BTE.UIModel.writeFailureSummary(writeErr));
             return;
@@ -41,6 +49,6 @@ var BTE = BTE || {};
 
     } catch (e) {
         log("fatal: " + e.message + " (line " + e.line + ")");
-        alert(L.format(L.ERR_CRITICAL, e.message, String(e.line || "?")));
+        alert(L.format(changed ? L.ERR_CRITICAL : L.ERR_CRITICAL_UNCHANGED, e.message, String(e.line || "?")));
     }
 })(BTE);

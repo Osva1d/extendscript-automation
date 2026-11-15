@@ -258,6 +258,17 @@ BTE.Steps = {
     },
 
     /**
+     * Whether a value lies beyond Do, in the direction of Krok.
+     * @param {number} v - The value.
+     * @param {number|null} to - Do, or null for none.
+     * @param {number} step - Krok; 0 counts as upwards.
+     * @returns {boolean} True when the series must not use v.
+     */
+    pastTo: function (v, to, step) {
+        return to !== null && (step >= 0 ? v > to : v < to);
+    },
+
+    /**
      * How many steps from the first value the i-th numbered element is
      * (spec 5.3): b = i, or i mod reset when reset is above 0; floor(b /
      * repeats).
@@ -330,15 +341,30 @@ BTE.Steps = {
      * MAX_DIGITS (Číslic only for the numeric format); every field is a
      * whole number within +-MAX_SAFE, and a series that would leave that
      * range fails with ERR_VALUE_RANGE and writes nothing. Blank Do and Znovu po mean none, blank Opakovat
-     * means 1. The Do check warns when the last value differs from Do, and
-     * names the missing or extra elements when the series is a plain count
-     * (repeats 1, no reset, step not 0) that Do falls on.
+     * means 1.
+     * Do ends the series: an element whose value would be past Do (above it
+     * for a Krok of 0 or more, below it for a negative Krok) is left alone,
+     * keeps all its matches and is counted in WARN_TO_CUT. An Od that is
+     * already past Do fails with ERR_FROM_PAST_TO (after the fields parse).
+     * With step.perSheet and a sheets array the series starts again in every
+     * sheet (the counter that feeds Opakovat and Znovu po restarts when the
+     * sheet number changes); without a sheets array it warns with
+     * WARN_PER_SHEET_OFF and numbers one series. With one series, or when the last
+     * series (a Znovu po cycle) was not cut, the Do check warns when the last value differs from Do, and names
+     * the missing elements when the series is a plain count (repeats 1, no
+     * reset, step not 0) that Do falls on. With several series it counts the
+     * ones that were not cut and did not reach Do (WARN_TO_SHORT).
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @param {Object} step - A number step.
+     * @param {?Array.<number>=} sheets - sheets[el] is the sheet number of
+     *     element el (1..K), 0 outside any sheet; consecutive elements with
+     *     the same number are one sheet. Only used with step.perSheet; its
+     *     length must equal state.length.
+     * @throws {Error} When step.perSheet is set and sheets has the wrong length.
      * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
      *     The step result run() merges into StepInfo.
      */
-    number: function (state, step) {
+    number: function (state, step, sheets) {
         var letters = step.format === "A" || step.format === "a";
         var specs = [
             ["from", "FIELD_FROM", undefined, null],
@@ -354,6 +380,13 @@ BTE.Steps = {
         var multi = [];
         var found = [];
         var first = !!(step.where && step.where.kind === "first");
+        var perSheet = !!(step.perSheet === true && sheets);
+        var cut = 0;
+        var shortSeries = 0;
+        var idx = 0;
+        var prevSheet = null;
+        var seriesLast = null;
+        var seriesCut = false;
         var re, c, f, i, j, k, texts, hits, ms, m, reset, v, last, span, want, text;
 
         if (first) {
@@ -377,6 +410,13 @@ BTE.Steps = {
             vals[specs[k][0]] = f.value;
         }
         reset = vals.reset === null ? 0 : vals.reset;
+        if (BTE.Steps.pastTo(vals.from, vals.to, vals.step)) {
+            return BTE.Steps.failed(BTE.Steps.msg("ERR_FROM_PAST_TO"));
+        }
+        if (step.perSheet === true && sheets && sheets.length !== state.length) {
+            throw new Error("BTE.Steps.number: sheets has " + sheets.length + " entries, state has " + state.length + " elements");
+        }
+        if (step.perSheet === true && !sheets) { warns.push(BTE.Steps.msg("WARN_PER_SHEET_OFF")); }
 
         for (i = 0; i < state.length; i++) {
             texts = state[i];
@@ -392,15 +432,35 @@ BTE.Steps = {
         }
 
         for (k = 0; k < found.length; k++) {
+            // The counter is the position inside the series; a new sheet
+            // starts a new series when the step works per sheet.
+            if (k === 0 || (perSheet && sheets[found[k].el] !== prevSheet)) {
+                if (k > 0 && !seriesCut && seriesLast !== vals.to && vals.to !== null) { shortSeries++; }
+                idx = 0;
+                seriesLast = null;
+                seriesCut = false;
+            } else if (!perSheet && reset > 0 && idx % reset === 0) {
+                // A Znovu po cycle is a series of its own.
+                seriesLast = null;
+                seriesCut = false;
+            }
+            prevSheet = perSheet ? sheets[found[k].el] : null;
             // The increments are checked on their own too: a product beyond
             // 2^53 is already rounded, and adding a negative Od could bring
             // the sum back in range with a wrong last digit.
-            if (Math.abs(vals.step * BTE.Steps.stepsAt(k, vals.repeats, reset)) > BTE.Steps.MAX_SAFE) {
+            if (Math.abs(vals.step * BTE.Steps.stepsAt(idx, vals.repeats, reset)) > BTE.Steps.MAX_SAFE) {
                 return BTE.Steps.failed(BTE.Steps.msg("ERR_VALUE_RANGE"));
             }
-            v = BTE.Steps.valueAt(k, vals.from, vals.step, vals.repeats, reset);
+            v = BTE.Steps.valueAt(idx, vals.from, vals.step, vals.repeats, reset);
+            idx++;
             if (Math.abs(v) > BTE.Steps.MAX_SAFE) { return BTE.Steps.failed(BTE.Steps.msg("ERR_VALUE_RANGE")); }
+            if (BTE.Steps.pastTo(v, vals.to, vals.step)) {
+                cut++;
+                seriesCut = true;
+                continue;
+            }
             if (letters && v < 1) { return BTE.Steps.failed(BTE.Steps.msg("ERR_LETTER_BELOW_ONE")); }
+            seriesLast = v;
             text = BTE.Steps.formatValue(v, step.format, vals.digits);
             hits = found[k].hits;
             for (m = 0; m < hits.length; m++) {
@@ -408,21 +468,25 @@ BTE.Steps = {
             }
             if (hits.length > 1) { multi.push({ el: found[k].el, count: hits.length }); }
         }
+        if (found.length > 0 && !seriesCut && vals.to !== null && seriesLast !== vals.to) { shortSeries++; }
 
+        if (cut > 0) { warns.push(BTE.Steps.msg("WARN_TO_CUT", [String(cut), String(vals.to)])); }
         if (vals.to !== null && found.length > 0) {
-            last = BTE.Steps.valueAt(found.length - 1, vals.from, vals.step, vals.repeats, reset);
-            if (last !== vals.to) {
-                warns.push(BTE.Steps.msg("WARN_TO_MISMATCH", [String(last), String(vals.to)]));
-                // A plain count (one element per value, no reset) knows how
-                // many elements Do would have needed, when it is on the series.
-                if (vals.repeats === 1 && reset <= 0 && vals.step !== 0) {
-                    span = vals.to - vals.from;
-                    if (span % vals.step === 0) {
-                        want = span / vals.step + 1;
-                        if (want > found.length) {
-                            warns.push(BTE.Steps.msg("WARN_MISSING", [String(want - found.length)]));
-                        } else if (want >= 1) {
-                            warns.push(BTE.Steps.msg("WARN_EXTRA", [String(found.length - want)]));
+            if (perSheet) {
+                if (shortSeries > 0) { warns.push(BTE.Steps.msg("WARN_TO_SHORT", [String(shortSeries), String(vals.to)])); }
+            } else if (!seriesCut) {
+                last = seriesLast;
+                if (last !== vals.to) {
+                    warns.push(BTE.Steps.msg("WARN_TO_MISMATCH", [String(last), String(vals.to)]));
+                    // A plain count (one element per value, no reset) knows how
+                    // many elements Do would have needed, when it is on the series.
+                    if (vals.repeats === 1 && reset <= 0 && vals.step !== 0) {
+                        span = vals.to - vals.from;
+                        if (span % vals.step === 0) {
+                            want = span / vals.step + 1;
+                            if (want > found.length) {
+                                warns.push(BTE.Steps.msg("WARN_MISSING", [String(want - found.length)]));
+                            }
                         }
                     }
                 }
@@ -891,12 +955,14 @@ BTE.Steps = {
      * so it throws instead of passing the text on unchanged.
      * @param {Array.<Array.<string>>} state - Input of the step.
      * @param {Object} step - Step object (the preset format).
+     * @param {?Array.<number>=} sheets - Sheet number per element, see number();
+     *     only the Number step uses it.
      * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array}}
      *     The step result run() merges into StepInfo.
      */
-    apply: function (state, step) {
+    apply: function (state, step, sheets) {
         if (step.type === "replace") { return BTE.Steps.replace(state, step); }
-        if (step.type === "number") { return BTE.Steps.number(state, step); }
+        if (step.type === "number") { return BTE.Steps.number(state, step, sheets); }
         if (step.type === "case") { return BTE.Steps.caseStep(state, step); }
         throw new Error("BTE.Steps: unknown step type \"" + step.type + "\"");
     },
@@ -997,6 +1063,9 @@ BTE.Steps = {
      * step's list. The input is never changed.
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @param {Array.<Object>} steps - Step objects, in order.
+     * @param {?Array.<number>=} sheets - Optional sheet number per element
+     *     (1..K, 0 outside any sheet), for the Number step's per-sheet series;
+     *     the same array goes to every step, whatever the order of the chain.
      * @returns {{states: Array, info: Array}} states[k] is the state after
      *     step k (states[0] is the input); info[k] is
      *     {hits, error, warns, vars, multi, edits} for step k: hits = elements
@@ -1007,7 +1076,7 @@ BTE.Steps = {
      * @throws {Error} For an unknown step type, an unknown case mode or a
      *     broken edit list: bugs in the caller or in a step handler.
      */
-    run: function (state, steps) {
+    run: function (state, steps, sheets) {
         var states = [state];
         var info = [];
         var cur = state;
@@ -1018,7 +1087,7 @@ BTE.Steps = {
             item = { hits: 0, error: null, warns: [], vars: BTE.Vars.list(cur), multi: [], edits: [] };
 
             if (step.active) {
-                res = BTE.Steps.apply(cur, step);
+                res = BTE.Steps.apply(cur, step, sheets);
                 if (res.error) {
                     item.error = res.error;
                 } else {

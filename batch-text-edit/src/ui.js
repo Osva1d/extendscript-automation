@@ -6,12 +6,13 @@
 //             BTE.FieldPaint, BTE.Vars, BTE.Steps, BTE.Scope, BTE.UIModel
 //
 // The texts are read from the document once, when the dialog opens and when
-// the Rozsah changes (BTE.Scope.prepare); a new Pořadí only re-sorts them
-// (BTE.Scope.reorder). Every other change reruns BTE.Steps.run over plain
-// strings (spec 6.2). What the dialog says comes from BTE.UIModel and BTE.L,
-// so this module wires controls to them and builds no text of its own. The
-// pure helpers at the top are tested in Node (tests/test_ui.js); build() is
-// measured headless by tests/probes/probe_dialog.jsx.
+// the Rozsah changes (BTE.Scope.prepare); a new Pořadí or Po aršících only
+// re-sorts them (BTE.Scope.reorder). Every other change reruns
+// BTE.Steps.run over plain strings (spec 6.2). What the dialog says comes
+// from BTE.UIModel and BTE.L, so this module wires controls to them and
+// builds no text of its own. The pure helpers at the top are tested in Node
+// (tests/test_ui.js); build() is measured headless by
+// tests/probes/probe_dialog.jsx.
 // ------------------------------------------------------------------------
 var BTE = BTE || {};
 
@@ -40,8 +41,10 @@ BTE.UI = {
         // details box: 58 px for three lines, measured 2026-10-15)
         MSG_H: 58,
         // px; the preview's columns: #, Původní, Po vybraném kroku, Nový.
-        // "240" fits 40; the three text columns share the dialog's width.
-        PREVIEW_COLS: [40, 300, 300, 300],
+        // # holds "20 · 240" with Po aršících (50 px) and the 17 px the
+        // 40 px column of 1.0 left beside "240" (23 px); Původní gave the
+        // 28 px, so the dialog keeps its width (probe_dialog.jsx, 1.1.0).
+        PREVIEW_COLS: [68, 272, 300, 300],
         // px; the preview shows its header and eight rows and scrolls past
         // that: 33 px plus 20 per row (engine-facts, listbox table)
         PREVIEW_H: 193
@@ -143,16 +146,20 @@ BTE.UI = {
      * show "*" right after it was loaded (Task 11 carry).
      * @param {{order: string, steps: Array}} preset - A preset.
      * @param {Array.<Array.<string>>} state - The texts (prepared.state).
+     * @param {?Array.<number>} [sheets] - Their sheet numbers
+     *     (prepared.sheets), so a step above with v každém aršíku runs as
+     *     the preview runs it; null or omitted without Po aršících.
      * @returns {{order: string, steps: Array}} A resolved copy.
-     * @throws {Error} From BTE.Steps.run for an unknown step type.
+     * @throws {Error} From BTE.Steps.run for an unknown step type, or for a
+     *     sheets array that does not match the texts.
      */
-    resolveAuto: function (preset, state) {
+    resolveAuto: function (preset, state, sheets) {
         var out = BTE.UI.copy(preset);
         var steps = out.steps;
         var k, run;
         for (k = 0; k < steps.length; k++) {
             if (steps[k].where && steps[k].where.kind === "auto") {
-                run = BTE.Steps.run(state, steps.slice(0, k));
+                run = BTE.Steps.run(state, steps.slice(0, k), sheets);
                 steps[k].where = BTE.UIModel.defaultWhere(steps[k].type, BTE.Vars.list(run.states[k]));
             }
         }
@@ -392,7 +399,7 @@ BTE.UI = {
         var indexOf = BTE.Utils.indexOf;
         var pData = BTE.Storage.load();
         var st = {
-            kind: "document", order: "rows", steps: [], sel: 0,
+            kind: "document", order: "rows", bySheet: false, steps: [], sel: 0,
             prepared: null, run: null, status: null, shown: [],
             fieldsOk: true, busy: false, outcome: null,
             // the values the preview was last computed from, when a text
@@ -416,10 +423,11 @@ BTE.UI = {
             pData.activePreset = DEF;
         }
         start = pData.presets.hasOwnProperty(LAST) ? pData.presets[LAST] : pData.presets[pData.activePreset];
-        st.prepared = BTE.Scope.prepare(doc, st.kind, start.order);
-        pData.presets[DEF] = U.resolveAuto(BTE.Storage.defaultPreset(), st.prepared.state);
-        start = U.resolveAuto(start, st.prepared.state);
+        st.prepared = BTE.Scope.prepare(doc, st.kind, start.order, start.bySheet === true);
+        pData.presets[DEF] = U.resolveAuto(BTE.Storage.defaultPreset(), st.prepared.state, st.prepared.sheets);
+        start = U.resolveAuto(start, st.prepared.state, st.prepared.sheets);
         st.order = start.order;
+        st.bySheet = start.bySheet === true;
         st.steps = start.steps;
 
         for (i = 0; i < U.TYPES.length; i++) { typeNames.push(Model.typeName(U.TYPES[i])); }
@@ -428,9 +436,14 @@ BTE.UI = {
         // Measured headless 2026-10-30 (probe_dialog.jsx, 240 prefabs): the
         // window is 1008 x 768 px in Czech and in English, the preview table
         // sets the width; Kroky 217 px tall, Náhled 316 px, no text cut.
+        // The same with Po aršících and v každém aršíku (1.1.0, 2026-11-10).
         var w = new Window("dialog", C.scriptName + " v" + C.version);
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
+        // On screen from onShow on: Illustrator 2027 reports w.visible false
+        // for the shown dialog (measured 2026-11-15), see repaint().
+        var onScreen = false;
+        w.onShow = function () { onScreen = true; };
 
         // --- Presets and Rozsah ----------------------------------------------
         // Side by side: each is two or three short rows, and stacked they
@@ -487,10 +500,13 @@ BTE.UI = {
             rb.helpTip = L.TIP_ORDER;
             rbOrder.push(rb);
         }
+        // Po aršících re-sorts as Pořadí does, so it sits in its row (spec 4.3).
+        var cbBySheet = gOrder.add("checkbox", undefined, L.LBL_BY_SHEET);
+        cbBySheet.helpTip = L.TIP_BY_SHEET;
         // What the scope holds: greyed, as the family shows what it found
         // (canon 12.3). Created with a long sample; it fills the panel anyway.
-        var stScope = pScope.add("statictext", undefined,
-            Model.scopeLine({ elements: { length: 99999 }, textCount: 99999, skipped: { locked: 99999 } }));
+        var stScope = pScope.add("statictext", undefined, Model.scopeLine({ elements: { length: 99999 },
+            textCount: 99999, skipped: { locked: 99999 }, sheets: [], sheetCount: 99999 }));
         stScope.alignment = ["fill", "top"];
         stScope.enabled = false;   // greyed — intentional, not a bug
 
@@ -625,6 +641,9 @@ BTE.UI = {
         ed.number.fields.repeats = numField(r, L.TIP_REPEATS);
         label(r, L.LBL_RESET, L.TIP_RESET, axis2);
         ed.number.fields.reset = numField(r, L.TIP_RESET);
+        // Beside Znovu po: both say where a series starts again (spec 3.4).
+        ed.number.cbPerSheet = r.add("checkbox", undefined, L.CB_PER_SHEET);
+        ed.number.cbPerSheet.helpTip = L.TIP_PER_SHEET;
         // [deviation] alignment axis, see matchWidths()
         U.matchWidths([ed.number.fields.from, ed.number.ddFormat, ed.number.fields.repeats]);
 
@@ -686,30 +705,21 @@ BTE.UI = {
 
         function selected() { return st.steps[st.sel]; }
 
-        /** Ticks clicked in the step list into the steps; true when one changed. */
-        function syncChecks() {
-            var changed = false;
-            var n = lbSteps.items.length;
-            var j, v;
-            for (j = 0; j < st.steps.length && j < n; j++) {
-                v = lbSteps.items[j].checked;
-                if (v !== undefined && (v === true) !== st.steps[j].active) {
-                    st.steps[j].active = (v === true);
-                    changed = true;
-                }
-            }
-            return changed;
-        }
-
-        /** Rebuilds the step list from the steps; the marks come with refresh(). */
+        /**
+         * Rebuilds the step list from the steps; the marks come with refresh().
+         * The list has no ticks: an inactive step says so in its text
+         * (Model.stepLabel) and Aktivní switches it. Illustrator 2027 drew a
+         * tick grey, would not toggle it on a click and showed it only after
+         * the mouse moved; a greyed item cannot be selected (manual test
+         * 2026-11-15).
+         */
         function renderStepList() {
-            var j, it;
+            var j;
             st.busy = true;
             try {
                 lbSteps.removeAll();
                 for (j = 0; j < st.steps.length; j++) {
-                    it = lbSteps.add("item", Model.stepLabel(st.steps[j], null, j));
-                    it.checked = st.steps[j].active === true;
+                    lbSteps.add("item", Model.stepLabel(st.steps[j], null, j));
                 }
                 lbSteps.selection = st.sel;
             } finally {
@@ -726,7 +736,6 @@ BTE.UI = {
                     it = lbSteps.items[j];
                     text = Model.stepLabel(st.steps[j], st.run ? st.run.info[j] : null, j);
                     if (it.text !== text) { it.text = text; }
-                    if ((it.checked === true) !== st.steps[j].active) { it.checked = st.steps[j].active; }
                 }
             } finally {
                 st.busy = false;
@@ -755,6 +764,7 @@ BTE.UI = {
                         e.fields[f].text = String(step[f]);
                     }
                     e.ddFormat.selection = Math.max(0, indexOf(U.FORMATS, step.format));
+                    e.cbPerSheet.value = step.perSheet === true;
                 } else {
                     e.ddMode.selection = Math.max(0, indexOf(U.MODES, step.mode));
                 }
@@ -808,6 +818,10 @@ BTE.UI = {
                 }
                 // Číslic means nothing for letters (spec 5.3).
                 e.fields.digits.enabled = (step.format === "1");
+                // v každém aršíku works only with Po aršících; a step that has
+                // it on keeps its tick, grey (spec 3.4). Every refresh sets
+                // it, so showEditor() and Po aršících need nothing of their own.
+                e.cbPerSheet.enabled = st.bySheet;
             } else if (step.type === "replace") {
                 // A variable is always matched exactly (spec 5.4).
                 e.cbCase.enabled = (kind !== "var");
@@ -816,7 +830,7 @@ BTE.UI = {
 
         /** The preview table; on an unchanged row count only changed cells are set. */
         function renderPreview() {
-            var rows = st.run ? Model.rows(st.run.states, st.sel) : [];
+            var rows = st.run ? Model.rows(st.run.states, st.sel, st.prepared.sheets) : [];
             var n = rows.length;
             var items, j, c, it, row, old;
             if (lbPrev.items.length !== n) {
@@ -858,8 +872,13 @@ BTE.UI = {
         // fields, never a preset the user saved or deleted.
         var sortedKeys = [];
 
-        /** What a preset holds: the order and the chain (spec 6.4). */
-        function current() { return { order: st.order, steps: U.copy(st.steps) }; }
+        /**
+         * What a preset holds: the order, Po aršících and the chain (spec 6.4,
+         * 1.1.0 spec 4.3). A loaded preset always has bySheet
+         * (Storage.normalize), so leaving it out here would mark every
+         * preset "*".
+         */
+        function current() { return { order: st.order, bySheet: st.bySheet, steps: U.copy(st.steps) }; }
 
         function presetLabel(key) { return key === DEF ? L.PRESET_DEFAULT : key; }
 
@@ -910,7 +929,7 @@ BTE.UI = {
 
         /** [Výchozí] resolved for the texts in the dialog now (Task 11 carry). */
         function resolveDefault() {
-            pData.presets[DEF] = U.resolveAuto(BTE.Storage.defaultPreset(), st.prepared.state);
+            pData.presets[DEF] = U.resolveAuto(BTE.Storage.defaultPreset(), st.prepared.state, st.prepared.sheets);
         }
 
         // --- the one recompute ------------------------------------------------------
@@ -918,12 +937,11 @@ BTE.UI = {
         function refresh() {
             var err = null;
             var j;
-            if (syncChecks()) { cbActive.value = selected().active === true; }
             st.shownValues = current();
             st.holdHint = false;
             st.run = null;
             try {
-                st.run = BTE.Steps.run(st.prepared.state, st.steps);
+                st.run = BTE.Steps.run(st.prepared.state, st.steps, st.prepared.sheets);
             } catch (e) {
                 // A bug (unknown step type, broken edit list): said in the
                 // status, Použít greyed, the dialog stays usable.
@@ -931,7 +949,8 @@ BTE.UI = {
                 U.log("refresh: " + e.message + " (line " + e.line + ")");
             }
             if (st.run) {
-                st.status = Model.status(st.run, st.steps, st.prepared.skipped, st.prepared.cursorInText);
+                st.status = Model.status(st.run, st.steps, st.prepared.skipped, st.prepared.cursorInText,
+                    Model.sheetLines(st.prepared));
                 st.fieldsOk = true;
                 for (j = 0; j < st.steps.length; j++) {
                     if (st.steps[j].active && st.run.info[j].error) { st.fieldsOk = false; }
@@ -949,15 +968,47 @@ BTE.UI = {
             btnUp.enabled = st.sel > 0;
             btnDown.enabled = st.sel < st.steps.length - 1;
             refreshPresetIndicator();
+            repaint();
+        }
+
+        /**
+         * Puts what refresh() drew on the screen now. In Illustrator 2027 a
+         * click on a checkbox (Aktivní, Po aršících) changed the dialog only
+         * on the next event, a click elsewhere or a switch of application;
+         * Enter in a field and a button did not have it. Of six ways tried
+         * one at a time, a new layout of the window, hiding and showing the
+         * preview panel and switching the preview off and on brought the
+         * change on screen at once; w.update(), focus on the step list and
+         * selecting its row again did not (manual test 2026-11-15). The
+         * layout is the one of them that covers the whole window. Nothing to
+         * do before the window is shown.
+         */
+        function repaint() {
+            if (!onScreen) { return; }
+            try {
+                w.layout.layout(true);
+            } catch (e) {
+                U.log("repaint: " + e.message);
+            }
+        }
+
+        /**
+         * The texts in another Pořadí or with Po aršících switched: re-sorted,
+         * never read again (spec 4.2). The scope line counts the aršíky.
+         */
+        function reorderTo(order, bySheet) {
+            st.prepared = BTE.Scope.reorder(st.prepared, order, bySheet);
+            st.order = order;
+            st.bySheet = bySheet;
+            stScope.text = Model.scopeLine(st.prepared);
         }
 
         /** Loads preset values into the dialog. */
         function applyValues(v) {
-            if (v.order !== st.order) {
-                st.prepared = BTE.Scope.reorder(st.prepared, v.order);
-                st.order = v.order;
-            }
+            var bySheet = v.bySheet === true;
+            if (v.order !== st.order || bySheet !== st.bySheet) { reorderTo(v.order, bySheet); }
             rbOrder[Math.max(0, indexOf(U.ORDERS, st.order))].value = true;
+            cbBySheet.value = st.bySheet;
             st.steps = U.copy(v.steps);
             st.sel = 0;
             renderStepList();
@@ -970,24 +1021,29 @@ BTE.UI = {
         /**
          * A handler that can never fail silently or half-way: an exception
          * is logged and shown as a ✗ status, and Použít, Uložit and Uložit
-         * jako… go grey until the next refresh succeeds. The dialog stays
-         * open; nothing has been written.
+         * jako… go grey until the next refresh succeeds. The buttons go grey
+         * first, so they do even when the status cannot be drawn; a thrown
+         * value that is no Error shows as itself, not "undefined" (1.1.0
+         * spec 6, M6). The dialog stays open; nothing has been written.
          */
         function guard(fn) {
             return function (ev) {
+                var isObj, msg;
                 try {
                     return fn(ev);
                 } catch (e) {
                     st.busy = false;
-                    U.log("handler: " + e.message + " (line " + e.line + ")");
+                    isObj = (e !== null && typeof e === "object");
+                    msg = (isObj && e.message !== undefined) ? String(e.message) : String(e);
+                    U.log("handler: " + msg + " (line " + (isObj ? e.line : "?") + ")");
                     try {
-                        st.status = Model.failedStatus(String(e.message), "ERR_HANDLER");
-                        st.fieldsOk = false;
-                        st.holdHint = false;
-                        renderStatus();
                         btnOk.enabled = false;
                         btnSave.enabled = false;
                         btnSaveAs.enabled = false;
+                        st.status = Model.failedStatus(msg, "ERR_HANDLER");
+                        st.fieldsOk = false;
+                        st.holdHint = false;
+                        renderStatus();
                     } catch (e2) {
                         U.log("handler error display: " + e2.message + " (line " + e2.line + ")");
                     }
@@ -1002,13 +1058,12 @@ BTE.UI = {
 
         /**
          * Brings the preview up to what the dialog holds before anything uses
-         * the values: a tick clicked in the step list without an event, an
-         * edit no refresh has seen yet. Použít, Uložit and Uložit jako… call
-         * it first, so they never act on values the preview did not show.
+         * the values: an edit no refresh has seen yet. Použít, Uložit and
+         * Uložit jako… call it first, so they never act on values the preview
+         * did not show.
          * @returns {boolean} True when it had to refresh.
          */
         function settle() {
-            if (syncChecks()) { cbActive.value = selected().active === true; }
             if (previewCurrent()) { return false; }
             refresh();
             return true;
@@ -1083,6 +1138,10 @@ BTE.UI = {
         for (k = 0; k < U.NUMBER_FIELDS.length; k++) {
             wireText(ed.number.fields[U.NUMBER_FIELDS[k]], numberSetter(U.NUMBER_FIELDS[k]));
         }
+        ed.number.cbPerSheet.onClick = guard(function () {
+            selected().perSheet = ed.number.cbPerSheet.value === true;
+            refresh();
+        });
         ed.number.ddFormat.onChange = guard(function () {
             if (st.busy || !ed.number.ddFormat.selection) { return; }
             selected().format = U.FORMATS[ed.number.ddFormat.selection.index];
@@ -1099,7 +1158,6 @@ BTE.UI = {
             if (st.busy || !ddType.selection) { return; }
             type = U.TYPES[ddType.selection.index];
             if (type === selected().type) { return; }
-            syncChecks();
             vars = st.run ? st.run.info[st.sel].vars : [];
             st.steps[st.sel] = U.convertStep(selected(), type, vars);
             showEditor();
@@ -1107,14 +1165,6 @@ BTE.UI = {
         });
         cbActive.onClick = guard(function () {
             selected().active = cbActive.value === true;
-            // The list's tick follows at once, or refresh() would read the
-            // old tick back as a click.
-            st.busy = true;
-            try {
-                lbSteps.items[st.sel].checked = selected().active;
-            } finally {
-                st.busy = false;
-            }
             refresh();
         });
 
@@ -1131,25 +1181,10 @@ BTE.UI = {
                 }
                 return;
             }
-            syncChecks();
             st.sel = lbSteps.selection.index;
             showEditor();
             refresh();
         });
-        // A click on a tick may not change the selection; whether it fires
-        // onChange is unmeasured (spec 6.1, manual test), so mouseup checks,
-        // and settle() catches a tick that came without any event.
-        try {
-            lbSteps.addEventListener("mouseup", guard(function () {
-                if (!st.busy && syncChecks()) {
-                    cbActive.value = selected().active === true;
-                    refresh();
-                }
-            }));
-        } catch (listenErr) {
-            U.log("step list mouseup: " + listenErr.message);
-        }
-
         function replaceChain(res) {
             st.steps = res.steps;
             st.sel = res.selected;
@@ -1160,21 +1195,17 @@ BTE.UI = {
         btnAdd.onClick = guard(function () {
             var type = U.TYPES[ddAddType.selection ? ddAddType.selection.index : 0];
             var s = BTE.Storage.newStep(type);
-            syncChecks();
             s.where = Model.defaultWhere(type, U.varsAfter(st.run, st.sel));
             replaceChain(U.insertStep(st.steps, st.sel, s));
         });
         btnRemove.onClick = guard(function () {
             if (st.steps.length <= 1) { return; }
-            syncChecks();
             replaceChain(U.removeStep(st.steps, st.sel));
         });
         btnUp.onClick = guard(function () {
-            syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, -1));
         });
         btnDown.onClick = guard(function () {
-            syncChecks();
             replaceChain(U.moveStep(st.steps, st.sel, 1));
         });
 
@@ -1182,7 +1213,7 @@ BTE.UI = {
             var p;
             if (kind === st.kind) { return; }
             try {
-                p = BTE.Scope.prepare(doc, kind, st.order);
+                p = BTE.Scope.prepare(doc, kind, st.order, st.bySheet);
             } catch (e) {
                 U.log("setKind: " + e.message + " (line " + e.line + ")");
                 alert(L.format(L.ERR_SCOPE_READ, e.message));
@@ -1200,12 +1231,19 @@ BTE.UI = {
 
         function setOrder(order) {
             if (order === st.order) { return; }
-            st.prepared = BTE.Scope.reorder(st.prepared, order);
-            st.order = order;
+            reorderTo(order, st.bySheet);
             refresh();
         }
         function orderClick(order) { return guard(function () { setOrder(order); }); }
         for (k = 0; k < rbOrder.length; k++) { rbOrder[k].onClick = orderClick(U.ORDERS[k]); }
+
+        /** Po aršících on or off: a re-sort, like Pořadí (spec 4.2). */
+        function setBySheet(on) {
+            if (on === st.bySheet) { return; }
+            reorderTo(st.order, on);
+            refresh();
+        }
+        cbBySheet.onClick = guard(function () { setBySheet(cbBySheet.value === true); });
 
         ddPreset.onChange = guard(function () {
             var key, res;
@@ -1282,15 +1320,17 @@ BTE.UI = {
         /**
          * Applies only a preview that has been on screen (spec 2, anti-goals).
          * Held back, it shows the new preview with a hint and the next Použít
-         * applies: when settle() had to refresh (an edit or a tick no refresh
-         * had seen), or when a text field refreshed it just now (Enter in the
-         * field, or this click committed it; HOLD_MS). The run handed back is
-         * the one the preview shows.
+         * applies: when settle() had to refresh (an edit no refresh had
+         * seen), or when a text field refreshed it just now (Enter in the
+         * field, or this click committed it; HOLD_MS). The hint asks to
+         * confirm Použít again, so it shows only when Použít is on after the
+         * refresh (1.1.0 spec 6, M5). The run handed back is the one the
+         * preview shows.
          */
         btnOk.onClick = guard(function () {
             var held = settle() || (new Date().getTime() - st.textAt < U.HOLD_MS);
             if (held) {
-                st.holdHint = true;
+                st.holdHint = st.status.canApply;
                 renderStatus();
                 return;
             }
@@ -1308,6 +1348,7 @@ BTE.UI = {
         // --- first fill ---------------------------------------------------------------
         rbKind[indexOf(U.SCOPES, st.kind)].value = true;
         rbOrder[Math.max(0, indexOf(U.ORDERS, st.order))].value = true;
+        cbBySheet.value = st.bySheet;
         stScope.text = Model.scopeLine(st.prepared);
         renderStepList();
         showEditor();
@@ -1322,7 +1363,7 @@ BTE.UI = {
             settle: settle,
             refs: {
                 ddPreset: ddPreset, btnRevert: btnRevert, btnSave: btnSave, btnSaveAs: btnSaveAs, btnDel: btnDel,
-                rbKind: rbKind, rbOrder: rbOrder, stScope: stScope,
+                rbKind: rbKind, rbOrder: rbOrder, gOrder: gOrder, cbBySheet: cbBySheet, stScope: stScope,
                 lbSteps: lbSteps, ddAddType: ddAddType, btnAdd: btnAdd, btnRemove: btnRemove,
                 btnUp: btnUp, btnDown: btnDown, ddType: ddType, cbActive: cbActive, gStack: gStack, ed: ed,
                 stStatus: stStatus, etMsgs: etMsgs, lbPrev: lbPrev, btnOk: btnOk, btnCancel: btnCancel,

@@ -197,4 +197,32 @@ h.eq(JSON.stringify(BTE.Order.sort([box("only", 0, 10, 10, 10, 0)], "cols")), '[
     h.eq(JSON.stringify(items), before, "input array and items unchanged");
 })();
 
+// Order by sheet (aršík): sheets first, loose items last, one sheet number per key.
+(function () {
+    function it(key, l, t, sheet, tie) { return { key: key, bounds: [l, t, l + 10, t - 10], tie: tie, sheet: sheet }; }
+    var A = { id: "A", bounds: [0, 0, 30, -30] }, B = { id: "B", bounds: [40, 0, 70, -30] };
+    var items = [it("b1", 40, 0, B, 2), it("a2", 20, 0, A, 1), it("a1", 0, 0, A, 0), it("b2", 60, 0, B, 3), it("x", 0, 50, null, 4)];
+    var r = BTE.Order.sortBySheet(items, "rows");
+    h.eq(r.keys.join(), "a1,a2,b1,b2,x", "bySheet: sheet A, then B, loose last although it is top-left");
+    h.eq(r.sheets.join(), "1,1,2,2,0", "bySheet: sheet numbers, 0 for loose");
+    h.eq(r.count, 2, "bySheet: two sheets");
+    h.eq(BTE.Order.sortBySheet([it("x", 0, 0, null, 0)], "rows").count, 0, "bySheet: no sheet");
+    var C = { id: "C", bounds: [0, 0, 30, -30] };
+    h.eq(BTE.Order.sortBySheet([it("c", 0, 0, C, 5), it("a", 0, 0, A, 1)], "rows").keys.join(), "a,c", "bySheet: identical sheet bounds, tie decides");
+    var P = { id: "constructor", bounds: [0, 0, 30, -30] };
+    h.eq(BTE.Order.sortBySheet([it("p", 0, 0, P, 0)], "rows").count, 1, "bySheet: a sheet id named like an Object.prototype member");
+    h.eq(BTE.Order.sortBySheet([], "cols").count, 0, "bySheet: empty input");
+    var N = { id: "n", bounds: [0, 0, 30, -30] };
+    ["__proto__", "hasOwnProperty"].forEach(function (id) {
+        var S = { id: id, bounds: [40, 0, 70, -30] };
+        var r2 = BTE.Order.sortBySheet([it("s2", 60, 0, S, 3), it("n1", 0, 0, N, 0), it("s1", 40, 0, S, 2), it("n2", 20, 0, N, 1)], "rows");
+        h.eq(r2.keys.join(), "n1,n2,s1,s2", "bySheet: sheet id " + id + ", keys");
+        h.eq(r2.sheets.join(), "1,1,2,2", "bySheet: sheet id " + id + ", sheet numbers");
+        h.eq(r2.count, 2, "bySheet: sheet id " + id + ", count");
+    });
+    var threw = false;
+    try { BTE.Order.sortBySheet(items, "diag"); } catch (e) { threw = true; }
+    h.assert(threw, "bySheet: unknown mode throws");
+})();
+
 h.done();

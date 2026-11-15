@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------------
 // Script:      probe_scope.jsx
-// Version:     1.0.0
+// Version:     1.1.0
 // Author:      Ladislav Osvald
-// Updated:     2026-10-29
+// Updated:     2026-11-10
 // Description: Scope probe for Batch Text Edit (Task 9). Runs the real
 //              BTE.Scope.prepare on documents it builds itself: 240 prefabs
 //              (12 x 20, pitch 312 pt) in the three structures of spec 4.2 -
@@ -17,6 +17,11 @@
 //              order, the skipped counts and the time of prepare (and of its
 //              parts). Creates one document per run and closes only that
 //              one, unsaved. Nothing is written to the user's documents.
+//              1.1.0 (order by sheet): parts bysheet, bysheetclip,
+//              bysheetmasked (sticker clip group > plain group > texts) and
+//              bysheetcliptexts build 20 sheets (aršíky) of 3 x 4 prefabs, 4
+//              across and 5 down, and run prepare(doc, "document", "rows",
+//              true/false); part real opens the files in REAL_FILES read-only.
 // Usage:       The probe needs a header line and the real modules in front
 //              of it. From the repo root, with 0 open documents (it refuses
 //              to run otherwise):
@@ -30,11 +35,15 @@
 //              The header resets BTE, which the engine keeps between runs,
 //              so the modules that follow load fresh. Parts: group, sheets,
 //              loose, select, artboard, loose1000, loose10k, mixed,
-//              groupbounds. One part per run. PARTS_FIRST = true times the
+//              groupbounds, bysheet, bysheetclip, bysheetmasked, bysheetcliptexts, real. One
+//              part per run. PARTS_FIRST = true times the
 //              parts of prepare before prepare itself (the first read of a
 //              fresh document is the slow one). Optional: var LOG_PATH =
 //              "..."; for the progress log (default
-//              Folder.temp/bte_probe_scope.log).
+//              Folder.temp/bte_probe_scope.log). Part real needs
+//              var REAL_FILES = ["/abs/a.ai", ...]; in the header; it opens
+//              each file with alerts off, never saves, and closes it
+//              DONOTSAVECHANGES.
 // ------------------------------------------------------------------------
 (function () {
     // Never next to the user's work: run only with no document open. The
@@ -57,6 +66,8 @@
     if (typeof PART === "string") { PART = ""; }
     if (typeof PARTS_FIRST === "boolean") { PARTS_FIRST = false; }
     if (typeof LOG_PATH === "string") { LOG_PATH = ""; }
+    var realFiles = (typeof REAL_FILES !== "undefined" && REAL_FILES instanceof Array) ? REAL_FILES : [];
+    if (typeof REAL_FILES !== "undefined") { REAL_FILES = []; }
     var PITCH = 312, CUT = 283, MASK = 290;
     var out = { part: part, app: app.version, notes: [] };
     var d = null;
@@ -316,6 +327,184 @@
         out.groupBounds = r;
     }
 
+    // 1.1.0: `across x down` sheets (aršíky) of 3 x 4 prefabs. mode:
+    // "plain" - sheet group > prefab group > {clip graphic, texts, cut circle};
+    // "clipsheet" - the sheet group is itself a clip group (mask = its box);
+    // "maskedsticker" - sheet group > clip group > plain group > the texts
+    // (spec 4.3): the sheet is the sticker's own clip group, one element each;
+    // "cliptexts" - the texts sit in a clip group directly (element = clip
+    // group, its sheet the prefab group).
+    function buildBySheet(L, mode, across, down) {
+        var SC = 3, SR = 4, H = down * SR * PITCH, sx, sy, i, sg, pg, clip, cx, cy, r, c, n = 0;
+        for (sy = 0; sy < down; sy++) {
+            for (sx = 0; sx < across; sx++) {
+                sg = L.groupItems.add();
+                for (i = 0; i < SC * SR; i++) {
+                    c = sx * SC + (i % SC);
+                    r = sy * SR + Math.floor(i / SC);
+                    cx = c * PITCH + PITCH / 2;
+                    cy = H - (r * PITCH + PITCH / 2);
+                    pg = sg.groupItems.add();
+                    if (mode === "maskedsticker") {
+                        // spec 4.3: sheet group > clip group (mask + graphic)
+                        // > plain group > the two texts. pg is the clip group.
+                        pg.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+                        clip = pg.groupItems.add();
+                        point(clip, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+                        point(clip, cx - 10, cy - 45, "{n}");
+                        circle(pg, cx, cy, MASK);
+                        pg.clipped = true;
+                    } else if (mode === "cliptexts") {
+                        clip = pg.groupItems.add();
+                        clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+                        point(clip, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+                        point(clip, cx - 10, cy - 45, "{n}");
+                        circle(clip, cx, cy, MASK);
+                        clip.clipped = true;
+                    } else {
+                        clip = pg.groupItems.add();
+                        clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+                        circle(clip, cx, cy, MASK);
+                        clip.clipped = true;
+                        point(pg, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+                        point(pg, cx - 10, cy - 45, "{n}");
+                        circle(pg, cx, cy, CUT);
+                    }
+                    n++;
+                }
+                if (mode === "clipsheet") {
+                    sg.pathItems.rectangle(H - sy * SR * PITCH, sx * SC * PITCH, SC * PITCH, SR * PITCH);
+                    sg.clipped = true;
+                }
+            }
+            log("built sheets row " + (sy + 1));
+        }
+        app.redraw();
+        return n;
+    }
+
+    function keysOf(p) {
+        var k = [], i;
+        for (i = 0; i < p.elements.length; i++) { k.push(p.elements[i].key); }
+        return k;
+    }
+    function sameKeys(a, b) {
+        var i;
+        if (a.length !== b.length) { return false; }
+        for (i = 0; i < a.length; i++) { if (a[i] !== b[i]) { return false; } }
+        return true;
+    }
+    // Summary of prepare(..., false) against prepare(..., true) on one document.
+    function bySheetRun(doc, order) {
+        var r = {}, s, off, on, off2, on2, i, per = {}, first = [], ks, offKeys, onKeys, mono = true;
+        s = now(); off = BTE.Scope.prepare(doc, "document", order, false); r.offMs = now() - s;
+        s = now(); on = BTE.Scope.prepare(doc, "document", order, true); r.onMs = now() - s;
+        s = now(); off2 = BTE.Scope.prepare(doc, "document", order, false); r.offMsWarm = now() - s;
+        s = now(); on2 = BTE.Scope.prepare(doc, "document", order, true); r.onMsWarm = now() - s;
+        offKeys = keysOf(off); onKeys = keysOf(on);
+        r.elements = on.elements.length;
+        r.elementsOff = off.elements.length;
+        r.sheetCountOff = off.sheetCount;
+        r.sheetsOffIsNull = (off.sheets === null);
+        r.sheetCountOn = on.sheetCount;
+        r.sheetsLen = on.sheets ? on.sheets.length : -1;
+        for (i = 0; i < 13 && on.sheets && i < on.sheets.length; i++) { first.push(on.sheets[i]); }
+        r.first13 = first;
+        if (on.sheets) {
+            r.sheet49 = on.sheets.length > 48 ? on.sheets[48] : null;
+            for (i = 0; i < on.sheets.length; i++) {
+                per[on.sheets[i]] = (per[on.sheets[i]] || 0) + 1;
+                if (i > 0 && on.sheets[i] < on.sheets[i - 1]) { mono = false; }
+            }
+            r.perSheet = per;
+            r.sheetsMonotone = mono;
+        }
+        r.sameKeySet = sameKeys(offKeys.slice(0).sort(), onKeys.slice(0).sort());
+        r.sameKeyOrder = sameKeys(offKeys, onKeys);
+        r.offElement4IsOnElement13 = (offKeys.length > 3 && onKeys.length > 12 && offKeys[3] === onKeys[12]);
+        r.onMatchesRepeat = sameKeys(onKeys, keysOf(on2)) && sameKeys(offKeys, keysOf(off2));
+        r.skippedOn = on.skipped;
+        r.textCount = on.textCount;
+        return r;
+    }
+
+    // Booleans computed here so the result need not be read by eye.
+    function expectFor(mode, r) {
+        var e = {}, k, all12 = true, i, want = [];
+        if (mode === "maskedsticker" || mode === "cliptexts") {
+            e.sheetCountIsElements = (r.sheetCountOn === r.elements);
+            e.elements240 = (r.elements === 240);
+            e.offSheetsNull = r.sheetsOffIsNull && r.sheetCountOff === 0;
+            e.first13Is1to13 = (r.first13.join(",") === "1,2,3,4,5,6,7,8,9,10,11,12,13");
+            e.sheet49Is49 = (r.sheet49 === 49);
+        } else {
+            for (k in r.perSheet) { if (r.perSheet.hasOwnProperty(k) && r.perSheet[k] !== 12) { all12 = false; } }
+            for (i = 0; i < 12; i++) { want.push(1); }
+            want.push(2);
+            e.elements240 = (r.elements === 240);
+            e.offSheetsNull = r.sheetsOffIsNull && r.sheetCountOff === 0;
+            e.sheetCountOn20 = (r.sheetCountOn === 20);
+            e.every12 = all12;
+            e.first13Is1x12Then2 = (r.first13.join(",") === want.join(","));
+            e.sheet49Is5 = (r.sheet49 === 5);
+            e.offElement4IsOnElement13 = r.offElement4IsOnElement13;
+            e.sameKeySet = r.sameKeySet;
+            e.monotone = r.sheetsMonotone;
+        }
+        e.repeatStable = r.onMatchesRepeat;
+        e.ok = true;
+        for (k in e) { if (e.hasOwnProperty(k) && k !== "ok" && e[k] !== true) { e.ok = false; } }
+        return e;
+    }
+
+    function bySheetPart(mode) {
+        var s, n;
+        d = app.documents.add(DocumentColorSpace.RGB, 12 * PITCH, 20 * PITCH);
+        s = now();
+        n = buildBySheet(d.layers[0], mode, 4, 5);
+        out.buildMs = now() - s;
+        out.prefabs = n;
+        out.counts = { textFrames: d.textFrames.length, groupItems: d.groupItems.length };
+        log("built " + n + " prefabs in " + out.buildMs + " ms");
+        out.mode = mode;
+        out.result = bySheetRun(d, "rows");
+        out.expect = expectFor(mode, out.result);
+        log("result " + j(out.result));
+    }
+
+    // Opens each of REAL_FILES read-only and measures prepare off/on.
+    function realPart() {
+        var i, f, doc, pdfOpts, level, r, res = [];
+        for (i = 0; i < realFiles.length; i++) {
+            f = new File(realFiles[i]);
+            r = { file: String(realFiles[i]).split("/").pop() };
+            doc = null; pdfOpts = null; level = null;
+            if (!f.exists) { r.error = "file not found"; res.push(r); continue; }
+            try {
+                try { pdfOpts = { c: app.preferences.PDFFileOptions.pDFCropToBox, p: app.preferences.PDFFileOptions.pageToOpen }; } catch (ep) { r.pdfOptsRead = ep.message; }
+                level = app.userInteractionLevel;
+                app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+                doc = app.open(f);
+                r.docName = doc.name;
+                r.saved = doc.saved;
+                r.result = bySheetRun(doc, "rows");
+                r.savedAfter = doc.saved;
+                log("real " + j(r));
+            } catch (e) {
+                r.error = e.message + " (line " + e.line + ")";
+            } finally {
+                if (doc) {
+                    try { doc.close(SaveOptions.DONOTSAVECHANGES); } catch (ec) { r.closeFailed = ec.message; }
+                }
+                try { if (level !== null) { app.userInteractionLevel = level; } } catch (el) { r.levelRestore = el.message; }
+                try { if (pdfOpts) { app.preferences.PDFFileOptions.pDFCropToBox = pdfOpts.c; app.preferences.PDFFileOptions.pageToOpen = pdfOpts.p; } } catch (er) { r.pdfRestore = er.message; }
+            }
+            res.push(r);
+        }
+        out.real = res;
+        if (realFiles.length === 0) { out.notes.push("REAL_FILES is empty"); }
+    }
+
     function j(v) {
         var a = [], k, i;
         if (v === null) { return "null"; }
@@ -344,6 +533,11 @@
         else if (part === "artboard") { artboardPart(); }
         else if (part === "mixed") { mixedPart(); }
         else if (part === "groupbounds") { groupBoundsPart(); }
+        else if (part === "bysheet") { bySheetPart("plain"); }
+        else if (part === "bysheetclip") { bySheetPart("clipsheet"); }
+        else if (part === "bysheetmasked") { bySheetPart("maskedsticker"); }
+        else if (part === "bysheetcliptexts") { bySheetPart("cliptexts"); }
+        else if (part === "real") { realPart(); }
         else { out.notes.push("unknown PART \"" + part + "\""); }
     } catch (e) {
         out.FAILED = e.message + " (line " + e.line + ")";

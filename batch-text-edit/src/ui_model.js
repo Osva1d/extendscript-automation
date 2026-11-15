@@ -2,7 +2,8 @@
 // Module: BTE.UIModel — what the dialog shows, computed from plain data: the
 //         Kde list, step labels, preview rows, the status line
 // Part of: Illustrator Batch Text Edit
-// Depends on: BTE.L, BTE.Utils, BTE.Storage (step types and Kde kinds)
+// Depends on: BTE.L, BTE.Utils, BTE.Storage (step types and Kde kinds), BTE.Vars
+//             (variables left after the last step)
 //
 // No ScriptUI here. The dialog wires controls to these functions, so the
 // texts and the rules for what may be applied are tested in Node.
@@ -36,6 +37,13 @@ BTE.UIModel = {
      * @type {number}
      */
     MAX_MULTI: 3,
+
+    /**
+     * How many variables left after the last step get a line of their own;
+     * the rest is one counted line.
+     * @type {number}
+     */
+    MAX_LEFTOVER: 3,
 
     /**
      * How many mismatches after writing the summary lists by name; the rest
@@ -215,8 +223,8 @@ BTE.UIModel = {
     /**
      * The line a step has in the step list: position, type, Kde and the
      * main value, and ✗ or ⚠ at the end when the step is on and has an error
-     * or a warning. An inactive step shows no sign: it is skipped, so it
-     * has nothing to report.
+     * or a warning. An inactive step ends with "(vypnutý)" instead: it is
+     * skipped, so it has nothing to report.
      * @param {Object} step - A step.
      * @param {?Object} info - Its StepInfo from BTE.Steps.run, or nothing.
      * @param {number} index - The step's position in the chain, from zero.
@@ -239,7 +247,10 @@ BTE.UIModel = {
             tail = where + " " + sym.ARROW + " " + U.modeName(step.mode);
         }
 
-        mark = "";
+        // An inactive step says so in its text: the list shows no tick
+        // (Illustrator 2027 drew it grey, unclickable and only after the
+        // mouse moved, 2026-11-15), and a stale symbol would mislead.
+        mark = step.active ? "" : "  " + L.STEP_OFF;
         if (step.active && info) {
             if (info.error) {
                 mark = "  " + sym.ERR;
@@ -259,13 +270,19 @@ BTE.UIModel = {
      * @param {number} selectedStep - The selected step, from zero. Out of
      *     range (nothing selected, or no steps) the column shows the final
      *     state.
-     * @returns {Array.<Array.<string>>} [[number, original, after, final], ...]
+     * @param {Array.<number>} [sheets] - One sheet number per element
+     *     (BTE.Scope prepared.sheets, 0 = no sheet); null or omitted when
+     *     Po aršících is off.
+     * @returns {Array.<Array.<string>>} [[number, original, after, final], ...];
+     *     number is the position ("25"), with sheets "3 · 25" (the sheet,
+     *     then the position; "– · 25" for an element outside a sheet).
      */
-    rows: function (states, selectedStep) {
+    rows: function (states, selectedStep, sheets) {
         var U = BTE.UIModel;
+        var L = BTE.L;
         var out = [];
         var last = states.length - 1;
-        var at, i;
+        var at, i, num;
 
         function joined(texts) {
             var parts = [];
@@ -280,7 +297,11 @@ BTE.UIModel = {
             at = selectedStep + 1;
         }
         for (i = 0; i < states[0].length; i++) {
-            out.push([String(i + 1), joined(states[0][i]), joined(states[at][i]), joined(states[last][i])]);
+            num = String(i + 1);
+            if (sheets instanceof Array) {
+                num = (sheets[i] > 0 ? String(sheets[i]) : L.SHEET_NONE_MARK) + " \u00B7 " + num;
+            }
+            out.push([num, joined(states[0][i]), joined(states[at][i]), joined(states[last][i])]);
         }
         return out;
     },
@@ -290,7 +311,7 @@ BTE.UIModel = {
      * Number step names the field in ERR_NOT_INTEGER and ERR_MIN_ONE with
      * "FIELD_FROM" and the like) is replaced by the label, so the user never
      * sees a key. A key that has no entry of its own but has _1/_2/_5 forms
-     * (WARN_MISSING, WARN_EXTRA) is a counted message; the form is picked by
+     * (WARN_MISSING, WARN_TO_CUT) is a counted message; the form is picked by
      * the first argument, which is the count.
      * @param {{key: string, args: Array}} msg - A StepInfo error or warning.
      * @returns {string} The message; the key itself when BTE.L has no such
@@ -325,7 +346,11 @@ BTE.UIModel = {
      * nothing found, an element with several matches, skipped texts) turn it
      * to WARN and leave Použít on. An empty range is an error. Messages:
      * errors first, then warnings, each in step order, led by the step's
-     * number; the skipped texts come last. Only steps that are on count.
+     * number; then the skipped texts, the extra lines (the sheet warnings),
+     * and last the variables still in the final texts (BTE.Vars.list), the
+     * latter only for a non-empty range. Extra lines and leftover variables
+     * turn the kind to WARN and leave Použít as it was. Only steps that are
+     * on count.
      * @param {{states: Array, info: Array}} run - BTE.Steps.run result.
      * @param {Array.<Object>} steps - The steps that were run.
      * @param {{locked: number, overflow: number, linked: number}} [skipped]
@@ -333,12 +358,14 @@ BTE.UIModel = {
      * @param {boolean} [cursorInText] - The Rozsah is Výběr and the
      *     selection is text being edited (BTE.Scope.prepare): the empty
      *     range then says so and what to do (spec 4.1), instead of "no text".
+     * @param {Array.<string>} [extra] - More warnings, as text without the
+     *     sign (sheetLines); each gets the warning sign.
      * @returns {{kind: string, line: string, messages: Array.<string>, canApply: boolean, changed: number}}
      *     kind is "OK", "WARN" or "ERR" (the keys of FieldPaint.COLORS);
      *     line starts with the matching sign; changed is the number of
      *     elements whose texts differ at the end.
      */
-    status: function (run, steps, skipped, cursorInText) {
+    status: function (run, steps, skipped, cursorInText, extra) {
         var U = BTE.UIModel;
         var L = BTE.L;
         var sym = U.SYMBOL;
@@ -349,7 +376,7 @@ BTE.UIModel = {
         var warns = [];
         var changed = 0;
         var reasons = [["locked", "SKIP_LOCKED"], ["overflow", "SKIP_OVERFLOW"], ["linked", "SKIP_LINKED"]];
-        var k, i, j, info, step, count, shown, rest, a, b, kind, line, canApply;
+        var k, i, j, info, step, count, shown, rest, a, b, kind, line, canApply, left;
 
         function led(no, text) { return L.format(L.STATUS_STEP, no, text); }
 
@@ -383,6 +410,14 @@ BTE.UIModel = {
             }
         }
 
+        if (extra) {
+            for (i = 0; i < extra.length; i++) { warns.push(sym.WARN + " " + extra[i]); }
+        }
+        if (total > 0) {
+            left = U.leftoverLines(finalState);
+            for (i = 0; i < left.length; i++) { warns.push(sym.WARN + " " + left[i]); }
+        }
+
         for (i = 0; i < total; i++) {
             a = states[0][i];
             b = finalState[i];
@@ -411,6 +446,63 @@ BTE.UIModel = {
     },
 
     /**
+     * The warnings for variables that the last step left in the texts: one
+     * line per variable (how many elements still hold it, then its name), at
+     * most MAX_LEFTOVER, then one line counting the rest.
+     * @param {Array.<Array.<string>>} finalState - The state after the last
+     *     step (BTE.Steps.run states, last).
+     * @returns {Array.<string>} Lines without a sign; empty for none.
+     */
+    leftoverLines: function (finalState) {
+        var U = BTE.UIModel;
+        var L = BTE.L;
+        var vars = BTE.Vars.list(finalState);
+        var shown = vars.length < U.MAX_LEFTOVER ? vars.length : U.MAX_LEFTOVER;
+        var lines = [];
+        var i;
+
+        for (i = 0; i < shown; i++) {
+            lines.push(L.format(L.countForm("VARS_LEFT", vars[i].count), vars[i].count, vars[i].name));
+        }
+        if (vars.length > shown) { lines.push(L.count("VARS_LEFT_MORE", vars.length - shown)); }
+        return lines;
+    },
+
+    /**
+     * The warnings for Po aršících: no element lies in a sheet, every sheet
+     * holds a single element (a sheet that is probably each element's own
+     * group), some elements lie outside a sheet. Nothing when the option is
+     * off.
+     * @param {{sheets: ?Array.<number>, sheetCount: number}} prepared - From
+     *     BTE.Scope.prepare or reorder.
+     * @returns {Array.<string>} Lines without a sign; empty for none.
+     */
+    sheetLines: function (prepared) {
+        var L = BTE.L;
+        var sheets = prepared.sheets;
+        var count = prepared.sheetCount;
+        var lines = [];
+        var held = {};
+        var loose = 0;
+        var every = true;
+        var i;
+
+        if (!(sheets instanceof Array)) { return lines; }
+        if (count === 0) { return [L.SHEET_NONE]; }
+        for (i = 0; i < sheets.length; i++) {
+            if (sheets[i] > 0) {
+                held[sheets[i]] = (held[sheets[i]] || 0) + 1;
+                if (held[sheets[i]] > 1) { every = false; }
+            } else {
+                loose++;
+            }
+        }
+        if (count > 1 && every) { lines.push(L.SHEET_SINGLES); }
+        if (loose > 0) { lines.push(L.count("SHEET_LOOSE", loose)); }
+        return lines;
+    },
+
+    /**
      * The status for a dialog that hit a bug: BTE.Steps.run threw (an
      * unknown step type, a broken edit list; ERR_PREVIEW), or a control's
      * handler did (ERR_HANDLER). The dialog stays open, says what failed and
@@ -435,9 +527,10 @@ BTE.UIModel = {
 
     /**
      * The greyed line under Rozsah: what the scope holds, "240 prvků, 480
-     * textů", and how many texts it skipped (the reasons are in the status
+     * textů", with "20 aršíků" after them when Po aršících is on and found
+     * sheets, and how many texts it skipped (the reasons are in the status
      * messages). With the cursor in a text it says that instead.
-     * @param {{elements: Array, textCount: number, skipped: Object, cursorInText: boolean}} prepared
+     * @param {{elements: Array, textCount: number, skipped: Object, cursorInText: boolean, sheets: ?Array.<number>, sheetCount: number}} prepared
      *     From BTE.Scope.prepare or reorder.
      * @returns {string} The line.
      */
@@ -449,6 +542,9 @@ BTE.UIModel = {
         if (prepared.cursorInText === true) { return L.SCOPE_CURSOR; }
         line = L.format(L.SCOPE_COUNTS, L.count("COUNT_ELEMENTS", prepared.elements.length),
             L.count("COUNT_TEXTS", prepared.textCount));
+        if (prepared.sheets instanceof Array && prepared.sheetCount > 0) {
+            line = L.format(L.SCOPE_COUNTS, line, L.count("COUNT_SHEETS", prepared.sheetCount));
+        }
         if (skipped > 0) { line = L.format(L.SCOPE_SKIPPED, line, skipped); }
         return line;
     },
@@ -528,7 +624,8 @@ BTE.UIModel = {
      * differs from the preview, from what it holds; see changes()), the
      * skipped texts, the mismatches after writing (red, always shown), and in
      * the details the mismatches first, then the warnings the dialog showed
-     * (the skipped texts by reason among them).
+     * (the skipped texts by reason, the sheet lines and the variables left
+     * after the last step among them).
      * @param {{steps: Array, prepared: Object, run: Object}} res - What
      *     BTE.UI.show returned.
      * @param {Array.<{el: number, tx: number, expected: string, actual: string}>} mismatches
@@ -541,7 +638,7 @@ BTE.UIModel = {
         var s = res.prepared.skipped || {};
         var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
         var ch = U.changes(res.run.states, mismatches);
-        var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText);
+        var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText, U.sheetLines(res.prepared));
 
         return {
             title: L.SUM_TITLE,

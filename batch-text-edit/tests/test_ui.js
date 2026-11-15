@@ -78,6 +78,18 @@ h.eq(j(res.steps[0].where), j(V("{kód}")), "auto: a concrete Kde stays");
 res = U.resolveAuto({ order: "cols", steps: [N(V("{x}"))] }, SHEET);
 h.eq(res.order, "cols", "auto: the order is kept");
 h.eq(j(res.steps[0].where), j(V("{x}")), "auto: a variable the texts lack is kept (nenalezeno)");
+// The steps above an auto step run with the sheets, as the preview runs
+// them: v každém aršíku with Do 1 numbers the first element of every sheet.
+var ONE = [["{n}"], ["{n}"], ["{n}"]];
+var perSheet = { order: "rows", bySheet: true, steps: [N(V("{n}"), { to: "1", perSheet: true }), N({ kind: "auto", text: "" })] };
+res = U.resolveAuto(perSheet, ONE, [1, 2, 3]);
+h.eq(j(res.steps[1].where), '{"kind":"first","text":""}', "auto: with the sheets the step above numbers every sheet, no {n} is left");
+res = U.resolveAuto(perSheet, ONE);
+h.eq(j(res.steps[1].where), j(V("{n}")), "auto: without them one series ends at Do 1 and {n} is left");
+h.eq(res.bySheet, true, "auto: Po aršících is kept");
+var threw = false;
+try { U.resolveAuto(perSheet, ONE, [1, 2]); } catch (e) { threw = /sheets has 2 entries/.test(e.message); }
+h.assert(threw, "auto: a sheets array of the wrong length throws (R5)");
 
 // ---- Task 11 carry: [Výchozí] shows no "*" right after the dialog opens ------
 function openAs(pData, state) {
@@ -118,11 +130,11 @@ pd.presets[DEF] = U.resolveAuto(S.defaultPreset(), [["{n}"]]);
 h.eq(listText(pd, shown), "[Výchozí] *", "Rozsah change to texts whose first variable differs: * (the values differ)");
 // the last run's values on open: * only when they differ from the active preset
 pd = S.fresh();
-pd.presets[BTE.Config.PRESET_KEY_LAST] = { order: "rows", steps: [N(V("{kód}"))] };
+pd.presets[BTE.Config.PRESET_KEY_LAST] = { order: "rows", bySheet: false, steps: [N(V("{kód}"))] };
 shown = openAs(pd, SHEET);
 h.eq(listText(pd, shown), "[Výchozí]", "last run equal to [Výchozí] here: no *");
 pd = S.fresh();
-pd.presets[BTE.Config.PRESET_KEY_LAST] = { order: "rows", steps: [N(V("{n}"), { from: "101" })] };
+pd.presets[BTE.Config.PRESET_KEY_LAST] = { order: "rows", bySheet: false, steps: [N(V("{n}"), { from: "101" })] };
 shown = openAs(pd, SHEET);
 h.eq(listText(pd, shown), "[Výchozí] *", "last run differing from [Výchozí]: *");
 h.eq(j(shown.steps[0].where), j(V("{n}")), "the fields hold the last run");
@@ -257,7 +269,9 @@ while ((hm = hre.exec(code)) !== null) {
 }
 h.eq(unguarded.join(", "), "", "every onClick / onChange / onChanging goes through guard()");
 h.eq(/kindClick\(kind\) \{ return guard\(/.test(code) && /orderClick\(order\) \{ return guard\(/.test(code), true, "the radio factories return guarded handlers");
-h.eq(/addEventListener\("mouseup", guard\(/.test(code), true, "the mouseup listener is guarded");
+var listeners = code.match(/addEventListener\("[a-z]+", [A-Za-z]+/g) || [], unguardedListeners = [], li;
+for (li = 0; li < listeners.length; li++) { if (!/, guard$/.test(listeners[li])) { unguardedListeners.push(listeners[li]); } }
+h.eq(unguardedListeners.join(", "), "", "every addEventListener handler goes through guard()");
 var handlers = code.match(/\.(onClick|onChange|onChanging)\s*=/g) || [];
 h.eq(handlers.length >= 20, true, "the scan saw " + handlers.length + " handler assignments");
 

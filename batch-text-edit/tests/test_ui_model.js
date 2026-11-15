@@ -146,8 +146,9 @@ var lab = U.stepLabel(R(V(longName), { replace: "x" }), errInfo, 0);
 h.eq(lab.length < 50, true, "a long name is shortened (length " + lab.length + ")");
 h.eq(lab.substring(lab.length - 3), "  ✗", "the symbol survives the shortening");
 var off = R(V("{kód}"), { replace: "ABC", active: false });
-h.eq(U.stepLabel(off, errInfo, 0), "1  Nahradit {kód} → ABC", "an inactive step shows no symbol, even with a stale error");
-h.eq(U.stepLabel(off, undefined, 0), "1  Nahradit {kód} → ABC", "no info is fine");
+h.eq(U.stepLabel(off, errInfo, 0), "1  Nahradit {kód} → ABC  (vypnutý)", "an inactive step says so instead of a symbol, even with a stale error");
+h.eq(U.stepLabel(off, undefined, 0), "1  Nahradit {kód} → ABC  (vypnutý)", "no info is fine");
+h.eq(U.stepLabel(off, warnInfo, 1), "2  Nahradit {kód} → ABC  (vypnutý)", "a stale warning is not shown either");
 threw = false;
 try { U.stepLabel({ type: "x", where: {} }, okInfo, 0); } catch (e3) { threw = true; }
 h.eq(threw, true, "stepLabel throws on an unknown type");
@@ -188,8 +189,8 @@ h.eq(U.text({ key: "WARN_MISSING", args: ["1"] }), "Chybí 1 prvek.", "missing: 
 h.eq(U.text({ key: "WARN_MISSING", args: ["3"] }), "Chybí 3 prvky.", "missing: 3");
 h.eq(U.text({ key: "WARN_MISSING", args: ["6"] }), "Chybí 6 prvků.", "missing: 6");
 h.eq(U.text({ key: "WARN_MISSING", args: [0] }), "Chybí 0 prvků.", "missing: 0");
-h.eq(U.text({ key: "WARN_EXTRA", args: ["1"] }), "Prvků je o 1 víc.", "extra: 1");
-h.eq(U.text({ key: "WARN_EXTRA", args: ["6"] }), "Prvků je o 6 víc.", "extra: 6");
+h.eq(U.text({ key: "WARN_TO_CUT", args: ["1", "3"] }), "1 prvek zůstane beze změny, řada končí na Do 3.", "cut: 1");
+h.eq(U.text({ key: "WARN_TO_CUT", args: ["6", "3"] }), "6 prvků zůstane beze změny, řada končí na Do 3.", "cut: 6");
 h.eq(U.text({ key: "NO_SUCH_KEY", args: [] }), "NO_SUCH_KEY", "an unknown key is shown as it is, never throws");
 h.eq(U.text({ key: "ERR_FIND_EMPTY" }), "Zadejte, co hledat.", "args may be missing");
 
@@ -230,7 +231,7 @@ steps = [R(V("{zzz}"), { replace: "x" })];
 s = U.status(chain(five, steps), steps);
 h.eq(s.line, "⚠ Nic se nezmění.", "nothing found: line");
 h.eq(s.canApply, false, "nothing found: cannot apply");
-h.eq(s.messages.join("|"), "⚠ Krok 1: Nic nenašel, nic nezmění.", "nothing found: the step warning");
+h.eq(s.messages[0], "⚠ Krok 1: Nic nenašel, nic nezmění.", "nothing found: the step warning");
 
 // WARN: Do does not match (two lines, apply stays on)
 steps = [N(V("{n}"), { to: "8" })];
@@ -238,10 +239,10 @@ s = U.status(chain(five, steps), steps);
 h.eq(s.kind, "WARN", "do: kind");
 h.eq(s.line, "⚠ Změní se 5 z 5 prvků.", "do: line keeps the count");
 h.eq(s.canApply, true, "do: apply stays on (decision 8)");
-h.eq(s.messages.join("|"), "⚠ Krok 1: Poslední číslo vyjde 5, v poli Do je 8.|⚠ Krok 1: Chybí 3 prvky.", "do: both messages, plural form");
+h.eq(s.messages.slice(0, 2).join("|"), "⚠ Krok 1: Poslední číslo vyjde 5, v poli Do je 8.|⚠ Krok 1: Chybí 3 prvky.", "do: both messages, plural form");
 steps = [N(V("{n}"), { to: "4" })];
 s = U.status(chain(five, steps), steps);
-h.eq(s.messages[1], "⚠ Krok 1: Prvků je o 1 víc.", "do: extra");
+h.eq(s.messages[0], "⚠ Krok 1: 1 prvek zůstane beze změny, řada končí na Do 4.", "do: cut");
 
 // ERR
 steps = [R({ kind: "text", text: "" }, { replace: "x" })];
@@ -249,12 +250,12 @@ s = U.status(chain(five, steps), steps);
 h.eq(s.kind, "ERR", "err: kind");
 h.eq(s.line, "✗ Nelze použít, nic se nezapíše.", "err: line");
 h.eq(s.canApply, false, "err: cannot apply");
-h.eq(s.messages.join("|"), "✗ Krok 1: Zadejte, co hledat.", "err: message");
+h.eq(s.messages[0], "✗ Krok 1: Zadejte, co hledat.", "err: message");
 
 // ERR names a field by its label, never by its key
 steps = [R(V("{kód}"), { replace: "ABC" }), N(V("{n}"), { from: "x" })];
 s = U.status(chain(five, steps), steps);
-h.eq(s.messages.join("|"), "✗ Krok 2: Pole „Od“ musí být celé číslo.", "err: the step number is the position, the field is named");
+h.eq(s.messages[0], "✗ Krok 2: Pole „Od“ musí být celé číslo.", "err: the step number is the position, the field is named");
 steps = [N(V("{n}"), { digits: "0", repeats: "0" })];
 s = U.status(chain(five, steps), steps);
 h.eq(s.messages[0], "✗ Krok 1: Pole „Číslic“ musí být alespoň 1.", "err: min one names the label");
@@ -268,10 +269,10 @@ s = U.status(chain(five, steps), steps);
 h.eq(s.kind, "ERR", "mixed: error wins");
 h.eq(s.messages[0].charAt(0), "✗", "mixed: errors first");
 h.eq(s.messages[1].charAt(0), "⚠", "mixed: then warnings");
-h.eq(s.messages.length, 3, "mixed: all three kept");
+h.eq(s.messages.length, 4, "mixed: all three kept, and the leftover variables");
 
 // an inactive step reports nothing, even if the run carries a stale error
-steps = [R({ kind: "text", text: "" }, { replace: "x", active: false }), N(V("{n}"))];
+steps = [R({ kind: "text", text: "" }, { replace: "x", active: false }), R(V("{kód}"), { replace: "ABC" }), N(V("{n}"))];
 s = U.status(chain(five, steps), steps);
 h.eq(s.kind, "OK", "inactive step: no error");
 var stale = chain(five, steps);
@@ -325,7 +326,7 @@ s = U.status(chain([["1 2"]], steps), steps);
 h.eq(s.messages[0], "⚠ Krok 1: Prvek 1 má 2 shody /\\d/, dostanou stejné číslo.", "multi: a regex match is named between slashes");
 
 // skipped texts (ruling R3)
-steps = [N(V("{n}"))];
+steps = [R(V("{kód}"), { replace: "ABC" }), N(V("{n}"))];
 var run5 = chain(five, steps);
 s = U.status(run5, steps, { locked: 2, overflow: 0, linked: 1 });
 h.eq(s.kind, "WARN", "skipped: warning");
@@ -389,6 +390,7 @@ h.eq(s.canApply, false, "cursor: Použít off");
 h.eq(s.messages.join("|"), "✗ Kurzor je v textu. Ukončete úpravu textu klávesou Esc a vyberte prvky, nebo zvolte jiný rozsah.", "cursor: the message replaces 'no text'");
 s = U.status(chain([], steps), steps, undefined, false);
 h.eq(s.messages.join("|"), "✗ V rozsahu není žádný text.", "cursor false: no text as before");
+steps = [R(V("{kód}"), { replace: "ABC" }), N(V("{n}"))];
 s = U.status(chain(five, steps), steps, undefined, true);
 h.eq(s.kind, "OK", "cursor flag with texts in the range changes nothing");
 
@@ -432,7 +434,7 @@ enS = UE.status(BTE_EN.Steps.run([["{n}"], ["{n}"], ["{n}"], ["{n}"], ["{n}"]], 
 h.eq(enS.messages.join("|"), "⚠ Step 1: The last number comes out as 5, the To field says 8.|⚠ Step 1: 3 elements missing.", "en: do check");
 enSteps = [N(V("{n}"), { to: "1" })];
 enS = UE.status(BTE_EN.Steps.run([["{n}"], ["{n}"]], enSteps), enSteps);
-h.eq(enS.messages[1], "⚠ Step 1: 1 element too many.", "en: extra, singular");
+h.eq(enS.messages[0], "⚠ Step 1: 1 element stays unchanged, the series ends at To 1.", "en: cut, singular");
 enS = UE.status(BTE_EN.Steps.run([["{n}"]], [N({ kind: "text", text: "" })]), [N({ kind: "text", text: "" })]);
 h.eq(enS.line, "✗ Cannot apply, nothing will be written.", "en: error line");
 h.eq(enS.messages[0], "✗ Step 1: Enter what to look for.", "en: error message");
@@ -441,4 +443,30 @@ enS = UE.status(BTE_EN.Steps.run([["{n}"]], enSteps), enSteps);
 h.eq(enS.messages[0], "✗ Step 1: The field \"From\" must be a whole number.", "en: label resolved");
 h.eq(UE.whereItems(N(V("{n}")), []).items[0].label, "{n}  (not found)", "en: not found");
 h.eq(UE.stepLabel(N(V("{n}")), undefined, 1), "2  Number {n} from 1", "en: step label");
+h.eq(UE.stepLabel(N(V("{n}"), { active: false }), undefined, 1), "2  Number {n} from 1  (off)", "en: an inactive step");
+
+// ======================= leftover variables and sheets (1.1.0) ================
+function j(a) { return JSON.stringify(a); }
+h.eq(j(U.leftoverLines([["{n} a"], ["x"], ["{n}"], ["{kód} {n}"]])),
+    j(["3 prvky mají po posledním kroku dál {n}.", "1 prvek má po posledním kroku dál {kód}."]), "leftover: per variable, count first");
+h.eq(U.leftoverLines([["{a}{b}{c}{d}{e}"]]).length, 4, "leftover: three lines and one more-line");
+h.eq(U.leftoverLines([["{a}{b}{c}{d}{e}"]])[3], "A 2 další proměnné zůstávají.", "leftover: the rest counted");
+h.eq(j(U.leftoverLines([["hotovo"]])), j([]), "leftover: none");
+var runL = { states: [[["{n}"], ["{n}"]], [["1"], ["{n}"]]], info: [{ hits: 1, error: null, warns: [], vars: [], multi: [], edits: [] }] };
+var stL = U.status(runL, [{ type: "number", active: true, where: { kind: "var", text: "{n}" } }]);
+h.eq(stL.kind, "WARN", "leftover: status WARN");
+h.eq(stL.canApply, true, "leftover: Použít stays");
+h.eq(stL.messages[stL.messages.length - 1], "⚠ 1 prvek má po posledním kroku dál {n}.", "leftover: last message");
+h.eq(U.status({ states: [[]], info: [] }, []).messages.join().indexOf("po posledním kroku"), -1, "leftover: not for an empty scope");
+h.eq(j(U.sheetLines({ sheets: null, sheetCount: 0 })), j([]), "sheets off: nothing");
+h.eq(U.sheetLines({ sheets: [0, 0], sheetCount: 0 })[0], BTE.L.SHEET_NONE, "no sheet");
+h.eq(U.sheetLines({ sheets: [1, 2, 3], sheetCount: 3 })[0], BTE.L.SHEET_SINGLES, "every sheet single");
+h.eq(j(U.sheetLines({ sheets: [1], sheetCount: 1 })), j([]), "one sheet with one element: fine");
+h.eq(U.sheetLines({ sheets: [1, 1, 0], sheetCount: 1 })[0], "1 prvek neleží v aršíku, přijde na konec.", "loose counted");
+h.eq(U.status(runL, [], undefined, false, ["X"]).messages.join("|").indexOf("⚠ X") >= 0, true, "extra lines shown as warnings");
+h.eq(U.status(runL, [], undefined, false, ["X"]).messages.join("|").indexOf("⚠ X") < U.status(runL, [], undefined, false, ["X"]).messages.join("|").indexOf("po posledním kroku"), true, "extra lines come before the leftover lines (R2)");
+h.eq(j(U.rows([[["a"], ["b"]]], 0, [3, 0])[0].slice(0, 1).concat(U.rows([[["a"], ["b"]]], 0, [3, 0])[1].slice(0, 1))), j(["3 · 1", "– · 2"]), "rows: sheet and position");
+h.eq(U.rows([[["a"]]], 0)[0][0], "1", "rows: no sheets as before");
+h.eq(U.scopeLine({ elements: { length: 240 }, textCount: 480, skipped: {}, sheets: [1], sheetCount: 20 }), "240 prvků, 480 textů, 20 aršíků", "scope line with sheets");
+
 h.done();

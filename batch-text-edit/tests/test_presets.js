@@ -19,7 +19,7 @@ h.eq(d.steps[0].type, "number", "default: a number step");
 h.eq(J(d.steps[0].where), '{"kind":"auto","text":""}', "default: where is auto, resolved by defaultWhere");
 same(d.steps[0], {
     type: "number", active: true, where: { kind: "auto", text: "" },
-    from: "1", to: "", step: "1", digits: "3", repeats: "1", reset: "", format: "1"
+    from: "1", to: "", step: "1", digits: "3", repeats: "1", reset: "", format: "1", perSheet: false
 }, "default: spec 5.3 values (from 1, step 1, digits 3, repeats 1, format 1)");
 h.eq(d.hasOwnProperty("scope"), false, "default: Rozsah is not part of a preset");
 h.eq(S.defaultPreset() === S.defaultPreset(), false, "default: a fresh object every time");
@@ -97,6 +97,20 @@ r = S.normalize({ steps: [{ type: "number" }] });
 h.eq(r.values.order + "|" + r.notes.length, "rows|1", "missing order: rows, with a note");
 h.eq(S.normalize({ order: "cols", steps: [{ type: "number" }] }).values.order, "cols", "cols kept");
 h.eq(S.normalize({ order: "cols", steps: [{ type: "number" }] }).notes.length, 0, "cols: no note");
+
+// 1.1.0 keys: bySheet (preset) and perSheet (Number step)
+h.eq(S.newStep("number").perSheet, false, "number step: perSheet off");
+h.eq(S.defaultPreset().bySheet, false, "default preset: bySheet off");
+var old = { order: "cols", steps: [{ type: "number", active: true, where: { kind: "var", text: "{n}" },
+    from: "1", to: "20", step: "1", digits: "3", repeats: "1", reset: "", format: "1" }] };
+var n1 = S.normalize(old);
+h.eq(n1.notes.length, 0, "1.0.0 preset: no notes");
+h.eq(n1.values.bySheet, false, "1.0.0 preset: bySheet off");
+h.eq(n1.values.steps[0].perSheet, false, "1.0.0 preset: perSheet off");
+h.eq(BTE.Utils.presetEquals(n1.values, S.normalize(n1.values).values), true, "1.0.0 preset: round trip equal (no * after open)");
+h.eq(S.normalize({ order: "rows", bySheet: true, steps: [] }).values.bySheet, true, "bySheet kept");
+h.eq(S.normalize({ order: "rows", bySheet: "yes", steps: [] }).values.bySheet, false, "bySheet not boolean: off");
+h.eq(S.normalize({ order: "rows", steps: [{ type: "number", perSheet: true }] }).values.steps[0].perSheet, true, "perSheet kept");
 
 // where kinds the type does not have
 r = S.normalize({ order: "rows", steps: [

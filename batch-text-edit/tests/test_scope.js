@@ -627,4 +627,132 @@ h.eq(BTE.Scope.isTextEditing([{ typename: "constructor" }]), true, "isTextEditin
     h.assert(/object gone/.test(msg) && /selected object 2/.test(msg), "selection typename failing names the object: " + msg);
 })();
 
+// ---- Task 3: sheets (aršík) and the order by sheet -------------------------
+
+function keysOf(p) {
+    var a = [], i;
+    for (i = 0; i < p.elements.length; i++) { a.push(p.elements[i].key); }
+    return a.join(",");
+}
+
+// sheetCols x sheetRows aršík groups on one layer, each holding bc x br prefab
+// groups (code above number, pitch PITCH); aršík i sits at column i % sheetCols.
+//   opts.clippedSheets  aršíky are clip groups (mask = the block inset by 10 on every side,
+//                       so the mask differs from the group's own bounds)
+//   opts.maskedPrefabs  every prefab is a clip group > plain group > texts
+//   opts.looseFirst     one more prefab group straight in the layer, top-left of all
+function blocks(sheetCols, sheetRows, bc, br, opts) {
+    var o = opts || {}, GAP = 100;
+    var bw = bc * PITCH, bh = br * PITCH;
+    var d = M.doc({ artboards: [[-PITCH * 2, PITCH, sheetCols * (bw + GAP), -sheetRows * (bh + GAP)]] });
+    var L = d.layers[0], sheets = [], prefabs = [];
+    var i, c, r, ox, oy, sg, k, cx, cy, parent, inner;
+    function makePrefab(host, px, py) {
+        if (o.maskedPrefabs) {
+            parent = M.group(host, box(px, py, PITCH, PITCH), { clipped: true });
+            M.path(parent, box(px, py, PITCH, PITCH), { clipping: true });
+            inner = M.group(parent, box(px, py, PITCH, PITCH));
+        } else {
+            parent = M.group(host, box(px, py, PITCH, PITCH));
+            inner = parent;
+        }
+        M.text(inner, "{kód}", box(px, py + 40, 120, 24));
+        M.text(inner, "{n}", box(px, py - 40, 120, 24));
+        prefabs.push(parent);
+    }
+    if (o.looseFirst) { makePrefab(L, -PITCH, -PITCH / 2); }
+    for (i = 0; i < sheetCols * sheetRows; i++) {
+        ox = (i % sheetCols) * (bw + GAP);
+        oy = -Math.floor(i / sheetCols) * (bh + GAP);
+        sg = M.group(L, box(ox + bw / 2, oy - bh / 2, bw, bh), { clipped: !!o.clippedSheets });
+        if (o.clippedSheets) { M.path(sg, box(ox + bw / 2, oy - bh / 2, bw - 20, bh - 20), { clipping: true }); }
+        sheets.push(sg);
+        for (k = 0; k < bc * br; k++) {
+            c = k % bc;
+            r = Math.floor(k / bc);
+            cx = ox + c * PITCH + PITCH / 2;
+            cy = oy - (r * PITCH + PITCH / 2);
+            makePrefab(sg, cx, cy);
+        }
+    }
+    return { doc: d, sheets: sheets, prefabs: prefabs };
+}
+
+(function () {
+    var b = blocks(4, 5, 3, 4, {});
+    var p = BTE.Scope.prepare(b.doc, "document", "rows", true);
+    h.eq(p.elements.length, 240, "blocks: 240 elements");
+    h.eq(p.sheetCount, 20, "blocks: 20 sheets");
+    h.eq(p.sheets.length, p.state.length, "blocks: one sheet number per row");
+    h.eq(p.sheets.slice(0, 13).join(), "1,1,1,1,1,1,1,1,1,1,1,1,2", "blocks: aršík 1 is rows 1-12, element 13 is aršík 2");
+    h.eq(p.sheets[48], 5, "blocks: element 49 opens aršík 5 (second row of aršíky)");
+    var flat = BTE.Scope.prepare(b.doc, "document", "rows", false);
+    h.eq(flat.sheets, null, "off: no sheets");
+    h.eq(flat.sheetCount, 0, "off: sheetCount 0");
+    h.eq(flat.elements[3].key === p.elements[12].key, true, "off: element 4 is the first of aršík 2 (the 1, 2, 3, 13 pattern)");
+    h.eq(keysOf(BTE.Scope.prepare(b.doc, "document", "rows")), keysOf(flat), "bySheet omitted = off");
+    var toggled = BTE.Scope.reorder(flat, "rows", true);
+    h.eq(keysOf(toggled), keysOf(p), "toggle on through reorder = prepare with it on");
+    h.eq(toggled.sheets.join(), p.sheets.join(), "toggle on: same sheet numbers");
+    h.eq(toggled.sheetCount, 20, "toggle on: sheetCount");
+    h.eq(keysOf(BTE.Scope.reorder(p, "rows", false)), keysOf(flat), "toggle off through reorder = prepare with it off");
+    h.eq(BTE.Scope.reorder(p, "rows", false).sheets, null, "toggle off: sheets null");
+    h.eq(BTE.Scope.reorder(p, "cols", true).sheets.length, 240, "reorder keeps one sheet number per row");
+    h.eq(BTE.Scope.reorder(p, "rows").sheets, null, "reorder: bySheet omitted = off");
+    // Full order from the fixture's geometry: aršík i is at column i % 4, row floor(i / 4);
+    // prefab k of an aršík is at column k % 3, row floor(k / 3).
+    function expected(byCols) {
+        var cells = [], i, k, keys = [];
+        for (i = 0; i < 20; i++) {
+            for (k = 0; k < 12; k++) {
+                cells.push({ uuid: b.prefabs[i * 12 + k].uuid,
+                    sc: i % 4, sr: Math.floor(i / 4), pc: k % 3, pr: Math.floor(k / 3) });
+            }
+        }
+        cells.sort(function (x, y) {
+            if (byCols) { return (x.sc - y.sc) || (x.sr - y.sr) || (x.pc - y.pc) || (x.pr - y.pr); }
+            return (x.sr - y.sr) || (x.sc - y.sc) || (x.pr - y.pr) || (x.pc - y.pc);
+        });
+        for (i = 0; i < cells.length; i++) { keys.push("g:" + cells[i].uuid); }
+        return keys.join();
+    }
+    h.eq(keysOf(p), expected(false), "blocks rows: aršíky row by row, prefabs row by row inside each");
+    h.eq(keysOf(BTE.Scope.prepare(b.doc, "document", "cols", true)), expected(true), "blocks cols: aršíky column by column, prefabs column by column inside each");
+    h.eq(p.state[0].join(), "{kód},{n}", "state rows still hold the element's texts");
+    h.assert(p.elements[0].sheet !== null && p.elements[0].sheet !== undefined, "element records keep their sheet");
+})();
+
+(function () {
+    var cl = BTE.Scope.prepare(blocks(2, 1, 3, 4, { clippedSheets: true }).doc, "document", "rows", true);
+    h.eq(cl.sheetCount, 2, "clip-group aršíky are sheets");
+    h.eq(JSON.stringify(cl.elements[0].sheet.bounds), JSON.stringify([10, -10, 3 * PITCH - 10, -4 * PITCH + 10]), "clip-group aršík: bounds are its mask rectangle");
+    var m = BTE.Scope.prepare(blocks(1, 1, 3, 4, { maskedPrefabs: true }).doc, "document", "rows", true);
+    h.eq(m.sheetCount, m.elements.length, "masked prefabs: every sheet holds one element (Task 4 warns)");
+    var lf = BTE.Scope.prepare(blocks(2, 1, 3, 4, { looseFirst: true }).doc, "document", "rows", true);
+    h.eq(lf.sheets[lf.sheets.length - 1], 0, "loose prefab: last, sheet 0");
+    h.eq(lf.sheetCount, 2, "loose prefab: not counted as a sheet");
+    h.eq(BTE.Scope.prepare(blocks(2, 1, 3, 4, { looseFirst: true }).doc, "document", "rows", false).sheets, null, "loose prefab, off: no sheets");
+    var one = blocks(2, 1, 3, 4, {});
+    one.doc.selection = [one.sheets[0]];
+    var ps = BTE.Scope.prepare(one.doc, "selection", "rows", true);
+    h.eq(ps.sheetCount, 1, "selected aršík: one sheet");
+    h.eq(keysOf(ps), keysOf(BTE.Scope.prepare(one.doc, "selection", "rows", false)), "selected aršík: same order as off");
+    one.doc.selection = [one.prefabs[0], one.prefabs[12]];
+    h.eq(BTE.Scope.prepare(one.doc, "selection", "rows", true).sheetCount, 2, "stickers from two aršíky: two sheets");
+    var e = BTE.Scope.prepare(M.doc(), "document", "rows", true);
+    h.eq(e.sheets.length, 0, "empty scope with the option on: empty sheets, same length as state");
+    h.eq(BTE.Scope.prepare(M.doc(), "document", "rows", false).sheets, null, "empty scope, off: null");
+})();
+
+(function () {
+    // a sheet group's bounds are read once, not once per text
+    var b = blocks(1, 1, 3, 4, {}), reads = 0, sg = b.sheets[0], orig = sg.pageItems;
+    var p0 = BTE.Scope.prepare(b.doc, "document", "rows", true);
+    h.eq(p0.elements[0].sheet.id, sg.uuid, "sheet record is keyed by the sheet group's uuid");
+    h.eq(JSON.stringify(p0.elements[0].sheet.bounds), JSON.stringify(BTE.Scope.groupBounds(sg)), "sheet bounds = groupBounds of the aršík");
+    Object.defineProperty(sg, "pageItems", { get: function () { reads++; return orig; } });
+    BTE.Scope.collect(b.doc, "document");
+    h.eq(reads, 1, "sheet group read once for 12 prefabs");
+})();
+
 h.done();

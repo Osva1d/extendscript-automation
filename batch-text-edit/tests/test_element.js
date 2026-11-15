@@ -326,4 +326,17 @@ function oracleKey(t, shapes) {
     h.eq(all.length, 6, "inRect: input list unchanged");
 })();
 
+// ---- sheet: carried from the group record --------------------------------
+
+(function () {
+    var sheet = { id: "S", bounds: [0, 100, 200, 0] };
+    var g = { id: 1, bounds: [0, 10, 10, 0], sheet: sheet };
+    var els = BTE.Element.build([text(1, g, [1, 2, 3, 1], 0), text(2, g, [4, 2, 5, 1], 1)], []);
+    h.eq(els[0].sheet, sheet, "sheet: a grouped element carries its group's sheet");
+    h.eq(BTE.Element.build([text(3, { id: 2, bounds: [0, 10, 10, 0], sheet: null }, [1, 2, 3, 1], 0)], [])[0].sheet, null, "sheet: a group without a sheet");
+    h.eq(BTE.Element.build([text(4, { id: 3, bounds: [0, 10, 10, 0] }, [1, 2, 3, 1], 0)], [])[0].sheet, null, "sheet: a group record without the field is null");
+    h.eq(BTE.Element.build([text(5, null, [50, 52, 53, 51], 0)], [])[0].sheet, null, "sheet: a lone text has none");
+    h.eq(BTE.Element.build([text(6, null, [1, 9, 3, 8], 0)], [{ id: 7, bounds: [0, 10, 10, 0] }])[0].sheet, null, "sheet: a shape element has none");
+})();
+
 h.done();

@@ -140,8 +140,13 @@ h.eq(sum.details.join("|"), "⚠ Přeskočen 1 zamčený nebo skrytý text.|⚠ 
 shown = BTE.Summary.visiblePairs(sum.pairs);
 h.eq(shown.length, 4, "summary: the skipped row shows at 3");
 
+// a variable left after the last step goes to the details
+r = result([["{n}", "x"], ["1", "x"]], [R(V("x"), { replace: "y" })]);
+sum = U.runSummary(r, []);
+h.eq(sum.details.join("|"), "⚠ 1 prvek má po posledním kroku dál {n}.", "summary: the leftover variable");
+
 // warnings of the run go to the details
-r = result(sheet(5), [N(V("{n}"), { to: "8" })]);
+r = result(sheet(5), [N(V("{n}"), { to: "8" }), R(V("{kód}"), { replace: "ABC" }), R(V("{série}"), { replace: "2026" })]);
 sum = U.runSummary(r, []);
 h.eq(sum.details.join("|"), "⚠ Krok 1: Poslední číslo vyjde 5, v poli Do je 8.|⚠ Krok 1: Chybí 3 prvky.", "summary: the Do warning");
 h.eq(sum.note, "", "summary: a warning is no note");
@@ -162,7 +167,7 @@ sum2 = U.runSummary(r2, [{ el: 0, tx: 1, expected: "001", actual: "{n}" }]);
 h.eq(sum2.pairs[0].value + "/" + sum2.pairs[1].value, "3/8", "summary: three elements still changed, eight texts of nine");
 h.eq(sum.note, "Zkontrolujte dokument, případně běh vraťte (Cmd+Z).", "summary: the note says what to do");
 h.eq(sum.details[0], "✗ Prvek 2, text 2: náhled říkal „002“, v dokumentu je „2“.", "summary: the mismatch comes first");
-h.eq(sum.details.length, 3, "summary: then the two warnings");
+h.eq(sum.details.length, 5, "summary: then the two warnings and the two leftover variables");
 
 // the shared window reads what the model gives: a pair with a count and a note never says "all fine"
 h.eq(typeof sum.allOk, "string", "summary: allOk is given (shown only when there is no note and no detail)");
@@ -222,7 +227,7 @@ function runMain(opts) {
         if (opts.verifyThrows) { throw opts.verifyThrows; }
         return opts.mismatches || [];
     };
-    BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); } };
+    BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); if (opts.summaryThrows) { throw opts.summaryThrows; } } };
     global.$ = { writeln: function (s) { logged.push(s); } };
     global.File = MockFile;
     global.Folder = MockFolder;
@@ -283,6 +288,11 @@ h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d BTE\.Write\.apply: step 1, element 7, text
     "main: and appended to the log file, one line with a stamp");
 h.eq(m.logFile.indexOf(wErr.message), -1, "main: the user's message is not what the file holds");
 
+// a write that stopped, then the summary itself fails: the document IS partly changed, so ERR_CRITICAL
+m = runMain({ res: r, applyThrows: wErr, summaryThrows: new Error("BTE.Summary: window failed") });
+h.eq(m.alerts.length === 1 && m.alerts[0].indexOf("Cmd+Z") !== -1 && m.alerts[0].indexOf("Dokument nebyl změněn.") === -1, true,
+    "main: a failing summary after a halfway write is ERR_CRITICAL, never 'unchanged'");
+
 // the log file cannot be opened: the run still ends with the summary, the console has the detail and the reason
 m = runMain({ res: r, applyThrows: wErr, logOpenFails: true });
 h.eq(m.calls.join(","), "ui.show:true,apply,summary", "main: a failing log file does not stop the summary");
@@ -299,7 +309,8 @@ var bug = new Error("BTE.Write: step 1, edit 1 has no text");
 bug.line = 42;
 m = runMain({ res: r, applyThrows: bug });
 h.eq(m.calls.join(","), "ui.show:true,apply", "main: a bug in the edit list stops at apply");
-h.eq(m.alerts.join("|"), L.format(L.ERR_CRITICAL, "BTE.Write: step 1, edit 1 has no text", "42"), "main: ERR_CRITICAL with the message and the line");
+h.eq(m.alerts.join("|"), L.format(L.ERR_CRITICAL_UNCHANGED, "BTE.Write: step 1, edit 1 has no text", "42"), "main: ERR_CRITICAL_UNCHANGED with the message and the line");
+h.eq(m.alerts[0].indexOf("Dokument nebyl změněn.") !== -1 && m.alerts[0].indexOf("Cmd+Z") === -1, true, "main: a broken edit list says the document is unchanged");
 h.eq(m.summaries.length, 0, "main: no summary after ERR_CRITICAL");
 h.eq(m.logged.length, 1, "main: the fatal error is logged too");
 h.eq(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d fatal: BTE\.Write: step 1, edit 1 has no text \(line 42\)\n$/.test(m.logFile), true,
@@ -310,12 +321,16 @@ m = runMain({ res: r, verifyThrows: new Error("BTE.Write.verify: reading failed"
 h.eq(m.calls.join(","), "ui.show:true,apply,verify", "main: a failing verify stops there");
 h.eq(m.alerts[0].indexOf("BTE.Write.verify: reading failed") !== -1 && m.alerts[0].indexOf("(řádek ?)") !== -1, true,
     "main: ERR_CRITICAL, line unknown");
+h.eq(m.alerts[0].indexOf("Cmd+Z") !== -1 && m.alerts[0].indexOf("Dokument nebyl změněn.") === -1, true,
+    "main: a failing verify (after a complete write) is ERR_CRITICAL, not the unchanged one");
 
 // the dialog throwing (a document that cannot be read)
 m = runMain({ uiThrows: new Error("BTE.UI: reading the selection failed") });
 h.eq(m.calls.join(","), "", "main: the dialog threw before it returned");
 h.eq(m.alerts.length === 1 && m.alerts[0].indexOf("BTE.UI: reading the selection failed") !== -1, true,
     "main: the dialog's failure reaches the boundary");
+h.eq(m.alerts[0].indexOf("Dokument nebyl změněn.") !== -1 && m.alerts[0].indexOf("Cmd+Z") === -1, true,
+    "main: a dialog failure says the document is unchanged");
 
 // the source has no silent catch and no redraw between apply and verify
 h.eq(/app\.redraw/.test(MAIN), false, "main.js never redraws (one Undo step)");

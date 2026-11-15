@@ -420,3 +420,141 @@ After the fix round (`ca9e586`, 2026-11-03) part main took 228 ms in total; the 
 ### Log file (`BTE.Utils.log`)
 
 `File.writeln` ends lines with CR on macOS by default (measured 2026-11-03, Illustrator 30.8.2); with `f.lineFeed = "Unix"` a second real run wrote LF. Append mode (`open("a")`), UTF-8 Czech and creating `Folder.userData/batch-text-edit/` were confirmed in the same run. The e2e probe sends the log to its own temp file, so the user's `bte.log` is never written by a probe.
+
+## Dialog probe (1.1.0)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`) with `tests/probes/probe_dialog.jsx` 1.1.0. The probe document now holds the 240 prefabs in 20 aršíky of 3 × 4 (4 across, 5 down, 100 pt apart; a sheet group on the layer, prefab groups in it, the blocks of `test_scope.js`). The probe reports the checks (a)–(h) per language in `checks`; all are true in Czech and English. The host's default maximumSize was 1462 × 932 this time, so nothing was lifted (`"lifted": false`), and the plain layout gives the same 1008 × 768 px as the lifted one of 2026-10-30.
+
+### Size and texts
+
+| | CS | EN |
+|---|---|---|
+| window, at open and after every check | 1008 × 768 | 1008 × 768 |
+| Po aršících / By sheet (text / checkbox) | 63 / 81 px | 49 / 67 px |
+| v každém aršíku / in every sheet | 96 / 114 px | 81 / 99 px |
+| longest scope line (99999 prvků, textů, aršíků, přeskočené) / its line | 397 / 507 px | 396 / 515 px |
+| step list / editor | 515 × 150 / 419 × 187 | 484 × 150 / 450 × 187 |
+| texts wider than their control | none | none |
+
+- Po aršících is the last control of the Pořadí row. v každém aršíku is the last control of the Opakovat / Znovu po row and starts at x 305 (EN 339), where Krok starts in the first row; the editor grew by 1 px in Czech and not at all in English.
+- The # column holds "20 · 240" (50 px). It is 68 px now, 28 px taken from Původní (columns 68/272/300/300), so the window keeps its width; no separate Aršík column. Other samples: "99 · 999" 50 px, "– · 240" 41 px, "999 · 9999" 65 px. The 17 px kept beside the text is the spare the 1.0 column left around "240" (23 px in 40); a rendered cell cannot be measured headless.
+
+### Behaviour
+
+- Ticking Po aršících re-sorts without reading the document (39 ms): row 13 is "2 · 13", row 12 "1 · 12", and the scope line says "240 prvků, 480 textů, 20 aršíků". Unticking gives "13" again and the line without aršíky.
+- v každém aršíku is grey while Po aršících is off and live with it on. On, with Od 1, row 13's final column is "abc | 001" again (row 12 "abc | 012", row 240 "abc | 012").
+- Do 10 with v každém aršíku: "⚠ Krok 2: 40 prvků zůstane beze změny, řada končí na Do 10.", Použít stays on.
+- A handler that throws a plain string shows it: "✗ Dialog narazil na chybu (probe: a plain string). …", and Použít, Uložit and Uložit jako… are grey. When drawing the status fails as well, the three buttons are still grey (before M6 they stayed live and the message read "(undefined)").
+- "1O" typed in Od, then Použít: the dialog stays, Použít is grey, and the hold hint is not shown (M5); before, the hint asked to confirm a grey Použít.
+- Opened on a last run with Po aršících and v každém aršíku (Do 10): the checkbox is ticked, row 13 is "2 · 13", the after column "{kód} | 001", the cut line counts 40. ↺ to [Výchozí] turns both off and re-sorts, and the list shows "[Výchozí]" without "*".
+- Right after opening, [Výchozí] shows no "*": the dialog's values now carry `bySheet` like every loaded preset.
+
+### Times (ms, 240 elements, a chain of three steps; CS / EN)
+
+| what | CS | EN |
+|---|---|---|
+| build the dialog (prepare included) | 586 | 523 |
+| Po aršících on | 39 | 40 |
+| Od committed, 12 times | 67–149, median 83 | 71–154, median 90 |
+| refresh with unchanged values, 5 times | 66–84 | 71–94 |
+| change Pořadí | 59–67 | 60–61 |
+| Rozsah → Celý dokument (prepare alone) | 442 (406) | 489 (459) |
+
+A refresh took a third of what it took on 2026-10-30 (190–670 ms), under the ~200 ms of spec §6.2. `BTE.UI.LIVE_EVENT` stays `onChange`; that decision was not re-made here.
+
+### Re-measuring
+
+As before: assemble the runner from the probe's Usage header and run it with `tools/ai-eval.sh -t 600`, with 0 documents open; the probe builds and closes its own document (2.6 s to build it this time). The result's `cs.checks` and `en.checks` hold (a)–(h), `noStar`, `noClipped`, `size` and `holds`.
+
+## By-sheet probe (1.1.0)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_scope.jsx` (parts `bysheet`, `bysheetclip`, `bysheetmasked`, `bysheetcliptexts`, `real`). It runs the real `BTE.Scope.prepare(doc, "document", "rows", bySheet)` on 20 sheets (aršíky) of 3 x 4 prefabs laid out 4 across and 5 down (240 prefabs, 480 texts), and on the user's three test files opened read-only (alerts off, PDF options saved and restored, closed unsaved, never saved). A sheet is the nearest group above an element's group. Each synthetic result carries an `expect` object of booleans computed in code and an overall `ok`; all four were `ok: true`.
+
+### Synthetic sheets
+
+| part | structure | sheetCount on | first 13 sheet numbers | element 49 |
+|---|---|---|---|---|
+| bysheet | sheet group > prefab group > texts | 20 (12 each) | 1 x12, 2 | sheet 5 |
+| bysheetclip | the same, the sheet group is a clip group | 20 (12 each) | 1 x12, 2 | sheet 5 |
+| bysheetmasked | sheet group > sticker clip group > plain group > texts (spec 4.3) | 240 = elements | 1..13 | sheet 49 |
+| bysheetcliptexts | texts directly in the sticker's clip group | 240 = elements | 1..13 | sheet 49 |
+
+Option off: `sheets` is null and `sheetCount` 0. In bysheet and bysheetclip element 4 without the option is element 13 with it (the 4th prefab of the first row lies in sheet 2); the key set is the same, the order differs. In the masked structures every sheet holds one element and the key order is identical off and on. Repeated runs give identical results.
+
+### Time of prepare on 240 prefabs (ms, off / on)
+
+| part | cold (first call) | warm (second call) |
+|---|---|---|
+| bysheet | 870 / 485 | 487 / 489 |
+| bysheetclip | 864 / 472 | 481 / 518 |
+| bysheetmasked | 890 / 731 | 519 / 757 |
+| bysheetcliptexts | 903 / 708 | 563 / 743 |
+
+With ordinary 12-element sheets the option costs about nothing warm (489 against 487 ms). The cost shows with one-element sheets (every sticker its own sheet): warm 519 -> 757 ms and 563 -> 743 ms, about 0.2-0.24 s more, because every element then has its own sheet whose bounds are read.
+
+### The user's files
+
+| file | elements | sheetCount | first 13 | keys off vs on | prepare off / on cold | off / on warm |
+|---|---|---|---|---|---|---|
+| Zund_Summa_Test_geoup.ai (sticker = group) | 240 | 0 | all 0 | same order | 989 / 456 | 461 / 508 |
+| Zund_Summa_Test_geoup arch.ai (stickers in groups of 12) | 240 | 20 (12 each) | 1 x12, 2 (element 49 in sheet 5) | same set, different order | 882 / 512 | 493 / 475 |
+| Zund_Summa_Test.ai (no groups) | 240 | 0 | all 0 | same order | 2258 / 579 | 572 / 573 |
+
+All as spec 4.4 expects. Not checked geometrically: that sheet 1 of the arch file is the top-left one. The cold range of `prepare` on these files was 0.46-2.3 s; the first call on a freshly opened document is the slow one.
+
+### Timing against 1.0
+
+On 2026-10-29 the same probe measured group 64 ms and sheets 71 ms; today it measures group 694 and 741 ms and sheets 693 ms, about 10x more. The same probe with the modules from before the by-sheet commit (0fa634f^) gave 767 and 773 ms, so the difference is not reading the sheet (Task 3). `Element.build` alone takes 291-323 ms now against 28 ms then. The numbers of 2026-10-29 look like the outlier: the dialog probe of 2026-10-30 already measured `Scope.prepare` at 1.7-2.1 s against 0.25-0.41 s in Tasks 9 and 10 ("a noisy machine; re-measure"), and `docs/manual-test.md` 9.1 expects 1.7-2.1 s of text collection when the dialog opens (that is an expectation taken from the probe; no manual-test measurement is recorded). Today's cold prepare on 240 prefabs is 0.7-1.0 s on the synthetic parts, over the 0.5 s of the task brief. The cause of the machine difference was not investigated; re-measure on a fresh Illustrator before treating it as a code problem.
+
+### Re-measuring
+
+From the worktree root, with 0 documents open:
+
+    tools/ai-eval.sh -e 'app.documents.length'     # must print 0
+    P=batch-text-edit
+    { echo 'var BTE = undefined; var BTE_PROBE_FRESH = true;'
+      echo 'var PART = "bysheet"; var PARTS_FIRST = false;'
+      # for part real: var REAL_FILES = ["/abs/one.ai", "/abs/two.ai"];
+      cat shared/lib/json2.js $P/src/lib/utils.js $P/src/order.js \
+          $P/src/element.js $P/src/scope.js $P/tests/probes/probe_scope.jsx
+    } > "$TMPDIR/probe_scope_run.jsx"
+    tools/ai-eval.sh -t 600 "$TMPDIR/probe_scope_run.jsx"
+
+One part per run. The first run builds the 240 prefabs slowly (about 40 s once, then 0.4-2.5 s).
+
+## Manual-test probe (1.1.0a)
+
+Measured 2026-11-10 in Adobe Illustrator 30.8.2 (`cs_CZ`). Probe: `tests/probes/probe_manual.jsx`, run on the modules of the 1.1.0a test build (a build of the same sources gives its SHA-256 `eb7b3067…`). It opens a copy of one of the user's three test files, builds the real dialog without showing it, drives it the way `docs/manual-test.md` does (field text with onChanging/onChange, dropdown selection, onClick), clicks Použít after `BTE.UI.HOLD_MS`, runs the real `src/main.js` and captures only the summary window. The written document is read back by position (reading order of the text frames' centres; aršík = the group above the sticker), not from the tool's own order, and every text's font, size, colour, horizontal scale, tracking and anchor and every path's bounds are compared before and after. The settings file and the log are files of the probe's own; `alert`, `confirm` and `prompt` are locals of the wrapper (the globals cannot be reassigned). 15 parts, one write at most per part, every document closed unsaved; the user's `settings.json` and the three originals stayed byte for byte.
+
+All 48 checks passed:
+
+| manual test | what the probe checked |
+|---|---|
+| 1.0 | a 1.0.0 settings file (no `bySheet`, no `perSheet`) opens without a repair note; "*" only when the last run differs; the file is not rewritten |
+| 1.1–1.4 | title, Rozsah, "240 prvků, 480 textů", Po aršících off, footer; no statictext, button or checkbox wider than its control; Kde items with counts; 37 controls, each with a helpTip of at most two sentences, none on Použít and Storno |
+| 1.5 | wiring only: Storno is the button named "cancel" |
+| 2.1–2.5, 3.1–3.3 | preview, status and messages; 240 / 480 / 0 in the summary; 001–240 and SNB SK 101–340 in reading order on the sheet; format, anchors and the artwork unchanged |
+| 5.1–5.5 | the arch file numbered by rows across aršíky; one selected aršík = 12 elements, 001–012; the file without groups pairs code and number (240 of 240) and numbers by columns; a second artboard over the left half holds 120 elements |
+| 6.2, 6.6–6.8 | ↑ ↓ + −; "1O": ✗ in the status and on the step, Použít, Uložit and Uložit jako… grey, no hold hint, the field's pen red (0.9, 0.2, 0.2) and grey 0.75 again after the fix; Do 230 cuts 10 with both warnings; lower case written, format unchanged |
+| 6.5 | logic only: the step's tick cleared in the list without any event, Použít holds with the hint, the next Použít writes without that step |
+| 7.2 | a locked text: "· přeskočené texty: 1", summary 1 skipped with a ⚠ line, the text unchanged, its sticker numbered |
+| 8.1–8.4 | "*" after the last run, ↺, [Výchozí] with Uložit asking for a name and the file unchanged, the delete question word for word, the preset gone from list and file |
+| 10.1–10.6 | Do 100: 001–100 by rows, 140 `{n}`, both warnings in the summary details; Po aršících: "20 aršíků", # from "1 · 1" to "20 · 240", aršík s holds 12s+1…12s+12; v každém aršíku + Do 10: 001–010 and two `{n}` in every aršík; "v každém aršíku" grey with its tick and the warning; the warning without aršíky and the same order; preset „Aršíky“ keeps both ticks |
+
+Times: dialog build 0.8–1.4 s (2.9 s on the file without groups), a committed field 52–91 ms (median 83), Po aršících 84–117 ms, write + check + summary 3.6–6.4 s.
+
+Not covered, by nature: Cmd+Z (4.1, 4.2), a real click, Enter and focus change (6.1, 6.3–6.5), a cursor in a text (7.1: a script cannot place one), and how things look on screen: a truncated cell (# column 68 px against 50 px of "20 · 240" is a measurement, not a rendering), the red field, the ⚠ glyph (summary.js unchanged since 1.0.0).
+
+## Illustrator 2027: checkboxes and the step list (1.1.0c)
+
+Measured 2026-11-15 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with the user, on a copy of `Zund_Summa_Test_geoup.ai`: the dialog was shown for real (the test build through `tools/ai-eval.sh`), the user clicked and said what the screen showed, and a window capture or a log file the build wrote showed what the dialog held. The released 1.0.0 behaves the same in both points below; on Illustrator 30.8.2 the manual test of 1.0.0 had passed.
+
+- **A tick in the step list (`ListItem.checked`) is grey and a click does not change it.** It shows the state; Aktivní in the editor switches the step. Code since 1.0.0 unchanged.
+- **After a click on a checkbox (Aktivní, Po aršících) the handler's changes reached the screen only on the next event** (a click on another row, a switch to another application). The dialog held them at once: a window capture taken later showed the new preview. Enter in a field and a click on a button showed their changes at once (manual tests 6.3, 6.4).
+- **`w.visible` is false while the dialog is shown;** `onShow` fires. A guard on `visible` never lets anything run.
+- **Six ways to bring the change on screen, one per dialog, the user clicking Aktivní once in each:** `w.update()` no, `w.layout.layout(true)` yes, the preview panel `hide()` + `show()` yes, focus on the step list (`active = true`) no, the step list's selection set again no, the preview list `enabled` false + true yes. `BTE.UI` uses the layout, the one that covers the whole window, from `onShow` on (`repaint()` at the end of `refresh()`).
+- **The layout costs 3-8 ms** on the dialog with 240 preview rows (headless, `w.layout.layout(true)` five times and after Po aršících), the window stays 1008 x 768 px and the status line and the preview keep their bounds when their texts change.
+- **The manual-test probe on Illustrator 2027 with 1.1.0c and again with 1.1.0d:** `probe_manual.jsx`, all 15 parts, 48 of 48 checks passed each time (2026-11-15, 31.0.0); with 1.1.0d part tick switches step 1 off through Aktivní, sees "(vypnutý)" and applies on the first Použít. Times: dialog build 0.4-0.5 s (1.7 s on the file without groups), a committed field 34-58 ms (median 48), Po aršících 43-67 ms, write + check + summary 0.19 s. The headless dialog never shows, so `repaint()` does nothing there.
+- **The ticks also show late:** after the dialog opens and after every rebuild of the step list (+, −, ↑, ↓, ↺, a preset) the tick column appeared only when the mouse first moved, and the lines jumped sideways when it did (a screen recording of the user, 2026-11-15).
+- **A list item can be greyed but then not selected:** `ListItem` has `enabled` (and `icon`), and `enabled = false` draws the line grey at once and switches back at once, but a click on the grey line selected nothing (three runs of a test dialog with the user; the log shows `onChange` only for the other lines). A greyed inactive step could not be selected and switched on again.
+- **So the step list has no ticks since 1.1.0d:** an inactive step's line ends with "(vypnutý)" instead of ✗ or ⚠ (`BTE.UIModel.stepLabel`), Aktivní is the switch, and the code that read ticks back (`syncChecks`, the `mouseup` listener) is gone. A symbol was weighed and left: ☐ looks clickable, ✗ and ✓ already mean error and OK (extendscript-ui-standards 12.6).
