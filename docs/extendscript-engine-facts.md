@@ -1232,6 +1232,65 @@ na `statictext` se vykreslí tučně a barevně (náhled s uživatelem 2026-10-1
 jako obyčejně, Menlo 31/42 px pro „1111"/„WWWW" jako výchozí písmo — na
 rozměr tučného textu se tedy nehodí.
 
+### Illustrator 2027: po kliknutí na checkbox se změny ukážou až při další události (naměřeno 2026-11-15, AI 31.0.0)
+
+Měřeno s uživatelem v batch-text-edit 1.1.0c: dialog skutečně zobrazený, klikal
+uživatel a hlásil, co vidí; co dialog drží, ukázal snímek okna nebo log buildu.
+Vydaná 1.0.0 se chová stejně, v AI 30.8.2 její ruční test prošel. Podrobný záznam:
+`batch-text-edit/docs/findings.md`, sekce „Illustrator 2027: checkboxes and the
+step list".
+
+- **Po kliknutí na `checkbox` se změny, které handler udělá v jiných prvcích**
+  (náhled, `enabled`, text), objeví na obrazovce až při další události — klik
+  jinam, přepnutí aplikace. Dialog je drží hned, snímek okna je ukáže. Enter
+  v poli a klik na tlačítko své změny ukážou hned. Rádiová tlačítka
+  a `dropdownlist` měřené nebyly.
+- **`w.visible` je u zobrazeného dialogu `false`;** `onShow` se volá. Stráž na
+  `visible` nepustí nic.
+
+Šest způsobů, jak změnu dostat na obrazovku, každý v samostatném dialogu,
+uživatel jednou klikl na checkbox Aktivní:
+
+| po změně v handleru | změna vidět hned |
+|---|---|
+| `w.update()` | ne |
+| `w.layout.layout(true)` | **ano** — 3–8 ms na dialogu s 240 řádky náhledu, okno zůstane 1008 × 768 px |
+| panel náhledu `hide()` + `show()` | ano |
+| `listbox.enabled` `false` + `true` | ano |
+| fokus na seznam (`active = true`) | ne |
+| znovu nastavený výběr seznamu | ne |
+
+Layout tu nic nepřeměřuje (viz výš: `layout(true)` nepřeměří změněný text),
+jen okno překreslí; stavová řádka a náhled si při změně textu drží rozměry.
+Kód, který na konci každé změny `w.layout.layout(true)` už volá, by měl být
+v pořádku — neověřeno. Paleta průběhu (`shared/lib/progress.js`, `dlg.update()`)
+v 2027 neměřena; měření se týkalo modálního dialogu.
+
+**Seznam se zaškrtávátky (`ListItem.checked`):**
+
+- zaškrtávátko je šedé a klik ho nepřepne (v 30.8.2 šlo);
+- sloupec zaškrtávátek se vykreslí až při prvním pohybu myši po otevření
+  dialogu a po každém přestavění seznamu, řádky přitom poskočí do strany
+  (záznam obrazovky uživatele);
+- `ListItem.enabled = false` řádek hned zešedí, ale klik na šedý řádek nic
+  nevybere (`onChange` nepřijde) — na „vypnutý, ale vybratelný“ se nehodí;
+  `ListItem` barvu nemá.
+
+Oprava v batch-text-edit 1.1.0 — příznak z `onShow` a `repaint()` na konci
+`refresh()`:
+
+```js
+var onScreen = false;
+w.onShow = function () { onScreen = true; };
+function repaint() {
+    if (!onScreen) { return; }
+    try { w.layout.layout(true); } catch (e) { U.log("repaint: " + e.message); }
+}
+```
+
+Stav kroku místo zaškrtávátka nese text řádku („(vypnutý)“), přepínačem je
+checkbox Aktivní v editoru kroku.
+
 ### Spot barva a artboardy
 
 - `doc.spots.add()` + `colorType = ColorModel.SPOT` + `SpotColor.spot`
