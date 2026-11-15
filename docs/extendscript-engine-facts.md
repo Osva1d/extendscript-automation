@@ -1813,6 +1813,15 @@ vlastní dokumenty, Illustrator bez otevřených dokumentů.
   `Folder`. Složku od souboru proto rozliší `Folder(cesta) instanceof Folder`.
 - `fsName` odstraní koncové lomítko: `new Folder("/a/b/").fsName` je `/a/b`.
 - `doc.placedItems` vrací naposledy umístěnou pozici první (pořadí vrstvení).
+- **Cesty z Illustratoru jsou rozložené (NFD), cesty ze `Folder.getFiles`
+  ne vždy** (naměřeno 2026-11-15). `PlacedItem.file.fsName` po umístění i po
+  `relink()` a `Document.fullName.fsName` vracejí název s diakritikou vždy
+  v NFD („C“ + háček). `Folder.getFiles()` a text napsaný do pole vracejí tvar
+  uložený na disku; soubor pojmenovaný v Terminálu nebo převzatý z Windows ho
+  má složený (NFC). Porovnání `===` dvou cest k témuž souboru pak vyjde
+  `false`. `app.open()` na NFC cestu už otevřeného dokumentu otevře **druhou
+  kopii** místo vrácení otevřené instance. Soubory rozdělené v Acrobatu jsou
+  v NFD.
 - Otevření dočasné kopie šablony (`app.open` na jiný soubor) a její zavření bez
   uložení nechá aktivním dokument, který byl aktivní předtím, a otevřený originál
   nezmění, i když má neuložené změny.

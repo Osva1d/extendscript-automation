@@ -166,6 +166,12 @@ soubor kratší) a prázdnou cílovou složku.
   strany a ořezu. Spusť dávku a umísti ho znovu → stejná strana i ořez, ne
   poslední pozice šablony. Že dávka předvolbu vrátí, ověřil harness; jestli ji
   Umístit bez možností importu používá, ověřené není.
+- [ ] **2.11 Diakritika v názvech zdrojů a šablony.** Zkopíruj zdroje
+  v Terminálu s ručně napsaným názvem s „Č“ (`cp zdroj.pdf "Část1.pdf"` —
+  název pak má „Č“ jako jeden znak) a spusť dávku → archy se vyexportují bez
+  „Ověření relinku selhalo". Totéž se šablonou s diakritikou v názvu, otevřenou
+  s neuloženou změnou → stavový řádek ukáže „⚠ Šablona má neuložené změny…".
+  Ověřeno sondou 2026-11-15.
 
 ---
 

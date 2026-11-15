@@ -67,6 +67,14 @@ výstupů) zůstává.
 - **Šablona se zdvojenou nebo chybějící stranou už neprojde plným archem
   beze slova.** Sonda stran dřív běžela jen u neúplného archu; teď ji vidí
   Kontrola souborů před během.
+- **Zdroj s diakritikou v názvu neprojde ověřením relinku.** Když má PDF
+  v názvu písmeno s háčkem nebo čárkou zapsané jedním znakem (soubory
+  z Windows, ze stažení nebo zkopírované z Terminálu), Illustrator vrací jeho
+  cestu v rozloženém tvaru a dávka dřív odmítla každý arch hláškou „Ověření
+  relinku selhalo… očekáváno X, nalezeno X". Cesty se teď porovnávají
+  v jednom tvaru — v ověření relinku, v počtu pozic navíc, při hledání
+  otevřené šablony i u kontroly, že cílová složka není zdrojová. Soubory
+  rozdělené v Acrobatu se to netýkalo.
 
 ## [1.2.0] — 2026-10-28
 
