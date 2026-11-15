@@ -12,8 +12,8 @@ Cmd+Z a skutečné soubory.
 
 ## 0. Příprava
 
-- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.1.0a-test.jsx`,
-  SHA-256 `eb7b30677d9e560b609d700c67e571192ff4480b47806e3d91af1dcaba72c660`.
+- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.1.0c-test.jsx`,
+  SHA-256 `540e448c0fd5511d68536cb4f7408e926e7b2eb7ca504daded99cd1970c38da0`.
 - Spouštět přes **Soubor › Skripty › Jiný skript…** (tak se skript bude
   spouštět i v provozu).
 - Testovat na **kopiích** tří souborů ze sondy 2026-10-29 (240 samolepek,
@@ -106,7 +106,7 @@ Na `…geoup.ai` v původním stavu (po 4.2). Na začátku **↺** (kroky a poř
 
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
-| 6.1 | Kliknout na zaškrtávátko u kroku v seznamu, pak znovu | Krok se vypne: zaškrtnutí zmizí (i jeho ⚠/✗), náhled se přepočítá bez něj; druhý klik ho zapne. **Zapsat, jak zaškrtávátko vypadá a zda klik funguje.** Když nefunguje, náhradou je zaškrtávátko **Aktivní** v editoru | |
+| 6.1 | Kliknout na **Aktivní** v editoru a nehýbat myší; pak znovu. Kliknout na zaškrtávátko u kroku v seznamu | Po každém kliknutí na Aktivní se **hned**, bez dalšího kliknutí, změní zaškrtnutí kroku v seznamu, jeho ⚠/✗, stavový řádek i náhled. Zaškrtávátko v seznamu jen ukazuje stav: v Illustratoru 2027 je šedé a klik ho nepřepne (naměřeno 2026-11-15, stejně u 1.0.0) | |
 | 6.2 | ↑ ↓ u kroku 2, **+** a − u nového kroku | Pořadí v seznamu i náhled se mění; nový krok zmizí. (− šedé u jediného kroku ukázal test 1.2) | |
 | 6.3 | Do pole Od napsat 5 a **bez Enteru** kliknout Použít; po chvilce **Použít** znovu; **Cmd+Z** | Po prvním kliku dialog zůstane, v hláškách „Náhled se přepočítal podle nové hodnoty. Zkontrolujte ho a potvrďte Použít znovu.“, náhled ukazuje 005. Druhé Použít zapíše 005–244 | |
 | 6.4 | Spustit znovu, Od 6 a **Enter**; pak **Enter** nebo Použít; **Cmd+Z** | První Enter jen přepočítá náhled (006), dialog se nezavře; další Enter / Použít zapíše 006–245 | |

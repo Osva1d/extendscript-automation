@@ -544,3 +544,13 @@ All 48 checks passed:
 Times: dialog build 0.8–1.4 s (2.9 s on the file without groups), a committed field 52–91 ms (median 83), Po aršících 84–117 ms, write + check + summary 3.6–6.4 s.
 
 Not covered, by nature: Cmd+Z (4.1, 4.2), a real click, Enter and focus change (6.1, 6.3–6.5), a cursor in a text (7.1: a script cannot place one), and how things look on screen: a truncated cell (# column 68 px against 50 px of "20 · 240" is a measurement, not a rendering), the red field, the ⚠ glyph (summary.js unchanged since 1.0.0).
+
+## Illustrator 2027: checkboxes and the step list (1.1.0c)
+
+Measured 2026-11-15 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with the user, on a copy of `Zund_Summa_Test_geoup.ai`: the dialog was shown for real (the test build through `tools/ai-eval.sh`), the user clicked and said what the screen showed, and a window capture or a log file the build wrote showed what the dialog held. The released 1.0.0 behaves the same in both points below; on Illustrator 30.8.2 the manual test of 1.0.0 had passed.
+
+- **A tick in the step list (`ListItem.checked`) is grey and a click does not change it.** It shows the state; Aktivní in the editor switches the step. Code since 1.0.0 unchanged.
+- **After a click on a checkbox (Aktivní, Po aršících) the handler's changes reached the screen only on the next event** (a click on another row, a switch to another application). The dialog held them at once: a window capture taken later showed the new preview. Enter in a field and a click on a button showed their changes at once (manual tests 6.3, 6.4).
+- **`w.visible` is false while the dialog is shown;** `onShow` fires. A guard on `visible` never lets anything run.
+- **Six ways to bring the change on screen, one per dialog, the user clicking Aktivní once in each:** `w.update()` no, `w.layout.layout(true)` yes, the preview panel `hide()` + `show()` yes, focus on the step list (`active = true`) no, the step list's selection set again no, the preview list `enabled` false + true yes. `BTE.UI` uses the layout, the one that covers the whole window, from `onShow` on (`repaint()` at the end of `refresh()`).
+- **The layout costs 3-8 ms** on the dialog with 240 preview rows (headless, `w.layout.layout(true)` five times and after Po aršících), the window stays 1008 x 768 px and the status line and the preview keep their bounds when their texts change.

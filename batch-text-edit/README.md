@@ -117,6 +117,8 @@ nezapíše nic, co náhled neukázal.
 - Zamčené a skryté texty (i ve skupině nebo vrstvě), přetečené odstavcové
   texty a navázané textové rámečky se přeskočí a spočítají v souhrnu.
 - Text v symbolu skript nevidí.
+- V Illustratoru 2027 zaškrtávátko u kroku v seznamu jen ukazuje, jestli
+  je krok zapnutý; zapíná a vypíná ho přepínač Aktivní v editoru.
 - Dvě místa pro stejné číslo musí ležet přímo v jedné skupině; ve dvou
   podskupinách dostanou různá čísla.
 - Regulární výrazy: lookbehind a pojmenované skupiny `(?<…)` Illustrator

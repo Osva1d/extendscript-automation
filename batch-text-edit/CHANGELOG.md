@@ -35,6 +35,9 @@ verzování podle [SemVer](https://semver.org/lang/cs/).
 - Pokyn „potvrďte Použít znovu“ se už neukáže vedle šedého Použít.
 - Chyba v ovládání dialogu zašedí Použít a Uložit i tehdy, když se nepodaří
   vykreslit stav, a hláška už neukáže „undefined“.
+- V Illustratoru 2027 se dialog po kliknutí na zaškrtávátko (Aktivní, Po
+  aršících a další) překreslí hned; dřív se změna ukázala až po dalším
+  kliknutí do dialogu.
 
 ## [1.0.0] — 2026-11-03
 
