@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * shared/lib/progress.js — the progress palette that stops on held Esc.
+ * shared/lib/progress.js — the progress palette that stops on held Control or Esc.
  */
 var fs = require("fs");
 var path = require("path");
@@ -54,6 +54,18 @@ assert(pr.isCancelled() === true, "the request stays once Esc is let go");
 ScriptUI.environment.keyboardState = null;
 var pr2 = P.create(3, TEXTS);
 assert(pr2.isCancelled() === false, "an unreadable keyboard state is no stop");
+
+console.log("\n=== held Control stops too; an unnamed key does not (Illustrator 2027) ===");
+function fresh(state) {
+    ScriptUI.environment.keyboardState = state;
+    return P.create(3, TEXTS);
+}
+assert(fresh({ keyName: "A", ctrlKey: true }).isCancelled() === true, "Control held: stop");
+assert(fresh({ keyName: "Esc", ctrlKey: false }).isCancelled() === true, "Esc named \"Esc\" (Windows): stop");
+assert(fresh({ keyName: undefined, ctrlKey: false }).isCancelled() === false,
+    "a key Illustrator 2027 does not name: no stop (it also reads so with nothing held)");
+assert(fresh({ keyName: "A", ctrlKey: false, shiftKey: true, altKey: true, metaKey: true }).isCancelled() === false,
+    "\"A\" with Shift, Option and Cmd: no stop");
 ScriptUI.environment.keyboardState = { keyName: undefined };
 
 console.log("\n=== finish and close ===");
