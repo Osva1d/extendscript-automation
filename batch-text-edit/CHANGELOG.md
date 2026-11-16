@@ -4,6 +4,33 @@ Všechny podstatné změny tohoto nástroje.
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 verzování podle [SemVer](https://semver.org/lang/cs/).
 
+## [1.2.0] — 2026-11-16
+
+### Přidáno
+
+- **Navázat.** U kroku Číslovat tlačítko „Navázat (241)“ dá do Od další
+  číslo řady minulého běhu a posune Do o stejný kus (1–240 → 241–480).
+  Číslo drží jen poslední běh, který se zapsal celý a prošel kontrolou po
+  zápisu; platí i v jiném dokumentu a nápověda tlačítka řekne, ve kterém
+  a kdy. Předvolby ho nenesou. Tlačítko je šedé u nového kroku, po ↺ nebo
+  výběru předvolby, u řady v každém aršíku a tam, kde řada nemá
+  pokračování (Krok 0, Znovu po, blok skončil uprostřed Opakovat).
+- **Dvojí číslo za Do.** Když si prvek za Do nechá číslo, které krok
+  v témže běhu dal jinému prvku (Kde „První číslo v prvku“, „Jiný text…“,
+  „Regulární výraz…“), hlášky to řeknou s počtem a příkladem; `007` a `7`
+  jsou totéž číslo. Použít zůstane aktivní.
+- **Ukázat v náhledu:** Všechny, Změněné, K prověření, každá volba
+  s počtem prvků. K prověření jsou prvky, o kterých mluví hlášky (za Do,
+  dvojí číslo, víc shod, zbylé `{…}`). Sloupec # dál ukazuje pořadí
+  v rozsahu a Použít zapíše vždy celý náhled. Volba se neukládá.
+- **Řádek čísel v Souhrnu:** za každý krok Číslovat, který něco zapsal,
+  např. „Krok 2: čísla 001–240, 240 prvků; další číslo 241.“
+
+### Opraveno
+
+- Sloupec # v náhledu pojme i „240 · 240“ (každý prvek vlastním aršíkem);
+  dřív na něj byl úzký.
+
 ## [1.1.0] — 2026-11-15
 
 ### Přidáno
