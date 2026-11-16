@@ -377,4 +377,10 @@ r.run.info[0].series = { from: 1, to: 8, numbered: 5, first: "001", last: "005",
 sum = U.runSummary(r, []);
 h.eq(sum.details[sum.details.length - 1], "Krok 1: čísla 001–005, 5 prvků.", "summary: series line last");
 h.eq(sum.details[0].indexOf("⚠"), 0, "summary: warning first");
+// after a mismatch no continuation is stored (Navázat stays grey), so the
+// series line promises no next number (spec 3.5)
+r = result([["{n}"], ["{n}"]], [N(V("{n}"))]);
+sum = U.runSummary(r, [{ el: 1, tx: 0, expected: "002", actual: "2" }]);
+h.eq(sum.details[sum.details.length - 1], "Krok 1: čísla 001–002, 2 prvky.", "summary: series line without the next number after a mismatch");
+h.eq(sum.details.join("|").indexOf("další číslo"), -1, "summary: no next number anywhere after a mismatch");
 h.done();

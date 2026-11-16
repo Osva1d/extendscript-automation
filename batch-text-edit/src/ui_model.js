@@ -689,9 +689,12 @@ BTE.UIModel = {
      * One summary line per active number step that numbered something.
      * @param {Array.<Object>} steps - The chain.
      * @param {Array.<Object>} info - BTE.Steps.run's info.
+     * @param {boolean} [noNext] - True when no continuation is stored (a
+     *     mismatch after writing): every line ends with the element count,
+     *     as for a series without a next number (spec 3.5).
      * @returns {Array.<string>} Lines like "Krok 2: čísla 001–240, ...".
      */
-    seriesLines: function (steps, info) {
+    seriesLines: function (steps, info, noNext) {
         var L = BTE.L;
         var lines = [];
         var i, s, range, tpl;
@@ -699,7 +702,7 @@ BTE.UIModel = {
             s = info[i] && info[i].series;
             if (!(steps[i].type === "number" && steps[i].active && s)) { continue; }
             range = s.first === s.last ? s.first : s.first + "\u2013" + s.last;
-            if (s.next === null) {
+            if (s.next === null || noNext === true) {
                 tpl = L.format(L.countForm("SUM_SERIES_END", s.numbered), range, s.numbered);
             } else {
                 tpl = L.format(L.countForm("SUM_SERIES", s.numbered), range, s.numbered, s.next);
@@ -793,7 +796,8 @@ BTE.UIModel = {
      * skipped texts, the mismatches after writing (red, always shown), and in
      * the details the mismatches first, then the warnings the dialog showed
      * (the skipped texts by reason, the sheet lines and the variables left
-     * after the last step among them).
+     * after the last step among them), then the series lines (seriesLines;
+     * without the next number after a mismatch).
      * @param {{steps: Array, prepared: Object, run: Object}} res - What
      *     BTE.UI.show returned.
      * @param {Array.<{el: number, tx: number, expected: string, actual: string}>} mismatches
@@ -807,7 +811,8 @@ BTE.UIModel = {
         var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
         var ch = U.changes(res.run.states, mismatches);
         var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText, U.sheetLines(res.prepared));
-        var ser = U.seriesLines(res.steps, res.run.info);
+        // main.js stores no continuation after a mismatch (spec 3.4)
+        var ser = U.seriesLines(res.steps, res.run.info, mismatches.length > 0);
         var details = U.mismatchLines(mismatches).concat(st.messages, ser);
         if (mismatches.length === 0 && st.messages.length === 0 && ser.length > 0) {
             details = [L.SUM_ALL_OK].concat(ser);

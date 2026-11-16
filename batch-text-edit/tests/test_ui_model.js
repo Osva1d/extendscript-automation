@@ -492,6 +492,7 @@ var info3 = [{}, ser(1, 240, 240, "001", "240", 241), ser(1, 240, 240, "001", "2
 h.eq(j(U.continuations(chain3, info3, "a.ai", 5)), j([null, { from: 1, to: 240, next: 241, doc: "a.ai", at: 5 }, null]), "continuations");
 h.eq(U.seriesLines([R(V("x")), N(V("{n}"))], [{}, ser(1, 240, 240, "001", "240", 241)])[0], "Krok 2: čísla 001–240, 240 prvků; další číslo 241.", "seriesLines");
 h.eq(U.seriesLines([N(V("{n}"))], [ser(1, 240, 240, "001", "240", null)])[0], "Krok 1: čísla 001–240, 240 prvků.", "seriesLines: end");
+h.eq(U.seriesLines([N(V("{n}"))], [ser(1, 240, 240, "001", "240", 241)], true)[0], "Krok 1: čísla 001–240, 240 prvků.", "seriesLines: next suppressed");
 h.eq(U.seriesLines([N(V("{n}"))], [ser(7, null, 1, "007", "007", 8)])[0], "Krok 1: čísla 007, 1 prvek; další číslo 8.", "seriesLines: one");
 h.eq(U.seriesLines([N(V("{n}"), { active: false })], [ser(7, null, 1, "007", "007", 8)]).length, 0, "seriesLines: inactive");
 
