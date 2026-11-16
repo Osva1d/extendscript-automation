@@ -315,6 +315,55 @@ p = S.load();
 h.eq(p.notes.length, 1, "a file that cannot be opened: defaults and a note");
 opens.fail = false;
 
+// ======================= the continuation record (spec 3.4) ===================
+h.eq(S.MAX_SAFE, 9007199254740991, "MAX_SAFE is the same literal as BTE.Steps.MAX_SAFE");
+var REC = { from: 1, to: 240, next: 241, doc: "a.ai", at: 5 };
+same(S.normalizeLast(REC), REC, "normalizeLast: valid record unchanged");
+h.eq(S.normalizeLast({ from: "1" }), null, "normalizeLast: from not a number gives null");
+h.eq(S.normalizeLast({ from: 1.5 }), null, "normalizeLast: fractional from gives null");
+h.eq(S.normalizeLast(null), null, "normalizeLast: null");
+h.eq(S.normalizeLast([]), null, "normalizeLast: array");
+h.eq(S.normalizeLast("x"), null, "normalizeLast: string");
+h.eq(J(S.normalizeLast({ from: 1, to: "x", next: 2.5, doc: 3, at: "t" })), '{"from":1,"to":null,"next":null,"doc":"","at":0}', "normalizeLast: junk fields repaired");
+
+var withLast = S.newStep("number");
+withLast.last = { from: 1, to: 240, next: 241, doc: "a.ai", at: 5 };
+var repl = S.newStep("replace");
+repl.last = { from: 1, to: 2, next: 3, doc: "x", at: 1 };
+var nv = { order: "rows", bySheet: false, steps: [withLast, repl] };
+var nd = S.normalize(nv).values;
+h.eq(nd.steps[0].hasOwnProperty("last"), false, "normalize: last dropped by default");
+nd = S.normalize(nv, true).values;
+same(nd.steps[0].last, REC, "normalize(v, true): a number step keeps its last");
+h.eq(nd.steps[1].hasOwnProperty("last"), false, "normalize(v, true): a replace step never keeps it");
+withLast.last = { from: "bad" };
+h.eq(S.normalize(nv, true).values.steps[0].hasOwnProperty("last"), false, "normalize(v, true): an invalid last is dropped");
+withLast.last = { from: 1, to: 240, next: 241, doc: "a.ai", at: 5 };
+
+disk[PATH] = JSON.stringify({ activePreset: "Samolepky", presets: { "[Last Settings]": nv, "Samolepky": nv } });
+p = S.load();
+same(p.presets["[Last Settings]"].steps[0].last, REC, "load: last kept on the last run");
+h.eq(p.presets["Samolepky"].steps[0].hasOwnProperty("last"), false, "load: last dropped on another preset");
+
+var stripped = S.withoutLast(nv);
+h.eq(stripped.steps[0].hasOwnProperty("last") || stripped.steps[1].hasOwnProperty("last"), false, "withoutLast: no step has last");
+h.eq(nv.steps[0].hasOwnProperty("last"), true, "withoutLast: the input is unchanged");
+
+disk[PATH] = JSON.stringify({ activePreset: "Samolepky", presets: { "Samolepky": S.defaultPreset(), "Jiná": S.normalize(odd).values } });
+var before = S.load();
+var lp = { order: "rows", bySheet: false, steps: [S.newStep("replace"), S.newStep("number")] };
+lp.steps[0].last = { from: 9, to: 9, next: 9, doc: "no", at: 9 };
+h.eq(S.saveLast(lp, [null, REC]), true, "saveLast reports success");
+var after = S.load();
+same(after.presets["[Last Settings]"].steps[1].last, REC, "saveLast: the record is on step 2");
+h.eq(after.presets["[Last Settings]"].steps[0].hasOwnProperty("last"), false, "saveLast: nothing on step 1");
+same(after.presets["Samolepky"], before.presets["Samolepky"], "saveLast: another preset untouched");
+same(after.presets["Jiná"], before.presets["Jiná"], "saveLast: a second preset untouched");
+h.eq(after.activePreset, "Samolepky", "saveLast: activePreset untouched");
+opens.fail = true;
+h.eq(S.saveLast(lp, [null, REC]), false, "saveLast: failing File.open gives false");
+opens.fail = false;
+
 // save failures are reported, never thrown
 opens.fail = true;
 h.eq(S.save(p), false, "save: open fails");
