@@ -363,6 +363,20 @@ h.eq(after.activePreset, "Samolepky", "saveLast: activePreset untouched");
 opens.fail = true;
 h.eq(S.saveLast(lp, [null, REC]), false, "saveLast: failing File.open gives false");
 opens.fail = false;
+// read fails, write would succeed: the file must stay as it is
+disk[PATH] = "{ not json";
+h.eq(S.saveLast(lp, [null, REC]), false, "saveLast: corrupt file is not overwritten");
+h.eq(disk[PATH], "{ not json", "saveLast: corrupt file unchanged on disk");
+var okFile = JSON.stringify({ activePreset: "Jiná", presets: { "Jiná": S.defaultPreset() } });
+disk[PATH] = okFile;
+var realOpen = MockFile.prototype.open;
+MockFile.prototype.open = function (mode) { return mode === "r" ? false : realOpen.call(this, mode); };
+h.eq(S.saveLast(lp, [null, REC]), false, "saveLast: open(r) failure does not overwrite");
+MockFile.prototype.open = realOpen;
+h.eq(disk[PATH], okFile, "saveLast: file unchanged after open(r) failure");
+delete disk[PATH];
+h.eq(S.saveLast(lp, [null, REC]), true, "saveLast: a missing file (first run) is written");
+same(S.load().presets["[Last Settings]"].steps[1].last, REC, "saveLast: first run record stored");
 
 // save failures are reported, never thrown
 opens.fail = true;

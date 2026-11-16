@@ -252,7 +252,9 @@ BTE.Storage = {
 
     /**
      * Stores the last-run preset with the continuation records and saves the
-     * file. Other presets and activePreset stay as loaded.
+     * file. Other presets and activePreset stay as loaded. When the file
+     * exists but could not be read (load() sets `unreadable`), nothing is
+     * written, so a transient failure cannot wipe the named presets.
      * @param {Object} preset - The exact last-run preset the dialog saved.
      * @param {Array.<?Object>} lasts - A record (or null) per step.
      * @returns {boolean} True when the file was written completely.
@@ -263,6 +265,10 @@ BTE.Storage = {
         var p = S.withoutLast(preset);
         var k;
 
+        if (pData.unreadable === true) {
+            S.log("saveLast: settings file unreadable, not overwriting it");
+            return false;
+        }
         for (k = 0; k < p.steps.length; k++) {
             if (lasts && lasts[k] && p.steps[k].type === "number") { p.steps[k].last = lasts[k]; }
         }
@@ -357,6 +363,7 @@ BTE.Storage = {
             if (!f.open("r")) {
                 S.log("load: open(r) failed for " + f.fsName);
                 pData.notes.push(L.NOTE_UNREADABLE);
+                pData.unreadable = true;
                 return pData;
             }
             content = f.read();
@@ -366,16 +373,19 @@ BTE.Storage = {
         } catch (e) {
             S.log("load failed: " + e.message);
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
 
         if (data === null || typeof data !== "object" || BTE.Utils.isArray(data)) {
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
         if (data.presets === undefined) { return pData; }
         if (data.presets === null || typeof data.presets !== "object" || BTE.Utils.isArray(data.presets)) {
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
 
