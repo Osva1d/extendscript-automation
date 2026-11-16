@@ -1411,8 +1411,10 @@ function probeManual(STUB) {
         out.timings.mainMs = r.ms;
         check("11.6 mismatch", function () {
             var sm = summaryOf(r), s = settings(), p2 = s ? s.presets[C.PRESET_KEY_LAST] : null;
+            // no record, so the series line promises no next number (spec 3.5)
             return { summary: sm ? { pairs: sm.pairs, details: ascii(j(sm.details)) } : null, lastInFile: anyLast(p2), alerts: r.alerts,
-                pass: !!sm && sm.pairs[L.SUM_MISMATCH] === "1" && !!p2 && !anyLast(p2) && r.alerts.length === 0 };
+                pass: !!sm && sm.pairs[L.SUM_MISMATCH] === "1" && !!p2 && !anyLast(p2) && r.alerts.length === 0 &&
+                    sm.details[sm.details.length - 1] === "Krok 2: čísla 001–240, 240 prvků." };
         });
         dlg = build();
         R = dlg.refs;

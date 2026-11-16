@@ -616,7 +616,7 @@ As before: assemble the runner from the probe's Usage header and run it with `to
 
 ## Manual-test probe (1.2.0a)
 
-Measured 2026-11-16 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with `tests/probes/probe_manual.jsx` 1.2.0, run on the sources of the 1.2.0a test build (SHA-256 `d20c4341…`). Same plumbing as 1.1.0a: copies of the user's three files in a folder of the probe's own, one part per `tools/ai-eval.sh` run, 0 documents before every run and at the end of each. The user's `settings.json` and the three originals stayed byte for byte (SHA-256 before and after).
+Measured 2026-11-16 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with `tests/probes/probe_manual.jsx` 1.2.0, run on the sources of a first 1.2.0a build (SHA-256 `d20c4341…`); part nocont ran again on the sources of the 1.2.0a test build (`7298092a…`, the summary fix below). Same plumbing as 1.1.0a: copies of the user's three files in a folder of the probe's own, one part per `tools/ai-eval.sh` run, 0 documents before every run and at the end of each. The user's `settings.json` and the three originals stayed byte for byte (SHA-256 before and after).
 
 All 20 parts passed, 66 of 66 checks: the 48 of 1.1.0a (check 1.1 now expects „v1.2.0“ in the title and the footer) and 18 new ones in five parts.
 
@@ -629,7 +629,7 @@ All 20 parts passed, 66 of 66 checks: the 48 of 1.1.0a (check 1.1 now expects �
 | 11.6 | nocont | a last run with `last` {from 1, to null, next 241} on step 2: „Samolepky“ without „*“, „Navázat (241)“, tip „Od 241 podle běhu v probe.ai, 1. 1. 1970 01:00; Do zůstane prázdné.“; Storno leaves the file byte for byte and the next open offers „Navázat (241)“ again; a new Číslovat step and ↺ have Navázat grey with TIP_CONTINUE_NONE. Then a write whose check (`BTE.Write.verify`, stubbed) reports one mismatch: „Neshoda po zápisu: 1“, no step of the last run in the file carries `last`, the next open has Navázat grey |
 
 - **Storno keeps the record**, as spec 3.4 has it: only a write changes it. So does Cmd+Z, which a script does not see; the tip names the document and the time for that case (README, Známá omezení).
-- **After a mismatch the summary's series line still ends „další číslo 241.“** although no record is kept and Navázat is grey on the next open: the line reports what the step wrote (`UIModel.seriesLines` reads only the run).
+- **After a mismatch the summary's series line ends with the element count** („Krok 2: čísla 001–240, 240 prvků.“), as it does whenever Navázat will be grey (spec 3.5). The first run found it ending „další číslo 241.“ with no record kept; `UIModel.runSummary` now builds the lines without the next number when there is a mismatch, and check „11.6 mismatch“ asserts the line (all 4 checks of nocont passed again).
 
 Times: dialog build 0.68–0.93 s (2.4–2.9 s on the file without groups), a committed field 51–76 ms (median 75), Po aršících 53–137 ms, the Navázat click 132 ms (refresh included); Ukázat: Všechny → K prověření 15 ms (240 → 10 rows) and 82 ms (240 → 100), K prověření → Změněné 211 ms (10 → 240), Změněné → Všechny 6 ms, Do emptied with K prověření on 271 ms. Write + check + summary 0.15–7.7 s on …geoup.ai (16.6 s on the file without groups), the whole of `main.js` with the dialog 2.0–9.5 s (18.7 s). A copy of part tick with timers around the functions split one write: `BTE.Write.apply` 2.6 s, `verify` 3 ms, `Storage.saveLast` (load + save) 97 ms, `runSummary` 3 ms; what 1.2.0 adds after a write costs about 0.1 s.
 
