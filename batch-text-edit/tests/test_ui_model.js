@@ -469,4 +469,7 @@ h.eq(j(U.rows([[["a"], ["b"]]], 0, [3, 0])[0].slice(0, 1).concat(U.rows([[["a"],
 h.eq(U.rows([[["a"]]], 0)[0][0], "1", "rows: no sheets as before");
 h.eq(U.scopeLine({ elements: { length: 240 }, textCount: 480, skipped: {}, sheets: [1], sheetCount: 20 }), "240 prvků, 480 textů, 20 aršíků", "scope line with sheets");
 
+h.eq(U.text({ key: "WARN_DUP", args: ["2", "4", "004", "2"] }), "2 prvky za Do si nechají číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 2");
+h.eq(U.text({ key: "WARN_DUP", args: ["1", "4", "004", "2"] }), "1 prvek za Do si nechá číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 1");
+h.eq(U.text({ key: "WARN_DUP", args: ["10", "4", "004", "2"] }), "10 prvků za Do si nechá číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 10");
 h.done();

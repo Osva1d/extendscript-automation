@@ -355,13 +355,18 @@ BTE.Steps = {
      * the missing elements when the series is a plain count (repeats 1, no
      * reset, step not 0) that Do falls on. With several series it counts the
      * ones that were not cut and did not reach Do (WARN_TO_SHORT).
-     * The result also carries `series` and `cut`: series is null when no
+     * The result also carries `series`, `cut` and `dups`: series is null when no
      * element was numbered, else {from, to, numbered, first, last, next}
      * with first/last the texts written to the first and last numbered
      * element and next the value a following series would continue with
      * (null when there is none: Krok 0, Znovu po, v kazdem arsiku, an
      * Opakovat group left open, letters below 1 or beyond MAX_SAFE); cut is
-     * the ascending indices of the elements left alone past Do.
+     * the ascending indices of the elements left alone past Do; dups lists
+     * those of them whose kept match spells a number the step wrote to an
+     * earlier element: {el, kept, sameAs} (kept = the match text, sameAs = the
+     * first element that got the value, both zero-based), at most one entry
+     * per cut element, and WARN_DUP follows WARN_TO_CUT. A kept text that is
+     * no whole number (format "1") is never a duplicate; letters compare as text.
      * @param {Array.<Array.<string>>} state - Per element, the texts it holds.
      * @param {Object} step - A number step.
      * @param {?Array.<number>=} sheets - sheets[el] is the sheet number of
@@ -370,7 +375,8 @@ BTE.Steps = {
      *     length must equal state.length.
      * @throws {Error} When step.perSheet is set and sheets has the wrong length.
      * @returns {{error: Object|null, edits: Array, warns: Array, multi: Array,
-     *     series: ?Object, cut: Array.<number>}}
+     *     series: ?Object, cut: Array.<number>,
+     *     dups: Array.<{el: number, kept: string, sameAs: number}>}}
      *     The step result run() merges into StepInfo.
      */
     number: function (state, step, sheets) {
@@ -392,6 +398,8 @@ BTE.Steps = {
         var perSheet = !!(step.perSheet === true && sheets);
         var cut = 0;
         var cutEls = [];
+        var dups = [];
+        var written = {};
         var numbered = 0;
         var firstText = "";
         var lastText = "";
@@ -402,7 +410,7 @@ BTE.Steps = {
         var prevSheet = null;
         var seriesLast = null;
         var seriesCut = false;
-        var re, c, f, i, j, k, texts, hits, ms, m, reset, v, last, span, want, text;
+        var re, c, f, i, j, k, texts, hits, ms, m, reset, v, last, span, want, text, kept, key, neg;
 
         if (first) {
             re = new RegExp("[0-9]+", "g");
@@ -481,6 +489,8 @@ BTE.Steps = {
             if (numbered === 0) { firstText = text; }
             lastText = text;
             numbered++;
+            key = "k" + (step.format === "1" ? String(v) : text);
+            if (!written.hasOwnProperty(key)) { written[key] = found[k].el; }
             hits = found[k].hits;
             for (m = 0; m < hits.length; m++) {
                 edits.push({ el: found[k].el, tx: hits[m].tx, start: hits[m].start, length: hits[m].length, text: text });
@@ -490,6 +500,29 @@ BTE.Steps = {
         if (found.length > 0 && !seriesCut && vals.to !== null && seriesLast !== vals.to) { shortSeries++; }
 
         if (cut > 0) { warns.push(BTE.Steps.msg("WARN_TO_CUT", [String(cut), String(vals.to)])); }
+        for (k = 0; k < cutEls.length; k++) {
+            for (i = 0; i < found.length; i++) { if (found[i].el === cutEls[k]) { break; } }
+            for (m = 0; m < found[i].hits.length; m++) {
+                hits = found[i].hits[m];
+                kept = state[cutEls[k]][hits.tx].substring(hits.start, hits.start + hits.length);
+                key = kept;
+                if (step.format === "1") {
+                    if (!/^-?[0-9]+$/.test(kept)) { continue; }
+                    neg = kept.charAt(0) === "-";
+                    key = neg ? kept.substring(1) : kept;
+                    while (key.length > 1 && key.charAt(0) === "0") { key = key.substring(1); }
+                    if (neg && key !== "0") { key = "-" + key; }
+                }
+                key = "k" + key;
+                if (written.hasOwnProperty(key)) {
+                    dups.push({ el: cutEls[k], kept: kept, sameAs: written[key] });
+                    break;
+                }
+            }
+        }
+        if (dups.length > 0) {
+            warns.push(BTE.Steps.msg("WARN_DUP", [String(dups.length), String(dups[0].el + 1), dups[0].kept, String(dups[0].sameAs + 1)]));
+        }
         if (vals.to !== null && found.length > 0) {
             if (perSheet) {
                 if (shortSeries > 0) { warns.push(BTE.Steps.msg("WARN_TO_SHORT", [String(shortSeries), String(vals.to)])); }
@@ -518,7 +551,7 @@ BTE.Steps = {
             }
             series = { from: vals.from, to: vals.to, numbered: numbered, first: firstText, last: lastText, next: next };
         }
-        return { error: null, edits: edits, warns: warns, multi: multi, series: series, cut: cutEls };
+        return { error: null, edits: edits, warns: warns, multi: multi, series: series, cut: cutEls, dups: dups };
     },
 
     /**
@@ -1101,7 +1134,8 @@ BTE.Steps = {
      *     a Case step's edits carry a `caseMode` besides (see caseEdit);
      *     series = the Number step's series record (null when it numbered
      *     nothing, and for every other step), cut = element indices the
-     *     Number step left alone past Do, dups = [] (filled by later code).
+     *     Number step left alone past Do, dups = the cut elements whose kept
+     *     number the step wrote elsewhere (see number()).
      * @throws {Error} For an unknown step type, an unknown case mode or a
      *     broken edit list: bugs in the caller or in a step handler.
      */
@@ -1125,6 +1159,7 @@ BTE.Steps = {
                     item.multi = res.multi;
                     item.series = res.series || null;
                     item.cut = res.cut || [];
+                    item.dups = res.dups || [];
                     item.hits = BTE.Steps.countElements(res.edits);
                     if (item.hits === 0) { item.warns.push(BTE.Steps.msg("WARN_NOTHING_FOUND")); }
                 }

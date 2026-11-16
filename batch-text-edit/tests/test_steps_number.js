@@ -293,4 +293,15 @@ h.eq(BTE.Steps.run(st, [R0()]).info[0].series, null, "series: a replace step has
 h.eq(BTE.Steps.run(st, [R0()]).info[0].cut.length, 0, "cut: a replace step has none");
 h.eq(infoOf(st, V({ from: "x" })).series, null, "series: failed step has none");
 
+
+// Duplicate numbers past Do (1.2.0)
+var nb = [["001"], ["002"], ["003"], ["004"], ["005"]];
+var d1 = infoOf(nb, N({kind:"first"}, { from: "3", to: "5" }));
+h.eq(JSON.stringify(d1.dups), '[{"el":3,"kept":"004","sameAs":1},{"el":4,"kept":"005","sameAs":2}]', "dup: kept numbers equal written ones");
+h.eq(d1.warns[1].key + "|" + d1.warns[1].args.join(","), "WARN_DUP|2,4,004,2", "dup: warning after WARN_TO_CUT");
+h.eq(infoOf([["7"], ["7"]], N({kind:"first"}, { from: "7", to: "7", digits: "3" })).dups.length, 1, "dup: 007 written, 7 kept");
+h.eq(infoOf(st, V({ to: "3" })).dups.length, 0, "dup: {n} kept is never a duplicate");
+h.eq(infoOf([["abc 1"], ["abc 2"]], N({kind:"regex",text:"abc"}, { from: "1", to: "1" })).dups.length, 0, "dup: a kept text that is no number");
+h.eq(infoOf([["1"], ["2"], ["1"]], N({kind:"first"}, { from: "1", to: "2", repeats: "1" })).dups[0].sameAs, 0, "dup: sameAs is the first element with the value");
+h.eq(infoOf([["A"], ["B"], ["A"]], N({kind:"regex",text:"[A-Z]"}, { format: "A", from: "1", to: "2" })).dups.length, 1, "dup: letters compare as text");
 h.done();
