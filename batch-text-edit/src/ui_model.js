@@ -619,6 +619,174 @@ BTE.UIModel = {
     },
 
     /**
+     * A moment as the dialog shows it: day. month. year hh:mm (local time).
+     * @param {number} ms - Milliseconds since the epoch.
+     * @returns {string} The formatted moment.
+     */
+    when: function (ms) {
+        var d = new Date(ms);
+        function two(n) { return (n < 10 ? "0" : "") + n; }
+        return BTE.L.format(BTE.L.WHEN, d.getDate(), d.getMonth() + 1, d.getFullYear(), two(d.getHours()), two(d.getMinutes()));
+    },
+
+    /**
+     * The From and To a continuation fills in, from the stored record only
+     * (the step's own fields are not read). To keeps the length of the
+     * previous run's range; empty when that run had no To.
+     * @param {{from: number, to: ?number, next: number}} last - step.last.
+     * @returns {{from: string, to: string}} Field texts.
+     */
+    continueFields: function (last) {
+        return {
+            from: String(last.next),
+            to: last.to === null ? "" : String(last.to + (last.next - last.from))
+        };
+    },
+
+    /**
+     * The Navázat button of a step: whether it works, its caption and tooltip.
+     * @param {{last: ?Object}} step - A number step.
+     * @returns {{enabled: boolean, text: string, tip: string}} Button state.
+     */
+    continueButton: function (step) {
+        var U = BTE.UIModel;
+        var L = BTE.L;
+        var last = step.last;
+        var f;
+        if (!last) { return { enabled: false, text: L.BTN_CONTINUE_OFF, tip: L.TIP_CONTINUE_NONE }; }
+        if (last.next === null) { return { enabled: false, text: L.BTN_CONTINUE_OFF, tip: L.TIP_CONTINUE_END }; }
+        f = U.continueFields(last);
+        return {
+            enabled: true,
+            text: L.format(L.BTN_CONTINUE, f.from),
+            tip: f.to === ""
+                ? L.format(L.TIP_CONTINUE_NO_TO, f.from, U.shorten(last.doc || "?", 40), U.when(last.at))
+                : L.format(L.TIP_CONTINUE, f.from, f.to, U.shorten(last.doc || "?", 40), U.when(last.at))
+        };
+    },
+
+    /**
+     * The continuation records of a run, one per step: for an active number
+     * step that numbered something, where it started, ended and would go on.
+     * @param {Array.<Object>} steps - The chain.
+     * @param {Array.<Object>} info - BTE.Steps.run's info.
+     * @param {string} doc - Document name.
+     * @param {number} at - Milliseconds since the epoch.
+     * @returns {Array.<?Object>} A step.last record or null per step.
+     */
+    continuations: function (steps, info, doc, at) {
+        var out = [];
+        var i, s;
+        for (i = 0; i < steps.length; i++) {
+            s = info[i] && info[i].series;
+            out.push((steps[i].type === "number" && steps[i].active && s) ?
+                { from: s.from, to: s.to, next: s.next, doc: doc, at: at } : null);
+        }
+        return out;
+    },
+
+    /**
+     * One summary line per active number step that numbered something.
+     * @param {Array.<Object>} steps - The chain.
+     * @param {Array.<Object>} info - BTE.Steps.run's info.
+     * @returns {Array.<string>} Lines like "Krok 2: čísla 001–240, ...".
+     */
+    seriesLines: function (steps, info) {
+        var L = BTE.L;
+        var lines = [];
+        var i, s, range, tpl;
+        for (i = 0; i < steps.length; i++) {
+            s = info[i] && info[i].series;
+            if (!(steps[i].type === "number" && steps[i].active && s)) { continue; }
+            range = s.first === s.last ? s.first : s.first + "\u2013" + s.last;
+            if (s.next === null) {
+                tpl = L.format(L.countForm("SUM_SERIES_END", s.numbered), range, s.numbered);
+            } else {
+                tpl = L.format(L.countForm("SUM_SERIES", s.numbered), range, s.numbered, s.next);
+            }
+            lines.push(L.format(L.STATUS_STEP, i + 1, tpl));
+        }
+        return lines;
+    },
+
+    /** The preview filter modes, in the dropdown's order. */
+    FILTERS: ["all", "changed", "review"],
+
+    /**
+     * Per element: do the final texts differ from the original?
+     * @param {Array} states - BTE.Steps.run's states (the original first).
+     * @returns {Array.<boolean>} One flag per element.
+     */
+    changedFlags: function (states) {
+        var first = states[0];
+        var last = states[states.length - 1];
+        var out = [];
+        var i, j, same;
+        for (i = 0; i < last.length; i++) {
+            same = first[i].length === last[i].length;
+            for (j = 0; same && j < last[i].length; j++) {
+                if (first[i][j] !== last[i][j]) { same = false; }
+            }
+            out.push(!same);
+        }
+        return out;
+    },
+
+    /**
+     * Per element: do the messages talk about it (cut past Do, a duplicate
+     * number, several texts for one numbering, a variable left at the end)?
+     * @param {{states: Array, info: Array}} run - BTE.Steps.run's result.
+     * @param {Array.<Object>} steps - The chain.
+     * @returns {Array.<boolean>} One flag per element.
+     */
+    reviewFlags: function (run, steps) {
+        var fin = run.states[run.states.length - 1];
+        var out = [];
+        var i, k, j, inf;
+        for (i = 0; i < fin.length; i++) { out.push(BTE.Vars.list([fin[i]]).length > 0); }
+        function mark(el) { if (el >= 0 && el < out.length) { out[el] = true; } }
+        for (k = 0; k < steps.length; k++) {
+            inf = run.info[k];
+            if (!steps[k].active || !inf) { continue; }
+            for (j = 0; inf.cut && j < inf.cut.length; j++) { mark(inf.cut[j]); }
+            for (j = 0; inf.dups && j < inf.dups.length; j++) { mark(inf.dups[j].el); }
+            for (j = 0; inf.multi && j < inf.multi.length; j++) { mark(inf.multi[j].el); }
+        }
+        return out;
+    },
+
+    /**
+     * The entries of the Ukázat dropdown, with counts.
+     * @param {Array.<boolean>} changed - changedFlags.
+     * @param {Array.<boolean>} review - reviewFlags.
+     * @returns {Array.<string>} Three labels, in FILTERS order.
+     */
+    filterItems: function (changed, review) {
+        var L = BTE.L;
+        var c = 0, r = 0, i;
+        for (i = 0; i < changed.length; i++) { if (changed[i]) { c++; } }
+        for (i = 0; i < review.length; i++) { if (review[i]) { r++; } }
+        return [L.format(L.FILTER_ALL, changed.length), L.format(L.FILTER_CHANGED, c), L.format(L.FILTER_REVIEW, r)];
+    },
+
+    /**
+     * The preview rows a filter mode shows, in order and unchanged.
+     * @param {Array} rows - All preview rows.
+     * @param {string} mode - One of FILTERS.
+     * @param {Array.<boolean>} changed - changedFlags.
+     * @param {Array.<boolean>} review - reviewFlags.
+     * @returns {Array} The rows to show.
+     */
+    filterRows: function (rows, mode, changed, review) {
+        var flags = mode === "changed" ? changed : (mode === "review" ? review : null);
+        var out = [];
+        var i;
+        if (!flags) { return rows; }
+        for (i = 0; i < rows.length; i++) { if (flags[i]) { out.push(rows[i]); } }
+        return out;
+    },
+
+    /**
      * The argument BTE.Summary.show takes for a finished run: changed
      * elements and texts (computed from the states and, where the document
      * differs from the preview, from what it holds; see changes()), the
@@ -639,6 +807,11 @@ BTE.UIModel = {
         var skipped = (Number(s.locked) || 0) + (Number(s.overflow) || 0) + (Number(s.linked) || 0);
         var ch = U.changes(res.run.states, mismatches);
         var st = U.status(res.run, res.steps, res.prepared.skipped, res.prepared.cursorInText, U.sheetLines(res.prepared));
+        var ser = U.seriesLines(res.steps, res.run.info);
+        var details = U.mismatchLines(mismatches).concat(st.messages, ser);
+        if (mismatches.length === 0 && st.messages.length === 0 && ser.length > 0) {
+            details = [L.SUM_ALL_OK].concat(ser);
+        }
 
         return {
             title: L.SUM_TITLE,
@@ -649,7 +822,7 @@ BTE.UIModel = {
                 { label: L.SUM_MISMATCH, value: mismatches.length, alert: true, always: true }
             ],
             note: mismatches.length > 0 ? L.SUM_MISMATCH_NOTE : "",
-            details: U.mismatchLines(mismatches).concat(st.messages),
+            details: details,
             detailsTitle: L.SUM_DETAILS,
             allOk: L.SUM_ALL_OK,
             close: L.BTN_CLOSE
