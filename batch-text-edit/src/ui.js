@@ -878,7 +878,9 @@ BTE.UI = {
          * (Storage.normalize), so leaving it out here would mark every
          * preset "*".
          */
-        function current() { return { order: st.order, bySheet: st.bySheet, steps: U.copy(st.steps) }; }
+        function current() {
+            return BTE.Storage.withoutLast({ order: st.order, bySheet: st.bySheet, steps: U.copy(st.steps) });
+        }
 
         function presetLabel(key) { return key === DEF ? L.PRESET_DEFAULT : key; }
 
@@ -1337,7 +1339,7 @@ BTE.UI = {
             if (!st.status.canApply) { return; }
             pData.presets[LAST] = current();
             if (!BTE.Storage.save(pData)) { alert(L.ERR_WRITE_SETTINGS_RUN); }
-            st.outcome = { scope: st.kind, order: st.order, steps: U.copy(st.steps), prepared: st.prepared, run: st.run };
+            st.outcome = { scope: st.kind, order: st.order, steps: U.copy(st.steps), preset: pData.presets[LAST], prepared: st.prepared, run: st.run };
             w.close(1);
         });
         btnCancel.onClick = guard(function () {

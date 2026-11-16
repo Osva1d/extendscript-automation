@@ -62,6 +62,8 @@ h.eq(U.initialScope({ typename: "TextRange", length: 3 }), "selection", "selecte
 h.eq(U.initialScope({ typename: "TextRange", length: 0 }), "selection", "a blinking cursor: Výběr");
 
 // ======================= resolveAuto =========================================
+var withLast = U.resolveAuto({ order: "rows", steps: [{ type: "number", last: { doc: "d", at: 5, next: 7 } }] }, SHEET);
+h.eq(JSON.stringify(withLast.steps[0].last), JSON.stringify({ doc: "d", at: 5, next: 7 }), "resolveAuto: keeps a step's last");
 var raw = S.defaultPreset();
 var res = U.resolveAuto(raw, SHEET);
 h.eq(j(res.steps[0].where), j(V("{kód}")), "auto: the first variable of the texts");

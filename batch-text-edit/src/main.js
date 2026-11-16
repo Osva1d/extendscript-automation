@@ -45,6 +45,22 @@ var BTE = BTE || {};
         }
 
         var mismatches = BTE.Write.verify(prepared.tfs, run.states[run.states.length - 1]);
+
+        // Only a clean, verified write leaves a continuation; a mismatch or a
+        // stopped write keeps the last run saved at Použít, without `last`.
+        if (mismatches.length === 0) {
+            try {
+                var docName = "";
+                try { docName = String(app.activeDocument.name); } catch (nameErr) {
+                    log("saveLast: reading the document name failed: " + nameErr.message);
+                }
+                var lasts = BTE.UIModel.continuations(res.steps, run.info, docName, new Date().getTime());
+                if (!BTE.Storage.saveLast(res.preset, lasts)) { log("saveLast: the continuation was not stored"); }
+            } catch (saveErr) {
+                log("saveLast: " + saveErr.message);
+            }
+        }
+
         BTE.Summary.show(BTE.UIModel.runSummary(res, mismatches));
 
     } catch (e) {

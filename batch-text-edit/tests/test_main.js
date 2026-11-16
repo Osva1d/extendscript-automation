@@ -45,7 +45,8 @@ function result(state, steps, skipped, tfs) {
         scope: "document", order: "rows", steps: steps,
         prepared: { elements: [], state: state, tfs: tfs || [], skipped: skipped || { locked: 0, overflow: 0, linked: 0 },
             cursorInText: false, textCount: 0 },
-        run: BTE.Steps.run(state, steps)
+        run: BTE.Steps.run(state, steps),
+        preset: { order: "rows", bySheet: false, steps: steps }
     };
 }
 function sheet(n) {
@@ -208,6 +209,7 @@ function runMain(opts) {
         documents: { length: opts.docs === undefined ? 1 : opts.docs },
         activeDocument: { name: "doc" }
     };
+    var origSaveLast = BTE.Storage.saveLast;
     var origApply = BTE.Write.apply, origVerify = BTE.Write.verify, origSummary = BTE.Summary;
 
     BTE.UI = { show: function (doc) {
@@ -227,6 +229,12 @@ function runMain(opts) {
         if (opts.verifyThrows) { throw opts.verifyThrows; }
         return opts.mismatches || [];
     };
+    BTE.Storage.saveLast = function (preset, lasts) {
+        calls.push("saveLast");
+        calls.saveArgs = { preset: preset, lasts: lasts };
+        if (opts.saveLastThrows) { throw opts.saveLastThrows; }
+        return opts.saveLastResult === undefined ? true : opts.saveLastResult;
+    };
     BTE.Summary = { show: function (o) { calls.push("summary"); summaries.push(o); if (opts.summaryThrows) { throw opts.summaryThrows; } } };
     global.$ = { writeln: function (s) { logged.push(s); } };
     global.File = MockFile;
@@ -239,6 +247,7 @@ function runMain(opts) {
     } finally {
         BTE.Write.apply = origApply;
         BTE.Write.verify = origVerify;
+        BTE.Storage.saveLast = origSaveLast;
         delete BTE.UI;
         BTE.Summary = origSummary;
         delete global.$;
@@ -263,7 +272,7 @@ h.eq(m.alerts.length + m.summaries.length, 0, "main: Storno, no alert and no sum
 
 // Použít: write, verify, summary - in that order, with the run the dialog handed over
 m = runMain({ res: r });
-h.eq(m.calls.join(","), "ui.show:true,apply,verify,summary", "main: dialog, apply, verify, summary");
+h.eq(m.calls.join(","), "ui.show:true,apply,verify,saveLast,summary", "main: dialog, apply, verify, saveLast, summary");
 h.eq(m.alerts.length, 0, "main: no alert after a good run");
 h.eq(m.calls.args.tfs === tfs && m.calls.args.info === r.run.info && m.calls.args.states === r.run.states, true,
     "main: apply gets prepared.tfs, run.info, run.states");
@@ -276,6 +285,29 @@ h.eq(m.summaries[0].pairs[0].value, 2, "main: the summary counts the sheet");
 m = runMain({ res: r, mismatches: [{ el: 0, tx: 0, expected: "ABC", actual: "x" }] });
 h.eq(m.summaries[0].pairs[3].value, 1, "main: the mismatch count reaches the summary");
 h.eq(m.summaries[0].details[0].indexOf("Prvek 1, text 1") !== -1, true, "main: and the line");
+
+// a clean write stores the continuation
+m = runMain({ res: r });
+h.eq(m.calls.join(","), "ui.show:true,apply,verify,saveLast,summary", "main: continuation after a clean write");
+h.eq(m.calls.saveArgs.preset === r.preset, true, "main: saveLast gets the preset saved at Použít");
+h.eq(m.calls.saveArgs.lasts[1].doc === "doc" && typeof m.calls.saveArgs.lasts[1].at === "number", true,
+    "main: the number step's last carries the document name and a time");
+
+m = runMain({ res: r, mismatches: [{ el: 0, tx: 0, expected: "ABC", actual: "x" }] });
+h.eq(m.calls.join(","), "ui.show:true,apply,verify,summary", "main: no continuation after a mismatch");
+
+m = runMain({ res: r, applyThrows: wErr });
+h.eq(m.calls.indexOf("saveLast"), -1, "main: no continuation after a failed write");
+
+m = runMain({ res: r, saveLastResult: false });
+h.eq(m.calls.join(","), "ui.show:true,apply,verify,saveLast,summary", "main: a failing saveLast still shows the summary");
+h.eq(m.alerts.length, 0, "main: a failing saveLast raises no alert");
+h.eq(m.logged.length >= 1 && m.logged.join("|").indexOf("saveLast") !== -1, true, "main: a failing saveLast is logged");
+
+m = runMain({ res: r, saveLastThrows: new Error("disk gone") });
+h.eq(m.alerts.length, 0, "main: a throwing saveLast raises no alert");
+h.eq(m.calls[m.calls.length - 1], "summary", "main: a throwing saveLast still shows the summary");
+h.eq(m.logged.join("|").indexOf("disk gone") !== -1, true, "main: and logs the reason");
 
 // a write that stopped: the Error's message in the summary, the detail only in the log, no verify
 m = runMain({ res: r, applyThrows: wErr });
