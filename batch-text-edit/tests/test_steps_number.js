@@ -271,4 +271,26 @@ h.assert(tm !== null && tm.indexOf("BTE.Steps") >= 0 && tm.indexOf("3") >= 0 && 
 tm = throwsMsg(function () { runN(five, { perSheet: true }, []); });
 h.assert(tm !== null && tm.indexOf("0") >= 0 && tm.indexOf("5") >= 0, "perSheet: empty sheets array throws");
 
+
+// Series record and the next number (1.2.0)
+h.eq(BTE.Steps.MAX_SAFE, 9007199254740991, "MAX_SAFE literal");
+function R0() { return { type: "replace", active: true, where: { kind: "text", text: "x" }, replace: "y", matchCase: false, firstOnly: false }; }
+var s1 = infoOf(st, V({ to: "" })).series;
+h.eq(JSON.stringify(s1), '{"from":1,"to":null,"numbered":5,"first":"001","last":"005","next":6}', "series: plain");
+h.eq(infoOf(st, V({ to: "3" })).series.next, 4, "next: Do ended the series");
+h.eq(infoOf(st, V({ to: "3" })).cut.join(","), "3,4", "cut: elements past Do");
+h.eq(infoOf(st, V({ from: "10", step: "-2" })).series.next, 0, "next: negative Krok");
+h.eq(infoOf(st, V({ step: "0" })).series.next, null, "next: Krok 0");
+h.eq(infoOf(st, V({ reset: "5" })).series.next, null, "next: Znovu po");
+h.eq(infoOf(st, V({ repeats: "2" })).series.next, null, "next: 5 elements end inside Opakovat 2");
+var st4 = st.slice(0, 4);
+h.eq(infoOf(st4, V({ repeats: "2" })).series.next, 3, "next: whole Opakovat groups");
+h.eq(infoOf(st, V({ perSheet: true })).series.next, null, "next: per sheet");
+h.eq(infoOf(st, V({ format: "A", from: "25" })).series.next, 30, "next: letters past Z (AD)");
+h.eq(infoOf(st, V({ format: "A", from: "5", step: "-1" })).series.next, null, "next: letters below 1");
+h.eq(infoOf([["x"]], V({})).series, null, "series: nothing numbered");
+h.eq(BTE.Steps.run(st, [R0()]).info[0].series, null, "series: a replace step has none");
+h.eq(BTE.Steps.run(st, [R0()]).info[0].cut.length, 0, "cut: a replace step has none");
+h.eq(infoOf(st, V({ from: "x" })).series, null, "series: failed step has none");
+
 h.done();
