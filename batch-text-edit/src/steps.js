@@ -359,11 +359,11 @@ BTE.Steps = {
      * element was numbered, else {from, to, numbered, first, last, next}
      * with first/last the texts written to the first and last numbered
      * element and next the value a following series would continue with
-     * (null when there is none: Krok 0, Znovu po, v kazdem arsiku, an
+     * (null when there is none: Krok 0, Znovu po, v každém aršíku, an
      * Opakovat group left open, letters below 1 or beyond MAX_SAFE); cut is
      * the ascending indices of the elements left alone past Do; dups lists
-     * those of them whose kept match spells a number the step wrote to an
-     * earlier element: {el, kept, sameAs} (kept = the match text, sameAs = the
+     * those of them whose kept match spells a number the step wrote to
+     * another element: {el, kept, sameAs} (kept = the match text, sameAs = the
      * first element that got the value, both zero-based), at most one entry
      * per cut element, and WARN_DUP follows WARN_TO_CUT. A kept text that is
      * no whole number (format "1") is never a duplicate; letters compare as text.
@@ -398,6 +398,7 @@ BTE.Steps = {
         var perSheet = !!(step.perSheet === true && sheets);
         var cut = 0;
         var cutEls = [];
+        var cutIdx = [];
         var dups = [];
         var written = {};
         var numbered = 0;
@@ -410,7 +411,7 @@ BTE.Steps = {
         var prevSheet = null;
         var seriesLast = null;
         var seriesCut = false;
-        var re, c, f, i, j, k, texts, hits, ms, m, reset, v, last, span, want, text, kept, key, neg;
+        var re, c, f, i, j, k, texts, hits, hit, ms, m, reset, v, last, span, want, text, kept, key, neg;
 
         if (first) {
             re = new RegExp("[0-9]+", "g");
@@ -480,6 +481,7 @@ BTE.Steps = {
             if (BTE.Steps.pastTo(v, vals.to, vals.step)) {
                 cut++;
                 cutEls.push(found[k].el);
+                cutIdx.push(k);
                 seriesCut = true;
                 continue;
             }
@@ -501,10 +503,9 @@ BTE.Steps = {
 
         if (cut > 0) { warns.push(BTE.Steps.msg("WARN_TO_CUT", [String(cut), String(vals.to)])); }
         for (k = 0; k < cutEls.length; k++) {
-            for (i = 0; i < found.length; i++) { if (found[i].el === cutEls[k]) { break; } }
-            for (m = 0; m < found[i].hits.length; m++) {
-                hits = found[i].hits[m];
-                kept = state[cutEls[k]][hits.tx].substring(hits.start, hits.start + hits.length);
+            for (m = 0; m < found[cutIdx[k]].hits.length; m++) {
+                hit = found[cutIdx[k]].hits[m];
+                kept = state[cutEls[k]][hit.tx].substring(hit.start, hit.start + hit.length);
                 key = kept;
                 if (step.format === "1") {
                     if (!/^-?[0-9]+$/.test(kept)) { continue; }

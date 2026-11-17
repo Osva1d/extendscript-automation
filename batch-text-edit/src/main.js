@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------
 // Module: Entry point — IIFE, error boundary, dialog, write, verify, summary
 // Part of: Illustrator Batch Text Edit
-// Depends on: BTE.L, BTE.UI, BTE.UIModel, BTE.Utils, BTE.Write, BTE.Summary
+// Depends on: BTE.L, BTE.UI, BTE.UIModel, BTE.Utils, BTE.Storage, BTE.Write, BTE.Summary
 // ------------------------------------------------------------------------
 var BTE = BTE || {};
 

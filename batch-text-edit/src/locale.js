@@ -107,7 +107,7 @@ BTE.L = (function () {
             ERR_ENTER_NAME:      "Enter a preset name.",
             ERR_RESERVED_NAME:   "Names in square brackets are reserved. Choose another name.",
             ERR_WRITE_SETTINGS:  "The settings could not be saved — next time the dialog opens without them.",
-            ERR_WRITE_SETTINGS_RUN: "The settings could not be saved — next time the dialog opens without them. The run continues.",
+            ERR_WRITE_SETTINGS_RUN: "The settings could not be saved — next time the dialog opens with the previous run, and Continue may offer that run's number. The run continues.",
             // Dialog: range and order
             PANEL_SCOPE:         "Range",
             SCOPE_SELECTION:     "Selection",
@@ -356,7 +356,7 @@ BTE.L = (function () {
             ERR_ENTER_NAME:      "Zadejte název předvolby.",
             ERR_RESERVED_NAME:   "Názvy v hranatých závorkách jsou vyhrazené. Zvolte jiný název.",
             ERR_WRITE_SETTINGS:  "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj.",
-            ERR_WRITE_SETTINGS_RUN: "Nastavení se nepodařilo uložit — příště se dialog otevře bez něj. Běh pokračuje.",
+            ERR_WRITE_SETTINGS_RUN: "Nastavení se nepodařilo uložit — příště se dialog otevře s předchozím během a Navázat může nabídnout jeho číslo. Běh pokračuje.",
             // Dialog: rozsah a pořadí
             PANEL_SCOPE:         "Rozsah",
             SCOPE_SELECTION:     "Výběr",
