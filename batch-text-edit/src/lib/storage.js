@@ -4,13 +4,17 @@
 // Part of: Illustrator Batch Text Edit
 // Depends on: BTE.L, BTE.Config, BTE.Utils, JSON; File and Folder in load/save
 //
-// A preset is {order: "rows"|"cols", steps: [Step]}. The Rozsah (selection,
-// artboard, document) is not part of it: it belongs to a run, not to a recipe
-// (spec 6.4). The file at Folder.userData/batch-text-edit/settings.json holds
+// A preset is {order: "rows"|"cols", bySheet, steps: [Step]}. Number steps
+// have perSheet. A 1.0.0 preset lacks bySheet and perSheet and gets their
+// defaults: the one older format, handled without a migration. The Rozsah
+// (selection, artboard, document) is not part of a preset: it belongs to a
+// run, not to a recipe (spec 6.4). The file at
+// Folder.userData/batch-text-edit/settings.json holds
 // {activePreset, presets: {name: preset}}; the default preset is built from
 // the code on every open and never written (extendscript-ui-standards 12.4).
-// No migrations: this tool has no older format. normalize() is the whole
-// defence against a file from another job, a hand edit or a future version.
+// A number step may carry `last`, the continuation record (spec 3.4), only
+// in the last-run entry. normalize() is the whole defence against a file
+// from another job, a hand edit or a future version.
 // The design rationale for the file layout lives in docs/persistence.md.
 // ------------------------------------------------------------------------
 var BTE = BTE || {};
@@ -21,6 +25,9 @@ BTE.Storage = {
 
     /** @type {string} File in that folder. */
     FILE: "settings.json",
+
+    /** @type {number} Largest whole number kept exactly (equals BTE.Steps.MAX_SAFE). */
+    MAX_SAFE: 9007199254740991,
 
     /**
      * The "Kde" kinds each step type has (spec 5.2). "auto" is not one of
@@ -108,11 +115,13 @@ BTE.Storage = {
      * note. "auto" passes through, so the default preset is a fixed
      * point. A second pass changes nothing and has no notes.
      * @param {*} values - A stored preset, or anything.
+     * @param {boolean} [keepLast] - True only for the last-run entry: number
+     *     steps then keep a valid `last`; otherwise `last` is never present.
      * @returns {{values: {order: string, bySheet: boolean, steps: Array}, notes: Array.<string>}}
      *     The preset, and what was repaired, in the user's language and
      *     without the preset's name (load() adds it).
      */
-    normalize: function (values) {
+    normalize: function (values, keepLast) {
         var L = BTE.L;
         var v = (values !== null && typeof values === "object") ? values : {};
         var notes = [];
@@ -129,7 +138,7 @@ BTE.Storage = {
 
         raw = BTE.Utils.isArray(v.steps) ? v.steps : [];
         for (i = 0; i < raw.length; i++) {
-            step = BTE.Storage.normalizeStep(raw[i], i + 1, notes);
+            step = BTE.Storage.normalizeStep(raw[i], i + 1, notes, keepLast);
             if (step !== null) { out.steps.push(step); }
         }
 
@@ -147,13 +156,14 @@ BTE.Storage = {
      * @param {*} raw - The stored step.
      * @param {number} no - Its position, from 1, for the notes.
      * @param {Array.<string>} notes - Collects what was repaired.
+     * @param {boolean} [keepLast] - Keep a valid `last` on a number step.
      * @returns {Object|null} The step, or null when its type is unknown.
      */
-    normalizeStep: function (raw, no, notes) {
+    normalizeStep: function (raw, no, notes, keepLast) {
         var L = BTE.L;
         var S = BTE.Storage;
         var type = (raw !== null && typeof raw === "object") ? raw.type : undefined;
-        var shown, s, i, fields;
+        var shown, s, i, fields, last;
 
         function str(value, def) {
             if (typeof value === "string") { return value; }
@@ -188,10 +198,82 @@ BTE.Storage = {
             }
             s.format = oneOf(raw.format, ["1", "A", "a"], s.format);
             s.perSheet = bool(raw.perSheet, false);
+            if (keepLast === true) {
+                last = S.normalizeLast(raw.last);
+                if (last !== null) { s.last = last; }
+            }
         } else {
             s.mode = oneOf(raw.mode, ["upper", "lower", "title", "sentence"], s.mode);
         }
         return s;
+    },
+
+    /**
+     * A stored continuation record made valid (spec 3.4). Never throws.
+     * @param {*} raw - The stored {from, to, next, doc, at}.
+     * @returns {?{from: number, to: ?number, next: ?number, doc: string, at: number}}
+     *     The record, or null when `from` is not a whole number in range.
+     */
+    normalizeLast: function (raw) {
+        var S = BTE.Storage;
+        var out;
+
+        function whole(n) {
+            return typeof n === "number" && isFinite(n) && Math.floor(n) === n && Math.abs(n) <= S.MAX_SAFE;
+        }
+
+        if (raw === null || typeof raw !== "object" || BTE.Utils.isArray(raw)) { return null; }
+        if (!whole(raw.from)) { return null; }
+        out = {
+            from: raw.from,
+            to: whole(raw.to) ? raw.to : null,
+            next: whole(raw.next) ? raw.next : null,
+            doc: typeof raw.doc === "string" ? raw.doc : "",
+            at: (typeof raw.at === "number" && isFinite(raw.at)) ? raw.at : 0
+        };
+        return out;
+    },
+
+    /**
+     * A deep copy of a preset whose steps carry no `last`.
+     * @param {Object} preset - A preset.
+     * @returns {Object} The copy; the input is unchanged.
+     */
+    withoutLast: function (preset) {
+        var copy = JSON.parse(JSON.stringify(preset));
+        var i;
+        if (copy && BTE.Utils.isArray(copy.steps)) {
+            for (i = 0; i < copy.steps.length; i++) {
+                if (copy.steps[i] && copy.steps[i].hasOwnProperty("last")) { delete copy.steps[i].last; }
+            }
+        }
+        return copy;
+    },
+
+    /**
+     * Stores the last-run preset with the continuation records and saves the
+     * file. Other presets and activePreset stay as loaded. When the file
+     * exists but could not be read (load() sets `unreadable`), nothing is
+     * written, so a transient failure cannot wipe the named presets.
+     * @param {Object} preset - The exact last-run preset the dialog saved.
+     * @param {Array.<?Object>} lasts - A record (or null) per step.
+     * @returns {boolean} True when the file was written completely.
+     */
+    saveLast: function (preset, lasts) {
+        var S = BTE.Storage;
+        var pData = S.load();
+        var p = S.withoutLast(preset);
+        var k;
+
+        if (pData.unreadable === true) {
+            S.log("saveLast: settings file unreadable, not overwriting it");
+            return false;
+        }
+        for (k = 0; k < p.steps.length; k++) {
+            if (lasts && lasts[k] && p.steps[k].type === "number") { p.steps[k].last = lasts[k]; }
+        }
+        pData.presets[BTE.Config.PRESET_KEY_LAST] = p;
+        return S.save(pData);
     },
 
     /**
@@ -281,6 +363,7 @@ BTE.Storage = {
             if (!f.open("r")) {
                 S.log("load: open(r) failed for " + f.fsName);
                 pData.notes.push(L.NOTE_UNREADABLE);
+                pData.unreadable = true;
                 return pData;
             }
             content = f.read();
@@ -290,22 +373,25 @@ BTE.Storage = {
         } catch (e) {
             S.log("load failed: " + e.message);
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
 
         if (data === null || typeof data !== "object" || BTE.Utils.isArray(data)) {
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
         if (data.presets === undefined) { return pData; }
         if (data.presets === null || typeof data.presets !== "object" || BTE.Utils.isArray(data.presets)) {
             pData.notes.push(L.NOTE_UNREADABLE);
+            pData.unreadable = true;
             return pData;
         }
 
         for (key in data.presets) {
             if (Object.prototype.hasOwnProperty.call(data.presets, key) && key !== defKey) {
-                r = S.normalize(data.presets[key]);
+                r = S.normalize(data.presets[key], key === BTE.Config.PRESET_KEY_LAST);
                 pData.presets[key] = r.values;
                 for (i = 0; i < r.notes.length; i++) {
                     pData.notes.push(L.format(L.NOTE_PRESET, key, r.notes[i]));

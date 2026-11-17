@@ -1,17 +1,23 @@
 // ------------------------------------------------------------------------
 // Script:      probe_dialog.jsx
-// Version:     1.1.0
+// Version:     1.2.0
 // Author:      Ladislav Osvald
-// Updated:     2026-11-15
-// Description: Dialog probe for Batch Text Edit (Task 12, 1.1.0 Task 6).
-//              Builds its own document with 240 prefabs in 20 aršíky of
-//              3 x 4 (groups of "{kód}" over "{n}" inside sheet groups, the
-//              blocks of test_scope.js), then builds the real BTE.UI dialog
-//              WITHOUT showing it, in Czech and in English, and reports the
-//              1.1.0 checks (a)-(h) in `checks` (Po aršících in the Pořadí
-//              row, the # column "2 · 13" and "20 · 240", v každém aršíku,
-//              the Do cut per sheet, a thrown string in a handler, the hold
-//              hint only with Použít on, a preset opened with Po aršících)
+// Updated:     2026-11-16
+// Description: Dialog probe for Batch Text Edit (Task 12, 1.1.0 Task 6,
+//              1.2.0 Task 6). Builds its own document with 240 prefabs in
+//              20 aršíky of 3 x 4 (groups of "{kód}" over "{n}" inside sheet
+//              groups, the blocks of test_scope.js), then builds the real
+//              BTE.UI dialog WITHOUT showing it, in Czech and in English, and
+//              reports the 1.1.0 checks (a)-(h) in `checks` (Po aršících in
+//              the Pořadí row, the # column "2 · 13" and "20 · 240", v každém
+//              aršíku, the Do cut per sheet, a thrown string in a handler,
+//              the hold hint only with Použít on, a preset opened with Po
+//              aršících), the 1.2.0 checks (i)-(n) (the window with Navázat
+//              and Ukázat, their widths and the status line, Navázat filling
+//              Od and Do, the filter's counts, rows and switch times, the #
+//              cell "240 · 240" in a second document of 240 one-element
+//              sheets, a last run whose step carries `last` against a named
+//              preset without it: no "*", Uložit and Použít store no `last`)
 //              and: the window size, whether [Výchozí] shows "*" right
 //              after opening, the time of every kind of refresh with 240
 //              preview rows (a field committed with Enter, selecting a step,
@@ -25,8 +31,8 @@
 //              the session of 2026-10-30), every such maximum is raised to
 //              4000 px before the first layout (BTE.UI.firstLayout) and the
 //              result says "lifted": true. The preset file is never read or
-//              written: Storage.load and save are stubbed. Creates one
-//              document and closes only that one, unsaved.
+//              written: Storage.load and save are stubbed. Creates two
+//              documents and closes only those, unsaved.
 // Usage:       From the repo root, with 0 open documents (it refuses to run
 //              otherwise; check with tools/ai-eval.sh -e 'app.documents.length'
 //              first):
@@ -71,7 +77,10 @@
     if (typeof LOG_PATH === "string") { LOG_PATH = ""; }
     var PITCH = 312, CUT = 283, MASK = 290;
     var out = { app: app.version, locale: app.locale, notes: [], saveCalls: 0 };
-    var d = null;
+    var d = null, d2 = null;
+    // The window as measure() found it right after opening; the checks that
+    // only have to keep the window's size compare against it (1.2.0 (i)).
+    var openSize = null;
     var realLoad = null, realSave = null;
 
     function now() { return new Date().getTime(); }
@@ -137,6 +146,27 @@
                 point(parent, cx - 10, cy - 45, "{n}");
                 circle(L, cx, cy, CUT);
             }
+        }
+        app.redraw();
+    }
+    // (m) 240 prefabs, 12 across and 20 down, each in a group of its own
+    // on the layer: every element is its own aršík (SHEET_SINGLES).
+    var SINGLES_COLS = 12, SINGLES_ROWS = 20;
+    var SINGLES_W = SINGLES_COLS * PITCH, SINGLES_H = SINGLES_ROWS * PITCH;
+    function buildSingles(L, H) {
+        var k, cx, cy, sg, parent, clip;
+        for (k = 0; k < SINGLES_COLS * SINGLES_ROWS; k++) {
+            cx = (k % SINGLES_COLS) * PITCH + PITCH / 2;
+            cy = H - (Math.floor(k / SINGLES_COLS) * PITCH + PITCH / 2);
+            sg = L.groupItems.add();
+            parent = sg.groupItems.add();
+            clip = parent.groupItems.add();
+            clip.pathItems.rectangle(cy + PITCH / 2, cx - PITCH / 2, PITCH, PITCH);
+            circle(clip, cx, cy, MASK);
+            clip.clipped = true;
+            point(parent, cx - 30, cy + 35, "{k" + String.fromCharCode(243) + "d}");
+            point(parent, cx - 10, cy - 45, "{n}");
+            circle(L, cx, cy, CUT);
         }
         app.redraw();
     }
@@ -254,6 +284,8 @@
     }
     function passed(c) { return !!c && c.pass === true; }
     function lastChild(g) { return g.children[g.children.length - 1]; }
+    // The window kept the size it opened with (1.2.0: (i) checks that size).
+    function sameSize(s) { return !!s && !!openSize && s[0] === openSize[0] && s[1] === openSize[1]; }
 
     // (a)-(g) on the open dialog; the dialog is left as it came: Po aršících
     // and v každém aršíku off, Do as before, Pořadí Po řádcích, step 2 selected.
@@ -277,7 +309,7 @@
             w.layout.layout(true);
             a.window = size(w);
             a.pass = a.lastInOrderRow && a.tip && a.value === false && a.textW + 18 <= a.ctrlW &&
-                a.scopeSample.textW <= a.scopeSample.ctrlW && a.window[0] === 1008 && a.window[1] === 768;
+                a.scopeSample.textW <= a.scopeSample.ctrlW && sameSize(a.window);
             return a;
         });
         // (d), first half: v každém aršíku in the Znovu po row, grey while Po aršících is off
@@ -343,7 +375,7 @@
             w.layout.layout(true);
             e.window = size(w);
             e.pass = String(R.etMsgs.text).indexOf(line) !== -1 && R.btnOk.enabled === true &&
-                e.window[0] === 1008 && e.window[1] === 768;
+                sameSize(e.window);
             return e;
         });
         // back: Do as before, v každém aršíku off, Po aršících off (grey again)
@@ -467,6 +499,293 @@
         return h;
     }
 
+    // ---- 1.2.0 (Task 6): Navázat, Ukázat, the # column, `last` --------------
+    var LAST_RECORD = { from: 1, to: 240, next: 241, doc: "probe.ai", at: 0 };
+
+    // The width a control lays out at with nothing set but its text (or
+    // items): what the dialog's control must at least be.
+    function natural(type, content) {
+        var w = new Window("dialog", "natural");
+        var c = w.add(type, undefined, content);
+        var r;
+        if (out.lifted) { liftMax(w); }
+        w.layout.layout(true);
+        r = c.size.width;
+        w.close();
+        return r;
+    }
+    function itemTexts(dd) {
+        var a = [], m;
+        for (m = 0; m < dd.items.length; m++) { a.push(dd.items[m].text); }
+        return a;
+    }
+    function sameTexts(a, b) {
+        var m;
+        if (a.length !== b.length) { return false; }
+        for (m = 0; m < a.length; m++) { if (a[m] !== b[m]) { return false; } }
+        return true;
+    }
+    function hasLast(preset) {
+        var m;
+        for (m = 0; m < preset.steps.length; m++) {
+            if (preset.steps[m].hasOwnProperty("last")) { return true; }
+        }
+        return false;
+    }
+
+    // (i) and (j), right after opening: the window with both controls, where
+    // they sit, and nothing they hold is cut.
+    function layoutChecks(dlg) {
+        var w = dlg.win, R = dlg.refs, S = dlg.state, L = BTE.L, c = {};
+        attempt(c, "i", function () {
+            var btn = R.btnContinue, row = btn.parent, i;
+            i = { window: size(w), growth: w.size.height - 768, steps: size(R.pSteps), preview: size(R.pPrev),
+                editor: size(R.colEdit), stack: size(R.gStack), stepList: size(R.lbSteps),
+                numberGroup: size(R.ed.number.group), numberRow: rowLayout(row), numberRowH: row.size.height,
+                statusRow: rowLayout(R.gStatus), showGroup: rowLayout(R.ddShow.parent), statusRowH: R.gStatus.size.height,
+                messages: size(R.etMsgs), previewList: size(R.lbPrev),
+                lastInRow: lastChild(row) === btn, showLast: lastChild(R.gStatus) === R.ddShow.parent,
+                filter: S.showMode, showIndex: R.ddShow.selection ? R.ddShow.selection.index : null,
+                tips: btn.helpTip === L.TIP_CONTINUE_NONE && R.ddShow.helpTip === L.TIP_SHOW && R.stShow.helpTip === L.TIP_SHOW };
+            i.pass = i.window[0] === 1008 && i.window[1] <= 850 && i.lastInRow && i.showLast && i.filter === "all" &&
+                i.showIndex === 0 && i.tips;
+            return i;
+        });
+        attempt(c, "j", function () {
+            var btn = R.btnContinue, dd = R.ddShow, j2 = {}, wide, items, m, sym = BTE.UIModel.SYMBOL, lines, t;
+            wide = L.format(L.BTN_CONTINUE, "-1000000");
+            j2.button = { text: ascii(wide), textW: textW(btn, wide), ctrlW: btn.size.width, natural: natural("button", wide),
+                now: ascii(btn.text) };
+            items = [L.format(L.FILTER_ALL, "99999"), L.format(L.FILTER_CHANGED, "99999"), L.format(L.FILTER_REVIEW, "99999")];
+            j2.dropdown = { widest: 0, ctrlW: dd.size.width, natural: natural("dropdownlist", items), items: [] };
+            for (m = 0; m < items.length; m++) {
+                t = textW(dd, items[m]);
+                j2.dropdown.items.push(ascii(items[m]) + " " + t);
+                if (t > j2.dropdown.widest) { j2.dropdown.widest = t; }
+            }
+            j2.dropdown.arrow = j2.dropdown.natural - j2.dropdown.widest;
+            j2.label = { text: ascii(R.stShow.text), textW: textW(R.stShow, R.stShow.text), ctrlW: R.stShow.size.width };
+            // The longest status lines; measureString gives a bold font's
+            // text the regular width (engine-facts, listbox table).
+            lines = [sym.WARN + " " + L.format(L.countForm("STATUS_CHANGED", 99999), "99999", "99999"),
+                sym.ERR + " " + L.STATUS_ERR, sym.WARN + " " + L.STATUS_NOTHING];
+            j2.status = { ctrlW: R.stStatus.size.width, widest: 0, text: "" };
+            for (m = 0; m < lines.length; m++) {
+                t = textW(R.stStatus, lines[m]);
+                if (t > j2.status.widest) { j2.status.widest = t; j2.status.text = ascii(lines[m]); }
+            }
+            j2.pass = j2.button.ctrlW >= j2.button.natural && j2.button.textW <= j2.button.ctrlW &&
+                j2.dropdown.ctrlW >= j2.dropdown.natural && j2.label.textW <= j2.label.ctrlW &&
+                j2.status.widest <= j2.status.ctrlW;
+            return j2;
+        });
+        return c;
+    }
+
+    // (k) Navázat on step 2; the dialog is left as it came (no `last`, Od 1,
+    // Do as before, step 2 selected).
+    function continueChecks(dlg) {
+        var R = dlg.refs, S = dlg.state, L = BTE.L, num = R.ed.number, btn = R.btnContinue, k = {};
+        var from0 = num.fields.from.text, to0 = num.fields.to.text;
+        function state() { return { enabled: btn.enabled, text: ascii(btn.text), tip: ascii(btn.helpTip) }; }
+        attempt(k, "k", function () {
+            var r = {};
+            R.lbSteps.selection = 1;
+            r.before = state();
+            S.steps[1].last = BTE.UI.copy(LAST_RECORD);
+            dlg.refresh();
+            r.armed = state();
+            r.clickMs = timed(function () { btn.onClick(); });
+            r.from = num.fields.from.text;
+            r.to = num.fields.to.text;
+            r.step = [S.steps[1].from, S.steps[1].to];
+            r.row1After = ascii(R.lbPrev.items[0].subItems[1].text);
+            r.row1Final = ascii(R.lbPrev.items[0].subItems[2].text);
+            r.row240Final = ascii(R.lbPrev.items[239].subItems[2].text);
+            r.status = ascii(R.stStatus.text);
+            r.pass = r.before.enabled === false &&
+                r.before.text === ascii(L.BTN_CONTINUE_OFF) && r.before.tip === ascii(L.TIP_CONTINUE_NONE) &&
+                r.armed.enabled === true && r.armed.text === ascii(L.format(L.BTN_CONTINUE, "241")) &&
+                r.from === "241" && r.to === "480" && r.step[0] === "241" && r.step[1] === "480" &&
+                /241$/.test(R.lbPrev.items[0].subItems[1].text) && /241$/.test(R.lbPrev.items[0].subItems[2].text);
+            return r;
+        });
+        attempt(k, "restore", function () {
+            var r = {};
+            delete S.steps[1].last;
+            num.fields.from.text = from0;
+            commit(num.fields.from);
+            num.fields.to.text = to0;
+            commit(num.fields.to);
+            r.after = state();
+            r.from = num.fields.from.text;
+            r.to = num.fields.to.text;
+            r.pass = r.after.enabled === false && r.from === from0 && r.to === to0;
+            return r;
+        });
+        return k;
+    }
+
+    // (l) the Ukázat filter on the three-step chain; the dialog is left with
+    // Do as before and the filter on Všechny.
+    function filterChecks(dlg) {
+        var R = dlg.refs, S = dlg.state, L = BTE.L, num = R.ed.number, dd = R.ddShow, f = {};
+        var to0 = num.fields.to.text;
+        function rowNos() {
+            var a = [], m;
+            for (m = 0; m < R.lbPrev.items.length; m++) { a.push(R.lbPrev.items[m].text); }
+            return a;
+        }
+        attempt(f, "l", function () {
+            var l = {}, run, nos, expect;
+            R.lbSteps.selection = 1;
+            num.fields.to.text = "230";
+            commit(num.fields.to);
+            expect = [L.format(L.FILTER_ALL, "240"), L.format(L.FILTER_CHANGED, "240"), L.format(L.FILTER_REVIEW, "10")];
+            l.items = ascii(itemTexts(dd).join(" / "));
+            l.itemsOk = sameTexts(itemTexts(dd), expect);
+            l.allRows = R.lbPrev.items.length;
+            run = S.run;
+            l.toReviewMs = timed(function () { dd.selection = 2; });
+            nos = rowNos();
+            l.review = { filter: S.showMode, rows: nos.length, first: nos[0], last: nos[nos.length - 1],
+                shown: ascii(dd.selection ? dd.selection.text : ""), sameRun: S.run === run,
+                row1Final: R.lbPrev.items.length ? ascii(R.lbPrev.items[0].subItems[2].text) : null };
+            num.fields.to.text = "";
+            l.emptyMs = timed(function () { commit(num.fields.to); });
+            l.empty = { items: ascii(itemTexts(dd).join(" / ")), rows: R.lbPrev.items.length, filter: S.showMode,
+                index: dd.selection ? dd.selection.index : null, shown: ascii(dd.selection ? dd.selection.text : "") };
+            l.emptyItemOk = itemTexts(dd)[2] === L.format(L.FILTER_REVIEW, "0");
+            run = S.run;
+            l.toAllMs = timed(function () { dd.selection = 0; });
+            l.all = { rows: R.lbPrev.items.length, filter: S.showMode, sameRun: S.run === run };
+            l.toChangedMs = timed(function () { dd.selection = 1; });
+            l.changed = { rows: R.lbPrev.items.length, filter: S.showMode, sameRun: S.run === run };
+            l.backAllMs = timed(function () { dd.selection = 0; });
+            l.back = { rows: R.lbPrev.items.length, filter: S.showMode };
+            l.pass = l.itemsOk && l.allRows === 240 && l.review.filter === "review" && l.review.rows === 10 &&
+                l.review.first === "231" && l.review.last === "240" && l.review.sameRun &&
+                l.emptyItemOk && l.empty.rows === 0 && l.empty.filter === "review" && l.empty.index === 2 &&
+                l.all.rows === 240 && l.all.sameRun && l.changed.rows === 240 && l.changed.sameRun &&
+                l.back.rows === 240 && l.back.filter === "all";
+            return l;
+        });
+        attempt(f, "restore", function () {
+            if (dd.selection === null || dd.selection.index !== 0) { dd.selection = 0; }
+            if (num.fields.to.text !== to0) {
+                num.fields.to.text = to0;
+                commit(num.fields.to);
+            }
+            return { pass: S.showMode === "all" && R.lbPrev.items.length === 240 && num.fields.to.text === to0 };
+        });
+        return f;
+    }
+
+    // (m) the second document, every element its own aršík, Po aršících on:
+    // the # cell "240 · 240" whole.
+    function singlesCheck(lang, table) {
+        var m = { lang: lang }, dlg = null, R, S, lb, n, last, pw, cols = [], i;
+        BTE.L = table;
+        try {
+            dlg = BTE.UI.build(d2);
+            R = dlg.refs;
+            S = dlg.state;
+            R.cbBySheet.value = true;
+            m.bySheetMs = timed(function () { R.cbBySheet.onClick(); });
+            lb = R.lbPrev;
+            n = lb.items.length;
+            last = n > 0 ? lb.items[n - 1].text : "";
+            pw = lb.columns.preferredWidths;
+            for (i = 0; i < pw.length; i++) { cols.push(pw[i]); }
+            m.rows = n;
+            m.sheetCount = S.prepared.sheetCount;
+            m.text = ascii(last);
+            m.textW = textW(lb, last);
+            m.colW = cols[0];
+            m.cols = cols;
+            m.pad = CELL_PAD;
+            m.singles = String(R.etMsgs.text).indexOf(BTE.L.SHEET_SINGLES) !== -1;
+            m.scopeLine = ascii(R.stScope.text);
+            dlg.win.layout.layout(true);
+            m.window = size(dlg.win);
+            m.pass = n === 240 && last === "240" + DOT + "240" && m.textW + CELL_PAD <= m.colW && m.singles;
+        } catch (e) {
+            m.pass = false;
+            m.error = ascii(e.message + " (line " + e.line + ")");
+        } finally {
+            if (dlg) { dlg.win.close(); }
+        }
+        return m;
+    }
+
+    // (n) the dialog opened on a last run whose number step carries `last`,
+    // with a named preset of the same steps without it active.
+    function lastRunCheck() {
+        var stubLoad = BTE.Storage.load, stubSave = BTE.Storage.save, LAST = BTE.Config.PRESET_KEY_LAST;
+        var n = {}, dlg = null, saved = null, R, S, m, res, stored;
+        BTE.Storage.load = function () {
+            var p = BTE.Storage.fresh(), step = BTE.Storage.newStep("number"), withLast;
+            step.where = { kind: "var", text: "{n}" };
+            step.to = "240";
+            p.presets.Probe = { order: "rows", bySheet: false, steps: [step] };
+            withLast = BTE.UI.copy(step);
+            withLast.last = BTE.UI.copy(LAST_RECORD);
+            p.presets[LAST] = { order: "rows", bySheet: false, steps: [withLast] };
+            p.activePreset = "Probe";
+            return p;
+        };
+        BTE.Storage.save = function (p) { out.saveCalls++; saved = p; return true; };
+        try {
+            try {
+                dlg = BTE.UI.build(d);
+            } finally {
+                BTE.Storage.load = stubLoad;
+            }
+            R = dlg.refs;
+            S = dlg.state;
+            // (n1) no "*" right after opening
+            n.open = { preset: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null,
+                items: ascii(itemTexts(R.ddPreset).join(" / ")), revert: R.btnRevert.enabled, save: R.btnSave.enabled,
+                stepHasLast: S.steps[0].hasOwnProperty("last") };
+            n.n1 = n.open.preset === "Probe" && n.open.items.indexOf("*") === -1 && n.open.revert === false && n.open.stepHasLast;
+            // (n2) Navázat is live: "Navázat (241)"
+            n.button = { enabled: R.btnContinue.enabled, text: ascii(R.btnContinue.text), tip: ascii(R.btnContinue.helpTip) };
+            n.n2 = n.button.enabled === true && R.btnContinue.text === BTE.L.format(BTE.L.BTN_CONTINUE, "241");
+            // (n3) Navázat is an edit ("*"), and Uložit stores no `last`
+            R.btnContinue.onClick();
+            n.afterClick = { from: R.ed.number.fields.from.text, to: R.ed.number.fields.to.text,
+                preset: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null, save: R.btnSave.enabled };
+            R.btnSave.onClick();
+            stored = saved ? saved.presets.Probe : null;
+            n.saved = stored === null ? null : { from: stored.steps[0].from, to: stored.steps[0].to, hasLast: hasLast(stored),
+                lastKept: saved.presets[LAST] ? hasLast(saved.presets[LAST]) : null,
+                preset: R.ddPreset.selection ? ascii(R.ddPreset.selection.text) : null };
+            n.n3 = n.afterClick.preset !== null && n.afterClick.preset.indexOf("*") !== -1 && stored !== null &&
+                n.saved.hasLast === false && n.saved.from === "241" && n.saved.to === "480";
+            // (n4) Použít: the outcome's preset is the stored [Last Settings], without `last`
+            saved = null;
+            R.btnOk.onClick();
+            res = dlg.result();
+            n.ok = res === null ? { closed: false, holdHint: S.holdHint, status: ascii(R.stStatus.text) } : {
+                closed: true, saved: saved !== null, same: saved !== null && res.preset === saved.presets[LAST],
+                hasLast: hasLast(res.preset), stepsHaveLast: false, from: res.preset.steps[0].from };
+            if (res !== null) {
+                for (m = 0; m < res.steps.length; m++) {
+                    if (res.steps[m].hasOwnProperty("last")) { n.ok.stepsHaveLast = true; }
+                }
+            }
+            n.n4 = res !== null && n.ok.saved && n.ok.same && n.ok.hasLast === false;
+            n.pass = n.n1 && n.n2 && n.n3 && n.n4;
+        } catch (e) {
+            n.pass = false;
+            n.error = ascii(e.message + " (line " + e.line + ")");
+        } finally {
+            BTE.Storage.save = stubSave;
+            if (dlg && dlg.result() === null) { dlg.win.close(); }
+        }
+        return n;
+    }
+
     function measure(lang, table) {
         var r = { lang: lang };
         var dlg, w, R, S, t, i, k, times, presetItems, sepTypes, dd, labelW, lbW, res;
@@ -480,6 +799,9 @@
         S = dlg.state;
         w.layout.layout(true);
         r.window = size(w);
+        openSize = r.window;
+        // --- 1.2.0: (i), (j) right after opening ------------------------------
+        r.layout = layoutChecks(dlg);
         r.parts = {
             steps: size(R.pSteps), preview: size(R.pPrev), stepList: size(R.lbSteps), editor: size(R.colEdit),
             stack: size(R.gStack), previewList: size(R.lbPrev), messages: size(R.etMsgs),
@@ -552,7 +874,11 @@
             subItemSet240: timed(function () { var q, items = R.lbPrev.items; for (q = 0; q < 240; q++) { items[q].subItems[2].text = "x" + q; } }),
             copySteps: timed(function () { BTE.UI.copy(S.steps); }),
             presetEquals: timed(function () { BTE.Utils.presetEquals({ order: "rows", steps: BTE.UI.copy(S.steps) }, { order: "rows", steps: S.steps }); }),
-            stepLabels: timed(function () { var q; for (q = 0; q < S.steps.length; q++) { BTE.UIModel.stepLabel(S.steps[q], S.run.info[q], q); } })
+            stepLabels: timed(function () { var q; for (q = 0; q < S.steps.length; q++) { BTE.UIModel.stepLabel(S.steps[q], S.run.info[q], q); } }),
+            // 1.2.0: what the Ukázat counts add to every refresh
+            flags: stats([timed(function () { BTE.UIModel.changedFlags(S.run.states); BTE.UIModel.reviewFlags(S.run, S.steps); }),
+                timed(function () { BTE.UIModel.changedFlags(S.run.states); BTE.UIModel.reviewFlags(S.run, S.steps); }),
+                timed(function () { BTE.UIModel.changedFlags(S.run.states); BTE.UIModel.reviewFlags(S.run, S.steps); })])
         };
         // the control setters a refresh makes, five times each
         function five(fn) { return timed(function () { var q; for (q = 0; q < 5; q++) { fn(q); } }); }
@@ -604,6 +930,10 @@
 
         // --- 1.1.0: (a)-(g), the dialog left as it came ----------------------
         r.sheet = sheetChecks(dlg);
+
+        // --- 1.2.0: (k) Navázat, (l) Ukázat; the dialog left as it came -------
+        r.cont = continueChecks(dlg);
+        r.filter = filterChecks(dlg);
 
         // --- step list labels against the list -------------------------------
         labelW = 0;
@@ -703,12 +1033,16 @@
 
         // --- 1.1.0: (h), a second dialog --------------------------------------
         r.reopen = openWithSheets();
+        // --- 1.2.0: (n), a dialog on a last run with `last` -------------------
+        r.lastRun = lastRunCheck();
         r.checks = {
             a: passed(r.sheet.a), b: passed(r.sheet.b), c: passed(r.sheet.c), d: passed(r.sheet.d) && passed(r.sheet.off),
             e: passed(r.sheet.e), f: passed(r.sheet.f), g: passed(r.sheet.g), h: passed(r.reopen),
             noStar: r.open.noStar, noClipped: r.clipped.length === 0,
-            size: r.window[0] === 1008 && r.window[1] === 768 && r.windowAfter[0] === 1008 && r.windowAfter[1] === 768,
-            holds: r.hold.typedThenOk.closed === false && r.hold.enterThenOk.closed === false && r.hold.laterOk !== null
+            size: sameSize(r.windowAfter) && r.window[0] === 1008 && r.window[1] <= 850,
+            holds: r.hold.typedThenOk.closed === false && r.hold.enterThenOk.closed === false && r.hold.laterOk !== null,
+            i: passed(r.layout.i), j: passed(r.layout.j), k: passed(r.cont.k) && passed(r.cont.restore),
+            l: passed(r.filter.l) && passed(r.filter.restore), n: passed(r.lastRun)
         };
         return r;
     }
@@ -744,6 +1078,16 @@
         log("cs " + j(out.cs));
         out.en = measure("en", BTE_L_en);
         log("en " + j(out.en));
+
+        // 1.2.0 (m): a second document, every element its own aršík
+        d2 = app.documents.add(DocumentColorSpace.RGB, SINGLES_W, SINGLES_H);
+        out.buildSinglesMs = timed(function () { buildSingles(d2.layers[0], SINGLES_H); });
+        d2.selection = null;
+        out.cs.singles = singlesCheck("cs", BTE_L_cs);
+        out.cs.checks.m = passed(out.cs.singles);
+        out.en.singles = singlesCheck("en", BTE_L_en);
+        out.en.checks.m = passed(out.en.singles);
+        log("singles " + j(out.cs.singles) + " " + j(out.en.singles));
     } catch (e) {
         out.FAILED = e.message + " (line " + e.line + ")";
         log("FAILED " + out.FAILED);
@@ -751,6 +1095,9 @@
         BTE.UI.firstLayout = realFirst;
         if (realLoad) { BTE.Storage.load = realLoad; }
         if (realSave) { BTE.Storage.save = realSave; }
+        if (d2) {
+            try { d2.close(SaveOptions.DONOTSAVECHANGES); } catch (e3) { out.notes.push("close failed: " + e3.message); }
+        }
         if (d) {
             try { d.close(SaveOptions.DONOTSAVECHANGES); } catch (e2) { out.notes.push("close failed: " + e2.message); }
         }

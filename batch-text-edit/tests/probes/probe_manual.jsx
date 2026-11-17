@@ -1,8 +1,8 @@
 // ------------------------------------------------------------------------
 // Script:      probe_manual.jsx
-// Version:     1.0.0
+// Version:     1.2.0
 // Author:      Ladislav Osvald
-// Updated:     2026-11-15
+// Updated:     2026-11-16
 // Description: The manual test (docs/manual-test.md) driven by a probe, for
 //              every step that needs no human eye. Opens a COPY of one of
 //              the user's three test files, builds the real dialog
@@ -23,13 +23,17 @@
 //              (BTE.Utils.LOG_FOLDER), and alert/confirm/prompt are locals of
 //              the wrapper (the globals cannot be reassigned, measured
 //              2026-11-10), so no window ever opens. One document per part,
-//              closed unsaved (part run1 saves its written copy to WORK_DIR
-//              for part run2). At most one write per part.
+//              closed unsaved (parts run1 and cont1 save their written copy
+//              to WORK_DIR for parts run2 and dup, and cont2). At most one
+//              write per part.
 //              Parts: dialog (1.0-1.5, 9.1), run1 (2.1-2.5), run2 (3.1-3.3),
 //              presets (8.1-8.4), controls (6.2, 6.6-6.8), tick (6.5 logic, Aktivní),
 //              locked (7.2), arch51 (5.2, 5.1), nogroups (5.3, 5.4),
 //              artboard (5.5), a101, a102, a103 (10.1-10.3), a104 (10.4,
-//              10.6), a105 (10.5).
+//              10.6), a105 (10.5); 1.2.0: cont1, cont2 (11.1, 11.2: two
+//              blocks, the second through Navázat in the saved copy), dup
+//              (11.3, after run1), filter (11.4), nocont (11.6 and a
+//              stubbed mismatch).
 // Usage:       From the repo root, with 0 open documents, one part per run;
 //              the wrapper makes alert/confirm/prompt local stubs:
 //                  P=batch-text-edit; R="$PWD"
@@ -448,9 +452,9 @@ function probeManual(STUB) {
             clipped(w, acc, drops);
             r = { title: ascii(w.text), kind: dlg.state.kind, kindRb: R.rbKind[2].value, scope: ascii(R.stScope.text), bySheet: R.cbBySheet.value,
                 footer: ascii(foot), window: [w.size.width, w.size.height], screens: screens(), clipped: acc, drops: drops };
-            r.pass = w.text === "Batch Text Edit v1.1.0" && dlg.state.kind === "document" && R.rbKind[2].value === true &&
+            r.pass = w.text === "Batch Text Edit v1.2.0" && dlg.state.kind === "document" && R.rbKind[2].value === true &&
                 String(R.stScope.text) === "240 prvků, 480 textů" && R.cbBySheet.value === false &&
-                foot === String.fromCharCode(169) + " 2025–2026 Ladislav Osvald · v1.1.0" && acc.length === 0;
+                foot === String.fromCharCode(169) + " 2025–2026 Ladislav Osvald · v1.2.0" && acc.length === 0;
             return r;
         });
         check("1.2", function () {
@@ -1083,6 +1087,347 @@ function probeManual(STUB) {
         dlg.win.close();
     }
 
+    // ---- 1.2.0 ------------------------------------------------------------------------
+    // fmt3 of a to b, in order.
+    function seq(a, b) { var r = [], i; for (i = a; i <= b; i++) { r.push(fmt3(i)); } return r; }
+    function ddIndex(dd) { return dd.selection ? dd.selection.index : -1; }
+    // The `last` of step k of the last run in the settings file, or null.
+    function lastOf(s, k) {
+        var p = s && s.presets ? s.presets[C.PRESET_KEY_LAST] : null;
+        return (p && p.steps && p.steps[k] && p.steps[k].hasOwnProperty("last")) ? p.steps[k].last : null;
+    }
+    // Whether any step of a stored preset carries `last`.
+    function anyLast(p) {
+        var k;
+        for (k = 0; p && p.steps && k < p.steps.length; k++) { if (p.steps[k] && p.steps[k].hasOwnProperty("last")) { return true; } }
+        return false;
+    }
+    function contState(R) { return [R.btnContinue.enabled, ascii(R.btnContinue.text), ascii(R.btnContinue.helpTip)]; }
+    function seriesLine(from, to, n, next) { return "Krok 2: čísla " + from + "–" + to + ", " + n + " prvků; další číslo " + next + "."; }
+    // The summary of a clean run: the numbers, no mismatch, details = all
+    // went fine + the series line.
+    function cleanSummary(sm, elements, texts, line) {
+        return !!sm && sm.pairs[L.SUM_CHANGED_ELEMENTS] === String(elements) && sm.pairs[L.SUM_CHANGED_TEXTS] === String(texts) &&
+            sm.pairs[L.SUM_MISMATCH] === "0" && sm.details.length === 2 && sm.details[0] === L.SUM_ALL_OK && sm.details[1] === line;
+    }
+
+    // 11.1 block A on …geoup.ai: the first 120 elements in reading order
+    // selected, Do 120, written; the settings file then holds `last`; the
+    // written copy is saved for cont2.
+    function partCont1() {
+        var r, order, sel = [], i, t0;
+        useSettings(settingsPath);
+        writeSettings("Samolepky", samolepky11());
+        openCopy(GEO);
+        snap = snapshot();
+        order = reading(snap.nIdx, snap.pos, "rows", 40);
+        for (i = 0; i < 120; i++) { sel.push(snap.sticker[order[i]]); }
+        doc.selection = sel;
+        t0 = now();
+        r = runMain(function (dlg) {
+            var R = dlg.refs;
+            check("11.1 block A", function () {
+                var x = {}, rs;
+                selectStep(dlg, 1);
+                x.kind = dlg.state.kind;
+                x.scope = ascii(R.stScope.text);
+                x.contBefore = contState(R);
+                commit(R.ed.number.fields.to, "120");
+                rs = rows(dlg);
+                x.n = rs.length;
+                x.first = ascii(rs[0][3]);
+                x.last = ascii(rs[rs.length - 1][3]);
+                x.status = ascii(status(dlg));
+                x.msgs = ascii(msgs(dlg));
+                x.pass = dlg.state.kind === "selection" && String(R.stScope.text) === "120 prvků, 240 textů" &&
+                    x.contBefore[0] === false && x.contBefore[1] === ascii(L.BTN_CONTINUE_OFF) && x.contBefore[2] === ascii(L.TIP_CONTINUE_NONE) &&
+                    rs.length === 120 && rs[0][3] === "SNB CZ | 001" && rs[119][3] === "SNB CZ | 120" && status(dlg) === sym("OK") + "Změní se 120 z 120 prvků.";
+                return x;
+            });
+            apply(dlg);
+        });
+        out.timings.mainMs = r.ms;
+        out.timings.writeMs = r.writeMs;
+        check("11.1 block A write", function () {
+            var sm = summaryOf(r), want = seq(1, 120), cmp, codes = contentsIn(snap.cIdx), snb = 0, kept = 0, n;
+            for (n = 121; n <= 240; n++) { want.push("{n}"); }
+            cmp = compare(contentsIn(order), want);
+            for (n = 0; n < codes.length; n++) {
+                if (codes[n] === "SNB CZ") { snb++; } else if (codes[n] === "{NORDIC CZ}") { kept++; }
+            }
+            return { alerts: r.alerts, summary: sm ? { pairs: sm.pairs, details: ascii(j(sm.details)) } : null, numbers: cmp, codes: [snb, kept],
+                pass: cleanSummary(sm, 120, 240, seriesLine("001", "120", 120, 121)) && cmp.wrong === 0 && snb === 120 && kept === 120 && r.alerts.length === 0 };
+        });
+        check("11.1 block A last", function () {
+            var s = settings(), last = lastOf(s, 1), x;
+            x = { last: last ? ascii(j(last)) : null, step1: lastOf(s, 0), preset: s && s.presets.Samolepky ? anyLast(s.presets.Samolepky) : null,
+                active: s ? ascii(s.activePreset) : null, docName: ascii(doc.name) };
+            x.pass = !!last && last.from === 1 && last.to === 120 && last.next === 121 && last.doc === "Zund_Summa_Test_geoup.ai" &&
+                last.at >= t0 && last.at <= now() && x.step1 === null && x.preset === false && s.activePreset === "Samolepky";
+            return x;
+        });
+        check("11.1 saved for cont2", function () {
+            var f = new File(WORK_DIR + "/cont1.ai"), level = app.userInteractionLevel;
+            app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+            try {
+                doc.saveAs(f, new IllustratorSaveOptions());
+            } finally {
+                app.userInteractionLevel = level;
+            }
+            return { pass: f.exists };
+        });
+    }
+
+    // 11.1 block B and 11.2 on the copy cont1 wrote (another document than
+    // the one `last` names): the other 120 selected, Navázat, written; read
+    // back 001-240 by position.
+    function partCont2() {
+        var r, sel = [], i, k, t;
+        useSettings(settingsPath);
+        openDoc(WORK_DIR + "/cont1.ai");
+        snap = snapshot();
+        for (i = 0; i < snap.nIdx.length; i++) {
+            k = snap.nIdx[i];
+            if (String(snap.frames[k].contents) === "{n}") { sel.push(snap.sticker[k]); }
+        }
+        doc.selection = sel;
+        r = runMain(function (dlg) {
+            var R = dlg.refs;
+            check("11.2 offer", function () {
+                var x = {}, tip = "Od 121 a Do 240 podle běhu v Zund_Summa_Test_geoup.ai, ";
+                selectStep(dlg, 1);
+                x.selected = sel.length;
+                x.doc = ascii(doc.name);
+                x.scope = ascii(R.stScope.text);
+                x.preset = ascii(presetText(dlg));
+                x.fields = [String(R.ed.number.fields.from.text), String(R.ed.number.fields.to.text)];
+                x.cont = contState(R);
+                x.pass = sel.length === 120 && String(doc.name) === "cont1.ai" && String(R.stScope.text) === "120 prvků, 240 textů" &&
+                    x.fields.join() === "1,120" && R.btnContinue.enabled === true && String(R.btnContinue.text) === "Navázat (121)" &&
+                    String(R.btnContinue.helpTip).indexOf(tip) === 0;
+                return x;
+            });
+            check("11.1 Navázat", function () {
+                var x = {}, rs;
+                t = now();
+                R.btnContinue.onClick();
+                x.clickMs = now() - t;
+                out.timings.continueClickMs = x.clickMs;
+                rs = rows(dlg);
+                x.fields = [String(R.ed.number.fields.from.text), String(R.ed.number.fields.to.text)];
+                x.step = [dlg.state.steps[1].from, dlg.state.steps[1].to];
+                x.first = ascii(rs[0][3]);
+                x.last = ascii(rs[rs.length - 1][3]);
+                x.status = ascii(status(dlg));
+                x.preset = ascii(presetText(dlg));
+                x.msgs = ascii(msgs(dlg));
+                x.pass = x.fields.join() === "121,240" && x.step.join() === "121,240" && rs.length === 120 && rs[0][3] === "SNB CZ | 121" &&
+                    rs[119][3] === "SNB CZ | 240" && status(dlg) === sym("OK") + "Změní se 120 z 120 prvků." && presetText(dlg) === "Samolepky *";
+                return x;
+            });
+            apply(dlg);
+        });
+        out.timings.mainMs = r.ms;
+        out.timings.writeMs = r.writeMs;
+        check("11.1 block B write", function () {
+            var sm = summaryOf(r), cmp = compare(contentsIn(reading(snap.nIdx, snap.pos, "rows", 40)), seq(1, 240)), codes = contentsIn(snap.cIdx);
+            return { alerts: r.alerts, summary: sm ? { pairs: sm.pairs, details: ascii(j(sm.details)) } : null, numbers: cmp, codesSnb: allEqual(codes, "SNB CZ"),
+                pass: cleanSummary(sm, 120, 240, seriesLine("121", "240", 120, 241)) && cmp.wrong === 0 && allEqual(codes, "SNB CZ") && r.alerts.length === 0 };
+        });
+        check("11.1 block B last", function () {
+            var s = settings(), last = lastOf(s, 1);
+            return { last: last ? ascii(j(last)) : null,
+                pass: !!last && last.from === 121 && last.to === 240 && last.next === 241 && last.doc === "cont1.ai" };
+        });
+        check("11.1 block B format", function () { return unchanged(snap); });
+    }
+
+    // 11.3 on the copy run1 wrote (001-240): První číslo v prvku, Od 101,
+    // Do 240; the duplicate warning, K prověření; Storno.
+    function partDup() {
+        var r, t;
+        useSettings(settingsPath);
+        writeSettings("Samolepky", samolepky11());
+        openDoc(WORK_DIR + "/run1.ai");
+        snap = snapshot();
+        r = runMain(function (dlg) {
+            var R = dlg.refs;
+            check("11.3", function () {
+                var x = {}, rs, i, kept = true;
+                var dup = sym("WARN") + "Krok 2: 100 prvků za Do si nechá číslo, které krok dal jinému prvku (např. prvek 141 má 141 jako prvek 41).";
+                var cut = sym("WARN") + "Krok 2: 100 prvků zůstane beze změny, řada končí na Do 240.";
+                selectStep(dlg, 1);
+                pick(R.ed.number.dd, L.WHERE_FIRST);
+                commit(R.ed.number.fields.from, "101");
+                commit(R.ed.number.fields.to, "240");
+                rs = rows(dlg);
+                x.r1 = ascii(rs[0][3]);
+                x.r140 = ascii(rs[139][3]);
+                x.r141 = ascii(rs[140].join(" || "));
+                x.status = ascii(status(dlg));
+                x.msgs = ascii(msgs(dlg));
+                x.dupShown = has(msgs(dlg), dup);
+                x.cutShown = has(msgs(dlg), cut);
+                x.items = ascii(itemTexts(R.ddShow).join(" / "));
+                x.ok = R.btnOk.enabled;
+                t = now();
+                pick(R.ddShow, "K prověření");
+                x.reviewMs = now() - t;
+                rs = rows(dlg);
+                for (i = 0; i < rs.length; i++) { if (rs[i][1] !== rs[i][3]) { kept = false; } }
+                x.review = { n: rs.length, first: rs.length ? ascii(rs[0].join(" || ")) : null, last: rs.length ? ascii(rs[rs.length - 1][0]) : null, keptAll: kept };
+                x.okAfter = R.btnOk.enabled;
+                x.pass = x.dupShown && x.cutShown && x.ok && x.okAfter && rs.length === 100 && rs[0][0] === "141" && rs[99][0] === "240" &&
+                    rs[0][3] === "SNB CZ | 141" && kept && x.r1 === "SNB CZ | 101" && x.r140 === "SNB CZ | 240" &&
+                    itemTexts(R.ddShow).join("/") === "Všechny (240)/Změněné (140)/K prověření (100)";
+                return x;
+            });
+            R.btnCancel.onClick();
+        });
+        check("11.3 Storno", function () {
+            var cmp = compare(contentsIn(reading(snap.nIdx, snap.pos, "rows", 40)), seq(1, 240));
+            return { summaries: r.summaries.length, alerts: r.alerts, numbers: cmp, pass: r.summaries.length === 0 && r.alerts.length === 0 && cmp.wrong === 0 };
+        });
+    }
+
+    // 11.4 on …geoup.ai: Do 230, the Ukázat counts and rows, the filter
+    // kept while Do changes; Použít with K prověření on writes the whole
+    // preview; the filter is not stored.
+    function partFilter() {
+        var r, dlg, t;
+        useSettings(settingsPath);
+        writeSettings("Samolepky", samolepky11());
+        openCopy(GEO);
+        snap = snapshot();
+        r = runMain(function (d) {
+            var R = d.refs;
+            check("11.4", function () {
+                var x = {}, rs, runBefore;
+                x.open = [ddIndex(R.ddShow), d.state.showMode, ascii(itemTexts(R.ddShow).join(" / "))];
+                selectStep(d, 1);
+                commit(R.ed.number.fields.to, "230");
+                x.items230 = ascii(itemTexts(R.ddShow).join(" / "));
+                runBefore = d.state.run;
+                t = now();
+                pick(R.ddShow, "K prověření");
+                x.reviewMs = now() - t;
+                rs = rows(d);
+                x.review = [rs.length, rs.length ? rs[0][0] : null, rs.length > 9 ? rs[9][0] : null, allEqual(col(rs, 3, 1, 10), "SNB CZ | {n}")];
+                x.sameRun = d.state.run === runBefore;
+                t = now();
+                pick(R.ddShow, "Změněné");
+                x.changedMs = now() - t;
+                x.changedRows = rows(d).length;
+                t = now();
+                pick(R.ddShow, "Všechny");
+                x.allMs = now() - t;
+                x.allRows = rows(d).length;
+                pick(R.ddShow, "K prověření");
+                t = now();
+                commit(R.ed.number.fields.to, "");
+                x.emptiedMs = now() - t;
+                x.emptied = [ascii(itemTexts(R.ddShow)[2]), rows(d).length, ddIndex(R.ddShow), d.state.showMode];
+                commit(R.ed.number.fields.to, "230");
+                x.back = [ascii(itemTexts(R.ddShow)[2]), rows(d).length, ddIndex(R.ddShow)];
+                x.ok = R.btnOk.enabled;
+                out.timings.filterMs = { review: x.reviewMs, changed: x.changedMs, all: x.allMs, emptied: x.emptiedMs };
+                x.pass = x.open[0] === 0 && x.open[1] === "all" && itemTexts(R.ddShow).join("/") === "Všechny (240)/Změněné (240)/K prověření (10)" &&
+                    x.review[0] === 10 && x.review[1] === "231" && x.review[2] === "240" && x.review[3] === true && x.sameRun &&
+                    x.changedRows === 240 && x.allRows === 240 &&
+                    x.emptied[0] === ascii(L.format(L.FILTER_REVIEW, "0")) && x.emptied[1] === 0 && x.emptied[2] === 2 && x.emptied[3] === "review" &&
+                    x.back[1] === 10 && x.back[2] === 2 && x.ok;
+                return x;
+            });
+            apply(d);
+        });
+        out.timings.mainMs = r.ms;
+        check("11.4 write", function () {
+            var sm = summaryOf(r), want = seq(1, 230), i, cmp, codes = contentsIn(snap.cIdx), line = seriesLine("001", "230", 230, 231);
+            for (i = 231; i <= 240; i++) { want.push("{n}"); }
+            cmp = compare(contentsIn(reading(snap.nIdx, snap.pos, "rows", 40)), want);
+            return { numbers: cmp, codesSnb: allEqual(codes, "SNB CZ"), summary: sm ? { pairs: sm.pairs, details: ascii(j(sm.details)) } : null,
+                pass: cmp.wrong === 0 && allEqual(codes, "SNB CZ") && !!sm && sm.pairs[L.SUM_CHANGED_ELEMENTS] === "240" && sm.pairs[L.SUM_MISMATCH] === "0" &&
+                    BTE.Utils.indexOf(sm.details, line) !== -1 };
+        });
+        check("11.4 not stored", function () {
+            var s = readFile(settingsPath), x;
+            dlg = build();
+            x = { open: [ddIndex(dlg.refs.ddShow), dlg.state.showMode], fileHasMode: s !== null && (s.indexOf("showMode") !== -1 || s.indexOf("review") !== -1) };
+            x.pass = s !== null && !x.fileHasMode && x.open[0] === 0 && x.open[1] === "all";
+            dlg.win.close();
+            return x;
+        });
+    }
+
+    // 11.6 on …geoup.ai: a last run with `last` on step 2. Storno keeps the
+    // record; a new step and ↺ have Navázat grey. Then a write whose check
+    // (BTE.Write.verify, stubbed) reports a mismatch: the record is gone
+    // and the next open has Navázat grey.
+    function partNoCont() {
+        var r, dlg, R, before, p = samolepky11(), realVerify = BTE.Write.verify;
+        useSettings(settingsPath);
+        p.steps[1].last = { from: 1, to: null, next: 241, doc: "probe.ai", at: 0 };
+        writeSettings("Samolepky", p);
+        before = readFile(settingsPath);
+        openCopy(GEO);
+        snap = snapshot();
+        dlg = build();
+        R = dlg.refs;
+        check("11.6 Storno", function () {
+            var x = {};
+            selectStep(dlg, 1);
+            x.preset = ascii(presetText(dlg));
+            x.first = contState(R);
+            R.btnCancel.onClick();
+            x.closedNull = dlg.result() === null;
+            x.fileSame = readFile(settingsPath) === before;
+            dlg = build();
+            R = dlg.refs;
+            selectStep(dlg, 1);
+            x.again = contState(R);
+            x.pass = x.preset === "Samolepky" && presetText(dlg) === "Samolepky" && x.first[0] === true && x.first[1] === ascii(L.format(L.BTN_CONTINUE, "241")) &&
+                x.first[2] === ascii(L.format(L.TIP_CONTINUE_NO_TO, "241", "probe.ai", BTE.UIModel.when(0))) &&
+                x.closedNull && x.fileSame && x.again[0] === true && x.again[1] === x.first[1];
+            return x;
+        });
+        check("11.6 new step, revert", function () {
+            var x = {};
+            addStep(dlg, "number");
+            x.newStep = [dlg.state.sel].concat(contState(R));
+            revert(dlg);
+            selectStep(dlg, 1);
+            x.reverted = [dlg.state.steps.length, ascii(presetText(dlg))].concat(contState(R));
+            x.pass = x.newStep[0] === 2 && x.newStep[1] === false && x.newStep[2] === ascii(L.BTN_CONTINUE_OFF) && x.newStep[3] === ascii(L.TIP_CONTINUE_NONE) &&
+                x.reverted[0] === 2 && x.reverted[1] === "Samolepky" && x.reverted[2] === false && x.reverted[3] === ascii(L.BTN_CONTINUE_OFF);
+            return x;
+        });
+        dlg.win.close();
+        BTE.Write.verify = function () { return [{ el: 0, tx: 1, expected: "001", actual: "X" }]; };
+        try {
+            r = runMain(function (d2) { apply(d2); });
+        } finally {
+            BTE.Write.verify = realVerify;
+        }
+        out.timings.mainMs = r.ms;
+        check("11.6 mismatch", function () {
+            var sm = summaryOf(r), s = settings(), p2 = s ? s.presets[C.PRESET_KEY_LAST] : null;
+            // no record, so the series line promises no next number (spec 3.5)
+            return { summary: sm ? { pairs: sm.pairs, details: ascii(j(sm.details)) } : null, lastInFile: anyLast(p2), alerts: r.alerts,
+                pass: !!sm && sm.pairs[L.SUM_MISMATCH] === "1" && !!p2 && !anyLast(p2) && r.alerts.length === 0 &&
+                    sm.details[sm.details.length - 1] === "Krok 2: čísla 001–240, 240 prvků." };
+        });
+        dlg = build();
+        R = dlg.refs;
+        check("11.6 next open", function () {
+            var x = {};
+            selectStep(dlg, 1);
+            x.cont = contState(R);
+            x.pass = x.cont[0] === false && x.cont[1] === ascii(L.BTN_CONTINUE_OFF) && x.cont[2] === ascii(L.TIP_CONTINUE_NONE);
+            return x;
+        });
+        dlg.win.close();
+    }
+
     // ---- layout helpers from probe_dialog.jsx ------------------------------------
     function footer(c) {
         var k, ch, f;
@@ -1153,7 +1498,8 @@ function probeManual(STUB) {
     var logPath = redirectLog();
     var parts = { dialog: partDialog, run1: partRun1, run2: partRun2, presets: partPresets, controls: partControls, tick: partTick,
         locked: partLocked, arch51: partArch51, nogroups: partNoGroups, artboard: partArtboard,
-        a101: partA101, a102: partA102, a103: partA103, a104: partA104, a105: partA105 };
+        a101: partA101, a102: partA102, a103: partA103, a104: partA104, a105: partA105,
+        cont1: partCont1, cont2: partCont2, dup: partDup, filter: partFilter, nocont: partNoCont };
     var t0 = now(), name, failed = 0;
     try {
         if (!parts[PART]) { throw new Error("unknown PART " + PART); }

@@ -12,8 +12,8 @@ Cmd+Z a skutečné soubory.
 
 ## 0. Příprava
 
-- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.1.0d-test.jsx`,
-  SHA-256 `7ea21e7524cb1783bb86ab4aa859cfed46385739e11d275a9138176692bec3d3`.
+- Testovací build: `~/Dev/extendscript-automation/batch-text-edit/dist/illustrator-batch-text-edit-1.2.0b-test.jsx`,
+  SHA-256 `5616f9463bffa17c3df3c1a13934899a604b5c7c464a617d8323aabe0f69434a`.
 - Spouštět přes **Soubor › Skripty › Jiný skript…** (tak se skript bude
   spouštět i v provozu).
 - Testovat na **kopiích** tří souborů ze sondy 2026-10-29 (240 samolepek,
@@ -32,19 +32,24 @@ Cmd+Z a skutečné soubory.
 - Log `bte.log` vzniká jen při zastaveném zápisu nebo neočekávané chybě.
 - Testy jdou **popořadě**; každý řádek říká, čím končí (Použít, Storno,
   Cmd+Z). Sekce 1–4 a 6–8 běží na `…geoup.ai`, sekce 5 na zbylých dvou,
-  sekce 10 (novinky 1.1.0) na `…geoup arch.ai`.
+  sekce 10 (novinky 1.1.0) na `…geoup arch.ai`, sekce 11 (novinky 1.2.0)
+  na dvou kopiích `…geoup.ai`.
 - Použít hned po psaní do pole může nejdřív jen přepočítat náhled a ukázat
   hlášku „Náhled se přepočítal…“ (pojistka proti zápisu neviděného
   náhledu); pak Použít znovu. To není chyba, kromě testu 6.3 se to nezapisuje.
-- **Brány vydání: 4.1, 4.2, 6.3, 6.4, 6.5, 10.1, 10.2, 10.3.** README
-  a CHANGELOG tvrdí, že celý běh vrátí jedno Cmd+Z, že Použít nikdy
-  nezapíše nic, co náhled neukázal, že Do ukončí řadu a že Po aršících
-  a „v každém aršíku“ číslují aršík po aršíku; ověří to jen tyto testy. Bez
-  nich se 1.1.0 nevydá. Brány 10.1–10.3 ověřila 2026-11-10 sonda
+- **Brány vydání: 4.1, 4.2, 6.3, 6.4, 6.5, 10.1, 10.2, 10.3, 11.1, 11.2.**
+  README a CHANGELOG tvrdí, že celý běh vrátí jedno Cmd+Z, že Použít nikdy
+  nezapíše nic, co náhled neukázal, že Do ukončí řadu, že Po aršících
+  a „v každém aršíku“ číslují aršík po aršíku a že Navázat pokračuje řadou
+  minulého běhu i v jiném dokumentu; ověří to jen tyto testy. Bez nich se
+  1.2.0 nevydá. Brány 10.1–10.3 ověřila 2026-11-10 sonda
   `tests/probes/probe_manual.jsx` na kopiích těchto souborů (skutečný
   dialog a `main.js`, zápis přečtený zpět podle polohy; `docs/findings.md`,
   „Manual-test probe (1.1.0a)“); uživatel ji přijal místo ručního běhu.
-  Ručně zůstávají 4.1, 4.2 a 6.3–6.5.
+  Pro 1.2.0 prošla 2026-11-16 znovu, s 11.1 a 11.2 (dva bloky, druhý přes
+  Navázat v jiném dokumentu) a s 11.3, 11.4 a 11.6 („Manual-test probe
+  (1.2.0a)“). Ručně zůstávají 4.1, 4.2, 6.3–6.5 a 11.1, 11.2, dokud
+  nerozhodneš, že sonda stačí i pro ně.
 
 Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 
@@ -55,7 +60,7 @@ Do sloupce ✓/✗ zapsat výsledek, do poznámky co bylo jinak.
 | # | co udělat | co čekat | ✓/✗ |
 |---|---|---|---|
 | 1.0 | Ještě se stávajícím `settings.json`: otevřít `…geoup.ai`, nic nevybrat, spustit skript; **Storno**. Pak `settings.json` do Koše | Dialog se otevře s posledním během z 1.0.0, bez hlášky o opraveném nastavení; v seznamu předvoleb hvězdička jen tehdy, když se pole od předvolby liší. Po aršících nezaškrtnuté | |
-| 1.1 | Otevřít `…geoup.ai`, nic nevybrat, spustit skript | Dialog „Batch Text Edit v1.1.0“, Rozsah **Celý dokument**, řádek „240 prvků, 480 textů“, v řádku Pořadí nezaškrtnuté **Po aršících**. Žádný useknutý text, okno se vejde na obrazovku. Patička „© 2025–2026 Ladislav Osvald · v1.1.0“ | |
+| 1.1 | Otevřít `…geoup.ai`, nic nevybrat, spustit skript | Dialog „Batch Text Edit v1.2.0“, Rozsah **Celý dokument**, řádek „240 prvků, 480 textů“, v řádku Pořadí nezaškrtnuté **Po aršících**. Žádný useknutý text, okno se vejde na obrazovku. Patička „© 2025–2026 Ladislav Osvald · v1.2.0“ | |
 | 1.2 | Podívat se na předvolbu | „[Výchozí]“ **bez hvězdičky**, ↺ a Uložit šedé, Smazat šedé; jeden krok Číslovat, − u něj šedé | |
 | 1.3 | V editoru kroku rozbalit **Kde** | `{NORDIC CZ}   (240×)` a `{n}   (240×)`, pod čarou „První číslo v prvku“, „Jiný text…“, „Regulární výraz…“ | |
 | 1.4 | Najet myší na pole, seznamy, zaškrtávátka a tlačítka kroků a předvoleb | Každý má nápovědu (helpTip), nejvýš dvě věty. Storno a Použít ji nemají, stejně jako v ostatních nástrojích | |
@@ -164,3 +169,21 @@ a **Uložit jako…** „Samolepky“;
 | 10.6 | Na `…arch.ai`: ↺, zaškrtnout Po aršících a u kroku 2 „v každém aršíku“, **Uložit jako…** „Aršíky“; vybrat „Samolepky“, pak „Aršíky“; **Storno** | „Samolepky“: obě volby nezaškrtnuté; „Aršíky“: obě zaškrtnuté, bez hvězdičky | |
 
 Konec sekce: soubor v původním stavu (nebo zavřít bez uložení).
+
+## 11. Novinky 1.2.0 (brány 11.1–11.2)
+
+Na dvou kopiích `…geoup.ai` v původním stavu: **A** a **B** (B pod jiným
+jménem, např. `…geoup B.ai`). Arch má 20 řad po 12 samolepkách; blok je
+10 řad (120 samolepek). Předvolba „Samolepky“ je ta ze sekce 10 (Nahradit
+`{NORDIC CZ}` → „SNB CZ“, Číslovat `{n}` Od 1, Číslic 3).
+
+| # | co udělat | co čekat | ✓/✗ |
+|---|---|---|---|
+| 11.1 | Na A vybrat horních 10 řad, spustit, vybrat předvolbu „Samolepky“ (je-li už aktivní, nejdřív vybrat jinou a pak „Samolepky“, jinak se nenačte); krok 2 **Do 120**; **Použít**. Pak vybrat spodních 10 řad, spustit, vybrat krok 2, kliknout **Navázat**; **Použít**. Nevracet | První dialog: rozsah „120 prvků, 240 textů“, Navázat šedé. Souhrn v podrobnostech „Krok 2: čísla 001–120, 120 prvků; další číslo 121.“ Druhý dialog: tlačítko **„Navázat (121)“**, po kliku Od 121, Do 240, náhled „SNB CZ \| 121“ až „… 240“, u předvolby hvězdička. V dokumentu 001–240 po řádcích bez díry a bez dvojího čísla; Souhrn „Krok 2: čísla 121–240, 120 prvků; další číslo 241.“ | |
+| 11.2 | Otevřít B, vybrat horních 10 řad, spustit, vybrat krok 2, najet myší na Navázat; kliknout **Navázat**; **Použít**, prohlédnout, **Cmd+Z**; B zavřít bez uložení | „Navázat (241)“, nápověda „Od 241 a Do 360 podle běhu v …geoup.ai, *datum čas*.“ se jménem dokumentu A a časem druhého Použít v 11.1. V B 241–360 po řádcích, Souhrn „… 241–360, 120 prvků; další číslo 361.“ | |
+| 11.3 | Na A (001–240 z 11.1) nic nevybrat, spustit. Krok 2: Kde **První číslo v prvku**, Od 101, Do 240. Dialog nechat otevřený | Řádky 1–140 101–240, řádky 141–240 beze změny (141–240). Hlášky „⚠ Krok 2: 100 prvků zůstane beze změny, řada končí na Do 240.“ a „⚠ Krok 2: 100 prvků za Do si nechá číslo, které krok dal jinému prvku (např. prvek 141 má 141 jako prvek 41).“; Použít aktivní. (⚠ „Nic nenašel“ u kroku 1 je tu v pořádku: `{NORDIC CZ}` už v A není) | |
+| 11.4 | Ve stejném dialogu rozbalit **Ukázat** a postupně vybrat K prověření, Změněné, Všechny; pak K prověření a v kroku 2 vymazat Do; **Storno** | Položky „Všechny (240)“, „Změněné (140)“, „K prověření (100)“; Ukázat se otevřel na Všechny. K prověření: 100 řádků, sloupec # 141–240 (filtr nepřečísluje), Změněné 140 řádků, Všechny 240. Po vymazání Do „K prověření (0)“, prázdná tabulka, volba zůstane na K prověření | |
+| 11.5 | V 11.4 po každém výběru v Ukázat a po vymazání Do (pole opustit Tabem, ne Enterem) nehýbat myší | Tabulka se změní **hned**, bez dalšího kliknutí (Illustrator 2027): u K prověření je první řádek # 141; Změněné a Všechny mají prvních 140 řádků stejných, rozdíl ukáže jezdec svislého posuvníku (u Změněné delší). Seznam Ukázat ukazuje vybranou položku s novým počtem (po vymazání Do „K prověření (0)“ a prázdná tabulka), ne prázdné pole ani starý počet | |
+| 11.6 | Na A spustit znovu, vybrat krok 2 a najet na Navázat. Pak **+** (nový krok Číslovat) a najet na jeho Navázat; pak **↺** a vybrat krok 2; **Storno** | Krok 2: „Navázat (361)“ s nápovědou o běhu v B: Storno v 11.3–11.4 ani Cmd+Z v 11.2 záznam nezměnily (skript Zpět nevidí; proto nápověda jmenuje dokument a čas). Nový krok: „Navázat“ šedé, nápověda „Navázat jde jen u kroku z minulého běhu; ten se musel zapsat celý a bez neshody.“ Po ↺ šedé i u kroku 2 | |
+
+Konec sekce: A zavřít bez uložení.

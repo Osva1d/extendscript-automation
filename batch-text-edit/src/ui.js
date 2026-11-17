@@ -41,13 +41,21 @@ BTE.UI = {
         // details box: 58 px for three lines, measured 2026-10-15)
         MSG_H: 58,
         // px; the preview's columns: #, Původní, Po vybraném kroku, Nový.
-        // # holds "20 · 240" with Po aršících (50 px) and the 17 px the
-        // 40 px column of 1.0 left beside "240" (23 px); Původní gave the
-        // 28 px, so the dialog keeps its width (probe_dialog.jsx, 1.1.0).
-        PREVIEW_COLS: [68, 272, 300, 300],
+        // # holds "240 · 240" with Po aršících when every element is its own
+        // aršík (57 px) and the 17 px the 40 px column of 1.0 left beside
+        // "240" (23 px); Původní gave the 34 px, so the dialog keeps its
+        // width (probe_dialog.jsx, 1.1.0 and 1.2.0, Illustrator 31.0.0).
+        PREVIEW_COLS: [74, 266, 300, 300],
         // px; the preview shows its header and eight rows and scrolls past
         // that: 33 px plus 20 per row (engine-facts, listbox table)
-        PREVIEW_H: 193
+        PREVIEW_H: 193,
+        // px; the Ukázat dropdown. Its counts change with every refresh, and
+        // a dropdown grows with its longest item: fixed for the longest item
+        // with a five-digit count (spec 5). An unsized dropdown with
+        // "K prověření (99999)" (117 px) lays out at 152 px, 35 px for the
+        // arrow; English 137 px (probe_dialog.jsx, Illustrator 31.0.0,
+        // 2026-11-16).
+        SHOW_DD: 152
     },
 
     /**
@@ -402,6 +410,11 @@ BTE.UI = {
             kind: "document", order: "rows", bySheet: false, steps: [], sel: 0,
             prepared: null, run: null, status: null, shown: [],
             fieldsOk: true, busy: false, outcome: null,
+            // the Ukázat filter (one of UIModel.FILTERS), "all" on every open
+            // and never stored (spec 5), and the flags it filters by, set by
+            // refresh(); not named "filter": npm run lint takes any .filter
+            // for the Array method the engine lacks
+            showMode: "all", flags: { changed: [], review: [] },
             // the values the preview was last computed from, when a text
             // field last refreshed it (ms, see HOLD_MS), and whether Použít
             // has just held a preview back (the hint shows until a refresh)
@@ -437,6 +450,9 @@ BTE.UI = {
         // window is 1008 x 768 px in Czech and in English, the preview table
         // sets the width; Kroky 217 px tall, Náhled 316 px, no text cut.
         // The same with Po aršících and v každém aršíku (1.1.0, 2026-11-10).
+        // With Navázat and Ukázat 1008 x 780 px: Kroky 221 px (the button
+        // makes the Od row 27 px), Náhled 324 px (the dropdown makes the
+        // status row 23 px); 1.2.0, Illustrator 31.0.0, 2026-11-16.
         var w = new Window("dialog", C.scriptName + " v" + C.version);
         w.orientation = "column";
         w.alignChildren = ["fill", "top"];   // panels match the widest one; no width set
@@ -630,6 +646,10 @@ BTE.UI = {
         ed.number.fields.to = numField(r, L.TIP_TO);
         r.add("statictext", undefined, L.LBL_STEP).helpTip = L.TIP_STEP;
         ed.number.fields.step = numField(r, L.TIP_STEP);
+        // Navázat fills Od and Do, so it ends their row (spec 3.1). Created
+        // with the widest caption: the first layout gives it that width.
+        ed.number.btnContinue = r.add("button", undefined, L.format(L.BTN_CONTINUE, "-1000000"));
+        ed.number.btnContinue.helpTip = L.TIP_CONTINUE_NONE;
         r = gNum.add("group");
         label(r, L.LBL_FORMAT, L.TIP_FORMAT, labels);
         ed.number.ddFormat = r.add("dropdownlist", undefined, [L.FORMAT_NUM, L.FORMAT_UPPER, L.FORMAT_LOWER]);
@@ -661,14 +681,32 @@ BTE.UI = {
         // --- Preview -----------------------------------------------------------
         var pPrev = w.add("panel", undefined, L.PANEL_PREVIEW);
         pPrev.alignChildren = ["fill", "top"];
-        var stStatus = pPrev.add("statictext", undefined, Model.SYMBOL.ERR + " " + L.STATUS_ERR);
-        stStatus.alignment = ["fill", "top"];
+        // The status line and, at its right, Ukázat: in one row, so the
+        // filter costs only the height its dropdown adds (spec 5).
+        var gStatus = pPrev.add("group");
+        gStatus.orientation = "row";
+        gStatus.alignment = ["fill", "top"];
+        var stStatus = gStatus.add("statictext", undefined, Model.SYMBOL.ERR + " " + L.STATUS_ERR);
+        stStatus.alignment = ["fill", "center"];
         try {
             var f0 = stStatus.graphics.font;
             stStatus.graphics.font = ScriptUI.newFont(f0.name, "BOLD", f0.size);
         } catch (fontErr) {
             U.log("status font: " + fontErr.message);
         }
+        // In a group of its own: a row's slack is shared among all its
+        // controls, and the status line is to get it (engine-facts, row slack).
+        var gShow = gStatus.add("group");
+        gShow.alignment = ["right", "center"];
+        var stShow = gShow.add("statictext", undefined, L.LBL_SHOW);
+        stShow.helpTip = L.TIP_SHOW;
+        // Created with zero counts, not with the widest items: flag arrays
+        // 99999 long cost about 30 s in this engine (push 10.7 s, one count
+        // 19.9 s; Illustrator 31.0.0, 2026-11-16), and the width is locked,
+        // so the items do not size it. refresh() sets the counts.
+        var ddShow = gShow.add("dropdownlist", undefined, Model.filterItems([], []));
+        U.lockW(ddShow, M.SHOW_DD);   // [deviation] see M
+        ddShow.helpTip = L.TIP_SHOW;
         // [deviation] readonly edittext, not statictext: the messages can run
         // longer than three lines, and a fixed-height statictext cuts the rest
         // with no sign (tile-export's details box).
@@ -806,7 +844,7 @@ BTE.UI = {
             var e = ed[step.type];
             var info = st.run ? st.run.info[st.sel] : null;
             var kind = step.where ? step.where.kind : "";
-            var bad, j, f;
+            var bad, j, f, cont;
             renderWhere(e, step, info ? info.vars : []);
             e.row.visible = (kind === "text" || kind === "regex");
             bad = U.errorField(step, info);
@@ -822,15 +860,25 @@ BTE.UI = {
                 // it on keeps its tick, grey (spec 3.4). Every refresh sets
                 // it, so showEditor() and Po aršících need nothing of their own.
                 e.cbPerSheet.enabled = st.bySheet;
+                // Navázat works on a step of the last run only (spec 3.1).
+                cont = Model.continueButton(step);
+                e.btnContinue.enabled = cont.enabled;
+                if (e.btnContinue.text !== cont.text) { e.btnContinue.text = cont.text; }
+                e.btnContinue.helpTip = cont.tip;
             } else if (step.type === "replace") {
                 // A variable is always matched exactly (spec 5.4).
                 e.cbCase.enabled = (kind !== "var");
             }
         }
 
-        /** The preview table; on an unchanged row count only changed cells are set. */
+        /**
+         * The preview table, the rows the Ukázat filter keeps; # keeps each
+         * element's position, so a filter renumbers nothing (spec 5). On an
+         * unchanged row count only changed cells are set.
+         */
         function renderPreview() {
-            var rows = st.run ? Model.rows(st.run.states, st.sel, st.prepared.sheets) : [];
+            var rows = st.run ? Model.filterRows(Model.rows(st.run.states, st.sel, st.prepared.sheets),
+                st.showMode, st.flags.changed, st.flags.review) : [];
             var n = rows.length;
             var items, j, c, it, row, old;
             if (lbPrev.items.length !== n) {
@@ -857,6 +905,20 @@ BTE.UI = {
             st.shown = rows;
         }
 
+        /** The Ukázat counts; the selected filter stays. */
+        function renderFilter() {
+            var texts = Model.filterItems(st.flags.changed, st.flags.review);
+            var j;
+            st.busy = true;
+            try {
+                for (j = 0; j < texts.length; j++) {
+                    if (ddShow.items[j].text !== texts[j]) { ddShow.items[j].text = texts[j]; }
+                }
+            } finally {
+                st.busy = false;
+            }
+        }
+
         /** Status line and messages; the hold hint first while it applies (ruling R28). */
         function renderStatus() {
             var msgs = st.holdHint ? [L.HOLD_HINT].concat(st.status.messages) : st.status.messages;
@@ -878,7 +940,9 @@ BTE.UI = {
          * (Storage.normalize), so leaving it out here would mark every
          * preset "*".
          */
-        function current() { return { order: st.order, bySheet: st.bySheet, steps: U.copy(st.steps) }; }
+        function current() {
+            return BTE.Storage.withoutLast({ order: st.order, bySheet: st.bySheet, steps: U.copy(st.steps) });
+        }
 
         function presetLabel(key) { return key === DEF ? L.PRESET_DEFAULT : key; }
 
@@ -959,8 +1023,11 @@ BTE.UI = {
                 st.status = Model.failedStatus(err.message);
                 st.fieldsOk = false;
             }
+            st.flags = st.run ? { changed: Model.changedFlags(st.run.states), review: Model.reviewFlags(st.run, st.steps) }
+                : { changed: [], review: [] };
             updateStepLabels();
             renderEditor();
+            renderFilter();
             renderPreview();
             renderStatus();
             btnOk.enabled = st.status.canApply;
@@ -1142,6 +1209,21 @@ BTE.UI = {
             selected().perSheet = ed.number.cbPerSheet.value === true;
             refresh();
         });
+        /** Navázat: Od and Do from the last run, an edit like typing them (spec 3.1). */
+        ed.number.btnContinue.onClick = guard(function () {
+            var step = selected();
+            var f = Model.continueFields(step.last);
+            step.from = f.from;
+            step.to = f.to;
+            st.busy = true;
+            try {
+                ed.number.fields.from.text = f.from;
+                ed.number.fields.to.text = f.to;
+            } finally {
+                st.busy = false;
+            }
+            refresh();
+        });
         ed.number.ddFormat.onChange = guard(function () {
             if (st.busy || !ed.number.ddFormat.selection) { return; }
             selected().format = U.FORMATS[ed.number.ddFormat.selection.index];
@@ -1245,6 +1327,14 @@ BTE.UI = {
         }
         cbBySheet.onClick = guard(function () { setBySheet(cbBySheet.value === true); });
 
+        /** Ukázat: only the table changes; the chain is not run again (spec 5). */
+        ddShow.onChange = guard(function () {
+            if (st.busy || !ddShow.selection) { return; }
+            st.showMode = Model.FILTERS[ddShow.selection.index];
+            renderPreview();
+            repaint();
+        });
+
         ddPreset.onChange = guard(function () {
             var key, res;
             if (st.busy || !ddPreset.selection) { return; }
@@ -1337,7 +1427,7 @@ BTE.UI = {
             if (!st.status.canApply) { return; }
             pData.presets[LAST] = current();
             if (!BTE.Storage.save(pData)) { alert(L.ERR_WRITE_SETTINGS_RUN); }
-            st.outcome = { scope: st.kind, order: st.order, steps: U.copy(st.steps), prepared: st.prepared, run: st.run };
+            st.outcome = { scope: st.kind, order: st.order, steps: U.copy(st.steps), preset: pData.presets[LAST], prepared: st.prepared, run: st.run };
             w.close(1);
         });
         btnCancel.onClick = guard(function () {
@@ -1350,6 +1440,12 @@ BTE.UI = {
         rbOrder[Math.max(0, indexOf(U.ORDERS, st.order))].value = true;
         cbBySheet.value = st.bySheet;
         stScope.text = Model.scopeLine(st.prepared);
+        st.busy = true;
+        try {
+            ddShow.selection = indexOf(Model.FILTERS, st.showMode);
+        } finally {
+            st.busy = false;
+        }
         renderStepList();
         showEditor();
         updatePresetList();
@@ -1367,7 +1463,8 @@ BTE.UI = {
                 lbSteps: lbSteps, ddAddType: ddAddType, btnAdd: btnAdd, btnRemove: btnRemove,
                 btnUp: btnUp, btnDown: btnDown, ddType: ddType, cbActive: cbActive, gStack: gStack, ed: ed,
                 stStatus: stStatus, etMsgs: etMsgs, lbPrev: lbPrev, btnOk: btnOk, btnCancel: btnCancel,
-                pSteps: pSteps, pPrev: pPrev, colList: colList, colEdit: colEdit
+                pSteps: pSteps, pPrev: pPrev, colList: colList, colEdit: colEdit,
+                btnContinue: ed.number.btnContinue, ddShow: ddShow, stShow: stShow, gStatus: gStatus
             },
             /**
              * The dialog's outcome, valid once the window has closed.

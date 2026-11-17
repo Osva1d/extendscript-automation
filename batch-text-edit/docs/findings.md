@@ -558,3 +558,83 @@ Measured 2026-11-15 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with the user, o
 - **The ticks also show late:** after the dialog opens and after every rebuild of the step list (+, −, ↑, ↓, ↺, a preset) the tick column appeared only when the mouse first moved, and the lines jumped sideways when it did (a screen recording of the user, 2026-11-15).
 - **A list item can be greyed but then not selected:** `ListItem` has `enabled` (and `icon`), and `enabled = false` draws the line grey at once and switches back at once, but a click on the grey line selected nothing (three runs of a test dialog with the user; the log shows `onChange` only for the other lines). A greyed inactive step could not be selected and switched on again.
 - **So the step list has no ticks since 1.1.0d:** an inactive step's line ends with "(vypnutý)" instead of ✗ or ⚠ (`BTE.UIModel.stepLabel`), Aktivní is the switch, and the code that read ticks back (`syncChecks`, the `mouseup` listener) is gone. A symbol was weighed and left: ☐ looks clickable, ✗ and ✓ already mean error and OK (extendscript-ui-standards 12.6).
+
+## Dialog probe (1.2.0)
+
+Measured 2026-11-16 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with `tests/probes/probe_dialog.jsx` 1.2.0, headless as before (dialog built, never shown; `Storage.load` and `save` stubbed). The probe now builds a second document as well: the same 240 prefabs, each in a group of its own on the layer, so every element is its own aršík. The result's `checks` hold (a)–(n) per language; all are true in Czech and English. The host's default maximumSize was 1462 × 932 (`"lifted": false`). Both documents were closed unsaved; 0 documents at the end.
+
+### Size and texts
+
+| | CS | EN |
+|---|---|---|
+| window, at open and after every check | 1008 × 780 | 1008 × 780 |
+| Kroky panel / Náhled panel | 978 × 221 / 978 × 324 | same |
+| step list / editor | 360 × 154 / 574 × 191 | 321 × 154 / 613 × 191 |
+| Navázat: widest caption „Navázat (-1000000)“ / button (= its natural width) | 118 / 146 px | 125 / 153 px |
+| Ukázat dropdown: widest five-digit item / natural width / control | 117 („K prověření (99999)“) / 152 / 152 px | 102 / 137 / 152 px |
+| longest status line („⚠ Změní se 99999 z 99999 prvků.“) / status line | 204 / 728 px | 241 / 737 px |
+| # column: „240 · 240“ / column (17 px inset) | 57 / 74 px | same |
+| texts wider than their control | none | none |
+
+- The window grew by 12 px and kept its width: Navázat at the end of the Od · Do · Krok row makes that row 27 px instead of 23 (the editor 191 px instead of 187), and the dropdown makes the status row 23 px instead of 15. It starts at x 428 in the row (EN 460).
+- An unsized dropdown is its widest item plus 35 px (arrow and insets), in both languages. `M.SHOW_DD` is 152 px, the Czech natural width.
+- The status line keeps the row's slack (Ukázat and its dropdown are a right-aligned group of their own, engine-facts row slack). `measureString` gives a bold font the regular width, so the 204 px of the bold status line are an estimate; the margin is over 500 px.
+- The # column holds „20 · 240“ (50 px) since 1.1.0 but not „240 · 240“ (57 px) with every element its own aršík: 57 + 17 > 68. Původní gave 6 more px (columns 74/266/300/300); the window keeps its width.
+- The editor is 155 px (EN 129 px) wider than in 1.1.0, and the step list beside it narrower by as much: 360 px (EN 321) against 515 (484). The widest real label of the probe chain is 211 px (EN 232); the synthetic worst case (Nahradit with 30 × W cut to 24 characters, ✗) is 364 px (EN 358), so it is cut by a few px in Czech and by 37 px in English.
+
+### Behaviour
+
+- **Navázat** is grey with the caption „Navázat“ and the tip TIP_CONTINUE_NONE on a step without `last`. With `last = {from: 1, to: 240, next: 241, doc: "probe.ai", at: 0}` on step 2 and a refresh it is live: „Navázat (241)“, tip „Od 241 a Do 480 podle běhu v probe.ai, 1. 1. 1970 01:00.“ A click puts 241 and 480 in Od and Do and in the step; the preview's row 1 reads „ABC | 241“ after the step and „abc | 241“ at the end, row 240 „abc | 480“.
+- **Ukázat** opens on Všechny. With Do 230 the items read „Všechny (240)“, „Změněné (240)“, „K prověření (10)“ (EN „All (240)“, „Changed (240)“, „To check (10)“): setting a dropdown item's `text` changes it, the selected item included, so no rebuild is needed. K prověření shows 10 rows numbered 231–240. Do emptied: „K prověření (0)“, 0 rows, the filter stays on K prověření. A filter switch never ran the chain again (`state.run` the same object).
+- **A last run with `last` against a named preset without it (check n):** the list shows „Probe“ without „*“ right after opening, ↺ and Uložit grey, and Navázat reads „Navázat (241)“. After the click the list shows „Probe *“; Uložit stores Od 241, Do 480 and no `last`. Použít closes the dialog and the outcome's `preset` is the very object stored as `[Last Settings]`, without `last`. The outcome's `steps` (a copy of the dialog's chain) still carry `last`.
+- The first run of the probe, in an Illustrator session that had been running for 33 hours, stalled after creating its document: no progress for more than six minutes, Illustrator at 14 % CPU and no window but the document's (System Events). After a restart a separate timing built 12 prefabs in 7.6 s for the first and 0–3 ms for each further one, and the probe ran through twice. Not reproduced, cause not known.
+
+### Times (ms, 240 elements, a chain of three steps; CS / EN)
+
+| what | CS | EN |
+|---|---|---|
+| build the dialog (prepare included) | 261 | 299 |
+| Od committed, 12 times | 49–74, median 57 | 56–114, median 65 |
+| refresh with unchanged values, 5 times | 48–62 | 53–64 |
+| the Ukázat counts (`changedFlags` + `reviewFlags`) in a refresh | 2–3 | 2–3 |
+| Navázat click (refresh included) | 52 | 57 |
+| Všechny → K prověření (240 → 10 rows) | 23 | 25 |
+| Do emptied with K prověření on (refresh, 10 → 0 rows) | 68 | 82 |
+| K prověření → Všechny (0 → 240 rows) | 25 | 24 |
+| Všechny → Změněné (240 → 240 rows, cells compared) | 6 | 6 |
+| Po aršících on, 240 one-element aršíky | 140 | 148 |
+
+A last run on the committed sources passed the same checks; its times were 1.2–1.7 × these (Do emptied 110 / 138 ms, Od committed median 81 / 96 ms) while building a probe document took 3.3–4.0 s against 0.2–0.3 s: a busy machine, not the change.
+
+### The widest items are not built from 99999-long arrays
+
+The plan created the dropdown with `UIModel.filterItems` of two 99999-long flag arrays. In this engine pushing 99999 elements took 10.7 s and counting them once 19.9 s (Illustrator 31.0.0, 2026-11-16; the quadratic array cost of engine-facts), so opening the dialog would have taken about a minute. The dropdown's width is locked, so its first items do not size it: it is created with the counts of empty arrays, and the probe measures the five-digit items in a dropdown of its own.
+
+### Re-measuring
+
+As before: assemble the runner from the probe's Usage header and run it with `tools/ai-eval.sh -t 900`, with 0 documents open; it builds and closes its two documents (0.2–0.3 s each to build). The progress log is written with CR line endings (`File.writeln` on macOS), so `wc -l` counts 0 lines; read it with `tr '\r' '\n'`.
+
+## Manual-test probe (1.2.0a)
+
+Measured 2026-11-16 in Adobe Illustrator 2027 (31.0.0, `cs_CZ`) with `tests/probes/probe_manual.jsx` 1.2.0, run on the sources of a first 1.2.0a build (SHA-256 `d20c4341…`); part nocont ran again on the sources of the 1.2.0a test build (`7298092a…`, the summary fix below). Same plumbing as 1.1.0a: copies of the user's three files in a folder of the probe's own, one part per `tools/ai-eval.sh` run, 0 documents before every run and at the end of each. The user's `settings.json` and the three originals stayed byte for byte (SHA-256 before and after).
+
+All 20 parts passed, 66 of 66 checks: the 48 of 1.1.0a (check 1.1 now expects „v1.2.0“ in the title and the footer) and 18 new ones in five parts.
+
+| manual test | part | what the probe checked |
+|---|---|---|
+| 11.1 | cont1 | the first 120 elements in reading order selected: „120 prvků, 240 textů“, Navázat grey with TIP_CONTINUE_NONE (the last run had no record), Do 120, „✓ Změní se 120 z 120 prvků.“; written: 001–120 by position, the other 120 elements untouched; summary 120 / 240 / 0, details „Vše proběhlo bez chyb.“ and „Krok 2: čísla 001–120, 120 prvků; další číslo 121.“; the settings file holds `last` = {from 1, to 120, next 121, doc „Zund_Summa_Test_geoup.ai“} on step 2 only, „Samolepky“ none |
+| 11.1, 11.2 | cont2 | the copy cont1 saved (`cont1.ai`, another document than the one `last` names), the other 120 selected: „Navázat (121)“, tip „Od 121 a Do 240 podle běhu v Zund_Summa_Test_geoup.ai, 16. 11. 2026 22:25.“; the click puts 121 and 240 in the fields and the step, preview „SNB CZ \| 121“ to „… 240“, „Samolepky *“; written: 001–240 by position over the whole sheet, series line 121–240 with next 241, format, anchors and artwork unchanged; `last` now {121, 240, 241, „cont1.ai“} |
+| 11.3 | dup | the copy run1 wrote (001–240), Kde První číslo v prvku, Od 101, Do 240: rows 1–140 101–240, rows 141–240 keep 141–240; „⚠ Krok 2: 100 prvků zůstane beze změny, řada končí na Do 240.“ and „⚠ Krok 2: 100 prvků za Do si nechá číslo, které krok dal jinému prvku (např. prvek 141 má 141 jako prvek 41).“; Ukázat „Všechny (240) / Změněné (140) / K prověření (100)“, K prověření 100 rows with # 141–240, each unchanged; Použít on before and after; Storno: no summary, the document still 001–240 |
+| 11.4 | filter | Ukázat opens on Všechny; Do 230: „Všechny (240) / Změněné (240) / K prověření (10)“; K prověření = rows 231–240, all „SNB CZ \| {n}“, the chain not run again; Změněné and Všechny 240 rows; Do emptied with K prověření on: „K prověření (0)“, 0 rows, the filter stays; Do 230 again: 10 rows. Použít with K prověření on wrote the whole preview (001–230 by position, 10 `{n}`, SNB CZ on all 240; summary 240 / 470 / 0 with „Krok 2: čísla 001–230, 230 prvků; další číslo 231.“ after the two warnings); the settings file holds nothing of the filter and the next open is on Všechny |
+| 11.6 | nocont | a last run with `last` {from 1, to null, next 241} on step 2: „Samolepky“ without „*“, „Navázat (241)“, tip „Od 241 podle běhu v probe.ai, 1. 1. 1970 01:00; Do zůstane prázdné.“; Storno leaves the file byte for byte and the next open offers „Navázat (241)“ again; a new Číslovat step and ↺ have Navázat grey with TIP_CONTINUE_NONE. Then a write whose check (`BTE.Write.verify`, stubbed) reports one mismatch: „Neshoda po zápisu: 1“, no step of the last run in the file carries `last`, the next open has Navázat grey |
+
+- **Storno keeps the record**, as spec 3.4 has it: only a write changes it. So does Cmd+Z, which a script does not see; the tip names the document and the time for that case (README, Známá omezení).
+- **After a mismatch the summary's series line ends with the element count** („Krok 2: čísla 001–240, 240 prvků.“), as it does whenever Navázat will be grey (spec 3.5). The first run found it ending „další číslo 241.“ with no record kept; `UIModel.runSummary` now builds the lines without the next number when there is a mismatch, and check „11.6 mismatch“ asserts the line (all 4 checks of nocont passed again).
+
+Times: dialog build 0.68–0.93 s (2.4–2.9 s on the file without groups), a committed field 51–76 ms (median 75), Po aršících 53–137 ms, the Navázat click 132 ms (refresh included); Ukázat: Všechny → K prověření 15 ms (240 → 10 rows) and 82 ms (240 → 100), K prověření → Změněné 211 ms (10 → 240), Změněné → Všechny 6 ms, Do emptied with K prověření on 271 ms. Write + check + summary 0.15–7.7 s on …geoup.ai (16.6 s on the file without groups), the whole of `main.js` with the dialog 2.0–9.5 s (18.7 s). A copy of part tick with timers around the functions split one write: `BTE.Write.apply` 2.6 s, `verify` 3 ms, `Storage.saveLast` (load + save) 97 ms, `runSummary` 3 ms; what 1.2.0 adds after a write costs about 0.1 s.
+
+The machine had been started 19 minutes before the first run; its 15-minute load average was 7.1 a few minutes in and fell to 2 by the end. Part nogroups took 138 s the first time and 25 s in a re-run with timers, with the same checks passing. The times vary up to tenfold between parts that do the same work; they are no comparison with 1.1.0d.
+
+Not covered, by nature: as in 1.1.0a, and how Navázat and Ukázat look on screen, whether the table redraws at once after an item is chosen in Illustrator 2027 and whether the shown dropdown keeps its selected item when its text changes (11.5): the headless dialog never shows.
+
+Re-measuring: as before, one runner per part from the probe's Usage header, `tools/ai-eval.sh -t 900`, 0 documents open. Run the parts in the header's order: run1 before run2 and dup (both open the copy run1 saves), cont1 right before cont2 (cont2 opens the copy cont1 saves and reads the record cont1 leaves in the settings file).

@@ -32,7 +32,10 @@ a s kontrolou po něm.
   - **Číslovat:** Od, Do (poslední číslo řady; prvky, na které číslo
     nezbude, zůstanou beze změny), Krok, Formát `1, 2, 3` / `A, B, C`
     / `a, b, c`, Číslic (nuly zleva), Opakovat a Znovu po (např. řady
-    sedadel 1–20, 1–20), řada znovu v každém aršíku.
+    sedadel 1–20, 1–20), řada znovu v každém aršíku. **Navázat (241)**
+    dá do Od další číslo minulého běhu a Do posune o stejný kus
+    (1–240 → 241–480); šedé je u nového kroku, po ↺ nebo výběru předvolby
+    a tam, kde řada nemá pokračování (důvod řekne nápověda tlačítka).
   - **Nahradit:** proměnná, jiný text nebo regulární výraz; Rozlišovat velká
     a malá, Jen první shoda v textu.
   - **Velikost písmen:** VELKÁ, malá, Každé Slovo, První písmeno věty.
@@ -51,7 +54,11 @@ a s kontrolou po něm.
   aršících** (číslování projde celý aršík, než přejde na další).
 - **Náhled.** Pro každý prvek Původní → Po vybraném kroku → Nový, dřív než se
   cokoli zapíše. Když po posledním kroku zůstane v textu `{…}`, náhled
-  i souhrn to ohlásí; zápis to nezablokuje.
+  i souhrn to ohlásí; zápis to nezablokuje. **Ukázat** zúží tabulku na
+  Změněné nebo K prověření (prvky, o kterých mluví hlášky), s počty;
+  Použít zapíše vždy celý náhled.
+- **Dvojí číslo.** Když si prvek za Do nechá číslo, které krok dal jinému
+  prvku, hlášky to řeknou; `007` a `7` jsou totéž číslo.
 - **Předvolby.** Uložené řetězy kroků (recepty): předvolba drží pořadí
   a kroky, ne Rozsah (ten se řídí výběrem). Dialog se otevře s posledním
   potvrzeným během; [Výchozí] je jeden krok Číslovat a smazat nejde.
@@ -65,8 +72,10 @@ a s kontrolou po něm.
    Od 1, Do 100, Číslic 3. Zkontroluj náhled a stavový řádek.
 4. **Použít.** Souhrn ukáže, kolik prvků a textů se změnilo a jestli kontrola
    po zápisu nenašla rozdíl. Celý běh vrátí jedno **Cmd+Z**.
-5. Další blok: vyber ho a spusť znovu se stejnou předvolbou, jen změň kód
-   a rozsah čísel.
+5. Další blok: vyber ho, spusť znovu a u kroku Číslovat klikni
+   **Navázat**: Od a Do se posunou za minulý běh, nic nemusíš počítat. Platí
+   i v dalším dokumentu; nápověda tlačítka řekne, ze kterého dokumentu
+   a běhu číslo je. Jiný kód změň v kroku Nahradit.
 
 **Co je prvek.** Jedno číslo dostane vždy celý prvek: nejnižší skupina,
 ve které text leží (samolepka). Texty bez skupiny se spárují podle
@@ -99,6 +108,10 @@ nezapíše nic, co náhled neukázal.
 - **„… prvků zůstane beze změny, řada končí na Do …“:** prvků je víc, než
   řada do Do pokryje; ty za hranicí krok nezmění. U „První číslo v prvku“
   si nechají staré číslo, takže na archu může vzniknout dvojí číslo.
+- **„… prvků za Do si nechá číslo, které krok dal jinému prvku“:** na
+  archu by bylo dvojí číslo. Hláška jmenuje jeden takový prvek a prvek se
+  stejným číslem, Ukázat › K prověření ukáže všechny. Zvol Od a Do tak,
+  aby se řady nepotkaly, nebo vyber jen prvky, které se mají přečíslovat.
 - **„… prvků má po posledním kroku dál {…}“:** v textu zůstala proměnná.
   Když ji nahradí až další běh, je to v pořádku; jinak doplň krok.
 - **„Každý aršík má jen jeden prvek“:** jako aršík se chytila skupina
@@ -118,6 +131,8 @@ nezapíše nic, co náhled neukázal.
 - Zamčené a skryté texty (i ve skupině nebo vrstvě), přetečené odstavcové
   texty a navázané textové rámečky se přeskočí a spočítají v souhrnu.
 - Text v symbolu skript nevidí.
+- Navázat se řídí posledním zapsaným během i po Cmd+Z (Zpět skript nevidí).
+  Po vráceném běhu zkontroluj nápovědu tlačítka, nebo Od a Do přepiš.
 - Dvě místa pro stejné číslo musí ležet přímo v jedné skupině; ve dvou
   podskupinách dostanou různá čísla.
 - Regulární výrazy: lookbehind a pojmenované skupiny `(?<…)` Illustrator

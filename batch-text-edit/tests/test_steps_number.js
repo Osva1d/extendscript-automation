@@ -271,4 +271,37 @@ h.assert(tm !== null && tm.indexOf("BTE.Steps") >= 0 && tm.indexOf("3") >= 0 && 
 tm = throwsMsg(function () { runN(five, { perSheet: true }, []); });
 h.assert(tm !== null && tm.indexOf("0") >= 0 && tm.indexOf("5") >= 0, "perSheet: empty sheets array throws");
 
+
+// Series record and the next number (1.2.0)
+h.eq(BTE.Steps.MAX_SAFE, 9007199254740991, "MAX_SAFE literal");
+function R0() { return { type: "replace", active: true, where: { kind: "text", text: "x" }, replace: "y", matchCase: false, firstOnly: false }; }
+var s1 = infoOf(st, V({ to: "" })).series;
+h.eq(JSON.stringify(s1), '{"from":1,"to":null,"numbered":5,"first":"001","last":"005","next":6}', "series: plain");
+h.eq(infoOf(st, V({ to: "3" })).series.next, 4, "next: Do ended the series");
+h.eq(infoOf(st, V({ to: "3" })).cut.join(","), "3,4", "cut: elements past Do");
+h.eq(infoOf(st, V({ from: "10", step: "-2" })).series.next, 0, "next: negative Krok");
+h.eq(infoOf(st, V({ step: "0" })).series.next, null, "next: Krok 0");
+h.eq(infoOf(st, V({ reset: "5" })).series.next, null, "next: Znovu po");
+h.eq(infoOf(st, V({ repeats: "2" })).series.next, null, "next: 5 elements end inside Opakovat 2");
+var st4 = st.slice(0, 4);
+h.eq(infoOf(st4, V({ repeats: "2" })).series.next, 3, "next: whole Opakovat groups");
+h.eq(infoOf(st, V({ perSheet: true })).series.next, null, "next: per sheet");
+h.eq(infoOf(st, V({ format: "A", from: "25" })).series.next, 30, "next: letters past Z (AD)");
+h.eq(infoOf(st, V({ format: "A", from: "5", step: "-1" })).series.next, null, "next: letters below 1");
+h.eq(infoOf([["x"]], V({})).series, null, "series: nothing numbered");
+h.eq(BTE.Steps.run(st, [R0()]).info[0].series, null, "series: a replace step has none");
+h.eq(BTE.Steps.run(st, [R0()]).info[0].cut.length, 0, "cut: a replace step has none");
+h.eq(infoOf(st, V({ from: "x" })).series, null, "series: failed step has none");
+
+
+// Duplicate numbers past Do (1.2.0)
+var nb = [["001"], ["002"], ["003"], ["004"], ["005"]];
+var d1 = infoOf(nb, N({kind:"first"}, { from: "3", to: "5" }));
+h.eq(JSON.stringify(d1.dups), '[{"el":3,"kept":"004","sameAs":1},{"el":4,"kept":"005","sameAs":2}]', "dup: kept numbers equal written ones");
+h.eq(d1.warns[1].key + "|" + d1.warns[1].args.join(","), "WARN_DUP|2,4,004,2", "dup: warning after WARN_TO_CUT");
+h.eq(infoOf([["7"], ["7"]], N({kind:"first"}, { from: "7", to: "7", digits: "3" })).dups.length, 1, "dup: 007 written, 7 kept");
+h.eq(infoOf(st, V({ to: "3" })).dups.length, 0, "dup: {n} kept is never a duplicate");
+h.eq(infoOf([["abc 1"], ["abc 2"]], N({kind:"regex",text:"abc"}, { from: "1", to: "1" })).dups.length, 0, "dup: a kept text that is no number");
+h.eq(infoOf([["1"], ["2"], ["1"]], N({kind:"first"}, { from: "1", to: "2", repeats: "1" })).dups[0].sameAs, 0, "dup: sameAs is the first element with the value");
+h.eq(infoOf([["A"], ["B"], ["A"]], N({kind:"regex",text:"[A-Z]"}, { format: "A", from: "1", to: "2" })).dups.length, 1, "dup: letters compare as text");
 h.done();

@@ -469,4 +469,43 @@ h.eq(j(U.rows([[["a"], ["b"]]], 0, [3, 0])[0].slice(0, 1).concat(U.rows([[["a"],
 h.eq(U.rows([[["a"]]], 0)[0][0], "1", "rows: no sheets as before");
 h.eq(U.scopeLine({ elements: { length: 240 }, textCount: 480, skipped: {}, sheets: [1], sheetCount: 20 }), "240 prvků, 480 textů, 20 aršíků", "scope line with sheets");
 
+h.eq(U.text({ key: "WARN_DUP", args: ["2", "4", "004", "2"] }), "2 prvky za Do si nechají číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 2");
+h.eq(U.text({ key: "WARN_DUP", args: ["1", "4", "004", "2"] }), "1 prvek za Do si nechá číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 1");
+h.eq(U.text({ key: "WARN_DUP", args: ["10", "4", "004", "2"] }), "10 prvků za Do si nechá číslo, které krok dal jinému prvku (např. prvek 4 má 004 jako prvek 2).", "dup: 10");
+// ======================= Navázat, series lines, filter (1.2.0) ================
+function ser(from, to, numbered, first, last, next) { return { series: { from: from, to: to, numbered: numbered, first: first, last: last, next: next } }; }
+h.eq(U.when(new Date(2026, 10, 15, 9, 5).getTime()), "15. 11. 2026 09:05", "when: cs");
+h.eq(j(U.continueFields({ from: 1, to: 240, next: 241 })), j({ from: "241", to: "480" }), "continueFields");
+h.eq(j(U.continueFields({ from: 1, to: null, next: 241 })), j({ from: "241", to: "" }), "continueFields: no To");
+h.eq(j(U.continueFields({ from: 10, to: 1, next: 0 })), j({ from: "0", to: "-9" }), "continueFields: negative step");
+h.eq(j(U.continueFields(N(V("{n}"), { from: "7", step: "5", last: { from: 1, to: 240, next: 241 } }).last)), j({ from: "241", to: "480" }), "continueFields ignores the step fields");
+var cb = U.continueButton(N(V("{n}")));
+h.eq(cb.enabled + cb.text + cb.tip, "false" + "Navázat" + BTE.L.TIP_CONTINUE_NONE, "continueButton: no record");
+cb = U.continueButton(N(V("{n}"), { last: { from: 1, to: 240, next: null, doc: "a.ai", at: 0 } }));
+h.eq(cb.enabled + cb.tip, "false" + BTE.L.TIP_CONTINUE_END, "continueButton: no continuation");
+cb = U.continueButton(N(V("{n}"), { last: { from: 1, to: 240, next: 241, doc: "a.ai", at: new Date(2026, 10, 15, 9, 5).getTime() } }));
+h.eq(cb.enabled + "|" + cb.text + "|" + cb.tip, "true|Navázat (241)|Od 241 a Do 480 podle běhu v a.ai, 15. 11. 2026 09:05.", "continueButton: full");
+cb = U.continueButton(N(V("{n}"), { last: { from: 1, to: null, next: 241, doc: "a.ai", at: new Date(2026, 10, 15, 9, 5).getTime() } }));
+h.eq(cb.tip, "Od 241 podle běhu v a.ai, 15. 11. 2026 09:05; Do zůstane prázdné.", "continueButton: no To");
+var chain3 = [R(V("x")), N(V("{n}")), N(V("{n}"), { active: false })];
+var info3 = [{}, ser(1, 240, 240, "001", "240", 241), ser(1, 240, 240, "001", "240", 241)];
+h.eq(j(U.continuations(chain3, info3, "a.ai", 5)), j([null, { from: 1, to: 240, next: 241, doc: "a.ai", at: 5 }, null]), "continuations");
+h.eq(U.seriesLines([R(V("x")), N(V("{n}"))], [{}, ser(1, 240, 240, "001", "240", 241)])[0], "Krok 2: čísla 001–240, 240 prvků; další číslo 241.", "seriesLines");
+h.eq(U.seriesLines([N(V("{n}"))], [ser(1, 240, 240, "001", "240", null)])[0], "Krok 1: čísla 001–240, 240 prvků.", "seriesLines: end");
+h.eq(U.seriesLines([N(V("{n}"))], [ser(1, 240, 240, "001", "240", 241)], true)[0], "Krok 1: čísla 001–240, 240 prvků.", "seriesLines: next suppressed");
+h.eq(U.seriesLines([N(V("{n}"))], [ser(7, null, 1, "007", "007", 8)])[0], "Krok 1: čísla 007, 1 prvek; další číslo 8.", "seriesLines: one");
+h.eq(U.seriesLines([N(V("{n}"), { active: false })], [ser(7, null, 1, "007", "007", 8)]).length, 0, "seriesLines: inactive");
+
+var fr = { states: [[["a"], ["b"], ["c {x}"], ["d"]], [["a"], ["B"], ["C {x}"], ["D"]]],
+    info: [{ cut: [0], dups: [], multi: [{ el: 3, count: 2 }] }] };
+var fsteps = [N(V("{n}"))];
+var chg = U.changedFlags(fr.states), rev = U.reviewFlags(fr, fsteps);
+h.eq(j(chg), j([false, true, true, true]), "changedFlags");
+h.eq(j(rev), j([true, false, true, true]), "reviewFlags: cut, leftover, multi");
+h.eq(j(U.filterItems(chg, rev)), j(["Všechny (4)", "Změněné (3)", "K prověření (3)"]), "filterItems");
+var frows = [["1"], ["2"], ["3"], ["4"]];
+h.eq(U.filterRows(frows, "all", chg, rev), frows, "filterRows: all");
+h.eq(j(U.filterRows(frows, "changed", chg, rev)), j([["2"], ["3"], ["4"]]), "filterRows: changed keeps order");
+h.eq(j(U.filterRows(frows, "review", [false], [false, false, false, false])), j([]), "filterRows: empty");
+h.eq(j(U.FILTERS), j(["all", "changed", "review"]), "FILTERS");
 h.done();
